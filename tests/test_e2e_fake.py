@@ -22,6 +22,7 @@ def test_smoke_against_fake_server(tmp_path):
            "server": {"kind": "fake", "port": free_port(), "startup_timeout_s": 30, "stop_grace_s": 5},
            "workload": {"rate": 4.0, "duration_s": 20, "warmup_s": 5, "output_tokens": 8,
                         "sessions": {"turns": 3, "turn_gap_s": {"dist": "exponential", "mean": 2.0}}},
+           "cpus": {"vllm": None, "loadgen": None, "recorder": None},  # taskset is Linux-only
            "drain_s": 10, "checks": {"require_clean_git": False}}
     path = tmp_path / "e2e.yaml"
     path.write_text(yaml.safe_dump(cfg))
