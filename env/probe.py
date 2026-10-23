@@ -96,11 +96,12 @@ def main():
         res["metric_names"] = names
         res["metrics_present"] = {m: any(n.startswith(m) for n in names) for m in METRICS}
     finally:
-        os.killpg(srv.pid, signal.SIGINT)
-        try:
-            srv.wait(30)
-        except subprocess.TimeoutExpired:
-            os.killpg(srv.pid, signal.SIGKILL)
+        if srv.poll() is None:
+            os.killpg(srv.pid, signal.SIGINT)
+            try:
+                srv.wait(30)
+            except subprocess.TimeoutExpired:
+                os.killpg(srv.pid, signal.SIGKILL)
 
     # Q6: CPU cores for pinning.
     res["nproc"] = os.cpu_count()

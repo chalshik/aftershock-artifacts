@@ -38,3 +38,7 @@ Append-only. Each entry: date · decision · why · evidence (a run id or probe 
 - **Driver:** `nvidia-driver-595-open` 595.99.02 (supports up to CUDA 13.2; torch uses 13.0) with Canonical's **prebuilt, signed** kernel modules `linux-modules-nvidia-595-open-generic`. The self-built DKMS module was removed: Secure Boot is on and its signing key was never enrolled, so the kernel refused it.
 - **Proxmox:** the GPU's ROM was not passed to the VM, so the driver failed (`kgspExtractVbiosFromRom: did not find valid ROM signature`, `RmInitAdapter failed`). Fixed in the VM's `hostpci` settings on the Proxmox host. The VM needs a full stop/start after such changes.
 - **GPU:** RTX 3090, 24 GB, power limit **420 W** (Gigabyte board, subsystem 1458:4041; reference spec is 350 W), max SM clock 2160 MHz. The power limit stays at its default during Stage 1, and `gpu.jsonl` records it every second.
+
+## 2026-10-23 · Use uv-managed Python, not the system Python
+- **Evidence:** the first `vllm serve` on the VM failed with `cuda_utils.c: fatal error: Python.h: No such file or directory`. Triton compiles a C helper at startup, and Ubuntu's `/usr/bin/python3.12` has no development headers.
+- **Fix:** `[tool.uv] python-preference = "only-managed"`. uv's CPython build includes the headers, needs no sudo, and is the same build on the Mac and the VM. `uv.lock` is unchanged. `env.json` records the exact Python version for every run.
