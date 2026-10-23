@@ -28,3 +28,8 @@ Append-only. Each entry: date · decision · why · evidence (a run id or probe 
 - **Completions API** (`entrypoints/openai/completion/protocol.py`): `prompt` accepts `list[int]`, and `min_tokens`, `ignore_eos` and `stream_options` are supported.
 - **Metric names** (docs `usage/metrics`) match the harness: `prefix_cache_hits/queries`, `prompt_tokens(_cached)`, `num_requests_running/waiting`, `kv_cache_usage_perc`, `num_preemptions`, `request_success`, `kv_block_idle_before_evict_seconds`, `admission_rejections`.
 - **For Stage 2:** `/reset_prefix_cache` exists, but only with `VLLM_SERVER_DEV_MODE=1`.
+
+## 2026-10-23 · VM facts and CPU pinning
+- VM: Ubuntu 24.04.5, kernel 6.8, 8 vCPUs (AMD EPYC 7702P, 1 NUMA node), 31 GB RAM, 62 GB disk (46 GB free). The RTX 3090 (GA102) is passed through, but `nouveau` was loaded and no NVIDIA driver was installed.
+- The driver must support CUDA 13 (the locked torch uses the cu13 runtime 13.0–13.4), so it must be ≥ 580. Install the Ubuntu-recommended `nvidia-driver-595-open`.
+- Pinning: vLLM on cores 0–5, loadgen on 6, recorder on 7 (open question 6). Whether one core is enough for loadgen is checked by client lag in every run.

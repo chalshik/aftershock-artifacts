@@ -48,8 +48,11 @@ class Gpu:
     def __init__(self):
         self.h = None
         if pynvml:
-            pynvml.nvmlInit()
-            self.h = pynvml.nvmlDeviceGetHandleByIndex(0)
+            try:
+                pynvml.nvmlInit()
+                self.h = pynvml.nvmlDeviceGetHandleByIndex(0)
+            except pynvml.NVMLError as e:  # no driver: run without GPU stats; checks flag a real run invalid
+                print(f"[recorder] no GPU stats: {e}", flush=True)
 
     def read(self) -> dict | None:
         if not self.h:

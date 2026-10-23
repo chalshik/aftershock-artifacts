@@ -18,10 +18,10 @@ server:
     --enable-prompt-tokens-details: true   # without it, usage.prompt_tokens_details.cached_tokens is not returned
     --seed: 0
 
-cpus:                        # taskset core lists, e.g. "0-11"; null = no pinning
-  vllm: null
-  loadgen: null
-  recorder: null
+cpus:                        # taskset core lists; null = no pinning. VM has 8 cores (nproc), 1 NUMA node
+  vllm: "0-5"
+  loadgen: "6"
+  recorder: "7"
 
 workload:
   kind: sessions             # random | sessions
