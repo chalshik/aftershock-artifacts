@@ -8,8 +8,9 @@ import numpy as np
 import pandas as pd
 import yaml
 
-# NVML clock-throttle bits that mean a thermal or hardware slowdown (a software power cap is normal operation).
-THERMAL_THROTTLE_MASK = 0x8 | 0x20 | 0x40 | 0x80  # HW slowdown, SW thermal, HW thermal, HW power brake
+# NVML clock-throttle bits. A software power cap (0x4) is normal boost behaviour and is ignored.
+HW_THROTTLE_MASK = 0x8 | 0x40 | 0x80  # HW slowdown, HW thermal, HW power brake: any sample fails the run
+SW_THERMAL_BIT = 0x20                 # SW thermal slowdown: GeForce sets it briefly during boost; fail only if sustained
 COUNTER_SUFFIXES = ("_total", "_count", "_sum", "_bucket")
 
 
@@ -73,11 +74,15 @@ def run_checks(run_dir: Path) -> dict:
         out.append(check("gpu_steady", False, "no gpu.jsonl data"))
     else:
         w = gpu[(gpu.t >= wl["warmup_s"]) & (gpu.t <= wl["duration_s"])]
-        cv = float(w.sm_clock_mhz.std() / w.sm_clock_mhz.mean()) if len(w) > 1 else math.inf
-        thermal = int(((w.throttle_reasons.astype(int) & THERMAL_THROTTLE_MASK) != 0).sum())
-        out.append(check("gpu_steady", cv <= c["max_sm_clock_cv"] and thermal == 0,
-                         {"sm_clock_cv": cv, "thermal_throttle_samples": thermal,
-                          "max_temp_c": float(w.temp_c.max()) if len(w) else None}))
+        busy = w[w.util_pct >= c["gpu_busy_util_pct"]]  # idle clocks are not throttling
+        cv = float(busy.sm_clock_mhz.std() / busy.sm_clock_mhz.mean()) if len(busy) > 1 else 0.0
+        reasons = w.throttle_reasons.astype(int)
+        hw = int(((reasons & HW_THROTTLE_MASK) != 0).sum())
+        sw_frac = float(((reasons & SW_THERMAL_BIT) != 0).mean()) if len(w) else 0.0
+        out.append(check("gpu_steady",
+                         cv <= c["max_sm_clock_cv"] and hw == 0 and sw_frac <= c["max_sw_thermal_frac"],
+                         {"busy_sm_clock_cv": cv, "busy_samples": len(busy), "hw_throttle_samples": hw,
+                          "sw_thermal_frac": sw_frac, "max_temp_c": float(w.temp_c.max()) if len(w) else None}))
 
     # 6. Measured arrival rate matches lambda (Poisson-aware tolerance).
     t_lo, t_hi = wl["warmup_s"], wl["duration_s"]

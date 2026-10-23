@@ -54,5 +54,7 @@ checks:
   max_client_lag_p99_s: 0.05
   max_scrape_gap_s: 2.0
   rate_rel_tolerance: 0.15
-  max_sm_clock_cv: 0.05
+  max_sm_clock_cv: 0.05        # over busy samples only
+  gpu_busy_util_pct: 50
+  max_sw_thermal_frac: 0.05    # HW throttle bits fail on any sample
   require_clean_git: true

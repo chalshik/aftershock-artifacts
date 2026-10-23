@@ -62,3 +62,29 @@ def test_counter_decrease(tmp_path):
     with open(d / "metrics.jsonl", "a") as f:
         f.write(json.dumps({"t": 1000, "values": {'vllm:request_success_total{finished_reason="length"}': 0}}) + "\n")
     assert "recorder" in failed(d)
+
+
+def with_gpu(d, masks, clocks=None, util=100):
+    cfg = yaml.safe_load((d / "config.yaml").read_text())
+    cfg["server"]["kind"] = "vllm"
+    (d / "config.yaml").write_text(yaml.safe_dump(cfg))
+    clocks = clocks or [2040] * len(masks)
+    with open(d / "gpu.jsonl", "w") as f:
+        for i, (m, c) in enumerate(zip(masks, clocks)):
+            f.write(json.dumps({"t": float(i), "throttle_reasons": m, "sm_clock_mhz": c,
+                                "util_pct": util if c == 2040 else 0, "temp_c": 50}) + "\n")
+    return d
+
+
+def test_gpu_brief_sw_thermal_and_idle_clocks_ok(tmp_path):
+    masks = [0x4] * 50 + [0x24] + [0] * 49
+    clocks = [2040, 1860] * 50
+    assert "gpu_steady" not in failed(with_gpu(make_run(tmp_path), masks, clocks))
+
+
+def test_gpu_hw_throttle_fails(tmp_path):
+    assert "gpu_steady" in failed(with_gpu(make_run(tmp_path), [0] * 99 + [0x40]))
+
+
+def test_gpu_sustained_sw_thermal_fails(tmp_path):
+    assert "gpu_steady" in failed(with_gpu(make_run(tmp_path), [0x20] * 10 + [0] * 90))
