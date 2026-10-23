@@ -1,0 +1,6 @@
+extends: sweep_pc_on.yaml
+name: sweep_pc_off
+server:
+  args:
+    --enable-prefix-caching: null
+    --no-enable-prefix-caching: true

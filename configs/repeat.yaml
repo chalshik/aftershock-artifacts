@@ -1,0 +1,3 @@
+# Same as first_real, run twice with the same seed; compare numbers within the tolerance in decisions.md.
+extends: first_real.yaml
+name: repeat

@@ -1,0 +1,6 @@
+# Set the rate to a lambda inside (mu_off, mu_warm) once both sweeps are done.
+extends: base.yaml
+name: long_run
+workload:
+  rate: null        # REQUIRED: fill from the sweeps before running
+  duration_s: 7200

@@ -1,0 +1,64 @@
+import json
+
+import pandas as pd
+import yaml
+
+from harness import checks
+from harness.run import load_config
+from tests.test_workload import CONFIGS
+
+
+def make_run(tmp_path, n=100, rate=1.0, lag=0.001, status="ok", success_delta=None, dirty=False, gap=1.0):
+    cfg = load_config(CONFIGS / "first_real.yaml")
+    cfg["server"]["kind"] = "fake"
+    cfg["workload"].update(rate=rate, duration_s=n / rate, warmup_s=0)
+    (tmp_path / "config.yaml").write_text(yaml.safe_dump(cfg))
+    (tmp_path / "env.json").write_text(json.dumps({"git_dirty": dirty, "git_commit": "abc"}))
+    t = [i / rate for i in range(n)]
+    pd.DataFrame({"request_id": range(n), "t_planned": t}).to_parquet(tmp_path / "schedule.parquet")
+    with open(tmp_path / "requests.jsonl", "w") as f:
+        for i, tp in enumerate(t):
+            f.write(json.dumps({"request_id": i, "t_planned": tp, "t_sent": tp + lag, "status": status}) + "\n")
+    ok = n if status == "ok" else 0
+    succ = ok if success_delta is None else success_delta
+    with open(tmp_path / "metrics.jsonl", "w") as f:
+        steps = int(n / rate / gap) + 2
+        for k in range(steps):
+            v = succ * k / (steps - 1)
+            f.write(json.dumps({"t": k * gap, "values": {'vllm:request_success_total{finished_reason="length"}': v}}) + "\n")
+    return tmp_path
+
+
+def failed(run_dir):
+    return checks.run_checks(run_dir)["failed"]
+
+
+def test_good_run_valid(tmp_path):
+    assert failed(make_run(tmp_path)) == []
+
+
+def test_client_lag(tmp_path):
+    assert "client_lag" in failed(make_run(tmp_path, lag=0.5))
+
+
+def test_errors(tmp_path):
+    assert "no_errors" in failed(make_run(tmp_path, status="client_error"))
+
+
+def test_accounting(tmp_path):
+    assert "accounting" in failed(make_run(tmp_path, success_delta=90))
+
+
+def test_scrape_gap(tmp_path):
+    assert "recorder" in failed(make_run(tmp_path, gap=3.0))
+
+
+def test_dirty_git(tmp_path):
+    assert "clean_git" in failed(make_run(tmp_path, dirty=True))
+
+
+def test_counter_decrease(tmp_path):
+    d = make_run(tmp_path)
+    with open(d / "metrics.jsonl", "a") as f:
+        f.write(json.dumps({"t": 1000, "values": {'vllm:request_success_total{finished_reason="length"}': 0}}) + "\n")
+    assert "recorder" in failed(d)

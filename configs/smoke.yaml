@@ -1,0 +1,8 @@
+extends: base.yaml
+name: smoke
+model: Qwen/Qwen3-1.7B
+workload:
+  kind: random
+  rate: 0.5
+  duration_s: 60
+  warmup_s: 0

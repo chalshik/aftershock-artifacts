@@ -1,0 +1,4 @@
+extends: base.yaml
+name: sweep_pc_on
+sweep:
+  rates: [1, 2, 3, 4, 5, 6, 8, 10]   # widen or refine around the knee after first_real

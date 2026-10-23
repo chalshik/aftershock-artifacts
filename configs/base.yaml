@@ -1,0 +1,58 @@
+# Every knob, with its default. Other configs `extends: base.yaml` and override.
+# Once a run has used a config, never edit it (CLAUDE.md rule 5).
+name: base
+seed: 0
+model: Qwen/Qwen3-4B
+
+server:
+  kind: vllm                 # vllm | fake (tests only)
+  host: 127.0.0.1
+  port: 8000
+  startup_timeout_s: 900
+  stop_grace_s: 30
+  # Passed verbatim to `vllm serve <model>`: true -> bare flag, null -> dropped, else `--flag value`.
+  # Everything else stays at vLLM defaults. Flag names checked against the v0.32.0 docs and source (docs/decisions.md).
+  args:
+    --enable-prefix-caching: true          # already the default in 0.32.0; set explicitly for the record
+    --kv-cache-metrics: true               # block lifetime / idle-before-evict / reuse-gap histograms (sampled, default 1%)
+    --enable-prompt-tokens-details: true   # without it, usage.prompt_tokens_details.cached_tokens is not returned
+    --seed: 0
+
+cpus:                        # taskset core lists, e.g. "0-11"; null = no pinning
+  vllm: null
+  loadgen: null
+  recorder: null
+
+workload:
+  kind: sessions             # random | sessions
+  rate: 2.0                  # lambda: requests per second (all turns together)
+  duration_s: 900            # arrivals are scheduled in [0, duration_s)
+  warmup_s: 240              # excluded from checks/metrics; must cover session ramp-up (~turns x gap)
+  output_tokens: 128         # fixed per request
+  token_id_range: [1000, 150000]   # avoids Qwen special tokens (>=151643)
+  random:
+    prompt_tokens: 512
+  sessions:
+    turns: 8
+    system_tokens: 512
+    user_tokens: 128         # new message per turn
+    reply_tokens: 128        # recorded reply standing in for the previous turn's answer
+    turn_gap_s: {dist: exponential, mean: 20.0}
+
+sweep: null                  # e.g. {rates: [1, 2, 3]} -> one run (fresh server) per rate
+drain_s: 300                 # after the last arrival, wait up to this long; still-running = miss
+recorder:
+  interval_s: 1.0
+gateway:                     # concurrency cap in loadgen; OFF in Stage 1
+  enabled: false
+  max_concurrency: null
+trigger: null                # Stage 2 only
+slo:
+  ttft_s: null               # fixed at the end of Stage 1 from measured healthy latency
+
+checks:
+  max_client_lag_p99_s: 0.05
+  max_scrape_gap_s: 2.0
+  rate_rel_tolerance: 0.15
+  max_sm_clock_cv: 0.05
+  require_clean_git: true

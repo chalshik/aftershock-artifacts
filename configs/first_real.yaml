@@ -1,0 +1,4 @@
+extends: base.yaml
+name: first_real
+workload:
+  rate: 2.0

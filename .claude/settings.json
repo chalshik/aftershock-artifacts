@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(runs/**)",
+      "Write(runs/**)",
+      "Bash(rm -rf runs*)",
+      "Bash(uv add vllm*)",
+      "Bash(uv lock --upgrade*)"
+    ]
+  }
+}
