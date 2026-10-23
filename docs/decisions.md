@@ -33,3 +33,8 @@ Append-only. Each entry: date · decision · why · evidence (a run id or probe 
 - VM: Ubuntu 24.04.5, kernel 6.8, 8 vCPUs (AMD EPYC 7702P, 1 NUMA node), 31 GB RAM, 62 GB disk (46 GB free). The RTX 3090 (GA102) is passed through, but `nouveau` was loaded and no NVIDIA driver was installed.
 - The driver must support CUDA 13 (the locked torch uses the cu13 runtime 13.0–13.4), so it must be ≥ 580. Install the Ubuntu-recommended `nvidia-driver-595-open`.
 - Pinning: vLLM on cores 0–5, loadgen on 6, recorder on 7 (open question 6). Whether one core is enough for loadgen is checked by client lag in every run.
+
+## 2026-10-23 · GPU driver setup on the VM (how it was made to work)
+- **Driver:** `nvidia-driver-595-open` 595.99.02 (supports up to CUDA 13.2; torch uses 13.0) with Canonical's **prebuilt, signed** kernel modules `linux-modules-nvidia-595-open-generic`. The self-built DKMS module was removed: Secure Boot is on and its signing key was never enrolled, so the kernel refused it.
+- **Proxmox:** the GPU's ROM was not passed to the VM, so the driver failed (`kgspExtractVbiosFromRom: did not find valid ROM signature`, `RmInitAdapter failed`). Fixed in the VM's `hostpci` settings on the Proxmox host. The VM needs a full stop/start after such changes.
+- **GPU:** RTX 3090, 24 GB, power limit **420 W** (Gigabyte board, subsystem 1458:4041; reference spec is 350 W), max SM clock 2160 MHz. The power limit stays at its default during Stage 1, and `gpu.jsonl` records it every second.

@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 
 echo "== GPU =="
 nvidia-smi --query-gpu=name,driver_version,memory.total,power.limit --format=csv
-nvidia-smi | head -4 | tail -1   # shows the max CUDA version the driver supports
+nvidia-smi | sed -n 3p          # driver line with the max CUDA version it supports (sed reads all input: no SIGPIPE under pipefail)
 
 echo "== uv =="
 command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
