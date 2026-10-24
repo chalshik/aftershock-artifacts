@@ -7,8 +7,9 @@ A metastable-failure study of vLLM prefix caching. The source of truth is `docs/
 - `harness/`: runs on the GPU VM. `run.py` is the only entry point: `uv run python -m harness.run configs/<x>.yaml`
 - `configs/`: one YAML per run or sweep. Each one `extends: base.yaml`.
 - `env/`: VM setup (`setup_vm.sh`) and `probe.py`, which answers the open questions on the pinned vLLM.
-- `analysis/`: notebook plus `io.py`. Reads only from `runs/`.
+- `analysis/`: notebook plus `load.py`. Reads only from `runs/`.
 - `runs/<run_id>/`: raw output of every run, gitignored. Copy it off the VM with rsync.
+- `docs/status.md`: current state of Stage 1. Update it after every run or decision.
 - `docs/decisions.md` (append-only log), `docs/open-questions.md`
 - `tests/`: `uv run pytest` runs on the Mac against `tests/fake_vllm.py`, with no GPU.
 
