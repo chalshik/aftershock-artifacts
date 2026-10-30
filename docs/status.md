@@ -2,9 +2,9 @@
 
 Living document: update it after every run or decision. Last updated: 2026-10-30.
 
-**Stage 1 is not finished.** The harness is built and the GPU VM works. Run steps 1 to 5 of 6 are done. μ_warm = 4 req/s, μ_off = 2 req/s.
+**Stage 1 is not finished.** The harness is built and the GPU VM works. All 6 run steps are done. μ_warm = 4 req/s, μ_off = 2 req/s, and λ = 3 stayed healthy for 2 h.
 
-**Next action:** step 6 is running on the VM: `configs/long_run.yaml`, λ = 3, about 2 h. Then judge it with the pre-registered criteria and fix the SLO.
+**Next action:** fix the SLO from measured healthy latency, generate the load–latency figures from `analysis/`, and answer open question 5.
 
 ## Run steps
 
@@ -15,18 +15,18 @@ Living document: update it after every run or decision. Last updated: 2026-10-30
 | 3 | Repeat the same config twice, compare | `repeat.yaml` | Done, all VALID, within tolerance | `20261030-120420_repeat`, `20261030-122024_repeat` |
 | 4 | Load sweep, prefix caching on → μ_warm | `sweep_pc_on.yaml` | Done: μ_warm = 4 req/s; λ = 8 INVALID (`accounting`), others VALID | `20261030-131243_sweep_pc_on_r1` … `20261030-151441_sweep_pc_on_r10` |
 | 5 | Load sweep, prefix caching off → μ_off | `sweep_pc_off.yaml` | Done: μ_off = 2 req/s; λ = 10 INVALID (`recorder`), others VALID | `20261030-154544_sweep_pc_off_r1` … `20261030-175458_sweep_pc_off_r10` |
-| 6 | Long run at a λ between μ_off and μ_warm | `long_run.yaml` (λ = 3) | Running | |
+| 6 | Long run at a λ between μ_off and μ_warm | `long_run.yaml` (λ = 3) | Done, VALID, healthy under the pre-registered criteria | `20261030-181851_long_run` |
 
 Invalid runs kept on record: `20261023-145613_smoke` (`gpu_steady`, before the check was refined; see decisions.md). Failed start, no load sent: `20261030-114021_first_real` (see decisions.md).
 
-GPU time still needed: about 2 h for the long run, plus whatever open question 5 needs.
+GPU time still needed: whatever open question 5 needs.
 
 ## Done when (from the plan)
 
 - [x] Repeated runs agree within a set tolerance (decisions.md, step 3 result)
 - [x] Every run up to the capacity knee passes all checks (decisions.md, steps 4 and 5)
 - [ ] Load–latency curves with prefix caching on and off; μ_warm and μ_off known
-- [ ] A λ inside the gap stays healthy in a long run
+- [x] A λ inside the gap stays healthy in a long run (decisions.md, step 6 result)
 - [ ] SLO for later stages fixed from measured healthy latency
 - [x] Harness can switch on the gateway and a trigger without a rewrite (config switches exist and are off; trigger logic is Stage 2)
 

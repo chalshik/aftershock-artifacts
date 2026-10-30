@@ -108,3 +108,12 @@ Supersedes the first two "Pending" items above. Written before `first_real` ran;
 - **Load:** λ = 3, inside (μ_off, μ_warm), and the only whole-number rate in that gap with data from both sweeps. **Caveat:** cache-off λ = 3 exceeds the capacity rule only narrowly, so a cache loss at this load may be survivable. Other Stage 2 loads get their own no-trigger controls under the plan.
 - **Healthy means all of:** (1) the run is VALID; (2) throughput ≥ 0.95 λ and queue slope ≤ 0.01 req/s² over the measured window; (3) comparing the last third of the measured window with the middle third, TTFT p50 is at most 25 % higher and hit rate at most 0.05 lower. The first third is left out because the λ = 3 sweep run was still drifting at that stage.
 - If it fails, λ = 3 cannot be used later, as the plan says. These limits are not widened after the result.
+
+## 2026-10-30 · Step 6 result: λ = 3 stays healthy for 2 h
+- **Evidence:** `20261030-181851_long_run`, judged with the criteria registered before the run. **All three pass:**
+  1. VALID, every check passed. All 21,551 requests finished ok, and vLLM's count matches exactly.
+  2. Throughput 3.013 req/s (1.004 of λ, limit 0.95); queue slope about 0 req/s² (limit 0.01).
+  3. Last third against middle third: TTFT p50 0.1166 s against 0.1152 s, 1.3 % higher (limit 25 %); hit rate 0.6004 against 0.6083, 0.008 lower (limit 0.05). Computed from counter totals per third instead of the mean of per-interval rates, hit rate is 0.6254 against 0.6363, 0.011 lower, which also passes.
+- **Other numbers:** TTFT p50 0.116 s, p99 0.513 s; queue peak 2; KV peak 54.5 %; no preemptions; no HW throttling; peak 81 °C.
+- **The step 4 drift did not continue:** the λ = 3 sweep run fell through 0.674, 0.625, 0.585 by thirds of its window, whereas here the thirds hold at 0.609, 0.608, 0.600. The earlier fall looks like settling after start-up, or sweep-run variation; this run does not show which. The cause of the lower hit rate at higher load is still not established.
+- **Limit of this result:** one 2 h run at one seed, at one load. It shows no drift over 2 h, not stability at longer times. It says nothing about loads other than λ = 3.
