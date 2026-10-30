@@ -2,5 +2,5 @@
 extends: base.yaml
 name: long_run
 workload:
-  rate: null        # REQUIRED: fill from the sweeps before running
+  rate: 3.0         # inside (mu_off = 2, mu_warm = 4); see docs/decisions.md
   duration_s: 7200

@@ -97,3 +97,14 @@ Supersedes the first two "Pending" items above. Written before `first_real` ran;
 - **`throughput` in `analysis/load.py` `summarize()`:** now completions per second inside the measured window, the plan's definition. It replaces the arrival-based count described in the step 4 entry.
 - **Effect on earlier results:** recorded `checks.json` files are not changed, and `20261030-145339_sweep_pc_on_r8` stays INVALID as recorded, although the new rule would pass it. So the two sweeps were judged under different versions of this check. μ_warm stays 4 under the new `throughput`. The capacity rule's thresholds are unchanged.
 - **Scope:** step 5 and later runs. The repeat comparison in step 3 is not re-judged.
+
+## 2026-10-30 · Step 5 result: μ_off = 2 req/s
+- **Evidence:** sweep `20261030-154544_sweep_pc_off_r1` to `20261030-175458_sweep_pc_off_r10`, capacity rule as registered. λ = 2 passes. λ = 3 fails narrowly on queue slope alone (0.0130 against the 0.01 limit), with throughput 2.906 (0.969 of λ), so it is near the limit. The rule is applied as registered, and the true limit is in [2, 3). The server saturates at about 3.5 completions/s at every overloaded rate.
+- **`20261030-175458_sweep_pc_off_r10` is INVALID on `recorder`:** one scrape timed out at t = 1201.1 s, the moment `load_end` was logged and the load generator was cancelling its remaining connections. That is after the measured window, and every other check passed. It stays INVALID as recorded and is not rerun, because λ = 8 is a valid overloaded point on this curve. The check is unchanged.
+- **`accounting`:** this run did use the new allowance (4,207 in vLLM, 4,205 at the client, 57 cut off after a first token).
+- **Gap:** μ_off = 2 and μ_warm = 4. Completions saturate at about 3.5 req/s without the cache and about 4.7 with it. Overload lowers completions with the cache on (4.73 at λ = 6, 4.18 at λ = 10) but not with it off, where they stay flat.
+
+## 2026-10-30 · Step 6 load and pass criteria (before the long run)
+- **Load:** λ = 3, inside (μ_off, μ_warm), and the only whole-number rate in that gap with data from both sweeps. **Caveat:** cache-off λ = 3 exceeds the capacity rule only narrowly, so a cache loss at this load may be survivable. Other Stage 2 loads get their own no-trigger controls under the plan.
+- **Healthy means all of:** (1) the run is VALID; (2) throughput ≥ 0.95 λ and queue slope ≤ 0.01 req/s² over the measured window; (3) comparing the last third of the measured window with the middle third, TTFT p50 is at most 25 % higher and hit rate at most 0.05 lower. The first third is left out because the λ = 3 sweep run was still drifting at that stage.
+- If it fails, λ = 3 cannot be used later, as the plan says. These limits are not widened after the result.
