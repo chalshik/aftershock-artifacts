@@ -77,3 +77,13 @@ Supersedes the first two "Pending" items above. Written before `first_real` ran;
 ## 2026-10-30 · Sweep λ grid kept (before any sweep run)
 - Steps 4 and 5 use the existing grid [1, 2, 3, 4, 5, 6, 8, 10] from `sweep_pc_on.yaml`. **Why:** the λ = 2 runs had an empty queue and KV usage of 22 % at most, so they say nothing about where the knee is. Both sweeps use the same grid so the curves compare point by point.
 - If the knee falls in a wide gap, extra rates go in a new config, logged here before they run. μ is only known to the resolution of the rates actually run.
+
+## 2026-10-30 · `20261030-145339_sweep_pc_on_r8` is INVALID on `accounting`
+- **Evidence:** `checks.json` reports 5,146 ok at the client and 5,147 in vLLM's success counter, an off-by-one. The other 1,543 of 6,689 requests were still unfinished at the 300 s drain deadline and count as misses. `request_success_total` shows no aborts or errors, and every other check passed.
+- **Likely cause, not proven:** a request finished in vLLM just as loadgen hit the drain deadline, so the client cancelled it before reading its last chunk. `requests.jsonl` does not hold enough detail to confirm this. 72 of the unfinished requests had already received a first token.
+- The run stays INVALID as recorded and is not re-judged, so it cannot count toward μ under the capacity rule. Any change to the check needs its own entry before the runs it judges.
+
+## 2026-10-30 · Step 4 result: μ_warm = 4 req/s
+- **Evidence:** sweep `20261030-131243_sweep_pc_on_r1` to `20261030-151441_sweep_pc_on_r10`, capacity rule as registered (F = 0.95, S = 0.01). λ = 1–6 and 10 are VALID; λ = 8 is INVALID on `accounting`. λ = 4 passes (queue slope 0.000); λ = 5 fails (slope 0.426). The true limit is in [4, 5), at this grid's resolution and the 420 W power limit.
+- **Deviation from the plan's definition:** `summarize()` `throughput` counts requests that *arrived* in the measured window and eventually completed, including during the drain, whereas the plan defines throughput as completions per second. It therefore stays near λ during overload (λ = 6 reports 6.12), so in this sweep the queue-slope condition did the rejecting. It cannot change μ_warm: this column can only make a run look better, and every rate above 4 already fails on slope.
+- **λ = 8 is not rerun:** λ = 10 is VALID, so the curve already has a valid overloaded point.
