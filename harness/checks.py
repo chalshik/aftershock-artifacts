@@ -52,8 +52,11 @@ def run_checks(run_dir: Path) -> dict:
         succ = f(ok_scrapes[-1]) - f(ok_scrapes[0])
     n_ok = int(statuses.get("ok", 0))
     ids_ok = len(reqs) == len(sched) and (len(reqs) == 0 or reqs.request_id.is_unique)
-    out.append(check("accounting", ids_ok and succ == n_ok,
-                     {"scheduled": len(sched), "recorded": len(reqs), "ok": n_ok, "vllm_success_delta": succ}))
+    # A streaming request cut off at the drain deadline may have finished in vLLM before the client read its last chunk.
+    cut_off = int((reqs.status.eq("unfinished") & reqs.t_first_token.notna()).sum()) if "t_first_token" in reqs else 0
+    out.append(check("accounting", ids_ok and succ is not None and n_ok <= succ <= n_ok + cut_off,
+                     {"scheduled": len(sched), "recorded": len(reqs), "ok": n_ok, "vllm_success_delta": succ,
+                      "cut_off_with_first_token": cut_off}))
 
     # 4. Counters never go down; no long scrape gaps or failed scrapes.
     decreases = []

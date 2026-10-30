@@ -4,7 +4,7 @@ Living document: update it after every run or decision. Last updated: 2026-10-30
 
 **Stage 1 is not finished.** The harness is built and the GPU VM works. Run steps 1 to 4 of 6 are done. μ_warm = 4 req/s.
 
-**Next action:** decide the `accounting` check change (see decisions.md), then step 5: `configs/sweep_pc_off.yaml`, 8 rates, about 2.5 h.
+**Next action:** step 5 is running on the VM: `configs/sweep_pc_off.yaml`, 8 rates, about 2.5 h. Then set the step 6 rate.
 
 ## Run steps
 
@@ -14,7 +14,7 @@ Living document: update it after every run or decision. Last updated: 2026-10-30
 | 2 | First real run (4B, sessions, λ = 2) | `first_real.yaml` | Done, VALID | `20261030-114115_first_real` |
 | 3 | Repeat the same config twice, compare | `repeat.yaml` | Done, all VALID, within tolerance | `20261030-120420_repeat`, `20261030-122024_repeat` |
 | 4 | Load sweep, prefix caching on → μ_warm | `sweep_pc_on.yaml` | Done: μ_warm = 4 req/s; λ = 8 INVALID (`accounting`), others VALID | `20261030-131243_sweep_pc_on_r1` … `20261030-151441_sweep_pc_on_r10` |
-| 5 | Load sweep, prefix caching off → μ_off | `sweep_pc_off.yaml` | Not started | |
+| 5 | Load sweep, prefix caching off → μ_off | `sweep_pc_off.yaml` | Running | |
 | 6 | Long run at a λ between μ_off and μ_warm | `long_run.yaml` (set the rate first) | Blocked by 4–5 | |
 
 Invalid runs kept on record: `20261023-145613_smoke` (`gpu_steady`, before the check was refined; see decisions.md). Failed start, no load sent: `20261030-114021_first_real` (see decisions.md).

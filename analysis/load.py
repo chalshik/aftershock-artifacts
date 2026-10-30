@@ -87,13 +87,14 @@ def window(df: pd.DataFrame, cfg: dict, col: str = "t") -> pd.DataFrame:
 
 def summarize(run: dict) -> dict:
     cfg, r = run["cfg"], window(run["requests"], run["cfg"], "t_planned")
+    done = window(run["requests"], cfg, "t_end")  # completions per second, so a backlog cannot look like throughput
     span = cfg["workload"]["duration_s"] - cfg["workload"]["warmup_s"]
     m = window(rates(run["metrics"]), cfg) if len(run["metrics"]) else pd.DataFrame()
     q = m.get("num_requests_waiting")
     return {
         "run": run["dir"].name, "rate": cfg["workload"]["rate"],
         "prefix_caching": bool(cfg["server"]["args"].get("--enable-prefix-caching")),
-        "throughput": float((r.status == "ok").sum() / span),
+        "throughput": float((done.status == "ok").sum() / span),
         "ttft_p50": r.ttft.quantile(.5), "ttft_p99": r.ttft.quantile(.99),
         "e2e_p50": r.e2e.quantile(.5), "unfinished": int((r.status == "unfinished").sum()),
         "hit_rate": float(m.hit_rate.mean()) if "hit_rate" in m else np.nan,

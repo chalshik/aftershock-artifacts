@@ -49,6 +49,35 @@ def test_accounting(tmp_path):
     assert "accounting" in failed(make_run(tmp_path, success_delta=90))
 
 
+def with_cut_off(d, unfinished, first_tokens):
+    """Mark the last `unfinished` requests as cut off at the drain; `first_tokens` of them had started streaming."""
+    recs = [json.loads(l) for l in (d / "requests.jsonl").read_text().splitlines()]
+    for i, rec in enumerate(recs[-unfinished:]):
+        rec.update(status="unfinished", t_first_token=rec["t_sent"] + 1 if i < first_tokens else None)
+    (d / "requests.jsonl").write_text("".join(json.dumps(r) + "\n" for r in recs))
+    return d
+
+
+def test_accounting_allows_requests_cut_off_after_first_token(tmp_path):
+    assert "accounting" not in failed(with_cut_off(make_run(tmp_path, success_delta=91), 10, 1))
+
+
+def test_accounting_exact_match_with_cut_off_requests(tmp_path):
+    assert "accounting" not in failed(with_cut_off(make_run(tmp_path, success_delta=90), 10, 1))
+
+
+def test_accounting_fails_above_cut_off_allowance(tmp_path):
+    assert "accounting" in failed(with_cut_off(make_run(tmp_path, success_delta=92), 10, 1))
+
+
+def test_accounting_no_allowance_without_first_token(tmp_path):
+    assert "accounting" in failed(with_cut_off(make_run(tmp_path, success_delta=91), 10, 0))
+
+
+def test_accounting_fails_when_vllm_counts_fewer(tmp_path):
+    assert "accounting" in failed(with_cut_off(make_run(tmp_path, success_delta=89), 10, 1))
+
+
 def test_scrape_gap(tmp_path):
     assert "recorder" in failed(make_run(tmp_path, gap=3.0))
 
