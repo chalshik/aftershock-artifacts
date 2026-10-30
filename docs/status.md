@@ -2,9 +2,9 @@
 
 Living document: update it after every run or decision. Last updated: 2026-10-30.
 
-**Stage 1 is not finished.** The harness is built and the GPU VM works. Run steps 1 and 2 of 6 are done.
+**Stage 1 is not finished.** The harness is built and the GPU VM works. Run steps 1 to 3 of 6 are done.
 
-**Next action:** step 3, two runs of `configs/repeat.yaml` on the VM, compared with `first_real` using the pre-registered tolerance.
+**Next action:** step 4 is running on the VM: `configs/sweep_pc_on.yaml`, 8 rates, about 3 h. Then step 5.
 
 ## Run steps
 
@@ -12,18 +12,18 @@ Living document: update it after every run or decision. Last updated: 2026-10-30
 |---|---|---|---|---|
 | 1 | Smoke test (1.7B, random prompts, λ = 0.5) | `smoke.yaml` | Done, VALID | `20261023-145933_smoke` |
 | 2 | First real run (4B, sessions, λ = 2) | `first_real.yaml` | Done, VALID | `20261030-114115_first_real` |
-| 3 | Repeat the same config twice, compare | `repeat.yaml` | Running | |
-| 4 | Load sweep, prefix caching on → μ_warm | `sweep_pc_on.yaml` | Not started | |
+| 3 | Repeat the same config twice, compare | `repeat.yaml` | Done, all VALID, within tolerance | `20261030-120420_repeat`, `20261030-122024_repeat` |
+| 4 | Load sweep, prefix caching on → μ_warm | `sweep_pc_on.yaml` | Running | |
 | 5 | Load sweep, prefix caching off → μ_off | `sweep_pc_off.yaml` | Not started | |
 | 6 | Long run at a λ between μ_off and μ_warm | `long_run.yaml` (set the rate first) | Blocked by 4–5 | |
 
 Invalid runs kept on record: `20261023-145613_smoke` (`gpu_steady`, before the check was refined; see decisions.md). Failed start, no load sent: `20261030-114021_first_real` (see decisions.md).
 
-GPU time still needed: about a day (two 8-point sweeps at ~20 min per point, plus a 2 h long run).
+GPU time still needed: about 8 h (two 8-point sweeps at ~20 min per point, plus a 2 h long run).
 
 ## Done when (from the plan)
 
-- [ ] Repeated runs agree within a set tolerance
+- [x] Repeated runs agree within a set tolerance (decisions.md, step 3 result)
 - [ ] Every run up to the capacity knee passes all checks
 - [ ] Load–latency curves with prefix caching on and off; μ_warm and μ_off known
 - [ ] A λ inside the gap stays healthy in a long run
@@ -34,7 +34,7 @@ GPU time still needed: about a day (two 8-point sweeps at ~20 min per point, plu
 
 - [x] Repeat tolerance (step 3): throughput ±2 %, TTFT p50 ±10 %, TTFT p99 ±25 %, hit rate ±0.02 (decisions.md, 2026-10-30)
 - [x] Capacity rule for μ: valid run, throughput ≥ 0.95 λ and waiting-queue slope ≤ 0.01 req/s² (decisions.md, 2026-10-30)
-- [ ] Sweep λ grid, refined after step 2
+- [x] Sweep λ grid: kept as [1, 2, 3, 4, 5, 6, 8, 10] (decisions.md, 2026-10-30)
 
 ## Open questions
 

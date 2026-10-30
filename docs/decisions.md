@@ -68,3 +68,12 @@ Supersedes the first two "Pending" items above. Written before `first_real` ran;
 - **Evidence:** `server.log` says `taskset: failed to execute vllm: No such file or directory`; `events.jsonl` has `server_failed` with return code 127. I had run `uv sync --frozen` on the VM without `--extra server`, which uninstalled vLLM, torch and the other server packages.
 - **Fix:** `uv sync --frozen --extra server` (the command in `env/setup_vm.sh`). vLLM 0.32.0 and torch 2.13.0 are back, `uv.lock` is unchanged, and `env_snapshot` matches the valid smoke run on every field except the git commit.
 - The folder is kept as it is. It has no `checks.json` because `run.py` exits before the checks when the server never starts, so `find_runs()` already leaves it out with its default `valid_only`. It does not count as a step 2 run.
+
+## 2026-10-30 · Step 3 result: repeats agree within the pre-registered tolerance
+- **Evidence:** `20261030-114115_first_real`, `20261030-120420_repeat`, `20261030-122024_repeat`. All three are VALID, with the same workload and seed. `first_real` ran at commit 0178705 and the repeats at bcdaa6e; the only change between them is in docs.
+- **Largest pairwise differences:** throughput 0.00 % (limit 2 %), TTFT p50 0.83 % (limit 10 %), TTFT p99 2.31 % (limit 25 %), hit rate 0.0006 (limit 0.02).
+- **Limits of this result:** all runs share one seed, so this shows the server and harness repeat on an identical schedule, not how much results vary across schedules. Throughput cannot differ below capacity, because every request completes, so that row is a weak test here. The limits turned out much wider than the observed differences. They stay as registered.
+
+## 2026-10-30 · Sweep λ grid kept (before any sweep run)
+- Steps 4 and 5 use the existing grid [1, 2, 3, 4, 5, 6, 8, 10] from `sweep_pc_on.yaml`. **Why:** the λ = 2 runs had an empty queue and KV usage of 22 % at most, so they say nothing about where the knee is. Both sweeps use the same grid so the curves compare point by point.
+- If the knee falls in a wide gap, extra rates go in a new config, logged here before they run. μ is only known to the resolution of the rates actually run.
