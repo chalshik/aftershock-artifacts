@@ -63,3 +63,8 @@ Supersedes the first two "Pending" items above. Written before `first_real` ran;
 
 ## 2026-10-30 · VM address changed
 - After a reboot the VM came up on 192.168.3.249 instead of 192.168.3.243 (DHCP). Same machine: the SSH host keys match the ones recorded for the old address. The Mac's `vm` remote now points to the new address. SSH uses `~/.ssh/id_ed25519_vllm`; the Mac's default key is not authorized there.
+
+## 2026-10-30 · Failed start `20261030-114021_first_real` (operator error, no load sent)
+- **Evidence:** `server.log` says `taskset: failed to execute vllm: No such file or directory`; `events.jsonl` has `server_failed` with return code 127. I had run `uv sync --frozen` on the VM without `--extra server`, which uninstalled vLLM, torch and the other server packages.
+- **Fix:** `uv sync --frozen --extra server` (the command in `env/setup_vm.sh`). vLLM 0.32.0 and torch 2.13.0 are back, `uv.lock` is unchanged, and `env_snapshot` matches the valid smoke run on every field except the git commit.
+- The folder is kept as it is. It has no `checks.json` because `run.py` exits before the checks when the server never starts, so `find_runs()` already leaves it out with its default `valid_only`. It does not count as a step 2 run.
