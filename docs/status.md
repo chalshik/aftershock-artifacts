@@ -33,8 +33,8 @@ GPU time still needed: about a day (two 8-point sweeps at ~20 min per point, plu
 
 ## Decide before the results they judge (pre-registration)
 
-- [ ] Repeat tolerance (step 3): e.g. TTFT p50/p99 and throughput within ±X %
-- [ ] Capacity rule for μ: proposed throughput ≥ 0.95 λ and waiting-queue slope ≤ 0.01 req/s²
+- [x] Repeat tolerance (step 3): throughput ±2 %, TTFT p50 ±10 %, TTFT p99 ±25 %, hit rate ±0.02 (decisions.md, 2026-10-30)
+- [x] Capacity rule for μ: valid run, throughput ≥ 0.95 λ and waiting-queue slope ≤ 0.01 req/s² (decisions.md, 2026-10-30)
 - [ ] Sweep λ grid, refined after step 2
 
 ## Open questions
@@ -52,6 +52,7 @@ Answered with evidence: 1–4, 6, 7 (see `open-questions.md`). Still open:
 | KV cache | Qwen3-4B: 92,432 tokens · Qwen3-1.7B: 165,792 tokens |
 | Pinning | vLLM cores 0–5, loadgen 6, recorder 7 |
 | Disk | 16 GB free (consider growing it before the sweeps) |
+| Address | 192.168.3.249 (DHCP, can change on reboot), key `~/.ssh/id_ed25519_vllm` |
 | Sync | Mac `git push vm main` → VM `git pull` in `~/aftershock-artifacts` |
 
 ## Watch

@@ -54,3 +54,12 @@ Append-only. Each entry: date · decision · why · evidence (a run id or probe 
 - **Evidence:** run `20261023-145613_smoke` is INVALID on `gpu_steady`. One of 66 samples had mask `0x24` (SW power cap + SW thermal slowdown) at 53 °C, with the SM clock at its 2040 MHz maximum. Clock CV was 4.4%, only because the GPU alternated idle (1860 MHz) and busy (2040 MHz) at λ = 0.5. Neither is a hardware slowdown.
 - **New rule** (configs/base.yaml `checks`): any HW throttle bit (0x8, 0x40, 0x80) in any sample fails the run. SW thermal (0x20) fails it only above 5% of samples. SM-clock CV ≤ 5% is computed over busy samples (util ≥ 50%). The SW power cap (0x4) is ignored, since it is normal boost behaviour.
 - That smoke run stays INVALID as recorded. It is not re-judged.
+
+## 2026-10-30 · Repeat tolerance and capacity rule pre-registered (before any sessions-workload run)
+Supersedes the first two "Pending" items above. Written before `first_real` ran; the only data so far is the two smoke runs (1.7B, random prompts, λ = 0.5), which say nothing about these numbers.
+- **Repeat tolerance (step 3):** `first_real` and two runs of `repeat.yaml` (same seed), compared pairwise using `analysis/load.py` `summarize()` over the measured window. They agree if every pair is within: throughput ±2 %, TTFT p50 ±10 %, TTFT p99 ±25 %, hit rate ±0.02 absolute. Relative differences are taken against the smaller of the pair. p99 gets more room because it rests on about 13 of 1,320 requests at λ = 2. A miss is reported as a miss; the tolerance is not widened afterwards.
+- **Capacity rule (steps 4–5):** μ is the highest swept λ whose run is valid, with throughput ≥ 0.95 λ and waiting-queue slope ≤ 0.01 req/s², both over the measured window (F and S as proposed above; `analysis/load.py` `capacity()`).
+- The sweep λ grid stays pending until after step 2, as planned.
+
+## 2026-10-30 · VM address changed
+- After a reboot the VM came up on 192.168.3.249 instead of 192.168.3.243 (DHCP). Same machine: the SSH host keys match the ones recorded for the old address. The Mac's `vm` remote now points to the new address. SSH uses `~/.ssh/id_ed25519_vllm`; the Mac's default key is not authorized there.
