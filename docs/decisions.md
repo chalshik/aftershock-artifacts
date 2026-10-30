@@ -117,3 +117,15 @@ Supersedes the first two "Pending" items above. Written before `first_real` ran;
 - **Other numbers:** TTFT p50 0.116 s, p99 0.513 s; queue peak 2; KV peak 54.5 %; no preemptions; no HW throttling; peak 81 °C.
 - **The step 4 drift did not continue:** the λ = 3 sweep run fell through 0.674, 0.625, 0.585 by thirds of its window, whereas here the thirds hold at 0.609, 0.608, 0.600. The earlier fall looks like settling after start-up, or sweep-run variation; this run does not show which. The cause of the lower hit rate at higher load is still not established.
 - **Limit of this result:** one 2 h run at one seed, at one load. It shows no drift over 2 h, not stability at longer times. It says nothing about loads other than λ = 3.
+
+## 2026-10-30 · SLO fixed: TTFT ≤ 1.0 s, measured from the planned arrival
+- **Value:** a request is fast if its first token arrives within 1.0 s of its planned arrival and it finishes ok. Unfinished requests are misses. Stage 2 configs set `slo.ttft_s: 1.0`; `base.yaml` keeps `null` because runs have already used it.
+- **Why this value:** the plan sets the limit just above healthy latency. In `20261030-181851_long_run`, the measured window has TTFT p99 0.513 s and a maximum of 0.941 s, so percent fast is 100 % in every minute. A limit of 0.5 s would mark healthy requests as misses (98.9 % overall, 89.8 % in the worst minute).
+- **It separates the cases Stage 2 needs:** at λ = 3, percent fast is 100 % with the cache on and 77.5 % with it off (`20261030-161749_sweep_pc_off_r3`). So it would register a server left running without its cache at this load.
+- **Limits:** the margin over the healthy maximum is only about 6 %, so one slow request can miss without the server being unhealthy. Stage 2 verdicts should rely on percent fast over time, not single misses. At λ = 4 with the cache on, percent fast is already 98.1 %. `1.0` was also the notebook's provisional value before this data existed; it was kept because the data supports it, not chosen independently of it. It is fixed before any Stage 2 run exists.
+
+## 2026-10-30 · Load–latency figure generated; notebook excludes invalid runs
+- `analysis/analysis.ipynb` now leaves invalid runs out of the repeat table and the load–latency curves, as `analysis/CLAUDE.md` requires. It previously included them, and the failed start's empty requests crashed it. So the curves have no λ = 8 point with the cache on and no λ = 10 point with it off. From valid runs only, the notebook reproduces μ_warm = 4 and μ_off = 2.
+
+## 2026-10-30 · Noticed in the long run: rare client-lag spikes
+- In `20261030-181851_long_run`, 18 of 21,551 requests were sent more than 20 ms late, in 12 short episodes, the worst 0.232 s. Client-lag p99 is 0.0026 s against the 0.05 s limit, so the run is VALID. The cause is not established. Latency is measured from the planned arrival, so these delays count against the server's numbers instead of being hidden, and a 0.23 s spike is a large part of the SLO margin. Worth watching in Stage 2 if isolated misses appear.

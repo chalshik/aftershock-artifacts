@@ -2,9 +2,9 @@
 
 Living document: update it after every run or decision. Last updated: 2026-10-30.
 
-**Stage 1 is not finished.** The harness is built and the GPU VM works. All 6 run steps are done. μ_warm = 4 req/s, μ_off = 2 req/s, and λ = 3 stayed healthy for 2 h.
+**Every Done-when box is ticked; open question 5 is still open.** All 6 run steps are done. μ_warm = 4 req/s, μ_off = 2 req/s, λ = 3 stayed healthy for 2 h, and the SLO is TTFT ≤ 1.0 s.
 
-**Next action:** fix the SLO from measured healthy latency, generate the load–latency figures from `analysis/`, and answer open question 5.
+**Next action:** answer open question 5. The recorder has no off switch and the checks need its data, so this needs a small harness change and a method registered first.
 
 ## Run steps
 
@@ -25,9 +25,9 @@ GPU time still needed: whatever open question 5 needs.
 
 - [x] Repeated runs agree within a set tolerance (decisions.md, step 3 result)
 - [x] Every run up to the capacity knee passes all checks (decisions.md, steps 4 and 5)
-- [ ] Load–latency curves with prefix caching on and off; μ_warm and μ_off known
+- [x] Load–latency curves with prefix caching on and off; μ_warm and μ_off known (`analysis/analysis.ipynb`, valid runs only)
 - [x] A λ inside the gap stays healthy in a long run (decisions.md, step 6 result)
-- [ ] SLO for later stages fixed from measured healthy latency
+- [x] SLO for later stages fixed from measured healthy latency: TTFT ≤ 1.0 s (decisions.md)
 - [x] Harness can switch on the gateway and a trigger without a rewrite (config switches exist and are off; trigger logic is Stage 2)
 
 ## Decide before the results they judge (pre-registration)
@@ -50,7 +50,7 @@ Answered with evidence: 1–4, 6, 7 (see `open-questions.md`). Still open:
 | Software | vLLM 0.32.0, torch 2.13.0 (CUDA 13.0), Python 3.12.13 (uv-managed) |
 | KV cache | Qwen3-4B: 92,432 tokens · Qwen3-1.7B: 165,792 tokens |
 | Pinning | vLLM cores 0–5, loadgen 6, recorder 7 |
-| Disk | 16 GB free; all runs so far total about 57 MB, so the sweeps fit |
+| Disk | 15 GB free on the VM; all runs total 1.4G |
 | Address | 192.168.3.249 (DHCP, can change on reboot), key `~/.ssh/id_ed25519_vllm` |
 | Sync | Mac `git push vm main` → VM `git pull` in `~/aftershock-artifacts` |
 
