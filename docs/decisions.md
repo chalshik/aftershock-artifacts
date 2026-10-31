@@ -176,3 +176,7 @@ Supersedes the first two "Pending" items above. Written before `first_real` ran;
 - **Decision:** the main wipe uses `reset_running_requests=true`, because waiting for an idle instant cannot work across the danger zone and would also pick only unusually quiet moments.
 - **Deviation:** the plan says the wipe touches no running requests and adds no work. This wipe adds no requests, but every running request starts over and repeats its prefill: about 8 at λ = 3 and 21 at λ = 4 (mean N). So leftover backlog is not ruled out as a cause, as the plan had hoped. **Check to run:** at λ = 3, also wipe at an idle instant without preempting, and compare. If both behave alike, the redone work is not what decides the result.
 - **All Stage 2 cache-wipe runs and their no-trigger controls run in dev mode.** Stage 1 runs did not, so controls are compared within Stage 2 only. From the source, dev mode adds routes and error-stack logging; its effect on speed is not measured beyond that comparison.
+
+## 2026-10-31 · τ run interrupted: the VM was shut down
+- `20261031-025032_tau` started at 02:50 VM time. By about 03:30 the VM no longer answered ping or SSH. The study owner believes it was shut down. The run's state has not been inspected, because the VM is off.
+- **When the VM is back:** look at the run folder and logs before anything else. If the run has no `checks.json`, it stays on record as unfinished and does not count, and `configs/tau.yaml` is rerun unchanged at a new run id. Its folder is not copied over or deleted.

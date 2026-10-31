@@ -4,7 +4,7 @@ Living document: update it after every run or decision. Last updated: 2026-10-30
 
 **Stage 2 has started (2026-10-31), but Stage 1 still owes τ.** Every Done-when box is ticked and Stage 1's open questions are answered, but the plan also lists recovery time τ as an input to Stage 2, and it was never measured. All 6 run steps are done. μ_warm = 4 req/s, μ_off = 2 req/s, λ = 3 stayed healthy for 2 h, and the SLO is TTFT ≤ 1.0 s.
 
-**Next action:** measure τ (`configs/tau.yaml`). Then register the Stage 2 verdict thresholds, build the cache-wipe trigger, and run no-trigger controls before the first wipe.
+**Next action:** when the VM is back on, inspect the interrupted `20261031-025032_tau` (decisions.md), then rerun `configs/tau.yaml`. The address may change on reboot. Then register the Stage 2 verdict thresholds, build the cache-wipe trigger, and run no-trigger controls before the first wipe.
 
 ## Run steps
 
