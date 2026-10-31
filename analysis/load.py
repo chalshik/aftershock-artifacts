@@ -104,6 +104,22 @@ def summarize(run: dict) -> dict:
     }
 
 
+def whole_run_hit_rate(run: dict) -> float:
+    """Hit rate from the first and last scrape, so runs with and without the recorder are measured the same way."""
+    m = run["metrics"]
+    hits, q = m["vllm:prefix_cache_hits_total"], m["vllm:prefix_cache_queries_total"]
+    return float((hits.iloc[-1] - hits.iloc[0]) / (q.iloc[-1] - q.iloc[0]))
+
+
+def client_backlog_slope(run: dict) -> float:
+    """Slope (req/s^2) of requests sent but without a first token, per second of the measured window.
+    Client-side stand-in for the queue slope, for runs with no recorder."""
+    wl, r = run["cfg"]["workload"], run["requests"]
+    grid = np.arange(wl["warmup_s"], wl["duration_s"], 1.0)
+    sent, first = np.sort(r.t_sent.dropna()), np.sort(r.t_first_token.dropna())
+    return float(np.polyfit(grid, np.searchsorted(sent, grid, "right") - np.searchsorted(first, grid, "right"), 1)[0])
+
+
 def capacity(curve: pd.DataFrame, min_throughput_frac: float, max_q_slope: float) -> float:
     """mu = highest rate where the server keeps up: throughput >= frac x rate and the queue is not growing.
     Thresholds must be pre-registered in docs/decisions.md before reading the sweep."""

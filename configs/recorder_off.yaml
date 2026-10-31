@@ -1,0 +1,7 @@
+# Open question 5: the same runs as sweep_pc_on at these rates, with the recorder off. See docs/decisions.md.
+extends: sweep_pc_on.yaml
+name: recorder_off
+sweep:
+  rates: [3, 4, 5]
+recorder:
+  enabled: false   # one scrape before and after the load; no scrapes or GPU samples during it

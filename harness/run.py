@@ -19,6 +19,7 @@ from pathlib import Path
 import yaml
 
 from harness import checks, env_snapshot, workload
+from harness.recorder import scrape
 
 REPO = Path(__file__).resolve().parent.parent
 LOAD_LEAD_S = 3.0  # time between starting loadgen and t0, so the first request is not late
@@ -64,6 +65,16 @@ def server_cmd(cfg: dict) -> list[str]:
 
 def _pin(cores: str | None) -> list[str]:
     return ["taskset", "-c", str(cores)] if cores else []
+
+
+def _scrape_once(run_dir: Path, base: str, t: float):
+    """With the recorder off: one scrape on each side of the load, so accounting still works and the load sees none."""
+    try:
+        rec = {"t": t, "values": scrape(f"{base}/metrics")}
+    except Exception as e:
+        rec = {"t": t, "error": f"{type(e).__name__}: {e}"[:200]}
+    with open(run_dir / "metrics.jsonl", "a") as f:
+        f.write(json.dumps(rec) + "\n")
 
 
 class Events:
@@ -145,9 +156,13 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
 
         t0 = time.monotonic() + LOAD_LEAD_S
         ev.t0 = t0
-        recorder = subprocess.Popen(_pin(cfg["cpus"]["recorder"]) + py +
-                                    ["harness.recorder", str(run_dir), repr(t0)],
-                                    start_new_session=True, env=child_env, cwd=REPO)
+        recording = cfg["recorder"].get("enabled", True)  # configs from before this switch have no key
+        if recording:
+            recorder = subprocess.Popen(_pin(cfg["cpus"]["recorder"]) + py +
+                                        ["harness.recorder", str(run_dir), repr(t0)],
+                                        start_new_session=True, env=child_env, cwd=REPO)
+        else:
+            _scrape_once(run_dir, base, time.monotonic() - t0)
         loadgen = subprocess.Popen(_pin(cfg["cpus"]["loadgen"]) + py +
                                    ["harness.loadgen", str(run_dir), repr(t0)],
                                    start_new_session=True, env=child_env, cwd=REPO)
@@ -163,6 +178,8 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
             time.sleep(0.5)
         ev("load_end", loadgen_returncode=loadgen.poll())
         time.sleep(2 * cfg["recorder"]["interval_s"])  # one more scrape after the last completion
+        if not recording:
+            _scrape_once(run_dir, base, time.monotonic() - t0)
     except KeyboardInterrupt:
         ev("aborted", reason="KeyboardInterrupt")
         aborted = True

@@ -78,6 +78,29 @@ def test_accounting_fails_when_vllm_counts_fewer(tmp_path):
     assert "accounting" in failed(with_cut_off(make_run(tmp_path, success_delta=89), 10, 1))
 
 
+def recorder_off(d):
+    cfg = yaml.safe_load((d / "config.yaml").read_text())
+    cfg["recorder"]["enabled"] = False
+    cfg["server"]["kind"] = "vllm"
+    (d / "config.yaml").write_text(yaml.safe_dump(cfg))
+    return d
+
+
+def test_recorder_off_allows_scrape_gap_and_no_gpu_samples(tmp_path):
+    assert failed(recorder_off(make_run(tmp_path, gap=3.0))) == []
+
+
+def test_recorder_off_still_fails_a_failed_scrape(tmp_path):
+    d = recorder_off(make_run(tmp_path, gap=3.0))
+    with open(d / "metrics.jsonl", "a") as f:
+        f.write(json.dumps({"t": 1000, "error": "URLError"}) + "\n")
+    assert "recorder" in failed(d)
+
+
+def test_recorder_off_still_checks_accounting(tmp_path):
+    assert "accounting" in failed(recorder_off(make_run(tmp_path, success_delta=90)))
+
+
 def test_scrape_gap(tmp_path):
     assert "recorder" in failed(make_run(tmp_path, gap=3.0))
 

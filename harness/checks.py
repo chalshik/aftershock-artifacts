@@ -28,6 +28,7 @@ def run_checks(run_dir: Path) -> dict:
     cfg = yaml.safe_load((run_dir / "config.yaml").read_text())
     env = json.loads((run_dir / "env.json").read_text())
     c, wl = cfg["checks"], cfg["workload"]
+    recording = cfg["recorder"].get("enabled", True)  # configs from before this switch have no key
     sched = pd.read_parquet(run_dir / "schedule.parquet")
     reqs = pd.DataFrame(_jsonl(run_dir / "requests.jsonl"))
     scrapes = _jsonl(run_dir / "metrics.jsonl")
@@ -58,7 +59,7 @@ def run_checks(run_dir: Path) -> dict:
                      {"scheduled": len(sched), "recorded": len(reqs), "ok": n_ok, "vllm_success_delta": succ,
                       "cut_off_with_first_token": cut_off}))
 
-    # 4. Counters never go down; no long scrape gaps or failed scrapes.
+    # 4. Counters never go down; no long scrape gaps (recorder on) or failed scrapes.
     decreases = []
     for a, b in zip(ok_scrapes, ok_scrapes[1:]):
         for k, v in b["values"].items():
@@ -67,12 +68,15 @@ def run_checks(run_dir: Path) -> dict:
     ts = [s["t"] for s in scrapes]
     max_gap = float(np.max(np.diff(ts))) if len(ts) >= 2 else math.inf
     n_fail = len(scrapes) - len(ok_scrapes)
-    out.append(check("recorder", not decreases and max_gap <= c["max_scrape_gap_s"] and n_fail == 0,
+    gap_ok = max_gap <= c["max_scrape_gap_s"] or not recording
+    out.append(check("recorder", not decreases and gap_ok and n_fail == 0,
                      {"counter_decreases": decreases[:10], "max_gap_s": max_gap, "failed_scrapes": n_fail}))
 
     # 5. GPU: SM clock steady and no thermal throttling during the measured window.
     if cfg["server"]["kind"] == "fake":
         out.append(check("gpu_steady", None, "skipped: fake server"))
+    elif not recording:
+        out.append(check("gpu_steady", None, "skipped: recorder off, no GPU samples"))
     elif gpu.empty:
         out.append(check("gpu_steady", False, "no gpu.jsonl data"))
     else:
