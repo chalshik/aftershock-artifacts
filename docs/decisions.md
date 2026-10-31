@@ -140,3 +140,20 @@ Supersedes the first two "Pending" items above. Written before `first_real` ran;
   - λ = 5: throughput ±2 %, hit rate ±0.02. TTFT is only reported, because it is overloaded and follows the backlog.
 - **μ_warm stays 4 if:** λ = 4 keeps up and λ = 5 does not, where keeping up means throughput ≥ 0.95 λ and client backlog slope ≤ 0.01 req/s². Backlog is requests sent without a first token, a client-side stand-in for the queue, which these runs cannot record. Checked on existing data only: it gave the same keep-up verdict as the queue slope on all 14 valid sweep runs.
 - **Limits of the method:** the step 3 limits came from λ = 2, so noise at λ = 3–5 has not been measured. Each side is one run, and the baselines ran hours earlier, so GPU temperature at the start may differ. If a difference exceeds a limit, it is reported as exceeding, and a with-recorder repeat at that λ is what would tell an effect from noise. Limits are not widened. μ_off is not retested; any recorder effect on it is inferred only.
+
+## 2026-10-31 · Open question 5 result: no recorder effect beyond the registered limits
+- **Evidence:** `20261031-013840_recorder_off_r3`, `20261031-015442_recorder_off_r4` and `20261031-021045_recorder_off_r5` against the registered baselines. All three are VALID under the reduced checks. All limits hold. Recorder-off minus baseline:
+
+| λ | Throughput (±2 %) | TTFT p50 (±10 %) | TTFT p99 (±25 %) | Hit rate (±0.02) |
+|---|---|---|---|---|
+| 3 | 0.00 % | −2.9 % | −0.3 % | 0.000 |
+| 4 | 0.00 % | −1.0 % | −6.3 % | −0.000 |
+| 5 | +0.64 % | +2.3 % (reported only) | −5.5 % (reported only) | +0.001 |
+
+- **μ_warm stays 4:** with the recorder off, λ = 4 keeps up and λ = 5 does not. At λ = 5, throughput clears 0.95 λ by a hair (4.753 against 4.75, whereas the baseline's 4.723 did not), so only the backlog slope rejects it (0.404 against the 0.01 limit). The queue is clearly growing, so this is not a close call.
+- **What this does not show:** it does not show zero effect. It shows no effect larger than these limits, from one run on each side, and most latency differences lean slightly faster without the recorder, which one pair cannot confirm or dismiss. GPU throttling was not observable in these runs. μ_off was not retested; that the recorder acts the same way with caching off is an inference.
+- **Client-lag spikes are not caused by the recorder alone:** the largest send lag with the recorder off is 0.156 s at λ = 5 and 0.050 s at λ = 4, so spikes occur without it. The cause is still not established. The client-lag check passed in all three runs.
+- **Decision:** the recorder stays on as configured for later stages. No cache-off check is run, as there is no effect here that would call for one.
+
+## 2026-10-31 · Stage 1 finished
+- Every Done-when box is ticked and all open questions have answers. Carried forward as known limits: μ_off rests on a narrow fail at λ = 3; the recorder was tested with caching on only; the λ = 3 health result is one 2 h run; the SLO has a thin margin over healthy latency; and the causes of client-lag spikes and of the lower hit rate at higher load are not established.

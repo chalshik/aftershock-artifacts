@@ -2,9 +2,9 @@
 
 Living document: update it after every run or decision. Last updated: 2026-10-30.
 
-**Every Done-when box is ticked; open question 5 is still open.** All 6 run steps are done. μ_warm = 4 req/s, μ_off = 2 req/s, λ = 3 stayed healthy for 2 h, and the SLO is TTFT ≤ 1.0 s.
+**Stage 1 is finished.** Every Done-when box is ticked and all open questions are answered. All 6 run steps are done. μ_warm = 4 req/s, μ_off = 2 req/s, λ = 3 stayed healthy for 2 h, and the SLO is TTFT ≤ 1.0 s.
 
-**Next action:** answer open question 5. The recorder has no off switch and the checks need its data, so this needs a small harness change and a method registered first.
+**Next action:** none in Stage 1. Stage 2 stays out of scope until the study owner starts it.
 
 ## Run steps
 
@@ -19,7 +19,7 @@ Living document: update it after every run or decision. Last updated: 2026-10-30
 
 Invalid runs kept on record: `20261023-145613_smoke` (`gpu_steady`, before the check was refined; see decisions.md). Failed start, no load sent: `20261030-114021_first_real` (see decisions.md).
 
-GPU time still needed: whatever open question 5 needs.
+GPU time still needed: none for Stage 1.
 
 ## Done when (from the plan)
 
@@ -38,8 +38,7 @@ GPU time still needed: whatever open question 5 needs.
 
 ## Open questions
 
-Answered with evidence: 1–4, 6, 7 (see `open-questions.md`). Still open:
-- **5:** does the recorder slow the server? Needs runs with and without it.
+Answered with evidence: all 7 (see `open-questions.md`). Question 5, the recorder, was tested with prefix caching on only.
 
 ## Environment
 
