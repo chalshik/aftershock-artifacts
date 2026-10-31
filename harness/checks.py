@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from harness.workload import expected_requests
+
 # NVML clock-throttle bits. A software power cap (0x4) is normal boost behaviour and is ignored.
 HW_THROTTLE_MASK = 0x8 | 0x40 | 0x80  # HW slowdown, HW thermal, HW power brake: any sample fails the run
 SW_THERMAL_BIT = 0x20                 # SW thermal slowdown: GeForce sets it briefly during boost; fail only if sustained
@@ -94,7 +96,7 @@ def run_checks(run_dir: Path) -> dict:
     # 6. Measured arrival rate matches lambda (Poisson-aware tolerance).
     t_lo, t_hi = wl["warmup_s"], wl["duration_s"]
     n = int(((sent.t_sent >= t_lo) & (sent.t_sent < t_hi)).sum()) if len(sent) else 0
-    expected = wl["rate"] * (t_hi - t_lo)
+    expected = expected_requests(wl, t_lo, t_hi)
     tol = max(c["rate_rel_tolerance"] * expected, 3 * math.sqrt(expected))
     out.append(check("arrival_rate", abs(n - expected) <= tol,
                      {"measured": n / (t_hi - t_lo), "configured": wl["rate"], "count": n, "expected": expected}))

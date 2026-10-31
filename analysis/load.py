@@ -120,6 +120,26 @@ def client_backlog_slope(run: dict) -> float:
     return float(np.polyfit(grid, np.searchsorted(sent, grid, "right") - np.searchsorted(first, grid, "right"), 1)[0])
 
 
+def settling_time(run: dict, t_step: float, t_end: float) -> float | None:
+    """Seconds from a load step until hit rate and TTFT p50, over a sliding span, are inside the band around their
+    settled level (the end of the segment). None if never. Settings are in the run's config under `tau`."""
+    c, m, r = run["cfg"]["tau"], run["metrics"], run["requests"]
+    hits, q = m["vllm:prefix_cache_hits_total"], m["vllm:prefix_cache_queries_total"]
+
+    def level(a, b):
+        dq = np.interp(b, m.t, q) - np.interp(a, m.t, q)
+        p50 = r[(r.t_planned >= a) & (r.t_planned < b)].ttft.median()
+        return (np.interp(b, m.t, hits) - np.interp(a, m.t, hits)) / dq, p50
+
+    hit0, p0 = level(t_end - c["settled_s"], t_end)
+    span = c["bin_s"] * c["n_bins"]
+    for t in np.arange(t_step, t_end - c["settled_s"], c["bin_s"]):
+        hit, p50 = level(t, t + span)
+        if abs(hit - hit0) <= c["hit_band"] and abs(p50 - p0) <= c["ttft_p50_band_s"]:
+            return float(t - t_step)
+    return None
+
+
 def capacity(curve: pd.DataFrame, min_throughput_frac: float, max_q_slope: float) -> float:
     """mu = highest rate where the server keeps up: throughput >= frac x rate and the queue is not growing.
     Thresholds must be pre-registered in docs/decisions.md before reading the sweep."""

@@ -6,4 +6,4 @@
 - **Prompts are token IDs**, never text. The output length is fixed (`min_tokens = max_tokens`, `ignore_eos`).
 - **Config only:** every number comes from the resolved config dict. Add new knobs to `configs/base.yaml` with their defaults.
 - **Append-only files:** one JSON line per record, flushed right away, so a crash keeps everything up to that point.
-- Stage 2 hooks (`trigger`, `gateway`) stay inert. Do not add trigger logic in Stage 1.
+- `gateway` stays inert. Triggers are built one at a time, in the plan's order.

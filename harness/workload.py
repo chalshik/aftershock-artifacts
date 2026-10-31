@@ -34,9 +34,25 @@ def _poisson_times(rng, rate: float, duration: float) -> np.ndarray:
     return np.sort(rng.uniform(0.0, duration, n))
 
 
+def segments(wl: dict) -> list[tuple[float, float, float]]:
+    """(start, end, rate) for each stretch of constant load. `workload.steps` is optional: older configs have none."""
+    steps = wl.get("steps") or []
+    starts = [0.0] + [float(s["at_s"]) for s in steps]
+    ends = starts[1:] + [float(wl["duration_s"])]
+    return list(zip(starts, ends, [wl["rate"]] + [s["rate"] for s in steps]))
+
+
+def expected_requests(wl: dict, lo: float, hi: float) -> float:
+    return sum(r * max(0.0, min(hi, b) - max(lo, a)) for a, b, r in segments(wl))
+
+
+def _arrival_times(rng, wl: dict, per_rate: float = 1.0) -> np.ndarray:
+    return np.concatenate([a + _poisson_times(rng, r * per_rate, b - a) for a, b, r in segments(wl)])
+
+
 def _random(wl, rng, lo, hi):
     n = wl["random"]["prompt_tokens"]
-    times = _poisson_times(rng, wl["rate"], wl["duration_s"])
+    times = _arrival_times(rng, wl)
     rows = [dict(t_planned=float(t), session_id=i, turn=0, prompt_len=n) for i, t in enumerate(times)]
     return rows, [rng.integers(lo, hi, n) for _ in times]
 
@@ -54,7 +70,7 @@ def _sessions(wl, rng, lo, hi):
     turns = s["turns"]
     rows, contexts = [], []
     # Sessions start at rate lambda/turns, so the steady-state request rate is lambda.
-    for sid, t0 in enumerate(_poisson_times(rng, wl["rate"] / turns, wl["duration_s"])):
+    for sid, t0 in enumerate(_arrival_times(rng, wl, 1 / turns)):
         parts = [rng.integers(lo, hi, s["system_tokens"])]
         t = float(t0)
         for turn in range(turns):

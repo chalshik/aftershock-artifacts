@@ -157,3 +157,22 @@ Supersedes the first two "Pending" items above. Written before `first_real` ran;
 
 ## 2026-10-31 · Stage 1 finished
 - Every Done-when box is ticked and all open questions have answers. Carried forward as known limits: μ_off rests on a narrow fail at λ = 3; the recorder was tested with caching on only; the λ = 3 health result is one 2 h run; the SLO has a thin margin over healthy latency; and the causes of client-lag spikes and of the lower hit rate at higher load are not established.
+
+## 2026-10-31 · Stage 2 started; correction: Stage 1 did not deliver τ
+- **Scope:** the study owner started Stage 2. `CLAUDE.md` and `harness/CLAUDE.md` are updated to match.
+- **Correction:** the "Stage 1 finished" entry above is wrong on one point. The plan lists recovery time τ under "Inputs from Stage 1", and it was never measured. It is not in the Done-when list, which is how it was missed. It sets how long to watch after a trigger, so it is measured before the verdict thresholds are fixed.
+
+## 2026-10-31 · τ: method, before the run
+- **Run:** `configs/tau.yaml`, cache on, no wipe, no dev mode. λ = 2 to t = 900 s, λ = 3 to t = 2100 s, λ = 2 to t = 3300 s. Both rates are at or below the point where λ = 3 was shown healthy for 2 h. The harness gains `workload.steps`; a config without it draws the same random numbers as before, and a test checks this.
+- **Settled level:** hit rate and TTFT p50 over the last 480 s of the segment.
+- **τ for one step:** time from the step until a sliding 180 s span, moved 60 s at a time, has hit rate within ±0.03 and TTFT p50 within ±0.02 s of the settled level. **τ is the larger of the up-step and down-step values.**
+- **Why these bands:** they come from healthy data and not from this run. In `20261030-181851_long_run`, 60 s hit rate has SD 0.045 and TTFT p50 SD 0.019 s, which is about 0.026 and 0.011 s over 180 s. The expected size of the step is about 0.14 and 0.03 s, so TTFT p50 only weakly separates the levels and the result is coarse.
+- **Expected floor:** session arrivals change at the step, but the request rate takes about one session's length (7 turn gaps × 20 s = 140 s) to follow, so τ includes that lag.
+- **If a step never settles by this rule,** τ is reported as "more than" the time tested, and the bands are not changed afterwards.
+- **Use:** watch window = max(1200 s, 5 τ), so K = 5. The 1200 s floor is at least 8 session lengths, so a slow drain has time to show.
+
+## 2026-10-31 · Cache wipe differs from the plan: it has to preempt running requests
+- **Evidence:** the source answer in `docs/open-questions.md` (S1, S2), plus idle time from recorded runs. Windows with nothing running: λ = 2, 4.4 per minute; λ = 3, 0.8 per minute, with up to 485 s between usable ones (`20261030-181851_long_run`); **λ = 4, none in the whole window** (`20261030-140051_sweep_pc_on_r4`).
+- **Decision:** the main wipe uses `reset_running_requests=true`, because waiting for an idle instant cannot work across the danger zone and would also pick only unusually quiet moments.
+- **Deviation:** the plan says the wipe touches no running requests and adds no work. This wipe adds no requests, but every running request starts over and repeats its prefill: about 8 at λ = 3 and 21 at λ = 4 (mean N). So leftover backlog is not ruled out as a cause, as the plan had hoped. **Check to run:** at λ = 3, also wipe at an idle instant without preempting, and compare. If both behave alike, the redone work is not what decides the result.
+- **All Stage 2 cache-wipe runs and their no-trigger controls run in dev mode.** Stage 1 runs did not, so controls are compared within Stage 2 only. From the source, dev mode adds routes and error-stack logging; its effect on speed is not measured beyond that comparison.

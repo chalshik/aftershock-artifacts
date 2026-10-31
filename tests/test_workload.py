@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from harness.run import load_config
-from harness.workload import build_schedule, prompt_tokens, summary
+from harness.workload import build_schedule, expected_requests, prompt_tokens, segments, summary
 
 CONFIGS = Path(__file__).resolve().parent.parent / "configs"
 
@@ -55,3 +55,25 @@ def test_random_workload():
     assert (sched.prompt_len == w["random"]["prompt_tokens"]).all()
     assert sched.session_id.is_unique
     assert summary(sched)["requests"] == len(sched)
+
+
+def test_load_steps_change_the_rate_at_the_step():
+    w = wl(rate=1.0, duration_s=6000, warmup_s=0, steps=[{"at_s": 2000, "rate": 4.0}, {"at_s": 4000, "rate": 1.0}])
+    sched, _ = build_schedule(w, seed=0)
+    middle = sched[(sched.t_planned >= 2500) & (sched.t_planned < 3500)]  # past the sessions' ramp
+    last = sched[(sched.t_planned >= 4500) & (sched.t_planned < 5500)]
+    assert 3.6 < len(middle) / 1000 < 4.4
+    assert 0.8 < len(last) / 1000 < 1.2
+    assert segments(w) == [(0.0, 2000.0, 1.0), (2000.0, 4000.0, 4.0), (4000.0, 6000.0, 1.0)]
+    assert expected_requests(w, 1000, 3000) == 1000 + 4000
+
+
+def test_no_steps_keeps_the_same_schedule_as_before():
+    """Same random draws as the code the Stage 1 runs used, so an old config still gives its old schedule."""
+    import numpy as np
+    w = wl()
+    sched, _ = build_schedule(w, seed=0)
+    rng = np.random.default_rng(0)
+    n = rng.poisson(w["rate"] / w["sessions"]["turns"] * w["duration_s"])
+    first = np.sort(rng.uniform(0.0, w["duration_s"], n))[0]
+    assert sched.t_planned.iloc[0] == first

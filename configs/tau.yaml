@@ -1,0 +1,15 @@
+# Recovery time: a normal load change with nothing wiped. See docs/decisions.md.
+extends: base.yaml
+name: tau
+workload:
+  rate: 2.0
+  duration_s: 3300
+  steps:
+    - {at_s: 900, rate: 3.0}
+    - {at_s: 2100, rate: 2.0}
+tau:
+  bin_s: 60
+  n_bins: 3            # judged over a sliding 180 s
+  settled_s: 480       # the settled level is the last 480 s of each 1200 s segment
+  hit_band: 0.03
+  ttft_p50_band_s: 0.02

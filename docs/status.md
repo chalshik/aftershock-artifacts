@@ -1,10 +1,10 @@
-# Stage 1 status
+# Study status
 
 Living document: update it after every run or decision. Last updated: 2026-10-30.
 
-**Stage 1 is finished.** Every Done-when box is ticked and all open questions are answered. All 6 run steps are done. μ_warm = 4 req/s, μ_off = 2 req/s, λ = 3 stayed healthy for 2 h, and the SLO is TTFT ≤ 1.0 s.
+**Stage 2 has started (2026-10-31), but Stage 1 still owes τ.** Every Done-when box is ticked and Stage 1's open questions are answered, but the plan also lists recovery time τ as an input to Stage 2, and it was never measured. All 6 run steps are done. μ_warm = 4 req/s, μ_off = 2 req/s, λ = 3 stayed healthy for 2 h, and the SLO is TTFT ≤ 1.0 s.
 
-**Next action:** none in Stage 1. Stage 2 stays out of scope until the study owner starts it.
+**Next action:** measure τ (`configs/tau.yaml`). Then register the Stage 2 verdict thresholds, build the cache-wipe trigger, and run no-trigger controls before the first wipe.
 
 ## Run steps
 
@@ -19,7 +19,7 @@ Living document: update it after every run or decision. Last updated: 2026-10-30
 
 Invalid runs kept on record: `20261023-145613_smoke` (`gpu_steady`, before the check was refined; see decisions.md). Failed start, no load sent: `20261030-114021_first_real` (see decisions.md).
 
-GPU time still needed: none for Stage 1.
+GPU time still needed: about 1 h for τ, then Stage 2.
 
 ## Done when (from the plan)
 
