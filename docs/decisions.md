@@ -226,3 +226,8 @@ Supersedes the first two "Pending" items above. Written before `first_real` ran;
 - **Hit rate around the wipe:** 0.774 before; 0.229 in the first 15 s; 0.681 at 15–60 s; 0.752 at 60–120 s (`preempt`). `idle` was similar: 0.773, 0.249, 0.634, 0.745. TTFT p50 rose from 0.087 s to 0.229 s (`preempt`) and 0.147 s (`idle`) for 15 s, then returned. This is a mechanics check at a load expected to recover, with one seed and no verdict.
 - **Answers the source-only claims logged earlier:** the endpoint and both modes behave as read from the source on a live server.
 - **Next:** no-trigger controls, `configs/stage2_control.yaml`. Wipe configs are added once the controls are read.
+
+## 2026-11-01 · Control sweep stopped by the study owner
+- **Stopped on request at 15:35 UTC,** about t = 1047 s of the first run, by sending the interrupt to the harness process. No control had finished.
+- `20261101-151707_stage2_control_r1.5` is INVALID (`accounting`, `arrival_rate`, because it was cut short: 1562 of 3494 requests). It stays on record and does not count. Nothing failed before the stop: all 1562 recorded requests were `ok`.
+- **To continue:** rerun `configs/stage2_control.yaml` unchanged at new run ids. All five loads are still owed, so no new config is needed.
