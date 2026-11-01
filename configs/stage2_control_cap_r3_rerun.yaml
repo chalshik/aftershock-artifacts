@@ -1,0 +1,6 @@
+# Rerun of the lambda = 3 control, same settings and seed; the first failed gpu_steady. See docs/decisions.md.
+extends: stage2_cap_base.yaml
+name: stage2_control_cap_r3_rerun
+seed: 1
+workload:
+  rate: 3.0
