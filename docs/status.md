@@ -4,7 +4,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-01
 
 **Stage 2 has started (2026-10-31), and Stage 1's inputs are all in.** τ = 300 s from `20261101-131823_tau` (VALID), so the watch window is 1500 s; see decisions.md for the limits of that number. All 6 run steps are done. μ_warm = 4 req/s, μ_off = 2 req/s, λ = 3 stayed healthy for 2 h, and the SLO is TTFT ≤ 1.0 s.
 
-**Next action:** rerun the no-trigger controls unchanged (`configs/stage2_control.yaml`, five loads, about 3.5 h); the first attempt was stopped on request with none finished, see decisions.md. When they end, read them with `verdict` in `analysis/load.py`, then add the wipe configs and run the matrix. Verdict rule and matrix are registered, and the live wipe test passed (decisions.md). The interrupted `20261031-025032_tau` does not count (decisions.md).
+**Next action:** the VM was unreachable at last check (2026-11-01); bring it back and read its logs. Then run the no-trigger controls (`configs/stage2_control_cap.yaml`, five loads, about 3.5 h). This replaces `stage2_control.yaml`, whose only attempt was stopped with none finished; see decisions.md. When they end, read them with `verdict` in `analysis/load.py`, then add the wipe configs and run the matrix. Verdict rule and matrix are registered, and the live wipe test passed (decisions.md). The interrupted `20261031-025032_tau` does not count (decisions.md).
 
 ## Run steps
 
@@ -47,7 +47,7 @@ Answered with evidence: all 7 (see `open-questions.md`). Question 5, the recorde
 | VM | Ubuntu 24.04, 8 cores, 31 GB RAM, Proxmox |
 | GPU | RTX 3090, 24 GB, driver 595.99.02, power limit 420 W |
 | Software | vLLM 0.32.0, torch 2.13.0 (CUDA 13.0), Python 3.12.13 (uv-managed) |
-| KV cache | Qwen3-4B: 92,432 tokens · Qwen3-1.7B: 165,792 tokens |
+| KV cache | Qwen3-4B: 96,656 tokens in load runs, 92,432 in the probe (see decisions.md) · Qwen3-1.7B: 165,792 tokens |
 | Pinning | vLLM cores 0–5, loadgen 6, recorder 7 |
 | Disk | 15 GB free on the VM; all runs total 1.4G |
 | Address | 192.168.3.249 (DHCP, can change on reboot), key `~/.ssh/id_ed25519_vllm` |

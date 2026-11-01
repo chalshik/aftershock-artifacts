@@ -1,0 +1,6 @@
+# stage2_base.yaml with the sequence cap stated, so every run records it. 256 is the v0.32.0 default here. See docs/decisions.md.
+extends: stage2_base.yaml
+name: stage2_cap_base
+server:
+  args:
+    --max-num-seqs: 256
