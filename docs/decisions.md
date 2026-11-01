@@ -218,3 +218,11 @@ Supersedes the first two "Pending" items above. Written before `first_real` ran;
 - **Matrix, cache wipe with `preempt`:** λ = 1.5 (below μ_off, sanity check), 2.5, 3, 3.5, 4. Seeds 1, 2, 3 each, reported as "stuck in k of n". If a load's seeds disagree, add seeds 4 and 5. One no-trigger control per load at seed 1, same schedule as the wiped seed 1 run. The `--seed` passed to vLLM stays 0; only the workload seed changes.
 - **`idle` comparison, λ = 3, seeds 1–3:** retry every 0.05 s, for up to 600 s, duration 3000 s so the full watch always fits. The retries themselves are load on the engine; their count is in `trigger.jsonl`.
 - **Order:** live test at λ = 2 (`wipe_test_preempt`, `wipe_test_idle`; mechanics only, no verdict), then controls, then wipes. A failed mechanics item stops the matrix. About 42 min per run; about 15 h for the matrix without extra seeds.
+
+## 2026-11-01 · Live wipe test at λ = 2: every mechanics item passed
+- **Runs:** `20261101-144335_wipe_test_preempt`, `20261101-145940_wipe_test_idle`, both VALID, commit `4509afe`, 1661 of 1661 requests ok, all with 128 output tokens. No counter decreases, so the reset does not touch the Prometheus counters we use.
+- **`preempt`:** one call, `success: true`, 14 ms. `vllm:num_preemptions_total` went 0 → 2, matching the 2 requests in flight. Both finished with 128 tokens in about 2.7 s against a usual 1.9 s.
+- **`idle`:** 178 attempts over 11.5 s (about 15 per second), 177 `success: false`, then `success: true`, with no preemptions and none in flight. At λ = 3 the wait can be far longer, so this retry load is untested there.
+- **Hit rate around the wipe:** 0.774 before; 0.229 in the first 15 s; 0.681 at 15–60 s; 0.752 at 60–120 s (`preempt`). `idle` was similar: 0.773, 0.249, 0.634, 0.745. TTFT p50 rose from 0.087 s to 0.229 s (`preempt`) and 0.147 s (`idle`) for 15 s, then returned. This is a mechanics check at a load expected to recover, with one seed and no verdict.
+- **Answers the source-only claims logged earlier:** the endpoint and both modes behave as read from the source on a live server.
+- **Next:** no-trigger controls, `configs/stage2_control.yaml`. Wipe configs are added once the controls are read.

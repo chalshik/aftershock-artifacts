@@ -1,0 +1,6 @@
+# No-trigger controls for the cache-wipe matrix: same schedule as the wiped seed 1 runs, no shock. See docs/decisions.md.
+extends: stage2_base.yaml
+name: stage2_control
+seed: 1
+sweep:
+  rates: [1.5, 2.5, 3, 3.5, 4]
