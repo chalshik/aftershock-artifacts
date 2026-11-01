@@ -259,3 +259,37 @@ Supersedes the first two "Pending" items above. Written before `first_real` ran;
 - **Model limits:** the warm test is too strict, or wrong at λ = 4: that run was healthy for 900 s (percent fast 0.981, hit 0.525 against a ceiling of about 0.80). Even at λ = 3 the hit rate (0.661) is below the ceiling, though the model says everything fits, so prefixes are lost earlier than it implies. F and W overlap, because running requests hold part of their own prefix. Caching-off runs only approximate a cold cache, and they were still changing at 900 s. Means hide spikes.
 - **Risk to the verdict rule:** `sweep_pc_on_r4` had percent fast 0.981 and a lowest 300 s of 0.959, so λ = 4 could come out `bad_baseline` under the 0.98 limit. The limit is not changed. If that happens, it's reported as such, and λ = 4 can't count as a healthy starting point.
 - **KV gap, 92,432 vs 96,656:** the logs account for it. Available KV memory was 12.69 GiB against 13.27 GiB, and vLLM's measured peak activation was 1.17 GiB against 0.58 GiB, the same 0.58 GiB difference. Versions and utilization (0.92) match, and the non-default args differ only in `host` and `port`. Why peak activation differed is not known. Each run's own logged value is used.
+
+## 2026-11-01 · "Stuck" redefined before any verdict was computed
+No Stage 2 verdict has been computed under the first rule, and the only wipes so far are the two λ = 2 mechanics tests. This replaces the verdict section of the 2026-11-01 entry above. The plan's key word says "stuck" is percent fast staying low, and that is not enough, for the reasons below.
+
+**Problems found**
+- **A recovering server could be called stuck.** Under the first rule, a hit rate climbing alone, with a flat or growing line, fell through to `stuck`.
+- **A hopeless queue could be called draining.** Slope −0.01 req/s² counted as draining; at 500 waiting that is about 14 h to empty.
+- **The climb limit was inside noise.** On the healthy long run (`20261030-181851_long_run`), 34 % of adjacent 300 s windows rose by ≥ 0.02, and the p95 change was 0.076. For adjacent 600 s windows, the p95 change was 0.059.
+- **Percent fast can't tell stuck from backlog.** It is counted by arrival with no timeouts, so it stays low until the line clears, even after the server has regained capacity. It shows the symptom, not the cause. Hit rate and the line's trend have to separate them.
+
+**New run verdict** (`analysis/load.py`, `configs/stage2_cap_base.yaml`), judged on the last 600 s (`end`) against the 600 s before them (`previous`) and the baseline:
+1. **bad_baseline:** baseline percent fast < 0.98.
+2. **recovered:** percent fast ≥ baseline − 0.02, hit rate ≥ baseline − 0.06, mean waiting ≤ baseline + 1.
+3. **slow_drain:** any one sign of recovery: hit rate up ≥ 0.06, or percent fast up ≥ 0.05, or the line shrinking fast enough to empty within 3600 s. These can be set off by noise, which only makes a `stuck` verdict harder to reach. That is the intended direction of error.
+4. **stuck:** percent fast ≤ baseline − 0.10 and hit rate ≤ baseline − 0.06, with no sign of recovery.
+5. **unclear:** anything else.
+
+The hit-rate noise was measured at λ = 3 only; it may differ at other loads.
+
+**A `stuck` verdict is not yet a metastable failure.** All of these must hold at one load, and the write-up must not use the term otherwise:
+1. **Trigger over, same load:** by construction of the run.
+2. **Control:** the no-trigger control at that λ is `recovered`.
+3. **Repeats:** `stuck` in most seeds.
+4. **Memory-limited loop, not just a queue:** at `end`, mean KV ≥ 0.80 (from `20261030-141658_sweep_pc_on_r5`, mean 0.82), mean N ≥ 2 × baseline, N below the cap of 256, and the traces follow the plan's order. A long queue with KV below this is a backlog state, not this loop, even if percent fast is low.
+5. **Persistence:** a confirmation run with a 4500 s watch (3 × 1500 s) is also `stuck` by the same rule.
+6. **Two states at one load:** in that same run, after the watch, λ drops to 1 req/s for 1800 s, then returns to the original λ for 1500 s. The last 600 s must be `recovered` against the original baseline, and the line must have reached 0 during the drop; if it did not, this item is inconclusive, not passed. A server that stays bad here has not shown two states; it may simply be broken or overloaded. About 2.4 h per run: wipe at 900 s, drop at 5400 s, back at 7200 s, end at 8700 s.
+
+Items 5 and 6 cost GPU time only for loads that reach `stuck`. Their configs get written then, using these values.
+
+**Limits that stay, to be reported with any result**
+- **Open-loop turns.** Turns are sent on schedule even if the previous turn hasn't finished, while a real user waits for a reply. A slow server's real users would therefore send less, which could weaken or remove the loop. Sent before the previous turn's first token: 1.3 % at λ = 3, 1.5 % at λ = 4, 43 % at λ = 5 (caching on), and 62 % at λ = 4 (caching off). So any metastable result is only shown for this open-loop arrival pattern. CLAUDE.md rule 2 fixes this choice, so it is not changed here.
+- **Where hits come from under pressure.** Mean cached share of the prompt, all later turns vs only those starting after the previous turn had finished: λ = 3, 0.667 vs 0.647; λ = 5, 0.438 vs 0.143; λ = 10, 0.240 vs 0.030. Under pressure, a finished turn's prefix is rarely still there, which fits the plan's eviction link, and most remaining hits depend on the previous turn still running. These come from overload, not from a wipe. The same split is reported for any stuck run.
+- **A finite watch can't prove forever.** Persistence and two states are the strongest evidence these runs give.
+- **Caching-off control needs rework for the burst stage.** At λ = 3, a caching-off server is already failing (percent fast 0.775, per the entry above), so it can't "get stuck" from a healthy start. The plan's done criterion needs a defined form before trigger 2. It does not block the cache-wipe matrix.

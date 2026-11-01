@@ -54,9 +54,9 @@ def test_settling_time_none_when_it_never_settles_before_the_settled_span():
     assert settling_time(tau_run(never_settles=True), 100, 400) is None
 
 
-VERDICT = {"control_t_s": 900, "baseline_s": 600, "watch_s": 1500, "end_s": 300, "min_baseline_pf": 0.98,
+VERDICT = {"control_t_s": 900, "baseline_s": 600, "watch_s": 1500, "end_s": 600, "min_baseline_pf": 0.98,
            "recovered_pf_drop": 0.02, "recovered_hit_drop": 0.06, "recovered_q_excess": 1.0,
-           "stuck_pf_drop": 0.10, "stuck_hit_drop": 0.06, "q_slope": 0.01, "climb": 0.02}
+           "stuck_pf_drop": 0.10, "stuck_hit_drop": 0.06, "hit_climb": 0.06, "pf_climb": 0.05, "drain_horizon_s": 3600}
 
 
 def wipe_run(after, base_pf=1.0, wiped=True):
@@ -67,7 +67,8 @@ def wipe_run(after, base_pf=1.0, wiped=True):
     for a in t[1:]:
         q.append(q[-1] + 100.0); hits.append(hits[-1] + 100.0 * level(a - 1)[1])
     m = pd.DataFrame({"t": t, "vllm:prefix_cache_hits_total": hits, "vllm:prefix_cache_queries_total": q,
-                      "vllm:num_requests_waiting": [level(a)[2] for a in t]})
+                      "vllm:num_requests_waiting": [level(a)[2] for a in t],
+                      "vllm:num_requests_running": 8.0, "vllm:kv_cache_usage_perc": 0.2})
     r = pd.DataFrame({"t_planned": t, "status": "ok", "ttft": [0.1 if (i % 100) < level(a)[0] * 100 else 5.0 for i, a in enumerate(t)]})
     trig = pd.DataFrame({"success": [True], "t_end": [900.0]}) if wiped else pd.DataFrame()
     return {"cfg": {"verdict": VERDICT, "slo": {"ttft_s": 1.0}}, "metrics": m, "requests": r, "trigger": trig}
@@ -80,6 +81,12 @@ def wipe_run(after, base_pf=1.0, wiped=True):
     (lambda x: (0.3, 0.1, 50.0 + x / 10), "stuck"),                             # low with a growing line
     (lambda x: (0.3, 0.2, 500.0 - x / 5), "slow_drain"),                        # the line is shrinking
     (lambda x: (0.2 + x / 3000, 0.1 + x / 5000, 50.0), "slow_drain"),           # percent fast and hit rate both climbing
+    (lambda x: (0.3, 0.1 + x / 5000, 50.0), "slow_drain"),                      # only the hit rate is climbing
+    (lambda x: (0.3, 0.1 + x / 5000, 50.0 + x / 10), "slow_drain"),             # hit rate climbing while the line still grows
+    (lambda x: (0.3 + x / 5000, 0.1, 50.0), "slow_drain"),                      # only percent fast is climbing
+    (lambda x: (0.3, 0.1, 500.0 - x / 100), "stuck"),                           # the line shrinks, but would take hours to empty
+    (lambda x: (0.3, 0.1 + x / 50000, 50.0), "stuck"),                          # a hit-rate rise inside healthy noise is not a climb
+    (lambda x: (0.3, 0.1, 0.0), "stuck"),                                       # low with no line: not a backlog
     (lambda x: (1.0, 0.4, 0.0), "unclear"),                                     # fast, but the hit rate stayed low
     (lambda x: (0.85, 0.6, 0.0), "unclear"),                                    # slower, but the hit rate came back
 ])

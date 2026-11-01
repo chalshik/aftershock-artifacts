@@ -4,3 +4,10 @@ name: stage2_cap_base
 server:
   args:
     --max-num-seqs: 256
+verdict:               # replaces the first rule before any verdict was computed; see docs/decisions.md
+  end_s: 600           # 600 s, because adjacent 300 s hit rates differ too much on a healthy server
+  hit_climb: 0.06      # p95 of the change between adjacent 600 s windows, healthy lambda = 3: 0.059
+  pf_climb: 0.05
+  drain_horizon_s: 3600    # a shrinking line counts as draining only if it would empty within this time
+  q_slope: null        # no longer used
+  climb: null          # no longer used

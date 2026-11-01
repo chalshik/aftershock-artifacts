@@ -156,19 +156,22 @@ def verdict(run: dict) -> dict:
         dq = np.interp(b, m.t, q) - np.interp(a, m.t, q)
         return {"pf": float(((reqs.status == "ok") & (reqs.ttft <= slo)).mean()),
                 "hit": float((np.interp(b, m.t, hits) - np.interp(a, m.t, hits)) / dq) if dq else 0.0,
-                "q": float(waiting[w].mean()), "q_slope": float(np.polyfit(m.t[w], waiting[w], 1)[0])}
+                "q": float(waiting[w].mean()), "q_slope": float(np.polyfit(m.t[w], waiting[w], 1)[0]),
+                "n": float(m["vllm:num_requests_running"][w].mean()), "kv": float(m["vllm:kv_cache_usage_perc"][w].mean())}
 
     t_end = t + c["watch_s"]
     base = level(t - c["baseline_s"], t)
     prev = level(t_end - 2 * c["end_s"], t_end - c["end_s"])
     end = level(t_end - c["end_s"], t_end)
-    pf_up, hit_up = end["pf"] - prev["pf"] >= c["climb"], end["hit"] - prev["hit"] >= c["climb"]
+    # Any one sign of recovery rules out stuck. A queue counts as draining only if it would empty within the horizon.
+    climbing = end["pf"] - prev["pf"] >= c["pf_climb"] or end["hit"] - prev["hit"] >= c["hit_climb"]
+    draining = end["q_slope"] < 0 and end["q"] / -end["q_slope"] <= c["drain_horizon_s"]
     if base["pf"] < c["min_baseline_pf"]:
         v = "bad_baseline"
     elif (end["pf"] >= base["pf"] - c["recovered_pf_drop"] and end["hit"] >= base["hit"] - c["recovered_hit_drop"]
           and end["q"] <= base["q"] + c["recovered_q_excess"]):
         v = "recovered"
-    elif end["q_slope"] <= -c["q_slope"] or (pf_up and hit_up):
+    elif climbing or draining:
         v = "slow_drain"
     elif end["pf"] <= base["pf"] - c["stuck_pf_drop"] and end["hit"] <= base["hit"] - c["stuck_hit_drop"]:
         v = "stuck"
