@@ -2,7 +2,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from analysis.load import client_backlog_slope, settling_time, summarize, whole_run_hit_rate
+import pytest
+
+from analysis.load import client_backlog_slope, settling_time, summarize, verdict, whole_run_hit_rate
 
 
 def test_throughput_counts_completions_inside_the_window():
@@ -50,3 +52,45 @@ def test_settling_time_finds_when_the_level_returns():
 
 def test_settling_time_none_when_it_never_settles_before_the_settled_span():
     assert settling_time(tau_run(never_settles=True), 100, 400) is None
+
+
+VERDICT = {"control_t_s": 900, "baseline_s": 600, "watch_s": 1500, "end_s": 300, "min_baseline_pf": 0.98,
+           "recovered_pf_drop": 0.02, "recovered_hit_drop": 0.06, "recovered_q_excess": 1.0,
+           "stuck_pf_drop": 0.10, "stuck_hit_drop": 0.06, "q_slope": 0.01, "climb": 0.02}
+
+
+def wipe_run(after, base_pf=1.0, wiped=True):
+    """Healthy (hit 0.6, Q 0) up to t = 900, then after(x) = (percent fast, hit rate, Q) with x = seconds since 900."""
+    level = lambda t: (base_pf, 0.6, 0.0) if t < 900 else after(t - 900)
+    t = [float(x) for x in range(0, 2401)]
+    hits, q = [0.0], [0.0]
+    for a in t[1:]:
+        q.append(q[-1] + 100.0); hits.append(hits[-1] + 100.0 * level(a - 1)[1])
+    m = pd.DataFrame({"t": t, "vllm:prefix_cache_hits_total": hits, "vllm:prefix_cache_queries_total": q,
+                      "vllm:num_requests_waiting": [level(a)[2] for a in t]})
+    r = pd.DataFrame({"t_planned": t, "status": "ok", "ttft": [0.1 if (i % 100) < level(a)[0] * 100 else 5.0 for i, a in enumerate(t)]})
+    trig = pd.DataFrame({"success": [True], "t_end": [900.0]}) if wiped else pd.DataFrame()
+    return {"cfg": {"verdict": VERDICT, "slo": {"ttft_s": 1.0}}, "metrics": m, "requests": r, "trigger": trig}
+
+
+@pytest.mark.parametrize("after, expected", [
+    (lambda x: (1.0, 0.6, 0.0), "recovered"),                                   # back to baseline
+    (lambda x: (0.99, 0.56, 0.5), "recovered"),                                 # small differences stay inside the limits
+    (lambda x: (0.3, 0.1, 50.0), "stuck"),                                      # low and flat
+    (lambda x: (0.3, 0.1, 50.0 + x / 10), "stuck"),                             # low with a growing line
+    (lambda x: (0.3, 0.2, 500.0 - x / 5), "slow_drain"),                        # the line is shrinking
+    (lambda x: (0.2 + x / 3000, 0.1 + x / 5000, 50.0), "slow_drain"),           # percent fast and hit rate both climbing
+    (lambda x: (1.0, 0.4, 0.0), "unclear"),                                     # fast, but the hit rate stayed low
+    (lambda x: (0.85, 0.6, 0.0), "unclear"),                                    # slower, but the hit rate came back
+])
+def test_verdict(after, expected):
+    assert verdict(wipe_run(after))["verdict"] == expected
+
+
+def test_verdict_needs_a_healthy_baseline():
+    assert verdict(wipe_run(lambda x: (1.0, 0.6, 0.0), base_pf=0.9))["verdict"] == "bad_baseline"
+
+
+def test_verdict_judges_a_control_at_the_configured_time():
+    v = verdict(wipe_run(lambda x: (1.0, 0.6, 0.0), wiped=False))
+    assert v["verdict"] == "recovered" and v["t_wipe"] == 900

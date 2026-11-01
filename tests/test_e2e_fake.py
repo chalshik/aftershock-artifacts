@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parent.parent
@@ -53,3 +54,43 @@ def test_recorder_off_scrapes_only_around_the_load(tmp_path):
     assert not (run_dir / "gpu.jsonl").exists()
     res = json.loads((run_dir / "checks.json").read_text())
     assert res["valid"], res
+
+
+def dev_server():
+    return {"kind": "fake", "port": free_port(), "startup_timeout_s": 30, "stop_grace_s": 5,
+            "env": {"VLLM_SERVER_DEV_MODE": "1"}}
+
+
+WIPE = {"kind": "cache_wipe", "at_s": 12, "mode": "preempt", "request_timeout_s": 5}
+
+
+def test_preempt_wipe_empties_the_cache(tmp_path):
+    run_dir = run_fake(tmp_path, server=dev_server(), trigger=WIPE)
+    res = json.loads((run_dir / "checks.json").read_text())
+    assert res["valid"], res
+    (wipe,) = [json.loads(l) for l in (run_dir / "trigger.jsonl").read_text().splitlines()]
+    assert wipe["success"] and wipe["t_start"] >= 12
+    reqs = pd.read_json(run_dir / "requests.jsonl", lines=True).sort_values("t_sent")
+    assert reqs[reqs.t_sent > wipe["t_end"]].iloc[0].cached_tokens == 0
+
+
+def test_idle_wipe_retries_until_nothing_holds_blocks(tmp_path):
+    trig = {**WIPE, "mode": "idle", "retry_interval_s": 0.001, "max_wait_s": 5}
+    run_dir = run_fake(tmp_path, server=dev_server(), trigger=trig)
+    res = json.loads((run_dir / "checks.json").read_text())
+    assert res["valid"], res
+    attempts = [json.loads(l) for l in (run_dir / "trigger.jsonl").read_text().splitlines()]
+    assert attempts[-1]["success"] and not any(a["success"] for a in attempts[:-1])
+
+
+def test_wipe_without_dev_mode_stops_before_the_run(tmp_path):
+    with pytest.raises(subprocess.CalledProcessError):
+        run_fake(tmp_path, trigger=WIPE)
+    assert not (tmp_path / "runs").exists()
+
+
+def test_no_trigger_in_dev_mode_writes_no_trigger_file(tmp_path):
+    run_dir = run_fake(tmp_path, server=dev_server())
+    assert not (run_dir / "trigger.jsonl").exists()
+    res = json.loads((run_dir / "checks.json").read_text())
+    assert res["valid"] and "trigger" not in [c["name"] for c in res["checks"]]

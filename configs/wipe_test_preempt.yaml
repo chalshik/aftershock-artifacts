@@ -1,0 +1,12 @@
+# Live test of the wipe at lambda = 2. Checks mechanics only; too short for a verdict.
+extends: stage2_base.yaml
+name: wipe_test_preempt
+seed: 1
+workload:
+  rate: 2.0
+  duration_s: 900
+trigger:
+  kind: cache_wipe
+  at_s: 450
+  mode: preempt
+  request_timeout_s: 60

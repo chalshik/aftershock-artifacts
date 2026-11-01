@@ -1,10 +1,10 @@
 # Study status
 
-Living document: update it after every run or decision. Last updated: 2026-10-30.
+Living document: update it after every run or decision. Last updated: 2026-11-01.
 
-**Stage 2 has started (2026-10-31), but Stage 1 still owes τ.** Every Done-when box is ticked and Stage 1's open questions are answered, but the plan also lists recovery time τ as an input to Stage 2, and it was never measured. All 6 run steps are done. μ_warm = 4 req/s, μ_off = 2 req/s, λ = 3 stayed healthy for 2 h, and the SLO is TTFT ≤ 1.0 s.
+**Stage 2 has started (2026-10-31), and Stage 1's inputs are all in.** τ = 300 s from `20261101-131823_tau` (VALID), so the watch window is 1500 s; see decisions.md for the limits of that number. All 6 run steps are done. μ_warm = 4 req/s, μ_off = 2 req/s, λ = 3 stayed healthy for 2 h, and the SLO is TTFT ≤ 1.0 s.
 
-**Next action:** when the VM is back on, inspect the interrupted `20261031-025032_tau` (decisions.md), then rerun `configs/tau.yaml`. The address may change on reboot. Then register the Stage 2 verdict thresholds, build the cache-wipe trigger, and run no-trigger controls before the first wipe.
+**Next action:** test the wipe live at λ = 2 (`wipe_test_preempt`, `wipe_test_idle`), then run no-trigger controls before the first wipe. Verdict rule and matrix are registered (decisions.md). The cache-wipe trigger has been tested against the fake server only. The interrupted `20261031-025032_tau` does not count (decisions.md).
 
 ## Run steps
 
@@ -19,7 +19,7 @@ Living document: update it after every run or decision. Last updated: 2026-10-30
 
 Invalid runs kept on record: `20261023-145613_smoke` (`gpu_steady`, before the check was refined; see decisions.md). Failed start, no load sent: `20261030-114021_first_real` (see decisions.md).
 
-GPU time still needed: about 1 h for τ, then Stage 2.
+GPU time still needed: Stage 2.
 
 ## Done when (from the plan)
 

@@ -105,6 +105,14 @@ def run_checks(run_dir: Path) -> dict:
     out.append(check("clean_git", not (c["require_clean_git"] and env.get("git_dirty")),
                      {"commit": env.get("git_commit"), "dirty": env.get("git_dirty")}))
 
+    # 8. Only with a trigger: the cache was wiped exactly once, while arrivals were still running.
+    if cfg.get("trigger") is not None:
+        attempts = _jsonl(run_dir / "trigger.jsonl")
+        wiped = [a for a in attempts if a["success"]]
+        out.append(check("trigger", len(wiped) == 1 and wiped[0]["t_end"] < wl["duration_s"],
+                         {"attempts": len(attempts), "wipe": wiped[0] if wiped else None,
+                          "last_attempt": attempts[-1] if attempts else None}))
+
     failed = [x["name"] for x in out if x["passed"] is False]
     return {"valid": not failed, "failed": failed, "checks": out}
 

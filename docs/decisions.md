@@ -180,3 +180,41 @@ Supersedes the first two "Pending" items above. Written before `first_real` ran;
 ## 2026-10-31 · τ run interrupted: the VM was shut down
 - `20261031-025032_tau` started at 02:50 VM time. By about 03:30 the VM no longer answered ping or SSH. The study owner believes it was shut down. The run's state has not been inspected, because the VM is off.
 - **When the VM is back:** look at the run folder and logs before anything else. If the run has no `checks.json`, it stays on record as unfinished and does not count, and `configs/tau.yaml` is rerun unchanged at a new run id. Its folder is not copied over or deleted.
+
+## 2026-11-01 · τ run: what stopped it, and the rerun
+- **Cause, from the VM's journal:** `Power key pressed short` at 02:53:50 on 2026-10-31, then a clean power-off. On this Proxmox VM that signal most likely came from the host; the journal cannot show who or what sent it. No crash, out-of-memory or GPU errors in the journal or `server.log`; last GPU sample 70 °C, 315 W, no throttle reasons.
+- **Extent:** `20261031-025032_tau` stopped about 140 s into 3300 s, before the first step at 900 s, with 170 requests and no `checks.json`. It does not count and gives no τ data. It stays on the VM, not yet copied to the Mac.
+- **Rerun:** `20261101-131823_tau` started 13:18 VM time from a clean tree at `9fc33c3`, the same commit as the interrupted run. Its `config.yaml` differs only in `run_id`; vLLM, torch and `uv.lock` are unchanged. The tau settings and verdict rule above are unchanged.
+- **Not compared:** after the reboot `nvidia-smi` shows persistence mode `Disabled` while `nvidia-persistenced` is active. `env.json` does not record this mode, so it can't be compared with earlier runs. It is noted here in case it matters later.
+
+## 2026-11-01 · τ result: 300 s; watch window 1500 s
+- **Run:** `20261101-131823_tau`, VALID, all checks passed, 7872 of 7872 requests ok. Both τ run folders are now copied to the Mac.
+- **Result under the registered rule:** τ up-step = 300 s, τ down-step = 60 s, so **τ = 300 s**. Watch window = max(1200 s, 5 × 300 s) = **1500 s**. Settled levels: λ = 3 hit 0.598, TTFT p50 0.131 s; λ = 2 hit 0.748, TTFT p50 0.087 s.
+- **Limits of this number, found after the run; the rule and bands are not changed:**
+  - The rule takes the first span inside the band, and spans then left it again. Up-step: back out at 660 s (hit +0.041). Down-step: out from 180 s to 300 s (hit up to +0.047), so its 60 s is below the expected 140 s session lag and looks like a chance crossing. Slow hit-rate drift of about ±0.04 is about the size of the ±0.03 band.
+  - Time is counted to the start of the 180 s span, so the span's data runs up to 180 s past the stated τ.
+  - This is one run with one seed.
+- **Reading:** τ = 300 s is the registered value and sets the 1500 s watch window. The real settling time could be longer, by up to several hundred seconds. If Stage 2 verdicts turn out to depend on data near the end of the window, that is a reason to watch longer, recorded as a new pre-registered change.
+
+## 2026-11-01 · Cache-wipe method checked against official sources; trigger built
+- **Official docs at v0.32.0:** `docs/serving/online_serving/README.md` and `docs/usage/security.md` list `/reset_prefix_cache` as a development endpoint, enabled by `VLLM_SERVER_DEV_MODE=1`: "Reset prefix cache (can disrupt service)", not for production. Our server listens only on 127.0.0.1 in a private experiment, so that warning doesn't apply.
+- **Source at v0.32.0:** the `BlockPool.reset_prefix_cache` docstring names "resetting prefix caching status for benchmarking" as a use. The `reset_running_requests=true` behaviour is not described in the prose docs at v0.32.0. It is established by the source (`Scheduler.reset_prefix_cache`, `_preempt_request`) and by merged PR vllm-project/vllm#28827, which added it.
+- **Maintainer position:** issue vllm-project/vllm#32593, closed as not planned: no plan to make the endpoint public, because of denial-of-service risk; set dev mode if you accept that risk.
+- **Known failure, not expected here:** issue vllm-project/vllm#60552 (open; reproduced on 0.30.0): the preempting call returns HTTP 500 while an OffloadingConnector load is in flight. We use no offload. If it happens, the `trigger` check marks the run invalid.
+- **Conclusion:** the method is a documented endpoint used for a purpose its source names. The plan's "without touching running requests" still doesn't hold, as already logged. Nothing has been run on a live server yet, so these remain claims from docs and source.
+- **Built:** `harness/trigger.py` (modes `preempt` and `idle`; one record per attempt in `trigger.jsonl`), `server.env` for dev mode, and a `trigger` check (exactly one successful wipe, before arrivals end). A config with a trigger but no dev mode stops before the server starts. Preempt mode never retries, since a second call would preempt again.
+- **To confirm in the live test at λ = 2:** `success: true`; `vllm:num_preemptions_total` rises by about the running count; preempted requests still return all 128 tokens with no errors; `accounting` and the counter-decrease check pass (the reset also clears a metrics collector in the block pool; whether that touches the Prometheus counters is not confirmed); hit rate falls right after the wipe.
+
+## 2026-11-01 · Stage 2 verdict rule and first test matrix, before any wipe
+- **Healthy variation these limits sit outside:** `20261030-181851_long_run` (λ = 3): percent fast 1.000 in every 60 s bin; hit rate over 300 s ranged 0.593–0.679; mean waiting 0.004, max 2. `20261101-131823_tau` at λ = 3: lowest 60 s percent fast 0.991, lowest 300 s 0.998.
+- **Run shape:** `configs/stage2_base.yaml`. Dev mode on, SLO TTFT ≤ 1.0 s, 2400 s long, wipe at t = 900 s. Baseline is the last 600 s before the wipe. Watch is 1500 s from the end of the wipe. `end` is its last 300 s and `previous` the 300 s before.
+- **Verdict, in this order** (code: `analysis/load.py`, `verdict`):
+  1. **bad_baseline:** baseline percent fast < 0.98. The run says nothing.
+  2. **recovered:** at `end`, percent fast ≥ baseline − 0.02, hit rate ≥ baseline − 0.06, mean waiting ≤ baseline + 1.
+  3. **slow_drain:** waiting slope at `end` ≤ −0.01 req/s², or percent fast and hit rate both rose by ≥ 0.02 from `previous` to `end`.
+  4. **stuck:** percent fast ≤ baseline − 0.10 and hit rate ≤ baseline − 0.06 at `end`.
+  5. **unclear:** none of these. Reported as such, never rounded to another verdict. A longer watch needs a new pre-registered config.
+- **A stuck verdict is a metastable failure only if** the no-trigger control at the same load is `recovered` by the same rule, judged at t = 900 s.
+- **Matrix, cache wipe with `preempt`:** λ = 1.5 (below μ_off, sanity check), 2.5, 3, 3.5, 4. Seeds 1, 2, 3 each, reported as "stuck in k of n". If a load's seeds disagree, add seeds 4 and 5. One no-trigger control per load at seed 1, same schedule as the wiped seed 1 run. The `--seed` passed to vLLM stays 0; only the workload seed changes.
+- **`idle` comparison, λ = 3, seeds 1–3:** retry every 0.05 s, for up to 600 s, duration 3000 s so the full watch always fits. The retries themselves are load on the engine; their count is in `trigger.jsonl`.
+- **Order:** live test at λ = 2 (`wipe_test_preempt`, `wipe_test_idle`; mechanics only, no verdict), then controls, then wipes. A failed mechanics item stops the matrix. About 42 min per run; about 15 h for the matrix without extra seeds.

@@ -1,11 +1,13 @@
 """Tiny stand-in for `vllm serve`, for testing the harness on a machine without a GPU.
 
 Speaks the subset the harness uses: GET /health, GET /metrics, POST /v1/completions (streaming,
-token-ID prompts). Simulates a block prefix cache so hit-rate metrics move. Not a performance model.
+token-ID prompts), and in dev mode POST /reset_prefix_cache. Simulates a block prefix cache so hit-rate
+metrics move. Not a performance model.
 """
 import argparse
 import asyncio
 import json
+import os
 import time
 
 from aiohttp import web
@@ -18,7 +20,7 @@ DECODE_S_PER_TOKEN = 1e-3
 class State:
     def __init__(self):
         self.cache: set[int] = set()
-        self.c = dict(success=0, hits=0, queries=0, prompt=0, gen=0)
+        self.c = dict(success=0, hits=0, queries=0, prompt=0, gen=0, preempted=0)
         self.running = 0
 
 
@@ -57,6 +59,17 @@ async def completions(req: web.Request):
     return resp
 
 
+async def reset_prefix_cache(req: web.Request):
+    """As in vLLM 0.32.0: fails while requests hold blocks, unless told to preempt them. Requests here don't restart."""
+    st: State = req.app["state"]
+    if req.query.get("reset_running_requests") == "true":
+        st.c["preempted"] += st.running
+    elif st.running:
+        return web.json_response({"success": False})
+    st.cache.clear()
+    return web.json_response({"success": True})
+
+
 async def metrics(req: web.Request):
     st: State = req.app["state"]
     lab = 'model_name="fake"'
@@ -70,7 +83,7 @@ async def metrics(req: web.Request):
         "# TYPE vllm:prefix_cache_hits counter", f"vllm:prefix_cache_hits_total{{{lab}}} {st.c['hits']}",
         "# TYPE vllm:prompt_tokens counter", f"vllm:prompt_tokens_total{{{lab}}} {st.c['prompt']}",
         "# TYPE vllm:generation_tokens counter", f"vllm:generation_tokens_total{{{lab}}} {st.c['gen']}",
-        "# TYPE vllm:num_preemptions counter", f"vllm:num_preemptions_total{{{lab}}} 0",
+        "# TYPE vllm:num_preemptions counter", f"vllm:num_preemptions_total{{{lab}}} {st.c['preempted']}",
     ]
     return web.Response(text="\n".join(lines) + "\n")
 
@@ -88,6 +101,8 @@ def main():
     app["state"] = State()
     app.add_routes([web.get("/health", health), web.get("/metrics", metrics),
                     web.post("/v1/completions", completions)])
+    if os.environ.get("VLLM_SERVER_DEV_MODE") == "1":
+        app.add_routes([web.post("/reset_prefix_cache", reset_prefix_cache)])
     print(f"fake vllm on {a.host}:{a.port} started at {time.time()}", flush=True)
     web.run_app(app, host=a.host, port=a.port, print=None)
 

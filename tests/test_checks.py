@@ -101,6 +101,34 @@ def test_recorder_off_still_checks_accounting(tmp_path):
     assert "accounting" in failed(recorder_off(make_run(tmp_path, success_delta=90)))
 
 
+def with_trigger(d, attempts):
+    cfg = yaml.safe_load((d / "config.yaml").read_text())
+    cfg["trigger"] = {"kind": "cache_wipe", "at_s": 10, "mode": "preempt"}
+    (d / "config.yaml").write_text(yaml.safe_dump(cfg))
+    (d / "trigger.jsonl").write_text("".join(json.dumps(a) + "\n" for a in attempts))
+    return d
+
+
+def test_trigger_one_wipe_passes(tmp_path):
+    assert failed(with_trigger(make_run(tmp_path), [{"success": True, "t_end": 10.1}])) == []
+
+
+def test_trigger_no_successful_wipe_fails(tmp_path):
+    assert "trigger" in failed(with_trigger(make_run(tmp_path), [{"success": False, "t_end": 10.1}]))
+
+
+def test_trigger_no_attempt_fails(tmp_path):
+    assert "trigger" in failed(with_trigger(make_run(tmp_path), []))
+
+
+def test_trigger_two_wipes_fail(tmp_path):
+    assert "trigger" in failed(with_trigger(make_run(tmp_path), [{"success": True, "t_end": 10.1}] * 2))
+
+
+def test_trigger_wipe_after_arrivals_end_fails(tmp_path):
+    assert "trigger" in failed(with_trigger(make_run(tmp_path), [{"success": True, "t_end": 500.0}]))
+
+
 def test_scrape_gap(tmp_path):
     assert "recorder" in failed(make_run(tmp_path, gap=3.0))
 

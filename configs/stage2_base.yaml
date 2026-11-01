@@ -1,0 +1,22 @@
+# Shared by all Stage 2 runs and their controls: dev mode, the SLO, one run shape, the verdict rule. See docs/decisions.md.
+extends: base.yaml
+name: stage2_base
+server:
+  env: {VLLM_SERVER_DEV_MODE: "1"}
+workload:
+  duration_s: 2400     # 900 s before the wipe + the 1500 s watch window
+slo:
+  ttft_s: 1.0
+verdict:
+  control_t_s: 900     # where a no-trigger control is judged as if a wipe had happened
+  baseline_s: 600      # the "before" level: the last 600 s before the wipe
+  watch_s: 1500        # max(1200 s, 5 tau), tau = 300 s
+  end_s: 300           # judged over the last 300 s of the watch, compared with the 300 s before them
+  min_baseline_pf: 0.98
+  recovered_pf_drop: 0.02
+  recovered_hit_drop: 0.06
+  recovered_q_excess: 1.0
+  stuck_pf_drop: 0.10
+  stuck_hit_drop: 0.06
+  q_slope: 0.01        # req/s^2; same limit as the capacity rule
+  climb: 0.02

@@ -1,0 +1,14 @@
+# Live test of the wipe at lambda = 2. Checks mechanics only; too short for a verdict.
+extends: stage2_base.yaml
+name: wipe_test_idle
+seed: 1
+workload:
+  rate: 2.0
+  duration_s: 900
+trigger:
+  kind: cache_wipe
+  at_s: 450
+  mode: idle
+  request_timeout_s: 60
+  retry_interval_s: 0.05
+  max_wait_s: 300

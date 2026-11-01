@@ -2,7 +2,7 @@
 
     uv run python -m harness.run configs/first_real.yaml
 
-Order: config + env + schedule -> vLLM -> ready -> recorder -> loadgen -> drain -> stop -> checks.
+Order: config + env + schedule -> vLLM -> ready -> recorder + trigger -> loadgen -> drain -> stop -> checks.
 """
 import argparse
 import copy
@@ -18,7 +18,7 @@ from pathlib import Path
 
 import yaml
 
-from harness import checks, env_snapshot, workload
+from harness import checks, env_snapshot, trigger, workload
 from harness.recorder import scrape
 
 REPO = Path(__file__).resolve().parent.parent
@@ -115,7 +115,7 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
     if wl.get("rate") is None:
         raise SystemExit(f"{cfg['name']}: workload.rate is not set")
     if cfg.get("trigger") is not None:
-        raise SystemExit("triggers are Stage 2; Stage 1 configs must have trigger: null")
+        trigger.validate(cfg)
 
     env = env_snapshot.snapshot()
     if env["git_dirty"] and cfg["checks"]["require_clean_git"] and not allow_dirty:
@@ -135,16 +135,17 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
     prompts.to_parquet(run_dir / "prompts.parquet", index=False)
     ev("schedule_written", **workload.summary(sched))
 
-    server = recorder = loadgen = None
+    server = recorder = loadgen = trig = None
     aborted = False
     py = [sys.executable, "-m"]
     child_env = {**os.environ, "PYTHONPATH": str(REPO)}
     try:
         cmd = server_cmd(cfg)
-        ev("server_start", cmd=" ".join(cmd))
+        server_env = srv.get("env") or {}  # configs from before this key have none
+        ev("server_start", cmd=" ".join(cmd), server_env=server_env)
         with open(run_dir / "server.log", "w") as log:
             server = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT,
-                                      start_new_session=True, env=child_env)
+                                      start_new_session=True, env={**child_env, **server_env})
         base = f"http://{srv['host']}:{srv['port']}"
         deadline = time.monotonic() + srv["startup_timeout_s"]
         while not _http_ok(f"{base}/health"):
@@ -163,6 +164,10 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
                                         start_new_session=True, env=child_env, cwd=REPO)
         else:
             _scrape_once(run_dir, base, time.monotonic() - t0)
+        if cfg.get("trigger") is not None:
+            trig = subprocess.Popen(_pin(cfg["cpus"]["recorder"]) + py +  # sleeps until at_s, then one short call
+                                    ["harness.trigger", str(run_dir), repr(t0)],
+                                    start_new_session=True, env=child_env, cwd=REPO)
         loadgen = subprocess.Popen(_pin(cfg["cpus"]["loadgen"]) + py +
                                    ["harness.loadgen", str(run_dir), repr(t0)],
                                    start_new_session=True, env=child_env, cwd=REPO)
@@ -185,6 +190,7 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
         aborted = True
     finally:
         _stop(loadgen, signal.SIGINT, 10)
+        _stop(trig, signal.SIGTERM, 10)
         _stop(recorder, signal.SIGTERM, 10)
         _stop(server, signal.SIGINT, srv["stop_grace_s"])
         ev("stopped")

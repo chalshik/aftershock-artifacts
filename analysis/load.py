@@ -29,6 +29,7 @@ def load_run(run_dir: Path | str) -> dict:
         "metrics": metrics_wide(_jsonl(d / "metrics.jsonl")),
         "gpu": pd.DataFrame(_jsonl(d / "gpu.jsonl")),
         "events": pd.DataFrame(_jsonl(d / "events.jsonl")),
+        "trigger": pd.DataFrame(_jsonl(d / "trigger.jsonl")),
     }
 
 
@@ -138,6 +139,42 @@ def settling_time(run: dict, t_step: float, t_end: float) -> float | None:
         if abs(hit - hit0) <= c["hit_band"] and abs(p50 - p0) <= c["ttft_p50_band_s"]:
             return float(t - t_step)
     return None
+
+
+def verdict(run: dict) -> dict:
+    """Stage 2 verdict, by the rule in docs/decisions.md; settings are in the run's config under `verdict`.
+    Judged around the successful wipe, or at control_t_s for a no-trigger control."""
+    c, m, r = run["cfg"]["verdict"], run["metrics"], run["requests"]
+    trig = run["trigger"]
+    t = float(trig[trig.success].t_end.iloc[0]) if len(trig) else c["control_t_s"]
+    hits, q, waiting = m["vllm:prefix_cache_hits_total"], m["vllm:prefix_cache_queries_total"], m["vllm:num_requests_waiting"]
+    slo = run["cfg"]["slo"]["ttft_s"]
+
+    def level(a, b):
+        reqs = r[(r.t_planned >= a) & (r.t_planned < b)]
+        w = (m.t >= a) & (m.t < b)
+        dq = np.interp(b, m.t, q) - np.interp(a, m.t, q)
+        return {"pf": float(((reqs.status == "ok") & (reqs.ttft <= slo)).mean()),
+                "hit": float((np.interp(b, m.t, hits) - np.interp(a, m.t, hits)) / dq) if dq else 0.0,
+                "q": float(waiting[w].mean()), "q_slope": float(np.polyfit(m.t[w], waiting[w], 1)[0])}
+
+    t_end = t + c["watch_s"]
+    base = level(t - c["baseline_s"], t)
+    prev = level(t_end - 2 * c["end_s"], t_end - c["end_s"])
+    end = level(t_end - c["end_s"], t_end)
+    pf_up, hit_up = end["pf"] - prev["pf"] >= c["climb"], end["hit"] - prev["hit"] >= c["climb"]
+    if base["pf"] < c["min_baseline_pf"]:
+        v = "bad_baseline"
+    elif (end["pf"] >= base["pf"] - c["recovered_pf_drop"] and end["hit"] >= base["hit"] - c["recovered_hit_drop"]
+          and end["q"] <= base["q"] + c["recovered_q_excess"]):
+        v = "recovered"
+    elif end["q_slope"] <= -c["q_slope"] or (pf_up and hit_up):
+        v = "slow_drain"
+    elif end["pf"] <= base["pf"] - c["stuck_pf_drop"] and end["hit"] <= base["hit"] - c["stuck_hit_drop"]:
+        v = "stuck"
+    else:
+        v = "unclear"
+    return {"verdict": v, "t_wipe": t, "baseline": base, "previous": prev, "end": end}
 
 
 def capacity(curve: pd.DataFrame, min_throughput_frac: float, max_q_slope: float) -> float:
