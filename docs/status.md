@@ -4,7 +4,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-01
 
 **Stage 2 has started (2026-10-31), and Stage 1's inputs are all in.** τ = 300 s from `20261101-131823_tau` (VALID), so the watch window is 1500 s; see decisions.md for the limits of that number. All 6 run steps are done. μ_warm = 4 req/s, μ_off = 2 req/s, λ = 3 stayed healthy for 2 h, and the SLO is TTFT ≤ 1.0 s.
 
-**Next action:** find out what is sending the VM's power-key signal (decisions.md). Then run the no-trigger controls (`configs/stage2_control_cap.yaml`, five loads, about 3.5 h). This replaces `stage2_control.yaml`, whose only attempt was stopped with none finished; see decisions.md. When they end, read them with `verdict` in `analysis/load.py`, then add the wipe configs and run the matrix. Verdict rule and matrix are registered, and the live wipe test passed (decisions.md). The interrupted `20261031-025032_tau` does not count (decisions.md).
+**Next action:** no-trigger controls are running (`configs/stage2_control_cap.yaml`, five loads, about 3.5 h, started 2026-11-01 about 18:25 UTC; VM clock). This replaces `stage2_control.yaml`, whose only attempt was stopped with none finished; see decisions.md. When they end, read them with `verdict` in `analysis/load.py`, then add the wipe configs and run the matrix. Verdict rule and matrix are registered, and the live wipe test passed (decisions.md). The interrupted `20261031-025032_tau` does not count (decisions.md).
 
 ## Run steps
 
