@@ -4,7 +4,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-01
 
 **Stage 2 has started (2026-10-31), and Stage 1's inputs are all in.** τ = 300 s from `20261101-131823_tau` (VALID), so the watch window is 1500 s; see decisions.md for the limits of that number. All 6 run steps are done. μ_warm = 4 req/s, μ_off = 2 req/s, λ = 3 stayed healthy for 2 h, and the SLO is TTFT ≤ 1.0 s.
 
-**Next action:** the VM was unreachable at last check (2026-11-01); bring it back and read its logs. Then run the no-trigger controls (`configs/stage2_control_cap.yaml`, five loads, about 3.5 h). This replaces `stage2_control.yaml`, whose only attempt was stopped with none finished; see decisions.md. When they end, read them with `verdict` in `analysis/load.py`, then add the wipe configs and run the matrix. Verdict rule and matrix are registered, and the live wipe test passed (decisions.md). The interrupted `20261031-025032_tau` does not count (decisions.md).
+**Next action:** find out what is sending the VM's power-key signal (decisions.md). Then run the no-trigger controls (`configs/stage2_control_cap.yaml`, five loads, about 3.5 h). This replaces `stage2_control.yaml`, whose only attempt was stopped with none finished; see decisions.md. When they end, read them with `verdict` in `analysis/load.py`, then add the wipe configs and run the matrix. Verdict rule and matrix are registered, and the live wipe test passed (decisions.md). The interrupted `20261031-025032_tau` does not count (decisions.md).
 
 ## Run steps
 
@@ -50,7 +50,7 @@ Answered with evidence: all 7 (see `open-questions.md`). Question 5, the recorde
 | KV cache | Qwen3-4B: 96,656 tokens in load runs, 92,432 in the probe (see decisions.md) · Qwen3-1.7B: 165,792 tokens |
 | Pinning | vLLM cores 0–5, loadgen 6, recorder 7 |
 | Disk | 15 GB free on the VM; all runs total 1.4G |
-| Address | 192.168.3.249 (DHCP, can change on reboot), key `~/.ssh/id_ed25519_vllm` |
+| Address | `inference-vm.tail3b0112.ts.net` / 100.83.53.50 (Tailscale, from anywhere); 192.168.3.249 at home (DHCP, can change on reboot); key `~/.ssh/id_ed25519_vllm` |
 | Sync | Mac `git push vm main` → VM `git pull` in `~/aftershock-artifacts` |
 
 ## Watch
