@@ -70,7 +70,7 @@ def wipe_run(after, base_pf=1.0, wiped=True):
                       "vllm:num_requests_waiting": [level(a)[2] for a in t],
                       "vllm:num_requests_running": 8.0, "vllm:kv_cache_usage_perc": 0.2})
     r = pd.DataFrame({"t_planned": t, "status": "ok", "ttft": [0.1 if (i % 100) < level(a)[0] * 100 else 5.0 for i, a in enumerate(t)]})
-    trig = pd.DataFrame({"success": [True], "t_end": [900.0]}) if wiped else pd.DataFrame()
+    trig = pd.DataFrame({"success": [True], "t_start": [900.0], "t_end": [900.0]}) if wiped else pd.DataFrame()
     return {"cfg": {"verdict": VERDICT, "slo": {"ttft_s": 1.0}}, "metrics": m, "requests": r, "trigger": trig}
 
 
@@ -102,6 +102,21 @@ def test_verdict_judges_a_burst_from_its_end():
     run = wipe_run(lambda x: (1.0, 0.6, 0.0), wiped=False)
     run["cfg"]["trigger"] = {"kind": "burst", "at_s": 780, "duration_s": 120}
     assert verdict(run)["t_wipe"] == 900
+
+
+def test_verdict_baseline_ends_before_the_burst():
+    """The burst itself is slow; it must not count as the baseline."""
+    run = wipe_run(lambda x: (0.2, 0.2, 100.0) if x < 120 else (1.0, 0.6, 0.0), wiped=False)
+    run["cfg"]["trigger"] = {"kind": "burst", "at_s": 900, "duration_s": 120}
+    run["cfg"]["verdict"] = dict(VERDICT, watch_s=1380)
+    v = verdict(run)
+    assert v["baseline"]["pf"] == 1.0 and v["t_start"] == 900 and v["t_wipe"] == 1020 and v["verdict"] == "recovered"
+
+
+def test_verdict_wipe_baseline_ends_at_the_wipe_start():
+    run = wipe_run(lambda x: (1.0, 0.6, 0.0))
+    run["trigger"] = pd.DataFrame({"success": [True], "t_start": [899.0], "t_end": [900.0]})
+    assert verdict(run)["t_start"] == 899.0
 
 
 def test_verdict_judges_a_control_at_the_configured_time():

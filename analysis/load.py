@@ -143,13 +143,17 @@ def settling_time(run: dict, t_step: float, t_end: float) -> float | None:
 
 def verdict(run: dict) -> dict:
     """Stage 2 verdict, by the rule in docs/decisions.md; settings are in the run's config under `verdict`.
-    Judged from the end of the trigger: the successful wipe, the end of a burst, or control_t_s for a control."""
+    The baseline ends where the trigger starts; the watch starts where it ends (a successful wipe, a burst,
+    or control_t_s for a control, where both are the same moment)."""
     c, m, r = run["cfg"]["verdict"], run["metrics"], run["requests"]
     trig, spec = run["trigger"], run["cfg"].get("trigger") or {}
     if spec.get("kind") == "burst":
-        t = float(spec["at_s"] + spec["duration_s"])
+        t_start, t = float(spec["at_s"]), float(spec["at_s"] + spec["duration_s"])
+    elif len(trig):
+        wipe = trig[trig.success].iloc[0]
+        t_start, t = float(wipe.t_start), float(wipe.t_end)
     else:
-        t = float(trig[trig.success].t_end.iloc[0]) if len(trig) else c["control_t_s"]
+        t_start = t = float(c["control_t_s"])
     hits, q, waiting = m["vllm:prefix_cache_hits_total"], m["vllm:prefix_cache_queries_total"], m["vllm:num_requests_waiting"]
     slo = run["cfg"]["slo"]["ttft_s"]
 
@@ -163,7 +167,7 @@ def verdict(run: dict) -> dict:
                 "n": float(m["vllm:num_requests_running"][w].mean()), "kv": float(m["vllm:kv_cache_usage_perc"][w].mean())}
 
     t_end = t + c["watch_s"]
-    base = level(t - c["baseline_s"], t)
+    base = level(t_start - c["baseline_s"], t_start)
     prev = level(t_end - 2 * c["end_s"], t_end - c["end_s"])
     end = level(t_end - c["end_s"], t_end)
     # Any one sign of recovery rules out stuck. A queue counts as draining only if it would empty within the horizon.
@@ -180,7 +184,7 @@ def verdict(run: dict) -> dict:
         v = "stuck"
     else:
         v = "unclear"
-    return {"verdict": v, "t_wipe": t, "baseline": base, "previous": prev, "end": end}
+    return {"verdict": v, "t_start": t_start, "t_wipe": t, "baseline": base, "previous": prev, "end": end}
 
 
 def capacity(curve: pd.DataFrame, min_throughput_frac: float, max_q_slope: float) -> float:
