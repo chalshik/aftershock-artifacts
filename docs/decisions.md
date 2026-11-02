@@ -310,3 +310,18 @@ Items 5 and 6 cost GPU time only for loads that reach `stuck`. Their configs get
 - **Effect on the run:** none visible. TTFT p50 0.091 s in the 60 s before and 0.093 s in the 60 s after; max 0.444 s and 0.438 s. It is still not counted, and this is not a reason to use it.
 - **Rerun:** `configs/stage2_control_cap_r3_rerun.yaml`, same settings and seed, after the sweep ends.
 - **Thermal margin is the wider concern.** Valid runs also peak at 83 °C (`20261101-190602_stage2_control_cap_r3.5`, `20261101-131823_tau`), so this could recur at random. The SW thermal share has been higher in recent runs: 0.022–0.027 against 0.003 in `20261030-181851_long_run`. The wipe matrix pushes the GPU at least as hard. Changing the power limit would change capacity, so μ would need remeasuring; cooling is the option to try first.
+
+## 2026-11-02 · No-trigger controls done
+- **Verdicts, judged as if a wipe happened at t = 900 s (`verdict`, `configs/stage2_cap_base.yaml`):**
+
+| λ | Run | Checks | Verdict | Baseline percent fast | Hit, baseline → end | Mean KV at end | Preemptions |
+|---|---|---|---|---|---|---|---|
+| 1.5 | `20261101-210915_stage2_control_cap_r1.5` | VALID | recovered | 1.000 | 0.792 → 0.791 | 0.04 | 0 |
+| 2.5 | `20261101-194705_stage2_control_cap_r2.5` | VALID | recovered | 1.000 | 0.684 → 0.702 | 0.09 | 0 |
+| 3 | `20261101-215502_stage2_control_cap_r3_rerun` | VALID | recovered | 1.000 | 0.608 → 0.607 | 0.15 | 0 |
+| 3.5 | `20261101-190602_stage2_control_cap_r3.5` | VALID | recovered | 0.996 | 0.550 → 0.565 | 0.20 | 0 |
+| 4 | `20261101-202808_stage2_control_cap_r4` | VALID | **bad_baseline** | 0.956 | 0.516 → 0.495 | 0.41 | 32 |
+
+- **`20261101-182452_stage2_control_cap_r3`** stays INVALID and does not count. The rerun's baseline and end levels match it to within 0.001 on percent fast, hit rate and KV, so the same seed reproduces closely.
+- **λ = 4:** by the registered rule, a stuck result there can't count as a metastable failure, because its control was not healthy. Percent fast per 300 s varied from 0.787 to 1.000 with no shock. The true steady limit looks a little below 4 over 2400 s, though μ_warm = 4 stands as measured by its rule over 900 s. Whether to keep λ = 4 in the matrix is the study owner's decision and is open.
+- **Thermal:** `gpu_steady` passed on all five counted runs. Peak was 84 °C in the rerun; SW thermal share was 0.047 at λ = 4 against a limit of 0.05.

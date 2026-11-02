@@ -1,0 +1,11 @@
+# Cache wipe at lambda = 3, preempting running requests. Matrix and verdict rule: docs/decisions.md.
+extends: stage2_cap_base.yaml
+name: wipe_preempt_r3_s1
+seed: 1
+workload:
+  rate: 3.0
+trigger:
+  kind: cache_wipe
+  at_s: 900
+  mode: preempt
+  request_timeout_s: 60
