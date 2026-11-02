@@ -362,3 +362,15 @@ Items 5 and 6 cost GPU time only for loads that reach `stuck`. Their configs get
 - **Seed 3, fourth attempt** `20261102-100744_wipe_preempt_r3_s3`: VALID. 0 HW thermal samples, SW thermal share 0.010, peak 82 °C, 90th percentile 80 °C. Over the same span (t = 240–725 s), the earlier attempts each had one HW sample. **Verdict recovered** (hit 0.652 → 0.677; 6 preempted by the wipe; first 15 s hit 0.295, back to 0.61 by 15–60 s; peak waiting 3, peak KV 0.36). Arrival-rate check passed (2.83 measured against 3.0).
 - **λ = 3, `preempt` wipe: stuck in 0 of 3 valid runs** (`20261102-072216_wipe_preempt_r3_s1`, `20261102-053935_wipe_preempt_r3_s2`, `20261102-100744_wipe_preempt_r3_s3`). The seeds agree, so seeds 4 and 5 are not added. At λ = 3 a single wipe does not cause the failure. The cache refills within about 1–5 minutes, and N, waiting and KV stay far from the memory limit.
 - **Comparability:** seeds 1 and 2 ran before the backplate fan, and seed 3 ran with it. All three recovered, so the cooling change doesn't alter the λ = 3 verdict. From here on, all runs use the new cooling.
+
+## 2026-11-02 · λ = 3.5 `preempt` wipes: stuck in 0 of 3
+- **Runs, commit `944f0ee`, all VALID, no HW thermal samples (SW thermal share 0.008–0.025, peak 83 °C). Control `20261101-190602_stage2_control_cap_r3.5`: recovered.**
+
+| Seed | Run | Preempted by the wipe | Verdict | Hit, baseline → end | End: mean KV, N, waiting |
+|---|---|---|---|---|---|
+| 1 | `20261102-110200_wipe_preempt_r3.5_s1` | 8 | recovered | 0.550 → 0.565 | 0.20, 13.2, 0.02 |
+| 2 | `20261102-114305_wipe_preempt_r3.5_s2` | 4 | recovered | 0.542 → 0.578 | 0.16, 10.6, 0.01 |
+| 3 | `20261102-122411_wipe_preempt_r3.5_s3` | 15 | recovered | 0.575 → 0.612 | 0.15, 9.4, 0.00 |
+
+- **Wipe effect:** first-minute hit 0.49–0.53, back at baseline within about 5 minutes. Worst share within the SLO in any listed span was 0.944, at seed 3, 0–60 s. Peak waiting after a wipe was 9. Mean KV stayed at or below 0.25 in every listed span. Seed 3 touched KV 0.98 once at 600–900 s after the wipe, with N up to 78, and returned without a queue; its baseline also peaked at 0.64 with no wipe.
+- **So far, the cache wipe does not cause the failure at any valid load tested:** λ = 3 and 3.5, 0 of 6 runs stuck.
