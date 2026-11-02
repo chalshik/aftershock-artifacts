@@ -1,0 +1,13 @@
+# Load burst at lambda = 3: +3 req/s of one-off 1408-token requests for 120 s. Verdict rule: docs/decisions.md.
+extends: stage2_cap_base.yaml
+name: burst_r3_s3
+seed: 3
+workload:
+  rate: 3
+  duration_s: 2520     # 900 s before the burst + 120 s burst + the 1500 s watch
+trigger:
+  kind: burst
+  at_s: 900
+  duration_s: 120
+  rate: 3.0            # extra requests per second, on top of lambda
+  prompt_tokens: 1408  # median session prompt; random tokens, so nothing is cached

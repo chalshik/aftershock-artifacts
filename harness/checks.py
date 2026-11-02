@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from harness.workload import expected_requests
+from harness.workload import burst_requests, expected_requests
 
 # NVML clock-throttle bits. A software power cap (0x4) is normal boost behaviour and is ignored.
 HW_THROTTLE_MASK = 0x8 | 0x40 | 0x80  # HW slowdown, HW thermal, HW power brake: any sample fails the run
@@ -96,7 +96,7 @@ def run_checks(run_dir: Path) -> dict:
     # 6. Measured arrival rate matches lambda (Poisson-aware tolerance).
     t_lo, t_hi = wl["warmup_s"], wl["duration_s"]
     n = int(((sent.t_sent >= t_lo) & (sent.t_sent < t_hi)).sum()) if len(sent) else 0
-    expected = expected_requests(wl, t_lo, t_hi)
+    expected = expected_requests(wl, t_lo, t_hi) + burst_requests(cfg.get("trigger"), t_lo, t_hi)
     tol = max(c["rate_rel_tolerance"] * expected, 3 * math.sqrt(expected))
     out.append(check("arrival_rate", abs(n - expected) <= tol,
                      {"measured": n / (t_hi - t_lo), "configured": wl["rate"], "count": n, "expected": expected}))
@@ -105,8 +105,14 @@ def run_checks(run_dir: Path) -> dict:
     out.append(check("clean_git", not (c["require_clean_git"] and env.get("git_dirty")),
                      {"commit": env.get("git_commit"), "dirty": env.get("git_dirty")}))
 
-    # 8. Only with a trigger: the cache was wiped exactly once, while arrivals were still running.
-    if cfg.get("trigger") is not None:
+    # 8. Only with a trigger. Burst: every burst request in the schedule was sent.
+    #    Cache wipe: the cache was wiped exactly once, while arrivals were still running.
+    trig = cfg.get("trigger")
+    if trig is not None and trig.get("kind") == "burst":
+        ids = set(sched.request_id[sched.burst]) if "burst" in sched else set()
+        sent = set(reqs.request_id[reqs.t_sent.notna()]) if len(reqs) else set()
+        out.append(check("trigger", bool(ids) and ids <= sent, {"burst_requests": len(ids), "sent": len(ids & sent)}))
+    elif trig is not None:
         attempts = _jsonl(run_dir / "trigger.jsonl")
         wiped = [a for a in attempts if a["success"]]
         out.append(check("trigger", len(wiped) == 1 and wiped[0]["t_end"] < wl["duration_s"],

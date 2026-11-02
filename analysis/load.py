@@ -143,10 +143,13 @@ def settling_time(run: dict, t_step: float, t_end: float) -> float | None:
 
 def verdict(run: dict) -> dict:
     """Stage 2 verdict, by the rule in docs/decisions.md; settings are in the run's config under `verdict`.
-    Judged around the successful wipe, or at control_t_s for a no-trigger control."""
+    Judged from the end of the trigger: the successful wipe, the end of a burst, or control_t_s for a control."""
     c, m, r = run["cfg"]["verdict"], run["metrics"], run["requests"]
-    trig = run["trigger"]
-    t = float(trig[trig.success].t_end.iloc[0]) if len(trig) else c["control_t_s"]
+    trig, spec = run["trigger"], run["cfg"].get("trigger") or {}
+    if spec.get("kind") == "burst":
+        t = float(spec["at_s"] + spec["duration_s"])
+    else:
+        t = float(trig[trig.success].t_end.iloc[0]) if len(trig) else c["control_t_s"]
     hits, q, waiting = m["vllm:prefix_cache_hits_total"], m["vllm:prefix_cache_queries_total"], m["vllm:num_requests_waiting"]
     slo = run["cfg"]["slo"]["ttft_s"]
 

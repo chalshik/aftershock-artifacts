@@ -98,6 +98,12 @@ def test_verdict_needs_a_healthy_baseline():
     assert verdict(wipe_run(lambda x: (1.0, 0.6, 0.0), base_pf=0.9))["verdict"] == "bad_baseline"
 
 
+def test_verdict_judges_a_burst_from_its_end():
+    run = wipe_run(lambda x: (1.0, 0.6, 0.0), wiped=False)
+    run["cfg"]["trigger"] = {"kind": "burst", "at_s": 780, "duration_s": 120}
+    assert verdict(run)["t_wipe"] == 900
+
+
 def test_verdict_judges_a_control_at_the_configured_time():
     v = verdict(wipe_run(lambda x: (1.0, 0.6, 0.0), wiped=False))
     assert v["verdict"] == "recovered" and v["t_wipe"] == 900

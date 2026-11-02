@@ -57,11 +57,26 @@ def test_validate_accepts_a_good_trigger():
     trigger.validate(cfg())
 
 
-@pytest.mark.parametrize("bad", [{"kind": "burst"}, {"mode": "other"}, {"at_s": 100}, {"at_s": 3000},
+@pytest.mark.parametrize("bad", [{"kind": "power_cap"}, {"kind": "burst"}, {"mode": "other"}, {"at_s": 100}, {"at_s": 3000},
                                  {"mode": "idle", "max_wait_s": 1800}])
 def test_validate_rejects(bad):
     with pytest.raises(SystemExit):
         trigger.validate(cfg(**bad))
+
+
+def burst_cfg(**trig):
+    return {"name": "x", "workload": {"warmup_s": 240, "duration_s": 2520}, "server": {}, "verdict": {"watch_s": 1500},
+            "trigger": {"kind": "burst", "at_s": 900, "duration_s": 120, "rate": 3.0, "prompt_tokens": 1408, **trig}}
+
+
+def test_validate_accepts_a_burst_without_dev_mode():
+    trigger.validate(burst_cfg())
+
+
+@pytest.mark.parametrize("bad", [{"at_s": 100}, {"duration_s": 200}, {"rate": 0}, {"prompt_tokens": 0}])
+def test_validate_rejects_a_bad_burst(bad):
+    with pytest.raises(SystemExit):
+        trigger.validate(burst_cfg(**bad))
 
 
 def test_validate_requires_dev_mode():

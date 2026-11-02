@@ -129,6 +129,28 @@ def test_trigger_wipe_after_arrivals_end_fails(tmp_path):
     assert "trigger" in failed(with_trigger(make_run(tmp_path), [{"success": True, "t_end": 500.0}]))
 
 
+def with_burst(d, sent_all=True):
+    cfg = yaml.safe_load((d / "config.yaml").read_text())
+    cfg["trigger"] = {"kind": "burst", "at_s": 10, "duration_s": 5, "rate": 1.0, "prompt_tokens": 8}
+    (d / "config.yaml").write_text(yaml.safe_dump(cfg))
+    s = pd.read_parquet(d / "schedule.parquet")
+    s["burst"] = s.request_id.isin([20, 21, 22])
+    s.to_parquet(d / "schedule.parquet")
+    if not sent_all:
+        recs = [json.loads(l) for l in (d / "requests.jsonl").read_text().splitlines()]
+        recs[21]["t_sent"] = None
+        (d / "requests.jsonl").write_text("".join(json.dumps(r) + "\n" for r in recs))
+    return d
+
+
+def test_burst_all_sent_passes(tmp_path):
+    assert "trigger" not in failed(with_burst(make_run(tmp_path)))
+
+
+def test_burst_request_not_sent_fails(tmp_path):
+    assert "trigger" in failed(with_burst(make_run(tmp_path), sent_all=False))
+
+
 def test_scrape_gap(tmp_path):
     assert "recorder" in failed(make_run(tmp_path, gap=3.0))
 

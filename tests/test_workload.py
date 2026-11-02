@@ -68,6 +68,28 @@ def test_load_steps_change_the_rate_at_the_step():
     assert expected_requests(w, 1000, 3000) == 1000 + 4000
 
 
+BURST = {"kind": "burst", "at_s": 300, "duration_s": 100, "rate": 5.0, "prompt_tokens": 256}
+
+
+def test_burst_adds_one_off_requests_inside_its_window():
+    w = wl()
+    sched, prompts = build_schedule(w, seed=0, trigger=BURST)
+    b = sched[sched.burst]
+    assert 400 < len(b) < 600 and b.t_planned.between(300, 400, inclusive="left").all()
+    assert (b.turn == 0).all() and (b.prompt_len == 256).all() and b.session_id.is_unique
+    assert all(len(prompts.at[s, "tokens"]) == 256 for s in b.session_id)
+
+
+def test_burst_leaves_the_sessions_unchanged():
+    w = wl()
+    plain, pp = build_schedule(w, seed=0)
+    with_burst, pb = build_schedule(w, seed=0, trigger=BURST)
+    cols = ["t_planned", "session_id", "turn", "prompt_len"]
+    assert with_burst[~with_burst.burst][cols].reset_index(drop=True).equals(plain[cols])
+    assert all((pp.tokens[i] == pb.tokens[i]).all() for i in range(len(pp)))
+    assert not plain.burst.any()
+
+
 def test_no_steps_keeps_the_same_schedule_as_before():
     """Same random draws as the code the Stage 1 runs used, so an old config still gives its old schedule."""
     import numpy as np

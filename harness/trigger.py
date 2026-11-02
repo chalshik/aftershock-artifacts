@@ -21,8 +21,19 @@ DEV_MODE_ENV = "VLLM_SERVER_DEV_MODE"  # vLLM serves /reset_prefix_cache only wi
 def validate(cfg: dict):
     """Stop before the server starts, not an hour into a run."""
     trig, wl = cfg["trigger"], cfg["workload"]
+    if trig.get("kind") == "burst":
+        missing = [k for k in ("at_s", "duration_s", "rate", "prompt_tokens") if k not in trig]
+        if missing:
+            raise SystemExit(f"{cfg['name']}: burst trigger is missing {missing}")
+        end = trig["at_s"] + trig["duration_s"]
+        if trig["rate"] <= 0 or trig["duration_s"] <= 0 or trig["prompt_tokens"] <= 0:
+            raise SystemExit(f"{cfg['name']}: burst rate, duration_s and prompt_tokens must be positive")
+        watch = (cfg.get("verdict") or {}).get("watch_s", 0)
+        if not wl["warmup_s"] <= trig["at_s"] or end + watch > wl["duration_s"]:
+            raise SystemExit(f"{cfg['name']}: the burst and its watch must fit between warm-up and the end of arrivals")
+        return
     if trig.get("kind") != "cache_wipe":
-        raise SystemExit(f"{cfg['name']}: unknown trigger kind {trig.get('kind')!r}; only cache_wipe is built")
+        raise SystemExit(f"{cfg['name']}: unknown trigger kind {trig.get('kind')!r}; built: cache_wipe, burst")
     if trig.get("mode") not in ("preempt", "idle"):
         raise SystemExit(f"{cfg['name']}: trigger.mode must be preempt or idle")
     if (cfg["server"].get("env") or {}).get(DEV_MODE_ENV) != "1":

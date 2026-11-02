@@ -89,6 +89,18 @@ def test_wipe_without_dev_mode_stops_before_the_run(tmp_path):
     assert not (tmp_path / "runs").exists()
 
 
+def test_burst_run_sends_the_extra_requests(tmp_path):
+    burst = {"kind": "burst", "at_s": 8, "duration_s": 4, "rate": 5.0, "prompt_tokens": 64}
+    run_dir = run_fake(tmp_path, trigger=burst)
+    res = json.loads((run_dir / "checks.json").read_text())
+    assert res["valid"], res
+    sched = pd.read_parquet(run_dir / "schedule.parquet")
+    reqs = pd.read_json(run_dir / "requests.jsonl", lines=True).merge(sched[["request_id", "burst"]], on="request_id")
+    b = reqs[reqs.burst]
+    assert len(b) == sched.burst.sum() > 0 and (b.status == "ok").all() and (b.cached_tokens == 0).all()
+    assert not (run_dir / "trigger.jsonl").exists()
+
+
 def test_no_trigger_in_dev_mode_writes_no_trigger_file(tmp_path):
     run_dir = run_fake(tmp_path, server=dev_server())
     assert not (run_dir / "trigger.jsonl").exists()

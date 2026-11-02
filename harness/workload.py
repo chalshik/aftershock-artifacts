@@ -1,14 +1,16 @@
 """Build the open-loop request schedule before the run (seeded, deterministic).
 
-schedule: one row per request (planned send time, session, turn, prompt_len).
+schedule: one row per request (planned send time, session, turn, prompt_len, burst).
 prompts:  one row per session with its full token-ID context. A turn's prompt is
           context[:prompt_len], because each turn extends the previous one.
+A burst trigger adds one-off requests with fresh random prompts, drawn from their own generator,
+so the sessions are the same as in a run without it.
 """
 import numpy as np
 import pandas as pd
 
 
-def build_schedule(wl: dict, seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+def build_schedule(wl: dict, seed: int, trigger: dict | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
     rng = np.random.default_rng(seed)
     lo, hi = wl["token_id_range"]
     if wl["kind"] == "random":
@@ -17,12 +19,33 @@ def build_schedule(wl: dict, seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
         rows, contexts = _sessions(wl, rng, lo, hi)
     else:
         raise ValueError(f"unknown workload kind {wl['kind']!r}")
-    cols = ["t_planned", "session_id", "turn", "prompt_len"]
+    for r in rows:
+        r["burst"] = False
+    if trigger and trigger.get("kind") == "burst":
+        b_rows, b_contexts = _burst(trigger, np.random.default_rng([seed, 1]), lo, hi, first_id=len(contexts))
+        rows, contexts = rows + b_rows, contexts + b_contexts
+    cols = ["t_planned", "session_id", "turn", "prompt_len", "burst"]
     df = pd.DataFrame(rows, columns=cols).sort_values("t_planned", kind="stable").reset_index(drop=True)
     df.insert(0, "request_id", np.arange(len(df)))
     df["output_len"] = wl["output_tokens"]
     prompts = pd.DataFrame({"session_id": np.arange(len(contexts)), "tokens": contexts})
     return df, prompts
+
+
+def _burst(trig: dict, rng, lo, hi, first_id: int):
+    n = trig["prompt_tokens"]
+    times = trig["at_s"] + _poisson_times(rng, trig["rate"], trig["duration_s"])
+    rows = [dict(t_planned=float(t), session_id=first_id + i, turn=0, prompt_len=n, burst=True)
+            for i, t in enumerate(times)]
+    return rows, [rng.integers(lo, hi, n) for _ in times]
+
+
+def burst_requests(trigger: dict | None, lo: float, hi: float) -> float:
+    """Expected burst requests planned in [lo, hi); 0 without a burst trigger."""
+    if not trigger or trigger.get("kind") != "burst":
+        return 0.0
+    a, b = trigger["at_s"], trigger["at_s"] + trigger["duration_s"]
+    return trigger["rate"] * max(0.0, min(hi, b) - max(lo, a))
 
 
 def prompt_tokens(prompts: pd.DataFrame, session_id: int, prompt_len: int) -> list[int]:

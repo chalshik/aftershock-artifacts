@@ -130,7 +130,7 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
     ev = Events(run_dir / "events.jsonl")
     ev("start", run_id=run_id, git_commit=env["git_commit"])
 
-    sched, prompts = workload.build_schedule(wl, cfg["seed"])
+    sched, prompts = workload.build_schedule(wl, cfg["seed"], cfg.get("trigger"))
     sched.to_parquet(run_dir / "schedule.parquet", index=False)
     prompts.to_parquet(run_dir / "prompts.parquet", index=False)
     ev("schedule_written", **workload.summary(sched))
@@ -164,7 +164,7 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
                                         start_new_session=True, env=child_env, cwd=REPO)
         else:
             _scrape_once(run_dir, base, time.monotonic() - t0)
-        if cfg.get("trigger") is not None:
+        if (cfg.get("trigger") or {}).get("kind") == "cache_wipe":  # a burst is already in the schedule
             trig = subprocess.Popen(_pin(cfg["cpus"]["recorder"]) + py +  # sleeps until at_s, then one short call
                                     ["harness.trigger", str(run_dir), repr(t0)],
                                     start_new_session=True, env=child_env, cwd=REPO)
