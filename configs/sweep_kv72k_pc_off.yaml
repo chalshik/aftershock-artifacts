@@ -1,0 +1,9 @@
+# Capacity with prefix caching off, at the 72,480-token KV pool: mu_off. Same run shape and rule as Stage 1.
+extends: kv72k_base.yaml
+name: sweep_kv72k_pc_off
+server:
+  args:
+    --enable-prefix-caching: null
+    --no-enable-prefix-caching: true
+sweep:
+  rates: [1, 1.5, 2, 2.5, 3, 3.5, 4]
