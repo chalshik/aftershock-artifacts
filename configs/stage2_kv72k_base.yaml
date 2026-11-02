@@ -1,0 +1,6 @@
+# Stage 2 run shape (dev mode, SLO, verdict rule, cap) at the 72,480-token KV pool. See docs/decisions.md.
+extends: stage2_cap_base.yaml
+name: stage2_kv72k_base
+server:
+  args:
+    --kv-cache-memory-bytes: 10687610880   # 4530 blocks x 16 tokens x 147,456 bytes = 72,480 tokens

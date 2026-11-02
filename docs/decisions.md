@@ -409,3 +409,26 @@ Items 5 and 6 cost GPU time only for loads that reach `stuck`. Their configs get
 - **Pool-to-context ratio:** 72,480 / W. That is 1.21 at λ = 2.5 (W ≈ 59.7k) and 0.99 at λ = 3 (W ≈ 73.0k). The default pool was 1.62 and 1.32.
 - **Step 1, the capacity sweeps at the new pool:** `configs/sweep_kv72k_pc_on.yaml` (λ = 1, 1.5, 2, 2.5, 3, 3.5, 4, 5) and `configs/sweep_kv72k_pc_off.yaml` (λ = 1, 1.5, 2, 2.5, 3, 3.5, 4). Same run shape as Stage 1: 900 s, seed 0, no dev mode, cap 256 stated. Capacity rule unchanged: valid run, throughput ≥ 0.95 λ, waiting slope ≤ 0.01 req/s². About 5 h.
 - **Then:** fix μ_warm and μ_off at this pool; pick loads inside the new zone; run no-trigger controls (2400 s); then wipes and bursts, each registered before running. If μ_warm and μ_off come out nearly equal, or the zone is empty, that is recorded and the size is reconsidered.
+
+## 2026-11-02 · Capacity at the 72,480-token pool
+- **Runs, commit `cfc18da`, all 15 VALID, 0 HW thermal samples:** `20261102-175648_sweep_kv72k_pc_on_r1` … `20261102-194816_sweep_kv72k_pc_on_r5`, and `20261102-200547_sweep_kv72k_pc_off_r1` … `20261102-214207_sweep_kv72k_pc_off_r4`. The server log confirms `GPU KV cache size: 72,480 tokens`.
+- **Rule as registered** (throughput ≥ 0.95 λ, waiting slope ≤ 0.01 req/s²):
+
+| λ | On: keeps up | On: hit | On: percent fast | Off: keeps up | Off: percent fast |
+|---|---|---|---|---|---|
+| 1 | yes | 0.727 | 1.000 | yes | 1.000 |
+| 1.5 | yes | 0.711 | 1.000 | yes | 1.000 |
+| 2 | yes | 0.658 | 1.000 | yes | 0.995 |
+| 2.5 | yes | 0.574 | 1.000 | yes | 0.969 |
+| 3 | yes | 0.511 | 0.999 | **no** (slope 0.021) | 0.715 |
+| 3.5 | yes | 0.462 | 0.994 | no | 0.318 |
+| 4 | yes | 0.397 | **0.883** | no | 0.116 |
+| 5 | **no** | 0.301 | 0.151 | — | — |
+
+- **μ_warm = 4, μ_off = 2.5 req/s at this pool.** The danger zone is 2.5 < λ < 4.
+  - λ = 4 is like before: it keeps up by the rule but is not healthy (percent fast 0.883; 0.66 in one 150 s span).
+  - The caching-off λ = 2.5 run was sliding at the end (percent fast per 150 s: 1.00, 0.99, 0.99, 0.98, 0.91), so μ_off may be lower over longer runs.
+- **Compared with the default pool:** hit rate is 0.10–0.15 lower at the same load (λ = 2: 0.658 vs 0.767; λ = 3: 0.511 vs 0.661; λ = 4: 0.397 vs 0.525). μ_warm is unchanged at 4. μ_off = 2.5 here is not comparable to the old μ_off = 2, because 2.5 was not in the old grid.
+  - **The registered prediction was wrong for λ = 3:** it said the warm state would not fit there, but λ = 3 is healthy (percent fast 0.999, hit 0.511). The prediction "danger zone around λ = 2.5" does not hold either: λ = 2.5 is at μ_off, at the low edge.
+- **Loads for the next step:** λ = 3 and 3.5, the healthy loads inside the zone. λ = 4 is excluded as before.
+- **Next, started now:** no-trigger controls at λ = 3 and 3.5 (`configs/stage2_control_kv72k.yaml`; 2400 s, seed 1, dev mode, same verdict rule). Then wipes and bursts at these loads, each registered before running.

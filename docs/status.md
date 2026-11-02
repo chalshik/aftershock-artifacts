@@ -1,10 +1,14 @@
 # Study status
 
-Living document: update it after every run or decision. Last updated: 2026-11-01.
+Living document: update it after every run or decision. Last updated: 2026-11-02.
 
 **Stage 2 has started (2026-10-31), and Stage 1's inputs are all in.** τ = 300 s from `20261101-131823_tau` (VALID), so the watch window is 1500 s; see decisions.md for the limits of that number. All 6 run steps are done. μ_warm = 4 req/s, μ_off = 2 req/s, λ = 3 stayed healthy for 2 h, and the SLO is TTFT ≤ 1.0 s.
 
-**Next action:** no-trigger controls are done: λ = 1.5, 2.5, 3, 3.5 healthy, λ = 4 `bad_baseline` (decisions.md). `preempt` wipes at λ = 3 done: stuck in 0 of 3 (decisions.md). A fan on the GPU backplate fixed the heat failures. `preempt` wipes at λ = 3.5 done: stuck in 0 of 3. Wipe matrix stopped there (decisions.md). Trigger 2, the load burst: stuck in 0 of 6 at λ = 3 and 3.5 (decisions.md). λ = 4 dropped. Now: capacity sweeps at a smaller KV pool, 72,480 tokens (`configs/sweep_kv72k_pc_on.yaml`, `sweep_kv72k_pc_off.yaml`, about 5 h). Whether λ = 4 stays in the matrix is still undecided. When they end, read them with `verdict` in `analysis/load.py`, then add the wipe configs and run the matrix. Verdict rule and matrix are registered, and the live wipe test passed (decisions.md). The interrupted `20261031-025032_tau` does not count (decisions.md).
+**Stage 2 so far (details in decisions.md):**
+- **Default KV pool (96,656 tokens):** cache wipe, stuck in 0 of 6; load burst (+3 req/s for 120 s), stuck in 0 of 6; both at λ = 3 and 3.5. λ = 4 dropped (`bad_baseline` control). Wipe matrix stopped early by decision.
+- **Smaller KV pool (72,480 tokens):** μ_warm = 4, μ_off = 2.5; danger zone 2.5 < λ < 4.
+
+**Next action:** no-trigger controls at the smaller pool, λ = 3 and 3.5, are running (`configs/stage2_control_kv72k.yaml`, about 1.4 h). Then register and run wipes and bursts at those loads.
 
 ## Run steps
 

@@ -1,0 +1,6 @@
+# No-trigger controls at the 72,480-token KV pool, at the loads inside its danger zone. See docs/decisions.md.
+extends: stage2_kv72k_base.yaml
+name: stage2_control_kv72k
+seed: 1
+sweep:
+  rates: [3, 3.5]
