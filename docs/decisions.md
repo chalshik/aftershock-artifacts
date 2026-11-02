@@ -325,3 +325,40 @@ Items 5 and 6 cost GPU time only for loads that reach `stuck`. Their configs get
 - **`20261101-182452_stage2_control_cap_r3`** stays INVALID and does not count. The rerun's baseline and end levels match it to within 0.001 on percent fast, hit rate and KV, so the same seed reproduces closely.
 - **λ = 4:** by the registered rule, a stuck result there can't count as a metastable failure, because its control was not healthy. Percent fast per 300 s varied from 0.787 to 1.000 with no shock. The true steady limit looks a little below 4 over 2400 s, though μ_warm = 4 stands as measured by its rule over 900 s. Whether to keep λ = 4 in the matrix is the study owner's decision and is open.
 - **Thermal:** `gpu_steady` passed on all five counted runs. Peak was 84 °C in the rerun; SW thermal share was 0.047 at λ = 4 against a limit of 0.05.
+
+## 2026-11-02 · First `preempt` wipes at λ = 3: recovered; two of three runs invalid on heat
+- **Runs, commit `f1ac598`, control `20261101-215502_stage2_control_cap_r3_rerun` (recovered):**
+
+| Seed | Run | Checks | HW thermal samples | Preempted by the wipe | Verdict | Hit, baseline → end |
+|---|---|---|---|---|---|---|
+| 1 | `20261102-045827_wipe_preempt_r3_s1` | INVALID (`gpu_steady`) | 1 | 11 | recovered, not counted | 0.608 → 0.608 |
+| 2 | `20261102-053935_wipe_preempt_r3_s2` | VALID | 0 | 1 | recovered | 0.624 → 0.640 |
+| 3 | `20261102-062040_wipe_preempt_r3_s3` | INVALID (`gpu_steady`) | 2 | 6 | recovered, not counted | 0.652 → 0.677 |
+
+- **Counted result: stuck in 0 of 1 valid run.** The matrix needs 3 valid seeds, so seeds 1 and 3 are rerun with their configs unchanged at new run ids.
+- **What the wipe did (all three, the invalid two for description only):** hit rate in the first 15 s was 0.19–0.30, then 0.56–0.64 at 15–60 s, and near baseline by 120–300 s. Worst share within the SLO in any listed span was 0.975, at seed 1, 0–15 s. Peak waiting 9, mean N at most 13, KV peak 0.64, no preemptions after the wipe's own. No sign of the memory-limited loop.
+- **Prediction check:** the F + W model said two states were possible at λ = 3. The valid run gives no sign of the cold state holding. One likely reason, untested: the cache refills within about a minute, while the caching-off run took about 10 minutes to collapse. So a single wipe may not hold the server cold long enough at this load. Three valid seeds are needed before this is the result.
+- **Heat now blocks the matrix.** Hardware thermal samples invalidated 3 of the 9 runs since the controls began, 2 of them in the last 3, and the peak rose to 84 °C. SW thermal share reached 0.043 at seed 3. Reruns may fail the same way until cooling improves. The rule is not loosened.
+
+## 2026-11-02 · λ = 3 reruns, and why runs fail on heat
+- **Seed 1 rerun** `20261102-072216_wipe_preempt_r3_s1`: VALID, **recovered** (hit 0.608 → 0.608; 11 preempted by the wipe; first 15 s hit 0.191, the same as the invalid first attempt).
+- **Seed 3 rerun** `20261102-080323_wipe_preempt_r3_s3`: INVALID (`gpu_steady`): 3 HW thermal samples in the window, SW thermal share 0.059 (limit 0.05). By the rule it would be `recovered`, but it is not counted. Seed 3 has now failed on heat twice; no further attempt until cooling changes.
+- **λ = 3 result so far: stuck in 0 of 2 valid runs** (seeds 1, 2).
+- **Cause of the heat failures (all INVALID runs since 2026-11-01):**
+  - Every one was a short HW slowdown + HW thermal flag at a core temperature of 83–84 °C, far below the card's 95 °C slowdown point. Most likely another part of the card (likely memory) hits its limit; the driver does not report memory temperature, so this is not confirmed.
+  - The wipe is not the cause: flags occurred before it, at t = 483 s and 696 s, and in a no-trigger control.
+  - Load is not the cause: every run draws about 401–416 W at the 420 W cap, whatever λ is. Seed 3 sends fewer prompt tokens per second than seed 1 (4,224 vs 4,460).
+  - Conditions got hotter: mean busy temperature was 74–79 °C on 2026-11-01 and 79–80 °C on 2026-11-02, with the peak 83 → 84 °C. Runs start from about the same idle temperature (44–50 °C).
+  - The GPU fan is already at 97–100 % under load, so a fan-curve change cannot help. The levers are cooler air reaching the card, or a lower power limit (which would require remeasuring μ and the controls).
+
+## 2026-11-02 · Seed 3, third attempt after a cooling change: stopped early
+- **Run:** `20261102-093229_wipe_preempt_r3_s3`, started after the study owner changed the cooling. Over t = 240–1152 s it was cooler than the two earlier attempts (mean busy 78.6 °C against 80.1 and 80.6; SW thermal share 3.6 % against 4.2 and 5.3 %). It still had a HW thermal sample at t = 508 s, so it could not be valid.
+- **Stopped on request at about t = 1618 s,** by interrupting the harness process. INVALID (`accounting`, `gpu_steady`, `arrival_rate`); it does not count.
+- **When the flag fires:** in every flagged second across seeds 1–3, the core briefly peaked at 83–84 °C. Seed 2 had heavier arrivals at t = 483–508 s (41–46 per 10 s against 32) while staying at 80–82 °C, with no flag. So the flag follows temperature peaks, not request load, and the repeat at t = 508 s is seed 3's schedule running warm there. Peaks need to come down about 2–3 °C.
+- **Options recorded, none chosen yet:** more cooling (no effect on the study); a lower power limit (reliable, but μ and the controls must be remeasured); or continue as is and accept reruns.
+
+## 2026-11-02 · Fan on the GPU backplate; λ = 3 complete: stuck in 0 of 3
+- **Cooling change:** the study owner added a fan on the back of the GPU. This is a change to the physical setup, not to the software or settings. Runs before it ran warmer: mean busy temperature 77.7 °C now, 79–80 °C before.
+- **Seed 3, fourth attempt** `20261102-100744_wipe_preempt_r3_s3`: VALID. 0 HW thermal samples, SW thermal share 0.010, peak 82 °C, 90th percentile 80 °C. Over the same span (t = 240–725 s), the earlier attempts each had one HW sample. **Verdict recovered** (hit 0.652 → 0.677; 6 preempted by the wipe; first 15 s hit 0.295, back to 0.61 by 15–60 s; peak waiting 3, peak KV 0.36). Arrival-rate check passed (2.83 measured against 3.0).
+- **λ = 3, `preempt` wipe: stuck in 0 of 3 valid runs** (`20261102-072216_wipe_preempt_r3_s1`, `20261102-053935_wipe_preempt_r3_s2`, `20261102-100744_wipe_preempt_r3_s3`). The seeds agree, so seeds 4 and 5 are not added. At λ = 3 a single wipe does not cause the failure. The cache refills within about 1–5 minutes, and N, waiting and KV stay far from the memory limit.
+- **Comparability:** seeds 1 and 2 ran before the backplate fan, and seed 3 ran with it. All three recovered, so the cooling change doesn't alter the λ = 3 verdict. From here on, all runs use the new cooling.
