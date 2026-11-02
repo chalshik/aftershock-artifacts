@@ -6,9 +6,9 @@ Living document: update it after every run or decision. Last updated: 2026-11-02
 
 **Stage 2 so far (details in decisions.md):**
 - **Default KV pool (96,656 tokens):** cache wipe, stuck in 0 of 6; load burst (+3 req/s for 120 s), stuck in 0 of 6; both at λ = 3 and 3.5. λ = 4 dropped (`bad_baseline` control). Wipe matrix stopped early by decision.
-- **Smaller KV pool (72,480 tokens):** μ_warm = 4, μ_off = 2.5; danger zone 2.5 < λ < 4.
+- **Smaller KV pool (72,480 tokens):** μ_warm = 4, μ_off = 2.5; danger zone 2.5 < λ < 4. Controls: λ = 3 healthy, λ = 3.5 `bad_baseline`.
 
-**Next action:** no-trigger controls at the smaller pool, λ = 3 and 3.5, are running (`configs/stage2_control_kv72k.yaml`, about 1.4 h). Then register and run wipes and bursts at those loads.
+**Next action:** bursts, then wipes, at λ = 3 on the smaller pool, seeds 1–3, are running (`configs/burst_kv72k_r3_s*.yaml`, `configs/wipe_kv72k_r3_s*.yaml`, about 4.3 h). Then read their verdicts.
 
 ## Run steps
 

@@ -432,3 +432,14 @@ Items 5 and 6 cost GPU time only for loads that reach `stuck`. Their configs get
   - **The registered prediction was wrong for λ = 3:** it said the warm state would not fit there, but λ = 3 is healthy (percent fast 0.999, hit 0.511). The prediction "danger zone around λ = 2.5" does not hold either: λ = 2.5 is at μ_off, at the low edge.
 - **Loads for the next step:** λ = 3 and 3.5, the healthy loads inside the zone. λ = 4 is excluded as before.
 - **Next, started now:** no-trigger controls at λ = 3 and 3.5 (`configs/stage2_control_kv72k.yaml`; 2400 s, seed 1, dev mode, same verdict rule). Then wipes and bursts at these loads, each registered before running.
+
+## 2026-11-02 · Controls at the 72,480-token pool; shocks registered at λ = 3
+- **Controls, commit `acd3051`, both VALID, 0 HW thermal samples:**
+  - `20261102-221019_stage2_control_kv72k_r3`: **recovered** (baseline percent fast 1.000, hit 0.500; end 0.998, 0.487). Percent fast per 300 s never below 0.998.
+  - `20261102-225146_stage2_control_kv72k_r3.5`: **bad_baseline** (baseline percent fast 0.951; one 300 s span at 0.912 with no shock; 13 preemptions). So at this pool λ = 3.5 is not steadily healthy, and a stuck result there could not count.
+- **Only λ = 3 is usable at this pool.**
+- **Shocks at λ = 3, registered before running, the same as at the default pool so the two pools compare directly:**
+  - Burst: +3 req/s of 1408-token one-off requests for 120 s from t = 900 s; 2520 s runs (`configs/burst_kv72k_r3_s1..3.yaml`).
+  - Wipe: `preempt` at t = 900 s; 2400 s runs (`configs/wipe_kv72k_r3_s1..3.yaml`).
+  - Seeds 1–3 each, bursts first. Same verdict rule. About 4.3 h.
+- **The control mismatch for bursts, as before:** the burst runs are 2520 s against the 2400 s control. A stuck burst result needs a matching 2520 s no-burst control before it counts.
