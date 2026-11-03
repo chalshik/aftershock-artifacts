@@ -473,3 +473,23 @@ Items 5 and 6 cost GPU time only for loads that reach `stuck`. Their configs get
   - A gap at 300 s only: lag. The backlog from the overloaded peak (λ = 4.5–5) hasn't cleared yet. This is expected, because a burst's backlog took about 5 minutes to clear at λ = 3.
   - No gap: no hysteresis on this setup.
 - **Caveat stated in advance:** at the peak, λ = 5 is overload (`20261030-141658_sweep_pc_on_r5`). The backlog it leaves, with no timeouts, can take a long time to clear on the way down. That lag is exactly what the second dwell is for.
+
+## 2026-11-03 · Ramp result: no gap at either dwell
+- **Runs, commit `a16d4e2`, both VALID, all requests ok, 0 HW thermal samples:** `20261103-043121_ramp_d300` (13,021 requests; peak 82 °C) and `20261103-053730_ramp_d600` (25,989 requests; peak 84 °C).
+- **Step table (second half of each step), percent fast / hit:**
+
+| λ | 300 s up | 300 s down | 600 s up | 600 s down |
+|---|---|---|---|---|
+| 2 | 1.000 / 0.759 | 1.000 / 0.757 | 1.000 / 0.756 | 1.000 / 0.750 |
+| 2.5 | 1.000 / 0.646 | 1.000 / 0.613 | 1.000 / 0.722 | 1.000 / 0.740 |
+| 3 | 1.000 / 0.608 | 1.000 / 0.680 | 1.000 / 0.606 | 1.000 / 0.660 |
+| 3.5 | 1.000 / 0.562 | 1.000 / 0.619 | 1.000 / 0.645 | 1.000 / 0.613 |
+| 4 | 1.000 / 0.521 | 0.998 / 0.501 | 0.984 / 0.543 | 0.998 / 0.524 |
+| 4.5 | 0.989 / 0.472 | 0.526 / 0.501 | 0.624 / 0.464 | 0.174 / 0.466 |
+| 5 (peak) | 0.000 / 0.419 | — | 0.089 / 0.407 | — |
+
+- **Gap rule:** no gap at any load judged, at either dwell.
+  - At λ = 4.5 down (300 s), percent fast was 0.526, but hit didn't fall, so it is not a gap. It is the peak's backlog clearing (waiting 6.9), and the next step down was healthy.
+  - At 600 s, λ = 4.5 was not healthy going up (0.624), so it isn't judged.
+- **Reading:** on this setup the server returns to the same state on the way down as on the way up, one step below the peak. The hit rate on the way down is equal to or higher than on the way up at λ ≤ 3.5. There is no evidence of two states at one load (C1).
+- **Stage 2 evidence so far, default pool unless stated:** cache wipe 0 of 6 stuck; load burst 0 of 6; smaller 72,480-token pool, wipe and burst at λ = 3, 0 of 6; up-then-down ramp at 300 s and 600 s dwell, no gap. Untested: triggers 3–5 (power cap, engine restart, popularity shift), bigger bursts, the ramp at the smaller pool, and other workloads (turn gap, session length, model size).

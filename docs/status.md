@@ -8,8 +8,9 @@ Living document: update it after every run or decision. Last updated: 2026-11-03
 - **Default KV pool (96,656 tokens):** cache wipe, stuck in 0 of 6; load burst (+3 req/s for 120 s), stuck in 0 of 6; both at λ = 3 and 3.5. λ = 4 dropped (`bad_baseline` control). Wipe matrix stopped early by decision.
 - **Smaller KV pool (72,480 tokens):** μ_warm = 4, μ_off = 2.5; danger zone 2.5 < λ < 4. Controls: λ = 3 healthy, λ = 3.5 `bad_baseline`. Burst and wipe at λ = 3: stuck in 0 of 6.
 - **Overall:** stuck in 0 of 18 valid shock runs at healthy loads.
+- **Up-then-down ramp (default pool):** no gap at 300 s or 600 s steps.
 
-**Next action:** up-then-down ramp on the default pool is running: 300 s steps, then 600 s steps (`configs/ramp_d300.yaml`, `configs/ramp_d600.yaml`, about 3.5 h). Then read it with `ramp_table` and the registered gap rule.
+**Next action:** the study owner's decision: write up the negative result, or try the untested options (decisions.md, ramp result). Nothing is running.
 
 ## Run steps
 
