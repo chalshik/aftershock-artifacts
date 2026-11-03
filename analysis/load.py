@@ -141,6 +141,35 @@ def settling_time(run: dict, t_step: float, t_end: float) -> float | None:
     return None
 
 
+def _level(run: dict, a: float, b: float) -> dict:
+    """Levels over [a, b): percent fast and hit rate by arrival/scrape time, and the server gauges."""
+    m, r, slo = run["metrics"], run["requests"], run["cfg"]["slo"]["ttft_s"]
+    hits, q, waiting = m["vllm:prefix_cache_hits_total"], m["vllm:prefix_cache_queries_total"], m["vllm:num_requests_waiting"]
+    reqs = r[(r.t_planned >= a) & (r.t_planned < b)]
+    w = (m.t >= a) & (m.t < b)
+    dq = np.interp(b, m.t, q) - np.interp(a, m.t, q)
+    return {"pf": float(((reqs.status == "ok") & (reqs.ttft <= slo)).mean()),
+            "hit": float((np.interp(b, m.t, hits) - np.interp(a, m.t, hits)) / dq) if dq else 0.0,
+            "q": float(waiting[w].mean()), "q_slope": float(np.polyfit(m.t[w], waiting[w], 1)[0]),
+            "n": float(m["vllm:num_requests_running"][w].mean()), "kv": float(m["vllm:kv_cache_usage_perc"][w].mean())}
+
+
+def ramp_table(run: dict) -> pd.DataFrame:
+    """One row per load step of an up-then-down ramp (`workload.steps`). Each step is judged over its last part,
+    after `ramp.settle_frac` of the step has passed, so the queue left by the previous step has had time to clear."""
+    cfg = run["cfg"]
+    wl, settle = cfg["workload"], cfg["ramp"]["settle_frac"]
+    starts = [0.0] + [float(s["at_s"]) for s in wl["steps"]]
+    ends = starts[1:] + [float(wl["duration_s"])]
+    rates = [wl["rate"]] + [s["rate"] for s in wl["steps"]]
+    peak = rates.index(max(rates))
+    rows = []
+    for i, (a, b, lam) in enumerate(zip(starts, ends, rates)):
+        lv = _level(run, a + settle * (b - a), b)
+        rows.append({"step": i, "rate": lam, "direction": "up" if i <= peak else "down", "start": a, "end": b, **lv})
+    return pd.DataFrame(rows)
+
+
 def verdict(run: dict) -> dict:
     """Stage 2 verdict, by the rule in docs/decisions.md; settings are in the run's config under `verdict`.
     The baseline ends where the trigger starts; the watch starts where it ends (a successful wipe, a burst,
@@ -154,18 +183,7 @@ def verdict(run: dict) -> dict:
         t_start, t = float(wipe.t_start), float(wipe.t_end)
     else:
         t_start = t = float(c["control_t_s"])
-    hits, q, waiting = m["vllm:prefix_cache_hits_total"], m["vllm:prefix_cache_queries_total"], m["vllm:num_requests_waiting"]
-    slo = run["cfg"]["slo"]["ttft_s"]
-
-    def level(a, b):
-        reqs = r[(r.t_planned >= a) & (r.t_planned < b)]
-        w = (m.t >= a) & (m.t < b)
-        dq = np.interp(b, m.t, q) - np.interp(a, m.t, q)
-        return {"pf": float(((reqs.status == "ok") & (reqs.ttft <= slo)).mean()),
-                "hit": float((np.interp(b, m.t, hits) - np.interp(a, m.t, hits)) / dq) if dq else 0.0,
-                "q": float(waiting[w].mean()), "q_slope": float(np.polyfit(m.t[w], waiting[w], 1)[0]),
-                "n": float(m["vllm:num_requests_running"][w].mean()), "kv": float(m["vllm:kv_cache_usage_perc"][w].mean())}
-
+    level = lambda a, b: _level(run, a, b)
     t_end = t + c["watch_s"]
     base = level(t_start - c["baseline_s"], t_start)
     prev = level(t_end - 2 * c["end_s"], t_end - c["end_s"])

@@ -4,7 +4,7 @@ import pandas as pd
 
 import pytest
 
-from analysis.load import client_backlog_slope, settling_time, summarize, verdict, whole_run_hit_rate
+from analysis.load import client_backlog_slope, ramp_table, settling_time, summarize, verdict, whole_run_hit_rate
 
 
 def test_throughput_counts_completions_inside_the_window():
@@ -122,3 +122,24 @@ def test_verdict_wipe_baseline_ends_at_the_wipe_start():
 def test_verdict_judges_a_control_at_the_configured_time():
     v = verdict(wipe_run(lambda x: (1.0, 0.6, 0.0), wiped=False))
     assert v["verdict"] == "recovered" and v["t_wipe"] == 900
+
+
+def test_ramp_table_judges_each_step_after_it_settles():
+    """Up 1 -> 2 -> 3, down 2 -> 1, 100 s each. The first half of the 'down 2' step is slow (left over from
+    the peak); its second half is fast, so with settle_frac 0.5 the down step matches the up step."""
+    t = [float(x) for x in range(0, 501)]
+    hits, q = [0.0], [0.0]
+    for a in t[1:]:
+        q.append(q[-1] + 100.0); hits.append(hits[-1] + 60.0)
+    m = pd.DataFrame({"t": t, "vllm:prefix_cache_hits_total": hits, "vllm:prefix_cache_queries_total": q,
+                      "vllm:num_requests_waiting": 0.0, "vllm:num_requests_running": 5.0, "vllm:kv_cache_usage_perc": 0.1})
+    slow = lambda x: 300 <= x < 350
+    r = pd.DataFrame({"t_planned": t, "status": "ok", "ttft": [5.0 if slow(x) else 0.1 for x in t]})
+    cfg = {"workload": {"rate": 1.0, "duration_s": 500, "steps": [{"at_s": 100, "rate": 2.0}, {"at_s": 200, "rate": 3.0},
+                                                                 {"at_s": 300, "rate": 2.0}, {"at_s": 400, "rate": 1.0}]},
+           "ramp": {"settle_frac": 0.5}, "slo": {"ttft_s": 1.0}}
+    tab = ramp_table({"cfg": cfg, "metrics": m, "requests": r})
+    assert list(tab.rate) == [1.0, 2.0, 3.0, 2.0, 1.0]
+    assert list(tab.direction) == ["up", "up", "up", "down", "down"]
+    assert (tab.pf == 1.0).all() and abs(tab.hit - 0.6).max() < 1e-9
+    assert list(tab.start) == [0, 100, 200, 300, 400]

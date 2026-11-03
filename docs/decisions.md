@@ -459,3 +459,17 @@ Items 5 and 6 cost GPU time only for loads that reach `stuck`. Their configs get
 - **Bursts against the default pool at λ = 3:** mean N during the burst was about 45–52 against 62–73, since fewer requests fit in less memory. Hit fell to 0.11–0.28 against 0.17–0.35. Peak waiting was 187–254 against 178–237. Clearing took about the same time: percent fast 0.54–0.85 at 60–300 s after, and back to baseline by 300–600 s.
 - **Wipes:** the lowest percent fast after a wipe was 0.995; the hit dip was small (to 0.43 at most) and gone within about 5 minutes.
 - **Result: a 25 % smaller KV pool does not produce the failure at λ = 3.** Over both pools and both triggers: stuck in 0 of 18 valid shock runs at healthy loads. At this pool, λ = 3.5 is not usable (`bad_baseline` control).
+
+## 2026-11-03 · Up-then-down ramp, registered before running (study owner's decision)
+- **Why:** after 0 of 18 stuck shock runs, the ramp is the plan's other test for two states at one load, and it needs no trigger. Load rises in steps past μ_warm, then falls back. A metastable server stays slow on the way down at loads where it was healthy on the way up.
+- **Runs:** default KV pool (`stage2_cap_base.yaml`: cap 256, dev mode, seed 1). Levels 2 → 2.5 → 3 → 3.5 → 4 → 4.5 → 5 → 4.5 → … → 2 req/s, 13 steps.
+  - `configs/ramp_d300.yaml`: 300 s per step, 3900 s.
+  - `configs/ramp_d600.yaml`: 600 s per step, 7800 s. The plan requires a second, longer dwell to tell lag from a real gap.
+  - About 3.5 h together.
+- **Measure** (`analysis/load.py`, `ramp_table`): each step is judged over its second half (`ramp.settle_frac: 0.5`) for percent fast, hit rate, waiting, N and KV. Session arrivals take about 140 s to follow a step, so half of a 300 s step is the shortest usable window.
+- **Gap rule, at each load visited both ways:** a gap if the down step has percent fast ≤ up − 0.10 and hit ≤ up − 0.06 (the stuck thresholds). It counts only at loads that were healthy going up (up percent fast ≥ 0.98). With the controls, that is λ ≤ 3.5.
+- **Reading:**
+  - A gap at both dwells, at the same load: evidence for two states at that load (C1).
+  - A gap at 300 s only: lag. The backlog from the overloaded peak (λ = 4.5–5) hasn't cleared yet. This is expected, because a burst's backlog took about 5 minutes to clear at λ = 3.
+  - No gap: no hysteresis on this setup.
+- **Caveat stated in advance:** at the peak, λ = 5 is overload (`20261030-141658_sweep_pc_on_r5`). The backlog it leaves, with no timeouts, can take a long time to clear on the way down. That lag is exactly what the second dwell is for.

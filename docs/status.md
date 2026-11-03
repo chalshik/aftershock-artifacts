@@ -9,7 +9,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-03
 - **Smaller KV pool (72,480 tokens):** μ_warm = 4, μ_off = 2.5; danger zone 2.5 < λ < 4. Controls: λ = 3 healthy, λ = 3.5 `bad_baseline`. Burst and wipe at λ = 3: stuck in 0 of 6.
 - **Overall:** stuck in 0 of 18 valid shock runs at healthy loads.
 
-**Next action:** the study owner's decision on what to try next. Nothing is running.
+**Next action:** up-then-down ramp on the default pool is running: 300 s steps, then 600 s steps (`configs/ramp_d300.yaml`, `configs/ramp_d600.yaml`, about 3.5 h). Then read it with `ramp_table` and the registered gap rule.
 
 ## Run steps
 
