@@ -10,7 +10,9 @@ Living document: update it after every run or decision. Last updated: 2026-11-03
 - **Overall:** stuck in 0 of 18 valid shock runs at healthy loads.
 - **Up-then-down ramp (default pool):** no gap at 300 s or 600 s steps.
 
-**Next action:** shorter turn gaps (mean 5 s): capacity sweeps running (`configs/sweep_gap5_pc_on.yaml`, `sweep_gap5_pc_off.yaml`, about 3.4 h). Then controls and shocks in the new zone.
+- **5 s turn gaps (default pool):** μ_warm = 6, μ_off = 2.5; danger zone 2.5 < λ < 6.
+
+**Next action:** no-trigger controls with 5 s gaps at λ = 3.5 and 4.5 are running (`configs/stage2_control_gap5.yaml`, about 1.4 h). Then the burst and wipe, registered first.
 
 ## Run steps
 

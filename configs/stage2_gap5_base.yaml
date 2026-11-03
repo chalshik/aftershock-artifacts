@@ -1,0 +1,6 @@
+# Stage 2 run shape (dev mode, SLO, verdict rule, cap) with 5 s turn gaps, default KV pool. See docs/decisions.md.
+extends: stage2_cap_base.yaml
+name: stage2_gap5_base
+workload:
+  sessions:
+    turn_gap_s: {dist: exponential, mean: 5.0}

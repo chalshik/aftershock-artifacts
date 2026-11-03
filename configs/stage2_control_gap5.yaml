@@ -1,0 +1,6 @@
+# No-trigger controls with 5 s turn gaps, at the healthy loads inside their danger zone. See docs/decisions.md.
+extends: stage2_gap5_base.yaml
+name: stage2_control_gap5
+seed: 1
+sweep:
+  rates: [3.5, 4.5]
