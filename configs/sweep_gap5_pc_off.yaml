@@ -1,0 +1,9 @@
+# Capacity with prefix caching off, 5 s turn gaps: mu_off. Same run shape and rule as Stage 1.
+extends: gap5_base.yaml
+name: sweep_gap5_pc_off
+server:
+  args:
+    --enable-prefix-caching: null
+    --no-enable-prefix-caching: true
+sweep:
+  rates: [2, 2.5, 3, 3.5]

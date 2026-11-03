@@ -1,0 +1,9 @@
+# Shorter turn gaps: mean 5 s instead of 20 s, default KV pool, cap stated. Everything else as Stage 1. See docs/decisions.md.
+extends: base.yaml
+name: gap5_base
+server:
+  args:
+    --max-num-seqs: 256
+workload:
+  sessions:
+    turn_gap_s: {dist: exponential, mean: 5.0}

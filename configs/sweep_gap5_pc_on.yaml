@@ -1,0 +1,5 @@
+# Capacity with prefix caching on, 5 s turn gaps: mu_warm. Same run shape and rule as Stage 1.
+extends: gap5_base.yaml
+name: sweep_gap5_pc_on
+sweep:
+  rates: [2, 3, 3.5, 4, 4.5, 5, 6, 7]

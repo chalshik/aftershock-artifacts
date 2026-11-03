@@ -10,7 +10,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-03
 - **Overall:** stuck in 0 of 18 valid shock runs at healthy loads.
 - **Up-then-down ramp (default pool):** no gap at 300 s or 600 s steps.
 
-**Next action:** the study owner's decision: write up the negative result, or try the untested options (decisions.md, ramp result). Nothing is running.
+**Next action:** shorter turn gaps (mean 5 s): capacity sweeps running (`configs/sweep_gap5_pc_on.yaml`, `sweep_gap5_pc_off.yaml`, about 3.4 h). Then controls and shocks in the new zone.
 
 ## Run steps
 
