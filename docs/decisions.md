@@ -508,3 +508,14 @@ Items 5 and 6 cost GPU time only for loads that reach `stuck`. Their configs get
 - **Against 20 s gaps:** the cache is worth far more (hit at λ = 4: 0.786 vs 0.525; μ_warm 6 vs 4). Under overload, cached prefixes survive (hit 0.757 at λ = 7 against about 0.42 at λ = 5 with 20 s gaps). This supports the registered prediction that crowding out the cache is harder here. The danger zone is wider (2.5 < λ < 6), but memory pressure inside it is low.
 - **Loads for the next step:** λ = 3.5 and 4.5, inside the zone and healthy (percent fast 1.000). λ = 5 and 6 are below 0.98, so like λ = 4 at 20 s gaps they could not count.
 - **Next, started now:** no-trigger controls at λ = 3.5 and 4.5 (`configs/stage2_control_gap5.yaml`; 2400 s, seed 1, dev mode). Then the same burst and wipe, registered before running.
+
+## 2026-11-03 · 5 s-gap controls healthy; shocks registered at λ = 3.5 and 4.5
+- **Controls, commit `49ba3df`, both VALID, 0 HW thermal samples, both recovered:**
+  - `20261103-145356_stage2_control_gap5_r3.5`: percent fast 1.000 in every 300 s span; hit 0.799–0.805; KV 0.10–0.14.
+  - `20261103-153502_stage2_control_gap5_r4.5`: baseline percent fast 1.000, hit 0.799, KV 0.20; end 1.000, 0.801, 0.21.
+- **Shocks, registered before running, the same as at 20 s gaps:**
+  - Burst: +3 req/s, 1408-token one-off requests for 120 s from t = 900 s, 2520 s runs.
+  - Wipe: `preempt` at t = 900 s, 2400 s runs.
+  - λ = 4.5 then 3.5, seeds 1–3: bursts at both loads first, then wipes (`configs/burst_gap5_r*_s*.yaml`, `configs/wipe_gap5_r*_s*.yaml`). 12 runs, about 9 h, about 2 GB of disk (7.7 GB free).
+  - At λ = 4.5 the burst brings the total to 7.5 req/s, above μ_warm = 6.
+- **Prediction (from the sweeps):** recovery, because cached prefixes survived even overload at 5 s gaps. The burst runs keep the same 2520 s vs 2400 s control mismatch as before.

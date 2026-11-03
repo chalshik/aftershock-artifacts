@@ -9,10 +9,9 @@ Living document: update it after every run or decision. Last updated: 2026-11-03
 - **Smaller KV pool (72,480 tokens):** μ_warm = 4, μ_off = 2.5; danger zone 2.5 < λ < 4. Controls: λ = 3 healthy, λ = 3.5 `bad_baseline`. Burst and wipe at λ = 3: stuck in 0 of 6.
 - **Overall:** stuck in 0 of 18 valid shock runs at healthy loads.
 - **Up-then-down ramp (default pool):** no gap at 300 s or 600 s steps.
+- **5 s turn gaps (default pool):** μ_warm = 6, μ_off = 2.5; danger zone 2.5 < λ < 6. Controls at λ = 3.5 and 4.5 healthy.
 
-- **5 s turn gaps (default pool):** μ_warm = 6, μ_off = 2.5; danger zone 2.5 < λ < 6.
-
-**Next action:** no-trigger controls with 5 s gaps at λ = 3.5 and 4.5 are running (`configs/stage2_control_gap5.yaml`, about 1.4 h). Then the burst and wipe, registered first.
+**Next action:** bursts, then wipes, with 5 s gaps at λ = 4.5 and 3.5, seeds 1–3, are running (`configs/burst_gap5_*`, `configs/wipe_gap5_*`, about 9 h).
 
 ## Run steps
 

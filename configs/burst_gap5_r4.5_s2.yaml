@@ -1,0 +1,13 @@
+# Load burst at lambda = 4.5, 5 s turn gaps, default KV pool: same burst as before. See docs/decisions.md.
+extends: stage2_gap5_base.yaml
+name: burst_gap5_r4.5_s2
+seed: 2
+workload:
+  rate: 4.5
+  duration_s: 2520     # 900 s before the burst + 120 s burst + the 1500 s watch
+trigger:
+  kind: burst
+  at_s: 900
+  duration_s: 120
+  rate: 3.0            # extra requests per second, on top of lambda
+  prompt_tokens: 1408  # median session prompt; random tokens, so nothing is cached

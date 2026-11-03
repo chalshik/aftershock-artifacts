@@ -1,0 +1,11 @@
+# Cache wipe at lambda = 4.5, 5 s turn gaps, default KV pool, preempting running requests: same wipe as before. See docs/decisions.md.
+extends: stage2_gap5_base.yaml
+name: wipe_gap5_r4.5_s1
+seed: 1
+workload:
+  rate: 4.5
+trigger:
+  kind: cache_wipe
+  at_s: 900
+  mode: preempt
+  request_timeout_s: 60
