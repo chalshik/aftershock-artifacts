@@ -443,3 +443,19 @@ Items 5 and 6 cost GPU time only for loads that reach `stuck`. Their configs get
   - Wipe: `preempt` at t = 900 s; 2400 s runs (`configs/wipe_kv72k_r3_s1..3.yaml`).
   - Seeds 1–3 each, bursts first. Same verdict rule. About 4.3 h.
 - **The control mismatch for bursts, as before:** the burst runs are 2520 s against the 2400 s control. A stuck burst result needs a matching 2520 s no-burst control before it counts.
+
+## 2026-11-03 · Shocks at the 72,480-token pool, λ = 3: stuck in 0 of 6
+- **Runs, commit `c964f49`, all VALID, 0 HW thermal samples, all recovered:**
+
+| Run | Verdict | Baseline percent fast / hit | End percent fast / hit |
+|---|---|---|---|
+| `20261102-234257_burst_kv72k_r3_s1` | recovered | 0.999 / 0.502 | 0.997 / 0.506 |
+| `20261103-002556_burst_kv72k_r3_s2` | recovered | 1.000 / 0.496 | 1.000 / 0.514 |
+| `20261103-010856_burst_kv72k_r3_s3` | recovered | 1.000 / 0.510 | 0.998 / 0.560 |
+| `20261103-015156_wipe_kv72k_r3_s1` | recovered | 0.999 / 0.500 | 0.998 / 0.487 |
+| `20261103-023254_wipe_kv72k_r3_s2` | recovered | 0.997 / 0.503 | 1.000 / 0.520 |
+| `20261103-031353_wipe_kv72k_r3_s3` | recovered | 1.000 / 0.543 | 1.000 / 0.562 |
+
+- **Bursts against the default pool at λ = 3:** mean N during the burst was about 45–52 against 62–73, since fewer requests fit in less memory. Hit fell to 0.11–0.28 against 0.17–0.35. Peak waiting was 187–254 against 178–237. Clearing took about the same time: percent fast 0.54–0.85 at 60–300 s after, and back to baseline by 300–600 s.
+- **Wipes:** the lowest percent fast after a wipe was 0.995; the hit dip was small (to 0.43 at most) and gone within about 5 minutes.
+- **Result: a 25 % smaller KV pool does not produce the failure at λ = 3.** Over both pools and both triggers: stuck in 0 of 18 valid shock runs at healthy loads. At this pool, λ = 3.5 is not usable (`bad_baseline` control).

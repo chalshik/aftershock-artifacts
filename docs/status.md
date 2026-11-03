@@ -1,14 +1,15 @@
 # Study status
 
-Living document: update it after every run or decision. Last updated: 2026-11-02.
+Living document: update it after every run or decision. Last updated: 2026-11-03.
 
 **Stage 2 has started (2026-10-31), and Stage 1's inputs are all in.** τ = 300 s from `20261101-131823_tau` (VALID), so the watch window is 1500 s; see decisions.md for the limits of that number. All 6 run steps are done. μ_warm = 4 req/s, μ_off = 2 req/s, λ = 3 stayed healthy for 2 h, and the SLO is TTFT ≤ 1.0 s.
 
 **Stage 2 so far (details in decisions.md):**
 - **Default KV pool (96,656 tokens):** cache wipe, stuck in 0 of 6; load burst (+3 req/s for 120 s), stuck in 0 of 6; both at λ = 3 and 3.5. λ = 4 dropped (`bad_baseline` control). Wipe matrix stopped early by decision.
-- **Smaller KV pool (72,480 tokens):** μ_warm = 4, μ_off = 2.5; danger zone 2.5 < λ < 4. Controls: λ = 3 healthy, λ = 3.5 `bad_baseline`.
+- **Smaller KV pool (72,480 tokens):** μ_warm = 4, μ_off = 2.5; danger zone 2.5 < λ < 4. Controls: λ = 3 healthy, λ = 3.5 `bad_baseline`. Burst and wipe at λ = 3: stuck in 0 of 6.
+- **Overall:** stuck in 0 of 18 valid shock runs at healthy loads.
 
-**Next action:** bursts, then wipes, at λ = 3 on the smaller pool, seeds 1–3, are running (`configs/burst_kv72k_r3_s*.yaml`, `configs/wipe_kv72k_r3_s*.yaml`, about 4.3 h). Then read their verdicts.
+**Next action:** the study owner's decision on what to try next. Nothing is running.
 
 ## Run steps
 
