@@ -28,7 +28,7 @@ def control(slow_bins=(), arrivals=None, preempt_bins=(), lam=4.0, dur=2400):
     m = pd.DataFrame({"t": ts, "vllm:prefix_cache_hits_total": 60.0 * ts, "vllm:prefix_cache_queries_total": 100.0 * ts,
                       "vllm:num_requests_waiting": 0.0, "vllm:num_requests_running": 10.0, "vllm:kv_cache_usage_perc": 0.4,
                       "vllm:num_preemptions_total": pre})
-    return {"cfg": {"workload": {"rate": lam, "warmup_s": 240, "duration_s": dur}, "slo": {"ttft_s": 1.0}}, "requests": r, "metrics": m, "gpu": pd.DataFrame()}
+    return {"cfg": {"workload": {"rate": lam, "warmup_s": 240, "duration_s": dur}, "slo": {"ttft_s": 1.0}, "checks": {"max_scrape_gap_s": 2.0}}, "requests": r, "metrics": m, "gpu": pd.DataFrame()}
 
 
 def test_episodes_merge_short_healthy_gaps():

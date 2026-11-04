@@ -71,7 +71,7 @@ def wipe_run(after, base_pf=1.0, wiped=True):
                       "vllm:num_requests_running": 8.0, "vllm:kv_cache_usage_perc": 0.2})
     r = pd.DataFrame({"t_planned": t, "status": "ok", "ttft": [0.1 if (i % 100) < level(a)[0] * 100 else 5.0 for i, a in enumerate(t)]})
     trig = pd.DataFrame({"success": [True], "t_start": [900.0], "t_end": [900.0]}) if wiped else pd.DataFrame()
-    return {"cfg": {"verdict": VERDICT, "slo": {"ttft_s": 1.0}}, "metrics": m, "requests": r, "trigger": trig}
+    return {"cfg": {"verdict": VERDICT, "slo": {"ttft_s": 1.0}, "checks": {"max_scrape_gap_s": 2.0}}, "metrics": m, "requests": r, "trigger": trig}
 
 
 @pytest.mark.parametrize("after, expected", [
@@ -137,7 +137,7 @@ def test_ramp_table_judges_each_step_after_it_settles():
     r = pd.DataFrame({"t_planned": t, "status": "ok", "ttft": [5.0 if slow(x) else 0.1 for x in t]})
     cfg = {"workload": {"rate": 1.0, "duration_s": 500, "steps": [{"at_s": 100, "rate": 2.0}, {"at_s": 200, "rate": 3.0},
                                                                  {"at_s": 300, "rate": 2.0}, {"at_s": 400, "rate": 1.0}]},
-           "ramp": {"settle_frac": 0.5}, "slo": {"ttft_s": 1.0}}
+           "ramp": {"settle_frac": 0.5}, "slo": {"ttft_s": 1.0}, "checks": {"max_scrape_gap_s": 2.0}}
     tab = ramp_table({"cfg": cfg, "metrics": m, "requests": r})
     assert list(tab.rate) == [1.0, 2.0, 3.0, 2.0, 1.0]
     assert list(tab.direction) == ["up", "up", "up", "down", "down"]

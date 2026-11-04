@@ -141,17 +141,41 @@ def settling_time(run: dict, t_step: float, t_end: float) -> float | None:
     return None
 
 
+def _covered(t: np.ndarray, a: float, b: float, max_gap: float) -> bool:
+    """Scrapes span [a, b): one within `max_gap` of each end, and no gap between consecutive scrapes above `max_gap`."""
+    inside = t[(t >= a - max_gap) & (t <= b + max_gap)]
+    return len(inside) >= 2 and inside[0] <= a + max_gap and inside[-1] >= b - max_gap and np.diff(inside).max() <= max_gap
+
+
 def _level(run: dict, a: float, b: float) -> dict:
-    """Levels over [a, b): percent fast and hit rate by arrival/scrape time, and the server gauges."""
+    """Levels over [a, b): percent fast and hit rate by arrival/scrape time, and the server gauges.
+    A value the window cannot give is NaN, never a number (REG-4, decisions.md 2026-11-04):
+    - pf with no requests;
+    - every server value (hit, q, n, kv, q_slope) when the scrapes don't cover the window, i.e. no scrape within the
+      registered `checks.max_scrape_gap_s` of each end, or a larger gap inside it;
+    - hit when the query counter does not rise, or either cache counter goes down (a restart) inside the window;
+    - a gauge's mean or slope over its non-NaN scrapes only; q_slope needs at least 2 of them."""
     m, r, slo = run["metrics"], run["requests"], run["cfg"]["slo"]["ttft_s"]
-    hits, q, waiting = m["vllm:prefix_cache_hits_total"], m["vllm:prefix_cache_queries_total"], m["vllm:num_requests_waiting"]
     reqs = r[(r.t_planned >= a) & (r.t_planned < b)]
-    w = (m.t >= a) & (m.t < b)
+    out = {"pf": float(((reqs.status == "ok") & (reqs.ttft <= slo)).mean()) if len(reqs) else np.nan}
+    nan = {"hit": np.nan, "q": np.nan, "q_slope": np.nan, "n": np.nan, "kv": np.nan}
+    max_gap = run["cfg"]["checks"]["max_scrape_gap_s"]  # the registered scrape-gap limit (configs/base.yaml)
+    if not len(m) or not _covered(m.t.to_numpy(), a, b, max_gap):
+        return {**out, **nan}
+    hits, q = m["vllm:prefix_cache_hits_total"], m["vllm:prefix_cache_queries_total"]
+    span = (m.t >= a) & (m.t <= b)
+    reset = (np.diff(hits[span].to_numpy()) < 0).any() or (np.diff(q[span].to_numpy()) < 0).any()
     dq = np.interp(b, m.t, q) - np.interp(a, m.t, q)
-    return {"pf": float(((reqs.status == "ok") & (reqs.ttft <= slo)).mean()),
-            "hit": float((np.interp(b, m.t, hits) - np.interp(a, m.t, hits)) / dq) if dq else 0.0,
-            "q": float(waiting[w].mean()), "q_slope": float(np.polyfit(m.t[w], waiting[w], 1)[0]),
-            "n": float(m["vllm:num_requests_running"][w].mean()), "kv": float(m["vllm:kv_cache_usage_perc"][w].mean())}
+    out["hit"] = float((np.interp(b, m.t, hits) - np.interp(a, m.t, hits)) / dq) if dq > 0 and not reset else np.nan
+    w = (m.t >= a) & (m.t < b)
+    wait = m["vllm:num_requests_waiting"][w]
+    ok = wait.notna()
+    out["q"] = float(wait[ok].mean()) if ok.any() else np.nan
+    out["q_slope"] = float(np.polyfit(m.t[w][ok], wait[ok], 1)[0]) if ok.sum() >= 2 else np.nan
+    for key, col in (("n", "vllm:num_requests_running"), ("kv", "vllm:kv_cache_usage_perc")):
+        g = m[col][w]
+        out[key] = float(g.mean()) if g.notna().any() else np.nan
+    return out
 
 
 def ramp_table(run: dict) -> pd.DataFrame:
@@ -188,20 +212,31 @@ def verdict(run: dict) -> dict:
     base = level(t_start - c["baseline_s"], t_start)
     prev = level(t_end - 2 * c["end_s"], t_end - c["end_s"])
     end = level(t_end - c["end_s"], t_end)
-    # Any one sign of recovery rules out stuck. A queue counts as draining only if it would empty within the horizon.
-    climbing = end["pf"] - prev["pf"] >= c["pf_climb"] or end["hit"] - prev["hit"] >= c["hit_climb"]
-    draining = end["q_slope"] < 0 and end["q"] / -end["q_slope"] <= c["drain_horizon_s"]
-    if base["pf"] < c["min_baseline_pf"]:
+    # Each branch is decided only from the values it uses; a branch that needs a NaN cannot be passed, and the verdict
+    # becomes `unclear` instead of falling through to a later branch (REG-4).
+    nan = lambda *x: any(np.isnan(v) for v in x)
+    if nan(base["pf"]):
+        v = "unclear"
+    elif base["pf"] < c["min_baseline_pf"]:
         v = "bad_baseline"
+    elif nan(end["pf"], end["hit"], end["q"], base["hit"], base["q"]):
+        v = "unclear"
     elif (end["pf"] >= base["pf"] - c["recovered_pf_drop"] and end["hit"] >= base["hit"] - c["recovered_hit_drop"]
           and end["q"] <= base["q"] + c["recovered_q_excess"]):
         v = "recovered"
-    elif climbing or draining:
-        v = "slow_drain"
-    elif end["pf"] <= base["pf"] - c["stuck_pf_drop"] and end["hit"] <= base["hit"] - c["stuck_hit_drop"]:
-        v = "stuck"
     else:
-        v = "unclear"
+        # Any one sign of recovery rules out stuck. A queue counts as draining only if it would empty within the horizon.
+        signs = [None if nan(end["pf"], prev["pf"]) else end["pf"] - prev["pf"] >= c["pf_climb"],
+                 None if nan(end["hit"], prev["hit"]) else end["hit"] - prev["hit"] >= c["hit_climb"],
+                 None if nan(end["q_slope"]) else end["q_slope"] < 0 and end["q"] / -end["q_slope"] <= c["drain_horizon_s"]]
+        if any(s is True for s in signs):
+            v = "slow_drain"
+        elif any(s is None for s in signs):
+            v = "unclear"  # a sign of recovery can't be ruled out
+        elif end["pf"] <= base["pf"] - c["stuck_pf_drop"] and end["hit"] <= base["hit"] - c["stuck_hit_drop"]:
+            v = "stuck"
+        else:
+            v = "unclear"
     return {"verdict": v, "t_start": t_start, "t_wipe": t, "baseline": base, "previous": prev, "end": end}
 
 

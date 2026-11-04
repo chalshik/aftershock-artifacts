@@ -489,11 +489,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-04 · [DECISION] Tests for untested analysis functions (audit item N15)
-- **New `tests/test_load_more.py`:** `metrics_wide` (label sums, buckets dropped, failed scrapes skipped); `rates` (a counter decrease becomes NaN, a no-query interval NaN hit); `percent_fast` (bins by planned arrival, unfinished requests are misses); `capacity` (both tests, nothing passing → NaN); `_level` (pooled levels, NaN percent fast with no requests). One more test pins the verdict fixture to `configs/stage2_cap_base.yaml`. `tests/test_tables.py` covers `analysis/tables.py`.
-- **Two strict `xfail` tests** state the approved target of the registered verdict-code change (items 9–10): a window with no queries gives NaN hit, and an empty window gives `unclear`. Both fail today for the stated reasons (hit 0.0; `np.polyfit` raises). Because they are strict, they turn into errors when the change lands, so the markers must be removed in that commit.
-- No analysis code was changed.
-
 ### 2026-11-04 · [REG] REG-2 (A3): what the no-trigger control dips are
 - **ID:** REG-2, open item A3. **Approved by the owner on 2026-11-04** ("Let's finish it", in reply to the agent's recommendation to approve), before any computation. Not computed on any run at commit. Code: `analysis/mechanisms.py` (`bin_series`, `episodes`, `cv`, `cv_chance`, `classify_dips`; settings `REG2`; driver `reg2_table`); `tests/test_mechanisms.py`.
 - **Question:** the two no-trigger controls that came out `bad_baseline` dipped with no shock. Is the pattern a regular preemption cycle of the Ao et al. kind, or arrival excesses of the seed-1 schedule at a load on the capacity edge?
@@ -591,3 +586,62 @@ Summary of its answers:
   - `20261023-145613_smoke` cannot be re-checked: its config predates `gpu_busy_util_pct`. This was already so at HEAD before these changes.
 - **Tests:** `tests/test_checks.py` (+7) and `tests/test_run_guards.py` (new, 4). The old trigger fixtures gained the `t_start` field that real `trigger.jsonl` records always have. Full suite: 138 passed, 2 xfailed.
 - `harness/CLAUDE.md` updated: knobs go in `defaults.yaml`; one run at a time.
+
+### 2026-11-04 · [REG] REG-4: verdict-code change, values a window can't give are NaN; a branch that needs one gives `unclear` (audit items 9–10, 11, N7)
+- **ID:** REG-4. The owner approved it in principle (approval list items 9–10: "one registered verdict-code change (NaN → unclear; empty window → unclear). Recheck all 43 verdicts after and log any change"). This entry fixes the exact change and the recheck. It is committed together with the change and before the recheck.
+- **Change to `load._level`** (diff in the commit):
+  - pf is NaN with no requests (unchanged in effect: the mean of an empty set was already NaN).
+  - **Every server value** (hit, q, n, kv, q_slope) is NaN when the scrapes don't cover the window: no scrape within the registered `checks.max_scrape_gap_s` (2.0 s, `configs/base.yaml`) of each end, or a larger gap inside it. Before, `np.interp` held the last value past the final scrape, so a half-empty window gave numbers from a fraction of it.
+  - **hit** is NaN when the query counter does not rise (it was 0.0, audit item 11), or when either cache counter goes down inside the window (a restart).
+  - Gauge means and the q slope use only non-NaN scrapes; q_slope needs at least 2. Before, one NaN made the slope NaN, and 0 scrapes raised a `TypeError` (N7). With exactly 1 scrape, `polyfit` returned a number.
+- **Change to `load.verdict`:** each branch is decided only from the values it uses; a branch that needs a NaN gives `unclear` and does not fall through. In order:
+  1. base pf NaN → `unclear`.
+  2. base pf < 0.98 → `bad_baseline`.
+  3. Any of end pf, end hit, end q, base hit, base q NaN → `unclear`. Otherwise the `recovered` test, unchanged.
+  4. Signs of recovery: pf climb (end and previous pf), hit climb (end and previous hit), draining (end q, q_slope). Any sign true → `slow_drain`. Otherwise, if any sign can't be computed → `unclear`. Otherwise the `stuck` test, unchanged. Otherwise `unclear`.
+  - Every threshold and window is unchanged. A window with all values present takes exactly the old path.
+- **Known consequence, accepted under the owner's rule (NaN → unclear):** a total stall that admits nothing has no defined hit rate, so it is `unclear`, not `stuck`. Its pf and queue stay visible in the levels.
+- **Prediction:**
+  1. All 43 verdicts from `tables.verdict_table` are unchanged, and so are all their levels.
+  2. `20261102-093229_wipe_preempt_r3_s3` (INVALID; stopped at about 1618 s, so its end window has no requests or scrapes) changes from raising to `unclear`. Its baseline is complete, so it is not `bad_baseline` unless its baseline pf is < 0.98.
+  3. The 26 ramp steps (`tables.ramp_tables`) and the REG-2 rows (`mechanisms.reg2_table`) are unchanged.
+- **Recheck:**
+  - **Before:** captured at `677559d` (clean tree) and saved in the session scratchpad. `verdict_table` uses `find_runs(valid_only=False)` and records a raised error per run, so the invalid run is included.
+  - **After:** the same three calls at this commit.
+  - **Comparison:** verdict labels exactly. Every level with `np.isclose(rtol=0, atol=1e-9, equal_nan=True)`, plus an explicit check that NaN appears in exactly the same places. Error-to-verdict transitions are listed. Every difference is logged.
+- **Decision under each outcome:** this is a correctness fix, so the change stands under every outcome; the recheck is an impact log, not a test of the decision.
+  - **No valid verdict changes:** audit items 9–11 and N7 close.
+  - **A valid verdict changes:** a `[RESULT]` names the run with its old and new verdict and every published statement that used it, and a `[CORR]` corrects each statement.
+  - **Any ramp or REG-2 value changes:** logged the same way; REG-2's labels are restated if they change.
+- **Stopping rule:** one recheck. **Cost:** 0 GPU hours.
+
+### Adversarial review (separate subagent; it saw only the first draft, its diff, `analysis/load.py` and the two load test files)
+
+Summary:
+1. **Traces, run on a scratch copy:**
+   - **A:** a total stall with no queries turned from `stuck` into `unclear`.
+   - **B:** a NaN previous window blocked a correct `recovered`.
+   - **C:** the NaN check came before `bad_baseline` and hid it.
+   - **D:** a window covered by scrapes for only 50 of 600 s was judged with no warning (old and new code alike).
+   - **D2:** exactly one scrape gave a number from `polyfit`, not a `TypeError` as the draft claimed.
+   - **E:** a counter reset became NaN, a change the draft didn't list.
+   - **F:** one NaN gauge made q_slope NaN while q, n and kv skipped it, which hid a real drain.
+   - **G:** interpolation across a gap still gave a number.
+2. **Recheck:** a plain 1e-9 comparison misses a value turning NaN; the before-outputs had to survive runs that raise; the invalid run's coverage had to be named; and the plan is an impact log, not a test, which should be said.
+3. **Code:**
+   - `dq > 0` also catches resets.
+   - The scrape count included NaN rows.
+   - The pf, q, n and kv edits did nothing (the means were already NaN).
+   - No coverage check existed.
+   - Missing tests: a reset; one scrape; a NaN gauge; a NaN previous window with `recovered`; `bad_baseline` with an empty end; a stall; a partly covered window; a ramp step without scrapes.
+
+**Changed because of it:**
+- Branch-aware NaN handling: `bad_baseline` and `recovered` are decided whenever their own inputs exist (B, C).
+- A coverage rule using the registered scrape-gap limit makes every server value NaN in a partly covered or gapped window (D, D2, G).
+- Counter resets give NaN hit, and this is now stated (E).
+- Gauges skip NaN rows (F).
+- The stall outcome is stated as a known consequence (A).
+- The recheck uses a NaN-aware comparison, names `valid_only=False`, and records raised errors.
+- The diff's no-op edits are described as such.
+- New tests cover each trace. The fixtures gain `checks.max_scrape_gap_s`, which `_level` now requires (no magic default). Full suite: 147 passed.
+- **Disclosure:** the "switching" file the reviewer saw was the agent stashing the change to capture the before-outputs during the review. Its scratch copy was the right response.
