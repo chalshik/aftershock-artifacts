@@ -848,3 +848,19 @@ Verbatim summary of its three answers:
 - **`tools/manifest.py verify <copy>`** checks a backup against the manifest (missing, different, unlisted). Without the script: `cd <copy> && shasum -a 256 -c <repo>/manifests/runs.sha256`. `verify runs` passes: 1,053 listed, 0 missing, 0 different.
 - **`tools/check_docs.py`** now checks that the manifest only grows (git history and working copy), and that every run folder in `runs/` is listed. So after each copy from the VM, `manifest.py update` is due before the docs check passes.
 - **Not done:** the second copy itself. A copy can now be verified, but none exists yet (status.md, Watch).
+
+## 2026-11-04 · [DECISION] Owner's decisions on audit items 38–42
+- **Draft kept:** the audit addendum (items 34–43) is in `docs/drafts/addendum_34-43.md`, marked DRAFT and not registered.
+- **Item 38, the cold-state floor μ_sat,off** (to be registered as REG-2):
+  - Saturation threshold: mean KV ≥ 0.85, as in the entry above.
+  - "At the floor": |λ − μ_sat,off| ≤ 0.05 μ_sat,off. Chosen over the min–max of the contributing runs because it works with one contributing point; per the owner, the 72k pool has one cache-off point at KV ≥ 0.85 (not checked by the agent, since that would compute part of the pending registration).
+  - **Both values were chosen after the default-pool and 72k sweep data had been seen.** The default-pool inputs are published (cache-off KV 0.415 and 0.867 at λ = 3 and 4, 2026-11-01; throughputs 3.453–3.533, `docs/model.md` M2). So the default-pool classification is not a blind test, and REG-2 must say so.
+- **Items 38 and 39:** approved to write up. Each gets its separate review pass (rule F), and both registrations and their review output go to the owner before anything is committed or any GPU time is used. Item 39's 2.2 GPU h is approved once that review is done.
+- **Item 40, the 5 s-gap cache-off extension:** on hold until the owner chooses the next direction. If it runs, its stopping rule is two consecutive λ steps at mean KV ≥ 0.85.
+- **Item 41, the danger zone:**
+  - The registered zone (μ_off < λ < μ_warm, PROTOCOL §5) stays unchanged for every existing result.
+  - The floor is written up as a **[new] post-hoc analysis** that answers the plan's question "why the loop did not hold". It does not re-judge any cell.
+  - For future cells only, to be proposed: lower edge μ_sat,off; upper edge the highest load whose 2400 s no-trigger control is `recovered`.
+- **Item 42, the capacity rule:** approved for future sweeps only. The throughput test becomes throughput ≥ 0.95 × the realized planned arrival rate over the measured window. Past μ values stand as judged, and **every past capacity sweep used seed 0** (2026-11-04 [RESULT], schedules). The code change goes to the owner with the registrations, because another session is editing `analysis/` at the same time.
+- **Push:** the owner pushes after reviewing `git log --stat origin/main..main`.
+- **One writing session at a time:** a lockfile is to be proposed; any other session stays read-only.

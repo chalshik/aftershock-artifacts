@@ -487,27 +487,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-04 · [CORR] Derived-figure differences explained by the recovered originals
-- **What was wrong:** entry (6) above says "The original code was never committed", and it lists 25 published values that the reconstruction (`analysis/derived.py`) does not reproduce, several marked "unexplained". The original code was never committed, but it was recoverable: the commands and their outputs are in the Claude Code session transcripts.
-- **Now committed:** `analysis/recovered/`, verbatim. That is 19 tool calls (command + recorded output), the scratch `judge.py` behind the long-run thirds, and `INDEX.md` (figure → file, transcript, timestamp, tool id, sha256).
-  - It is one file per tool call, not per figure: some calls print several figures, and some figures need several calls.
-  - `analysis/recompute_published.py` gains an "Original" column: the value the original printed, read from its `.out.txt`. The originals are not re-run, because several ssh to the VM or read scratch files.
-- **Result, 104 comparisons:**
-  - The original agrees with the published value in 91 rows and differs in 3. 10 rows have no recovered original.
-  - Of the 25 values the reconstruction does not reproduce, the original reproduces 18.
-- **Explained by a different reading in the original** (14 values):
-  - **W:** sampled every 5 s from 600 s (every 10 s for the 5 s-gap comparison), not every 1 s. This covers W/C p90 at λ = 2.5, W/C mean at λ = 4, the W tokens at λ = 2 / 2.5 / 3 (original 47,580 / 59,722 / 72,968), the two pool/W ratios, and 74.8k at 20 s gaps (original 74,843).
-  - **Wipe-test "before":** the 120 s before the wipe, not 240 s → wipe. Original 0.773 for `wipe_test_idle`.
-  - **Adjacent-window noise:** 60 s steps from t = 600 s, a start the reconstruction never tried. The original gives 0.34 / 0.076 / 0.059, all three.
-- **Rounding** (4 values): F_warm/C at λ = 3 (original 0.125, published 0.13), λ = 3 wipe 0–15 s max (0.295, published 0.30), long-run last third (0.6254), and (W+F_warm)/C high at λ = 4.
-- **Hand arithmetic** (3 values): (W+F)/C 0.91, 1.16 and 1.32 are sums of 2-decimal values (0.75 + 0.16, 0.75 + 0.41, 1.01 + 0.31). At the original's precision they are 0.919, 1.170 and 1.313. Every fits/holds yes/no is unchanged.
-- **Still without an original:** F_warm 6.4k and 8.7k (2026-11-02). 8.7k = 0.090 × 96,656 = 8,699, where 0.09 is the control r2.5 end-window KV printed to 2 decimals in `analysis/recovered/2026-11-01T215355_toolu_01ERXSiZtFdmg4pHCtdknqgA.out.txt`; that this is its origin is a BELIEF. 6.4k: no source found. Also not recovered: the 72k spans (0.11–0.28, 0.43), the long-run 60 s SD 0.045, and the λ = 3.5 seed-3 first minute.
-- **Canonical functions unchanged:** `derived.py` keeps its readings, and `docs/definitions.md` notes the original's reading where it differs. Aligning the functions with the originals would change a definition (rule J), so it is left for the owner.
-- **Since when:** 2026-11-04, entry (6).
-- **Which results it affects:** none. No verdict uses these values, and `hit_climb: 0.06` rests on the 600 s value 0.059, which both the original and the reconstruction reproduce.
-- **Re-check done:** `uv run --extra analysis python -m analysis.recompute_published`.
-- **Rule that would have caught it:** I (numbers only from committed functions).
-
 ### 2026-11-04 · [CORR] A used config that cannot be fixed: stage2_base.yaml
 - **What was wrong:** the verdict block of `configs/stage2_base.yaml` (FILE(configs/stage2_base.yaml:10)) lacks `pf_climb`, `hit_climb` and `drain_horizon_s`, which `load.verdict` needs (FILE(analysis/load.py:192)). It keeps the retired `q_slope`, `climb` and `end_s: 300`. Its comment still says "req/s^2" (FILE(configs/stage2_base.yaml:21)).
 - **Since when:** 2026-11-01, when `stage2_cap_base.yaml` introduced the new keys (FILE(configs/stage2_cap_base.yaml:7)) and every later Stage 2 config extended that file.
@@ -535,3 +514,19 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **`tools/manifest.py verify <copy>`** checks a backup against the manifest (missing, different, unlisted). Without the script: `cd <copy> && shasum -a 256 -c <repo>/manifests/runs.sha256`. `verify runs` passes: 1,053 listed, 0 missing, 0 different.
 - **`tools/check_docs.py`** now checks that the manifest only grows (git history and working copy), and that every run folder in `runs/` is listed. So after each copy from the VM, `manifest.py update` is due before the docs check passes.
 - **Not done:** the second copy itself. A copy can now be verified, but none exists yet (status.md, Watch).
+
+### 2026-11-04 · [DECISION] Owner's decisions on audit items 38–42
+- **Draft kept:** the audit addendum (items 34–43) is in `docs/drafts/addendum_34-43.md`, marked DRAFT and not registered.
+- **Item 38, the cold-state floor μ_sat,off** (to be registered as REG-2):
+  - Saturation threshold: mean KV ≥ 0.85, as in the entry above.
+  - "At the floor": |λ − μ_sat,off| ≤ 0.05 μ_sat,off. Chosen over the min–max of the contributing runs because it works with one contributing point; per the owner, the 72k pool has one cache-off point at KV ≥ 0.85 (not checked by the agent, since that would compute part of the pending registration).
+  - **Both values were chosen after the default-pool and 72k sweep data had been seen.** The default-pool inputs are published (cache-off KV 0.415 and 0.867 at λ = 3 and 4, 2026-11-01; throughputs 3.453–3.533, `docs/model.md` M2). So the default-pool classification is not a blind test, and REG-2 must say so.
+- **Items 38 and 39:** approved to write up. Each gets its separate review pass (rule F), and both registrations and their review output go to the owner before anything is committed or any GPU time is used. Item 39's 2.2 GPU h is approved once that review is done.
+- **Item 40, the 5 s-gap cache-off extension:** on hold until the owner chooses the next direction. If it runs, its stopping rule is two consecutive λ steps at mean KV ≥ 0.85.
+- **Item 41, the danger zone:**
+  - The registered zone (μ_off < λ < μ_warm, PROTOCOL §5) stays unchanged for every existing result.
+  - The floor is written up as a **[new] post-hoc analysis** that answers the plan's question "why the loop did not hold". It does not re-judge any cell.
+  - For future cells only, to be proposed: lower edge μ_sat,off; upper edge the highest load whose 2400 s no-trigger control is `recovered`.
+- **Item 42, the capacity rule:** approved for future sweeps only. The throughput test becomes throughput ≥ 0.95 × the realized planned arrival rate over the measured window. Past μ values stand as judged, and **every past capacity sweep used seed 0** (2026-11-04 [RESULT], schedules). The code change goes to the owner with the registrations, because another session is editing `analysis/` at the same time.
+- **Push:** the owner pushes after reviewing `git log --stat origin/main..main`.
+- **One writing session at a time:** a lockfile is to be proposed; any other session stays read-only.
