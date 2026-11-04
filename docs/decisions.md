@@ -647,3 +647,11 @@ The nine entries below come from a read-only audit of the repo, done before any 
 - **Which results it affects:** none. The inserted text is a pointer; no number, verdict or rule changed.
 - **Re-check done:** `git show` of every version of `docs/decisions.md` against the previous one.
 - **Rule that would have caught it:** the `append_only` check of `tools/check_docs.py`, which holds from `cfc18da` on (added in this audit's tools commit). The edited text stays as it is.
+
+## 2026-11-04 · [CORR] Queue slope is in req/s, not req/s²; "goodput" has two meanings
+- **What was wrong:** the capacity rule and later entries give the waiting-queue slope limit as "0.01 req/s²" (this file: 2026-10-23 "Pending", 2026-10-30 capacity rule, and later). The slope is a least-squares fit of a request count against time (FILE(analysis/load.py:103)), so its unit is req/s.
+- **Since when:** 2026-10-23.
+- **Which results it affects:** none. The number 0.01 and every comparison with it are unchanged; only the unit was misnamed. The comment in the used config `configs/stage2_base.yaml` keeps the old wording (rule 5).
+- **Also in definitions.md:** "goodput" is marked ⚠. In this repo it is a synonym of percent fast (FILE(docs/experiment-plan.md:205)); the owner's paper notes use it for completions/s (BELIEF, outside the repo). Until the owner chooses the C1 metric, the docs say "percent fast" or "completions/s". New entries: rule J, "throughput (completion rate c)", "capacity loss", and "post-trigger margin" (defined, not computed).
+- **analysis/CLAUDE.md** now names both percent-fast computations instead of "per arrival second" (audit finding 10), and forbids computing an analysis that a pending `[REG]` covers.
+- **Rule that would have caught it:** J (single definitions, with units).

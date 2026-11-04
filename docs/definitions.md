@@ -4,6 +4,7 @@ One entry per term: one text definition, its source, and the code that computes 
 
 - **Which text is given:** where files differ, the newer decisions.md entry rules (`PROTOCOL.md:3`). Older or other wordings are listed under "Other text", not deleted.
 - **⚠ more than one computation:** the term is computed in more than one way, and reported numbers may come from either. **No single one has been chosen yet.**
+- **Rule J (CLAUDE.md):** code must match the definition given here. Where it does not, the term is marked ⚠ and the choice between computations is the owner's; nothing here picks one.
 - Line numbers are as of 2026-11-04. Code paths: `load` = `analysis/load.py`, `derived` = `analysis/derived.py`.
 
 ## Outcome and capacity
@@ -15,12 +16,13 @@ One entry per term: one text definition, its source, and the code that computes 
   - `load._level` `"pf"` (`load.py:151`): one share pooled over every request arriving in [a, b). This one feeds `verdict` and `ramp_table`. It counts requests, not bins, and it includes burst requests.
 - **Other text:** `analysis/CLAUDE.md:4` ("percent fast per arrival second").
 
-### goodput
-- **Text:** "Share of requests that met the speed limit (SLO); the goodput measure from Stage 1". `docs/experiment-plan.md:205`. It is a synonym of percent fast.
-- **Code:** none of its own; see percent fast.
+### goodput ⚠ two meanings
+- **Text:** "Share of requests that met the speed limit (SLO); the goodput measure from Stage 1". `docs/experiment-plan.md:205`. In this repo it is a synonym of percent fast.
+- **Other meaning:** completions per second, used outside this repo (the owner's paper notes; not checkable here, BELIEF). The C1 metric, percent fast or completions/s, is the owner's decision (`docs/claims.md`).
+- **Code:** none of its own; see percent fast and throughput. Until the owner decides, write "percent fast" or "completions/s", never "goodput".
 
-### throughput
-- **Text:** "completions per second inside the measured window, the plan's definition". `docs/decisions.md:97`.
+### throughput (completion rate c)
+- **Text:** "completions per second inside the measured window, the plan's definition". `docs/decisions.md:97`. Written c(s) in `docs/model.md` M2.
 - **Code:** `load.summarize` `"throughput"` (`load.py:98`): ok requests whose `t_end` falls in [warm-up, end of arrivals), divided by that span.
 - **Other text:** the step 4 sweep used an arrival-based count instead (`docs/decisions.md:88`, superseded).
 
@@ -88,6 +90,7 @@ One entry per term: one text definition, its source, and the code that computes 
 
 ### waiting Q
 - **Text:** "`vllm:num_requests_waiting` | Whether requests pile up". `docs/experiment-plan.md:123`.
+- **Queue slope, units:** a least-squares slope of a request count against time, so its unit is **req/s**. The docs write "req/s²" (`docs/decisions.md:21`, `:61` and later); the numbers and thresholds are unchanged, only the unit was misnamed (2026-11-04 audit).
 - **Code:** gauge; `load._level` `"q"` (mean) and `"q_slope"` (least-squares slope, `load.py:153`); `load.summarize` `"q_mean"` and `"q_slope_per_s"` (`load.py:102-103`).
 
 ### preemption
@@ -149,3 +152,11 @@ Added 2026-11-04 with their code. Each is the reading that reproduces the publis
 ### overlap fraction
 - **Text:** "Sent before the previous turn's first token". `docs/decisions.md:292`.
 - **Code:** `derived.overlap_fraction` (`derived.py:103`).
+
+### capacity loss
+- **Text:** 1 − c(state) / c_max, the share of the best completion rate a state loses. `docs/model.md` M2.
+- **Code:** none yet; DERIVED from `load.summarize` throughputs.
+
+### post-trigger margin
+- **Text:** completions − λ over a span after a trigger's end. Defined with its windows in the registration REG-1 (`docs/model.md` M2), **not yet computed**.
+- **Code:** none yet; to be written only after REG-1 is approved.
