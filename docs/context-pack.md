@@ -487,13 +487,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-04 · [CORR] REG-1: Poisson upper bound underflowed for large counts
-- **What was wrong:** `analysis/stats.py` `poisson_rate_upper` summed `exp(-mu)` terms directly. Near mu ≈ 745 that underflows to 0, and the bound collapsed to n / t or a stale value. In the REG-1 output, four spans with n = 714–861 showed `c_upper` ≤ c + 0.26 (e.g. n = 861: 7.175 against a correct 7.765, DERIVED from the fixed function).
-- **Since when:** the function was added with REG-1 (`c83751c`).
-- **Which results it affects:** none. The REG-1 outcome rests on no span qualifying, and qualification uses neither c nor `c_upper`. No span had a wrong bound and qualified.
-- **Re-check done:** the CDF is now summed in log space; `tests/test_stats.py` gains a large-count test (bounds rise with n and match the normal approximation within 2). REG-1 is not rerun (its stopping rule); its recorded numbers stand, with this defect noted.
-- **Rule that would have caught it:** F asked for a trace on which the verdict is wrong, but not for one on which a helper is wrong at the scale of the real data. Tests of numeric helpers now include counts at the real scale (process.md §7 row added).
-
 ### 2026-11-04 · [CORR] Hit rates from different computations compared again: λ = 7 at 5 s gaps vs λ = 5 at 20 s
 - **What was wrong:** 2026-11-03 "Capacity with 5 s turn gaps": "cached prefixes survive (hit 0.757 at λ = 7 against about 0.42 at λ = 5 with 20 s gaps)".
   - 0.757 is a mean of per-scrape ratios: RUN(20261103-132357_sweep_gap5_pc_on_r7, load.summarize).
@@ -545,3 +538,11 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **"Session median"** is now defined in `docs/definitions.md`: the p50 of prompt length over every scheduled session request of the whole schedule, truncated sessions included, burst requests excluded. The claim "1408 = the session median" (2026-11-02) is correct under this definition (entry (7)).
   - Recount: p50 = 1408 and share ≤ 1408 = 0.508, RUN(20261101-215502_stage2_control_cap_r3_rerun, schedule.parquet).
 - **Saturation threshold:** the owner chose mean KV ≥ 0.85 for the pending drafts of the cold-state floor μ_sat,off (audit item 38) and of the 5 s-gap cache-off extension (item 40, whose draft had 0.9). This is fixed before any μ_sat,off is computed. Those registrations are not yet written or approved, and nothing has been computed under them.
+
+### 2026-11-04 · [CORR] Two audit numbers rest on scratch scripts: marked "pending committed code"
+- **What was wrong:** two results from the 2026-11-04 audit were computed by scripts in the session's scratch directory, not by committed functions, against rule I (`docs/process.md` §6):
+  1. the `[RESULT]` "Sweep schedules share one rising-load pattern" (per-span planned arrival rates of all 43 sweeps);
+  2. the audit's statement that all 43 recomputed Stage 2 verdicts reproduce the published ones (and the sweep throughputs and hit rates quoted with it).
+- **Status:** both are **pending committed code**. Neither may be cited as `RUN(...)` evidence until the functions exist, are committed, and their output is logged in a new entry.
+- **Since when:** both were made today. The REG-1 result is not affected: it was computed by the committed `margin.reg1_table`.
+- **Rule that would have caught it:** I. The agent installed it and broke it in the same session.

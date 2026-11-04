@@ -833,3 +833,11 @@ Verbatim summary of its three answers:
 - **"Session median"** is now defined in `docs/definitions.md`: the p50 of prompt length over every scheduled session request of the whole schedule, truncated sessions included, burst requests excluded. The claim "1408 = the session median" (2026-11-02) is correct under this definition (entry (7)).
   - Recount: p50 = 1408 and share ≤ 1408 = 0.508, RUN(20261101-215502_stage2_control_cap_r3_rerun, schedule.parquet).
 - **Saturation threshold:** the owner chose mean KV ≥ 0.85 for the pending drafts of the cold-state floor μ_sat,off (audit item 38) and of the 5 s-gap cache-off extension (item 40, whose draft had 0.9). This is fixed before any μ_sat,off is computed. Those registrations are not yet written or approved, and nothing has been computed under them.
+
+## 2026-11-04 · [CORR] Two audit numbers rest on scratch scripts: marked "pending committed code"
+- **What was wrong:** two results from the 2026-11-04 audit were computed by scripts in the session's scratch directory, not by committed functions, against rule I (`docs/process.md` §6):
+  1. the `[RESULT]` "Sweep schedules share one rising-load pattern" (per-span planned arrival rates of all 43 sweeps);
+  2. the audit's statement that all 43 recomputed Stage 2 verdicts reproduce the published ones (and the sweep throughputs and hit rates quoted with it).
+- **Status:** both are **pending committed code**. Neither may be cited as `RUN(...)` evidence until the functions exist, are committed, and their output is logged in a new entry.
+- **Since when:** both were made today. The REG-1 result is not affected: it was computed by the committed `margin.reg1_table`.
+- **Rule that would have caught it:** I. The agent installed it and broke it in the same session.
