@@ -6,7 +6,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-04
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action:** the owner's answers to items 18–23 (paper layer, framing, C1 metric, canonical hit rate, backup location, push). Then the A1 registration (cache-off λ = 3, 3600 s, seeds 0 and 1; GPU) and the A8 registration (cold-state floor under assumption B; no GPU). Nothing is running.
+**Next action:** run REG-6 (approved 2026-11-04). The owner pushes `main`, the VM pulls it, then `uv run python -m harness.run configs/long_pc_off_r3_s0.yaml` and `..._s1.yaml` (about 2.2 GPU h). Then copy the run folders to the Mac, `python3 tools/manifest.py update`, and compute `uv run python -m analysis.floor` once. Separately: the owner's answers to items 18–23.
 
 **Done 2026-11-04, after the audit:**
 - REG-1 (post-trigger margin): inconclusive.

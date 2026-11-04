@@ -1097,3 +1097,58 @@ Summary:
   - On the same conditions, this setup has no healthy load clearly above its cold floor, so a further shock matrix here is unlikely to be informative.
 - **The 18 runs at the 72k pool and with 5 s gaps:** no cache-off floor is measured for them, so nothing is concluded.
 - `docs/model.md` M2 gets this as a note.
+
+## 2026-11-04 · [REG] REG-6 (A1): sustained cache-off capacity at λ = 3, default pool (GPU, 2.2 h)
+- **ID:** REG-6, open item A1 (merged with the owner's item 12 and the other session's item 39). **Approved by the owner on 2026-11-04 ("ok"), before any run.** Committed together with `analysis/floor.py` (`backlogged_stretches`, `sustained_capacity`; settings `REG6`; driver `reg6_table`), `tests/test_floor.py` and `configs/long_pc_off_r3_s0.yaml` and `_s1.yaml`.
+- **Question:** is λ = 3 below the default pool's cache-off capacity in sustained operation?
+  - μ_off = 2 rests on one 900 s run that failed the slope test narrowly, under the seed-0 rising load.
+  - If λ = 3 is below cold capacity, the 6 default-pool shock runs at λ = 3 were bound to recover, and were not tests of C1.
+  - It is also condition 2 of the floor calculation (decisions.md 2026-11-04, REG-5 not computed).
+- **Design:**
+  - The same server settings as `sweep_pc_off`: base flags plus cache off, with the cap of 256 stated (its default anyway), no dev mode, and `kv_capacity` expected at 96,656.
+  - λ = 3, 3600 s, judged over 600–3600 s, seeds 0 and 1.
+  - The 3600 s schedules share no arrivals with the 900 s one (the count is drawn over the whole duration; `harness/workload.py:55-57`).
+  - Planned rate over the window, from the schedules: 3.049 (seed 0) and 3.032 (seed 1). Seed 0 has a 3.91 req/s stretch at 3051–3201 s; seed 1 never exceeds 3.46 req/s in any 150 s.
+- **Measurement:** the capacity is measured directly. Backlogged stretches are runs of consecutive scrapes with waiting ≥ 1 that last ≥ 30 s. c_b = ok completions inside them ÷ their total length. While requests wait the server is saturated, so c_b is its capacity, not the demand.
+- **Label per seed** (λp = that seed's planned rate):
+  - `unclear_data`: a NaN waiting value, or a scrape gap > `checks.max_scrape_gap_s`.
+  - `sustainable_no_backlog`: backlogged stretches total < 300 s, so the server kept up with its own schedule.
+  - `sustainable`: c_b ≥ 1.05 λp.
+  - `not_sustainable`: c_b < λp.
+  - `unclear`: otherwise.
+- **Prediction:**
+  - Seed 0: `sustainable`, c_b 3.35–3.60, from the backlog its 3.91 req/s stretch builds.
+  - Seed 1: `sustainable_no_backlog` (≈ 0.6) or `sustainable` (≈ 0.3).
+  - Both `not_sustainable` or `unclear`: ≈ 0.1.
+- **Decision:**
+  - **Both seeds `sustainable` or `sustainable_no_backlog`:**
+    - The 6 default-pool λ = 3 shock runs were below sustained cache-off capacity, so they were not tests. μ_off = 2 is recorded as an underestimate due to the seed-0 schedule.
+    - Combined with the floor calculation, the default pool with 20 s gaps has no healthy load clearly above its cold floor. **No further shocks are proposed there**; the next experiment must use a setup whose floor is measured first and lies below a healthy load (the owner chooses the setup).
+  - **Either seed `not_sustainable`:**
+    - λ = 3 is above sustained cold capacity, so the 6 λ = 3 runs were real tests, and they recovered. That is evidence against C1 at this load, to be written up as such.
+    - 900 s saturation overstates sustained capacity, so the floor calculation is withdrawn.
+  - **Otherwise** (`unclear`, `unclear_data`, or one seed of each kind): no change to any statement; the stopping rule applies.
+- **Alternatives:**
+  1. Heat or slowdown over the hour; `gpu_steady` applies, and c_b is reported per stretch time.
+  2. A backlog at λ ≈ 3 is small, so batches there are smaller than in deep overload and c_b may be lower than the 900 s saturation. This is a real effect, and it is what the run measures.
+  3. With few stretches, c_b rests on little time. The 300 s minimum guards against this.
+- **Stopping rule:** both seeds once; an invalid run is rerun unchanged, at most twice. **Cost:** about 2.2 GPU h. The VM must `git pull` first.
+
+### Adversarial review (separate subagent; it saw only the first draft, the two configs and their parents, `analysis/floor.py`, the tests, `harness/workload.py` and `harness/config.py`; it built schedules, which are inputs, but opened no runs)
+1. **The first draft's queue-shape rule** (throughput, waiting slope, late vs early waiting) **would most likely give a split.**
+   - A queue model run on the actual schedules shows seed 0's 3.91 req/s stretch drives the late waiting mean above 5 × max(1, early) → `unclear`, while seed 1 comes out `bounded`. By the draft's own table a split moves no edge, so 2.2 GPU h would buy nothing.
+   - The same rule labels a critically loaded run `bounded` when its early queue is large, and a healthy run `unclear` when a late burst drains before the end.
+   - Within one schedule, the planned rate's own SD is about 0.07 req/s.
+2. **Code and claims:**
+   - One NaN scrape made the slope NaN and produced `growing`.
+   - The claim that seed 0 is "comparable" to the 900 s run was false: no shared arrivals.
+   - The throughput criterion never decided anything.
+   - The settings match `sweep_pc_off` once its flags are checked; the server `--seed` stays 0 for both seeds.
+3. **The fix the review recommended:** measure the capacity directly over backlogged stretches, so a schedule burst becomes the measurement instead of its confound.
+
+**Changed because of it:**
+- The rule is replaced by c_b over backlogged stretches.
+- NaN and gaps give `unclear_data`.
+- "Comparable" is removed, and the schedules' planned rates and the seed-0 burst are stated.
+- The decision is restricted to the 6 default-pool λ = 3 runs (the first draft said 12, which was wrong).
+- New tests: a burst that drains, a saturated server below its load, a capacity just above it, and NaN or a gap; 6 pass.

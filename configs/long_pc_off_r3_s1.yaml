@@ -1,0 +1,15 @@
+# A1 / REG-6: is lambda = 3 sustainable with prefix caching off? 3600 s, default pool, same server settings as the
+# Stage 1 cache-off sweep (no dev mode). Seed 1. See docs/decisions.md (REG-6). Needs the owner's approval to run.
+extends: base.yaml
+name: long_pc_off_r3_s1
+seed: 1
+server:
+  args:
+    --enable-prefix-caching: null
+    --no-enable-prefix-caching: true
+    --max-num-seqs: 256          # the v0.32.0 default, stated so the run records it
+workload:
+  rate: 3.0
+  duration_s: 3600
+checks:
+  expected_kv_tokens: 96656      # the default pool every default-pool run logged
