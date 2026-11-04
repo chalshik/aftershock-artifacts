@@ -28,3 +28,22 @@ def test_published_check_flags_only_differences():
     v.loc[0, "verdict"] = "unclear"
     c.loc[0, "mu_off"] = 2.5
     assert len(published_check(v, c)) == 2
+
+
+def test_capacity_rule_is_read_from_the_config_and_defaults_to_the_old_rule():
+    from analysis.tables import CAPACITY_RULE, capacity_rule
+    assert capacity_rule({}) == {**CAPACITY_RULE, "against": "rate", "monotone": False}
+    new = {"capacity": {"min_throughput_frac": 0.95, "max_q_slope": 0.01, "against": "planned_rate"}}
+    assert capacity_rule(new)["against"] == "planned_rate"
+
+
+def test_sweep_capacity_uses_the_registered_rule_and_refuses_a_mix():
+    import json
+    import pytest
+    from analysis.tables import sweep_capacity
+    rule = lambda a: json.dumps({"against": a, "max_q_slope": 0.01, "min_throughput_frac": 0.95}, sort_keys=True)
+    sw = pd.DataFrame({"parent": ["p", "p"], "valid": [True, True], "rate": [2, 3], "throughput": [2.0, 3.0],
+                       "planned_rate": [2.0, 3.3], "q_slope_per_s": [0.0, 0.0], "capacity_rule": [rule("planned_rate")] * 2})
+    assert sweep_capacity("p", sw) == 2
+    with pytest.raises(ValueError):
+        sweep_capacity("p", sw.assign(capacity_rule=[rule("rate"), rule("planned_rate")]))

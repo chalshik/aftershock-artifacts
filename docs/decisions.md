@@ -1166,3 +1166,159 @@ Summary:
   4. With the owner's go, rerun `configs/long_pc_off_r3_s0.yaml` unchanged at a new run id, then `..._s1.yaml`. REG-6's stopping rule allows an invalid run to be rerun unchanged, at most twice.
   5. Compute `uv run python -m analysis.floor` once, and write the `[RESULT]`.
 - **Found while checking the VM:** microk8s (Kubernetes: kubelite, containerd, calico) runs on the VM. It was installed 2026-10-23 at 11:49 UTC (`/var/snap/microk8s/common`, the first kubelite start), about 3 hours before the first run, so it was present for all 104 runs. It sat at load 0.1–0.2 when idle and is not pinned. It is the same for every run, so it confounds no comparison, but `env.json` doesn't record it, and it shares the cores the harness pins. Whether to stop it during runs is the owner's decision.
+
+## 2026-11-05 · [DECISION] Audit of Stage 2, and the owner's choice of the next direction: setup L1 with a feasibility gate first
+- **What was done (0 GPU h):** a read-only audit of all 104 runs, the harness, the analysis code, the docs history and the literature on metastable failures. Nothing in `runs/` was touched.
+- **Data integrity:**
+  - `git_dirty` is false in all 104 runs.
+  - `uv run python -m analysis.tables published` gives "44 judgeable runs, 39 valid, 0 raised" and "differences from published: none" (the commit of this entry, before its own changes to `analysis/`).
+  - The 39 valid judged runs are 37 `recovered` and 2 `bad_baseline`, as in REG-4's result. **Correction of the audit's own draft:** it said "41 valid judged verdicts, 39 `recovered`". That came from an agent summary, not from the table above.
+- **Why no run got stuck** (DERIVED or BELIEF, as marked; to be tested, not asserted):
+  - Metastability without retries needs the bad state to lose capacity. Plain queues are only stable or unstable (Isaacs et al., "Formal Analysis of Metastable Failures in Software Systems", arXiv 2510.03551). A trigger must also exceed the gap between capacity and load (Huang et al., OSDI'22).
+  - This study removed retries on purpose (CLAUDE.md rule 2), so the only possible sustaining effect is a capacity loss from the lost cache: c_b(λ) < λ ≤ c_warm(λ) (`docs/model.md` M2).
+  - At the default pool that loss is small. DERIVED from M2's inputs: 1 − 4.185 / 4.735 = 0.116. BELIEF: larger batches in a backlog make up for most of the lost cache.
+  - Every burst backlog drained, and the λ = 4 control met a natural backlog and recovered from it (REG-2).
+  - At the loads that passed pf ≥ 0.98, mean KV at the end was 0.15–0.20 (decisions.md 2026-11-02, "No-trigger controls done").
+- **Design points for future cells only** (no past verdict changes):
+  1. **The pf ≥ 0.98 baseline excludes loads near capacity.** Future test loads are chosen at ≤ 0.8 μ_warm, so the rule is kept unchanged rather than loosened.
+  2. **Every shock seed gets a control with the same seed and the same duration**, so the session schedules match (the burst uses its own generator, `harness/workload.py`). Until now only seed 1 had one, and no burst run matched any control (2520 s against 2400 s).
+  3. **Seed 3 was a lighter test.** In every valid seed-3 shock run, the `arrival_rate` check's count is 0.944–0.953 of its expected count. Examples: 6116 of 6480 in `20261102-100744_wipe_preempt_r3_s3`; 9237 of 9720 in `20261103-220054_wipe_gap5_r4.5_s3` (FILE(runs/<id>/checks.json), `arrival_rate` detail). This passes the check's tolerance, but it is reported with any pooled statement.
+  4. **Thin heat margins in two counted runs:** SW-thermal share 0.047 against the 0.05 limit in `20261102-072216_wipe_preempt_r3_s1` and `20261101-202808_stage2_control_cap_r4` (`checks.json`, `gpu_steady`). The rule is not changed.
+  5. **The scheduler settings that shape the loop are not recorded:** `max_num_batched_tokens` (probably 2048, from the compile range in `docs/probe/20261023_Qwen3-4B/server.log`; BELIEF) and `--scheduler-reserve-full-isl`. They are to be probed on the VM (open-questions A10).
+  6. **60 s gaps are advised against.** From schedules (`derived.working_set`, seed 1, 2400 s, /96,656): W/C mean is 0.77 at 20 s gaps and λ = 3, but 1.48 at 60 s gaps already at λ = 2. The warm state could not hold its own working set, so there would be no warm state to lose (DERIVED; inputs, not outcomes).
+- **Owner's choices (2026-11-05):**
+  - **Direction:** setup L1. It is the 5 s-gap setup with a 2048-token system prompt per session, measured first by a feasibility gate (REG-7, next entries).
+  - **REG-6:** run after the gate, when the GPU is idle. Its result changes how the default-pool negative is written up, not the next experiment.
+  - **Turns stay open-loop** (rule 2). The overlap share is measured in the gate, and closed-loop turns are proposed only if overlap hits are more than half of the post-burst hits.
+  - **C1 metric for future cells:** the registered pf/hit/queue verdict, unchanged. The completion rate in backlog (c_b against λ) is reported as a pre-registered secondary readout and never decides a verdict.
+- **Rejected claim from the audit:** that preempted readmissions inflate the hit counter. S8 (SOURCE, `docs/open-questions.md`) says their numbers go to unexported `preempted_*` fields, so nothing changes.
+
+## 2026-11-05 · [CORR] Doc statements found wrong or inconsistent in the 2026-11-05 audit
+- **What was wrong:**
+  1. FILE(docs/claims.md:26) says "during bursts KV reached 1.00 and hits fell to 0.11–0.35". The hit values are the first 60 s *after* the burst ended, not during it (decisions.md 2026-11-03, the 72k entry). The counter also includes the burst requests, which never hit, so it overstates how cold the sessions' cache was (REG-1's review, decisions.md 2026-11-04). Corrected in claims.md.
+  2. decisions.md 2026-11-02 "Fan on the GPU backplate": "peak KV 0.36" for `20261102-100744_wipe_preempt_r3_s3` holds only for 900–1500 s. The window was not stated. Over the full watch the peak is higher (an audit agent's inline count; the value is not quoted until a committed function gives it). The old entry stays as written, and no verdict uses the peak.
+  3. FILE(docs/open-questions.md:51), A8, says "Open. To be registered". REG-5 (A8) was decided not to be computed (decisions.md 2026-11-04 [DECISION] REG-5). Corrected.
+  4. FILE(docs/model.md:18) says M2 is "Not yet registered or tested". REG-1 tested its assumption A (inconclusive). Corrected.
+  5. FILE(docs/open-questions.md:23), S5, says "the verdict rule as redefined before any verdict". The baseline window was later moved after the λ = 3 burst verdicts (decisions.md 2026-11-02, correction after seeing results). A note is added; the original wording stays visible.
+  6. FILE(docs/status.md:15) lists "push" as an open owner item and as done ("pushed 2026-11-04"). Fixed in status.md.
+  7. **For the owner (process.md, PROTOCOL.md and CLAUDE.md need the owner's approval to change):**
+     - FILE(docs/process.md:121) says the manifest location is "the owner's decision", but it was decided: `manifests/runs.sha256` (decisions.md 2026-11-04 [OPS]).
+     - PROTOCOL §5.1 states only the 2026-10-30 capacity rule, without item 42's rule for future sweeps.
+     - CLAUDE.md rule H says "95 % Clopper–Pearson upper bound" without "one-sided"; process.md §5 makes one-sided the default.
+- **Since when:** each since the date of the statement it corrects.
+- **Which results it affects:** none. No verdict, μ or threshold uses these statements.
+- **Re-check done:** `analysis.tables published`: no difference (previous entry).
+- **Rule that would have caught it:** I (numbers only from committed functions, with their window), plus a docs pass at the end of each session (D).
+
+## 2026-11-05 · [CORR] `derived.hit_between` gave a number when a counter went down
+- **What was wrong:** FILE(analysis/derived.py:16) tested only `if dq`, so a negative difference (a counter reset) gave a number, while `load._level` gives NaN (REG-4).
+- **Since when:** the function was committed (2026-11-04).
+- **Fix:** NaN when the query counter does not rise or either counter goes down inside [a, b], as in `_level`. Test: `tests/test_derived.py::test_hit_between_is_nan_on_a_counter_reset_or_no_queries`.
+- **Which results it affects:** none.
+  - Every caller reads valid runs, and the `recorder` check fails any run with a counter decrease (FILE(harness/checks.py:83-93)).
+  - Re-check: `analysis.recompute_published` prints identical output under the old and the new function (109 lines, compared in one process).
+- **Rule that would have caught it:** J (one definition, one computation), with a reset test from the start.
+
+## 2026-11-05 · [DECISION] Item 42's capacity rule implemented, for future sweeps only
+- **The owner approved it on 2026-11-04** (decisions.md, items 38–42): the throughput test compares against the realized planned arrival rate over the measured window, not the configured λ. Past μ values stand as judged.
+- **Code:**
+  - `load.summarize` gains `planned_rate`: requests planned in [warm-up, end of arrivals) per second.
+  - `load.capacity(..., against="rate" | "planned_rate")`; the default is the old rule.
+  - `tables.capacity_rule(cfg)` reads a sweep's own `capacity:` block, else the 2026-10-30 rule.
+  - `tables.sweep_capacity(parent)` refuses a sweep whose runs registered different rules.
+  - Old configs are not edited, so every old sweep keeps the old rule.
+  - Tests: `tests/test_load_more.py::test_capacity_against_the_realized_planned_rate` and two in `tests/test_tables.py`.
+- **Re-check:** `analysis.tables published` reports no difference; every published μ is unchanged.
+
+## 2026-11-05 · [REG] REG-7: feasibility gate for setup L1 (2048-token system prompt, 5 s gaps) before any shock matrix (GPU, ≤ 9 h)
+- **ID:** REG-7. The owner chose the direction on 2026-11-05 (the audit [DECISION] above). **Not approved yet:** no GPU run before the owner approves this entry. Committed together with `analysis/gate.py`, `tests/test_gate.py`, the `capacity` changes in `analysis/load.py` and `analysis/tables.py`, and `configs/l1_base.yaml`, `sweep_l1_pc_on.yaml`, `sweep_l1_pc_off.yaml` and `stage2_l1_base.yaml`.
+- **Question:** is there a setup and load where a stuck state is possible at all? It needs c_b(λ) < λ ≤ c_warm(λ): the cold, backlogged completion rate below λ while the warm server keeps up at λ (`docs/model.md` M2). At the default pool overload costs only 1 − 4.185 / 4.735 = 0.116 of capacity (DERIVED from M2's inputs), and every burst backlog drained.
+- **Claim tested:** M2 (feasibility, `docs/process.md` §4), as the precondition of C1. Not C1 itself: one burst run is not a cell.
+- **Setup L1:** the measured 5 s-gap setup (`configs/gap5_base.yaml`) with one factor changed, `system_tokens` 512 → 2048. Everything else stays: default pool, cap 256 stated, 8 turns, 128 user / 128 reply / 128 output tokens, exponential 5 s gaps, open-loop turns, no retries, gateway off.
+  - Inputs from schedules (`harness.workload.build_schedule`, seed 1, 2400 s; inputs, not outcomes): W/C mean (`derived.working_set` / 96,656) is 0.38 at λ = 3 and 0.53 at λ = 4 (p90 0.52, 0.68), against 0.19–0.29 for the 5 s-gap setup at λ = 3–4.5.
+  - Mean prompt 3070 tokens (1534 at 512). About 498 prompt tokens per request are left to prefill when warm.
+  - Session median prompt 2944 tokens, max 3968.
+- **Design:**
+  - **G1:** `configs/sweep_l1_pc_on.yaml`, λ = 2, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7. 900 s, seed 0, no dev mode (the run shape of every capacity sweep).
+    - μ_warm by the rule in `configs/l1_base.yaml`: throughput ≥ 0.95 × the realized planned rate (item 42), waiting slope ≤ 0.01 req/s, and **monotone**: the highest rate that passes along with every lower swept rate (`load.capacity`, through `tables.sweep_capacity`).
+    - Seed 0's realized rate is 2.4–7.1 % above λ at every L1 rate (the review, from schedules), so this rule asks for throughput ≈ 0.97–1.02 λ. That is item 42's intent.
+  - **G2:** `configs/sweep_l1_pc_off.yaml`, λ = 1, 1.5, 2, 2.5, 3, 3.5, 4, the same shape with caching off. The sweep runs in full.
+  - **Test load**, computed once after G1 and G2 by `gate.reg7_zone`:
+    - μ_sat,off = `gate.cold_floor`. Drop rows with a non-finite value. λ_sat is the lowest λ with measured-window mean KV ≥ 0.85 (owner, decisions.md 2026-11-04). Every row at λ ≥ λ_sat must be saturated (KV ≥ 0.85 and throughput < 0.95 × planned_rate), else the floor is undefined (`not_monotone`). The floor is the mean throughput over ≥ 2 such rows, else `too_few`; with no saturated row it is `unsaturated`.
+    - λ_test = `gate.choose_lambda`. Take the largest multiple of 0.5 that is ≤ 0.8 μ_warm and ≥ 1.3 μ_sat,off (`gate.zone_check`). Then step down by 0.5 until the G1 run at the smallest swept rate ≥ λ_test has pooled percent fast ≥ 0.98 at TTFT ≤ 1.0 s (`load._level` over 240–900 s; `gate.slo_feasible`), staying ≥ 1.3 μ_sat,off. Otherwise there is no λ_test.
+  - **G3**, at λ_test: two runs of 2580 s, seed 1, extending `configs/stage2_l1_base.yaml` (dev mode, SLO 1.0 s, the verdict block of `stage2_cap_base.yaml`, `burst_min_kv_max: 0.95`). Their configs are written with exactly these contents and committed before they run:
+    - `configs/stage2_control_l1_r<λ>.yaml`: `extends: stage2_l1_base.yaml`, `seed: 1`, `workload.rate: <λ_test>`, `verdict.control_t_s: 1080`. It is judged at the burst's end, so both watches end at 2580 s.
+    - `configs/burst_l1_r<λ>_s1.yaml`: `extends: stage2_l1_base.yaml`, `seed: 1`, `workload.rate: <λ_test>`, `trigger: {kind: burst, at_s: 900, duration_s: 180, rate: <λ_test>, prompt_tokens: 2944}`.
+    - Same seed and duration, so the same session schedule: the burst draws from its own generator (FILE(harness/workload.py:24-26)). Burst requests can't be mistaken for session requests: they are turn 0 with 2944 tokens, while a session's turn 0 is 2176 (`margin.check_burst_rule`).
+- **Analysis plan** (`gate.gate_verdict`, settings `gate.REG7`). Spans are [600, 900), [900, 1200) and [1200, 1500) s after the burst's last planned arrival (1080 s).
+  - A span **holds** in the burst run when `margin.post_trigger_margin` finds it qualifies: waiting > 0 at every scrape; no burst request completes in it; the sessions' cached share is ≤ the baseline's minus 0.06, over the 600 s before the burst. And the one-sided 99 % Poisson upper bound of its completions/s must be below **both** λ_test and the span's planned session rate λp.
+  - A span **counts** when it holds and the control at the same absolute span is defined and not backlogged (waiting > 0 at every scrape there; `gate.control_backlog`).
+  - **Labels:**
+    - `inconclusive`: the control or the burst verdict is `unclear`, the burst run is `bad_baseline`, or a span needed for the decision is undefined. The pair is rerun under the stopping rule; this is never read as `drains`.
+    - `control_not_healthy`: the control is defined but not `recovered`.
+    - `pass`: some span counts.
+    - `inconclusive` also when the burst run is `stuck` by `load.verdict` but no span counts. For example, burst requests may still be completing in every span, so none is burst-free. The span test could not confirm, so this is not read as a drain (pre-commit review, 2026-11-05; see the approval entry).
+    - `drains`: otherwise.
+    - The family error over 3 spans is ≤ 0.03 for the Poisson part.
+  - **Readouts, reported:**
+    - `gate.overlap_share` over [1080, 2580): the share of session cache hits served while the previous turn still ran. It decides the closed-loop proposal below.
+    - Never decisive: `gate.secondary_cb` (`floor.sustained_capacity`, REG-6's settings), `derived.cached_share_split`, completions/s and percent fast per 60 s.
+- **Prediction** (BELIEF, from M2 arithmetic; DERIVED: the default cache-off saturation 3.5 req/s × 1525 prompt tokens ≈ 5.3k prefill tokens/s, so c_off,L1 ≈ 5.3k / 3070 ≈ 1.7 req/s):
+  - μ_sat,off ∈ [1.4, 2.2] (point 1.7), status `ok`; μ_off ∈ {1, 1.5, 2}; μ_warm ∈ [3, 6] (point 4.5).
+  - λ_test exists with p ≈ 0.7 (point 3.5).
+  - Given G3: `pass` ≈ 0.3, `drains` ≈ 0.45, `control_not_healthy` ≈ 0.1, `inconclusive` ≈ 0.15.
+  - Overall `pass` ≈ 0.2.
+- **Decision under each outcome:**
+  - **No λ_test:**
+    - With a floor status `ok`: L1 has no load clearly above its cold floor that is healthy when warm, so no shock matrix runs at L1. μ goes into M2, and the owner picks the next factor.
+    - With a floor status `unsaturated`, `not_monotone` or `too_few`: the floor is *unmeasured*, not absent. A new registration extends or repeats G2.
+  - **pass:** the shock matrix at λ_test, registered first: burst seeds 2–5, each with a same-seed, same-duration control. "Most" = ≥ 3 of 5, with the one-sided Clopper–Pearson bound. Then the condition-5/6 confirmation run, the caching-off control and the loop figure for C2.
+  - **drains:**
+    - Record c_b and 1 − c_b / μ_warm in M2.
+    - If `overlap_share` > 0.5: propose closed-loop turns (a change to rule 2) to the owner as the next single factor.
+    - Otherwise: propose writing up the negative with its mechanism.
+  - **control_not_healthy:** one retry pair at λ_test − 0.5 if that is still ≥ 1.3 μ_sat,off; otherwise as "No λ_test" with status `ok`.
+  - **inconclusive:** rerun the pair unchanged.
+- **Alternatives:**
+  1. Longer prompts also cut the warm capacity, by attention cost and fewer requests in the pool. The zone check measures this.
+  2. Overlap protection may keep hits up in the backlog, so `drains` would not refute the loop for closed-loop traffic. The overlap share is measured, and it decides.
+  3. Larger batches in a backlog may make up for the lost cache, as at the default pool. That gives `drains`.
+  4. Dev mode is on in G3 and off in G1 and G2 (A6).
+  5. One seed per G3 run: `pass` is a reason for a matrix, not a result.
+  6. "Cold" follows from any long backlog (reuse gaps exceed eviction time), so `cold` alone does not separate causes. The matched control span does (review).
+- **Stopping rule:**
+  - Each sweep once; an invalid run is rerun unchanged, at most twice.
+  - G3 at most at 2 λ_test values.
+  - An `inconclusive` pair is rerun at most twice.
+- **Cost:** G1 ≈ 3.0 h (9 runs); G2 ≈ 2.3 h (7 runs); G3 ≈ 1.7 h per pair. In total ≤ 9 GPU h without the inconclusive reruns.
+- **Not changed:** every past verdict, μ and threshold. `capacity`'s new options are off by default, and the old sweeps have no `capacity:` block. Re-check: `analysis.tables published` reports no difference after the change.
+
+### Adversarial review (separate subagent; it saw only the first draft, its diff and the code those call; it built schedules, which are inputs, and synthetic traces; it opened no runs). Verbatim:
+
+> **1. Traces on which the verdict is wrong.**
+> **A. False `pass` on a draining server (main defect).** `holds` compares `c_upper < λp(span)` where λp is the *span's own* planned rate, not λ. With the G3 schedule at λ_test=3.0 (seed 1, burst at 900 s), λp over the three spans = **2.737, 3.393, 2.977**; at 3.5: 3.17, **3.847**, 3.66; at 4.0: 3.65, **4.31**, 4.137. Exact `poisson_rate_upper(n,300,0.99)`: span 2 at λ=3.0 holds whenever c ≤ **3.143**. Trace: cold backlogged rate c_b = 3.10 > λ = 3.0 (no stuck state by M2); after the burst, Q ≈ 528+excess drains at ~0.1/s so Q>0 at every scrape; burst requests finish by ~1080+600/3.1 ≈ 1270 s so spans are burst-free; long queue pushes reuse gap past eviction ⇒ cold. Span 2 → holds → label `pass`. `load.verdict` likely says `stuck` too (end window [1980,2580) planned rate (3.393+2.977)/2 ≈ 3.19 > 3.10 ⇒ positive q slope). So the gate cannot distinguish c_b<λ from c_b<λ+~13 % schedule fluctuation; the 0.03 family error covers only Poisson noise on completions, not the choice of λp as target.
+> **B. Control never judged where the burst run is.** Control verdict windows: end [1800,2400), prev [1200,1800). Burst spans: [1680,1980), [1980,2280), [2280,2580); end [1980,2580). Nothing judges the control on [2400,2580) — where the planned rate peaks at 4.017 (λ=3.5) / 4.422 (λ=4.0). A local overload there can make span 3 hold while the control reads `recovered`. `post_trigger_margin` raises on a run with no trigger, so no matched-span check of the control exists.
+> **C. Missing data → `drains`.** Burst run verdict `unclear` (NaN from a scrape gap) or `bad_baseline`, with no span holding (NaN share/NaN baseline/no scrapes all make `holds` False) → `drains`. Neither case is tested; only `slow_drain`→`drains` is. A `drains` label then drives "write up the negative".
+> **D. False `control_not_healthy`.** Control `unclear` for the same NaN reasons → `control_not_healthy` → retry at λ−0.5, which can then fail the 1.3×floor test → "No λ_test", from an instrument fault.
+> **E. Zone check (run on the real functions).** μ_warm from an integer grid: `zone_check` → {2:None, 3:None, 4:3.0, 5:4.0, 6:4.5, 7:5.5} for μ_warm 2–7, μ_sat,off=1.7. **The predicted λ_test=3.5 cannot occur.** True capacity anywhere in [μ, μ+1) ⇒ λ_test at 0.6–0.8 of it. `cold_floor` averages *every* row ≥ λ_sat including unsaturated ones: synthetic sweep rates 1.5–3, KV ≥0.85 from 1.5, throughput 1.5/2.0/2.4/2.4 → μ_sat,off = 2.075, λ_test=3.0 at μ_warm=4; with the true plateau 2.4, 1.3×2.4=3.12 ⇒ no λ_test. Ran a similar trace: {mu_sat_off: 1.9375, lam_sat: 1.5, n: 4}. Non-monotone KV: one noisy row ≥0.85 at a low λ pulls λ_sat down; nothing checks that rows above are saturated. NaN counts as a run: throughput [NaN, 1.8] → n=2, mean 1.8 — `min_runs`=2 passes with one value; NaN `kv_mean` row silently skipped. Grid ceiling: if c_off,L1 ≥ 3, no row saturates → NaN → "No λ_test" (verified), a grid artifact that the decision reads as "L1 infeasible". `capacity` takes the max passing rate: λ=4 fails, λ=5 passes by noise ⇒ μ_warm=5, λ_test=4.0 above the failing rate.
+> **2. Strongest alternative explanation per outcome.** *No λ_test*: G2 grid stops at 3, or the grid is too coarse (μ_warm 4 vs true 4.9), not evidence of no zone. *pass*: slow drain with c_b slightly above λ judged against a local λp up to 13 % above λ (trace A), or local overload in the control's unjudged tail (B). The "cold" criterion does not separate these: any long queue makes the cached share drop because reuse gaps exceed eviction time, so `cold` follows from backlog of any cause. *drains*: the burst did not push the server over (KV≥0.95 proves pressure, not loss of the sessions' cache); or burst-run verdict `unclear` (C); single seed (1/1 has 95 % upper bound near 1). *control_not_healthy*: the SLO, not capacity — G1's throughput rule says nothing about TTFT p98 ≤ 1.0 s with 2–4k-token prompts at 0.6–0.8 of capacity, and dev mode is on only in G3; or instrument NaN (D).
+> **3. Can the run change a decision?** Yes, if "No λ_test" and `drains` are fixed as above: "No λ_test" stops the L1 shock matrix; `pass` starts the matrix at seeds 2–5. As drafted, `pass` is vulnerable to trace A, so it could commit ~8 h GPU on a false positive. The overlap-share > 0.5 branch under `drains` is not computable as written (see 4).
+> **4. Code/config defects.** (1) `holds` vs `lam_p(span)` not λ (trace A); no check that the queue grows across spans. (2) Control/burst verdict windows differ (control at `control_t_s`=900, watch ends 2400; burst watch ends 2580); last 180 s of control unjudged. (3) `unclear`/`bad_baseline` burst verdicts → `drains`; `unclear` control → `control_not_healthy`; untested. (4) Overlap decision has no named function: "overlap share > 0.5 of post-burst cached share" — `cached_share_split` returns two means over the whole measured window [240,2580), not post-burst; no function returns an "overlap share". Choosing this computation after data is a threshold-after-data risk. (5) `cold_floor`: unsaturated rows averaged, NaN rows counted toward n, no monotonicity. (6) Grid: μ_warm integer grid ⇒ λ_test ∈ {3,4,4.5,5.5}; prediction inconsistent; λ_test = 4.5 has no G1 run at that rate. (7) Item-42 `planned_rate` in `summarize` = all requests with `t_planned` in [warmup, duration) / span: for sweeps this is the realized planned rate (warm-up excluded, no bursts in sweeps); it would include burst requests if ever applied to a burst run. With seed 0 the realized rate is **+2.4 % to +7.1 % above λ** at every L1 rate (on: 2.097, 3.124, 4.186, 5.217, 6.159, 7.171; off: 1.05, 1.606, 2.097, 2.638, 3.124), so the rule effectively requires throughput ≥ ~0.99–1.02 λ — near "zero shortfall". G3 uses seed 1, whose baseline at λ=3 is 3.153 — a different realized load from G1. (8) `is_burst_request` is safe: session turn 3 = 2944 tokens, but bursts have turn = 0 and session turn 0 = 2176; `check_burst_rule` holds. Verified turn-3 length set {2944}, burst turns {0}. (9) Burst requests (528–796 × 2944 tok ≈ 1.6–2.3 M prefill tokens) may still be finishing in span 1: at the predicted ~5.3k tok/s cold rate (BELIEF), the last burst completion approaches the span-1 start at 1680 s when c_b ≲ 1.5, so span 1 can fail burst-free; biases against `pass`, not toward it. (10) Errored requests count in λp but not in c → inflates `holds`. (11) `sweep_kv_table` fails on runs with empty metrics (`tables.sweep_table` skips them); duplicate valid runs at one rate double-weight the floor mean. (12) G3 control/burst configs are not in the diff — trigger keys, rate = λ_test, `control_t_s` unreviewed.
+> **5. Recommended changes, most important first.** 1. `holds` must require `c_upper < λ` (configured) AND `< λp`, or a positive Q slope across the three spans jointly; register now. 2. Add a matched-span negative control: compute Q>0 / c_upper / share on the control at the same absolute spans, and require the control not to hold there (Q ≈ 0); judge the control at `control_t_s` = 1080 or extend it to cover [2400,2580). 3. Map burst-run verdict `unclear`/`bad_baseline` and NaN spans to a new `inconclusive` label (rerun under the stopping rule), never `drains`; map control `unclear` to `inconclusive` too. Add tests for each. 4. Fix `cold_floor`: require every row ≥ λ_sat to have KV ≥ 0.85 and throughput < 0.95×planned_rate; use finite rows only; extend G2 to 3.5 and 4, or register that a NaN floor means "unmeasured" rather than "infeasible". 5. Use 0.5-step G1 rates 2–7 (or interpolate μ_warm) and fix the λ_test prediction; make `capacity` monotone (highest λ with all lower rates passing). 6. Pre-register an SLO feasibility check before G3: percent fast ≥ 0.98 at TTFT 1.0 s in the G1 run at the rate ≥ λ_test; otherwise "control_not_healthy" is predictable from data in hand. 7. Write and test a named function for the overlap share over [burst end, duration), and register the 0.5 rule against it. 8. Commit G3 control/burst configs now (parametrized by λ_test) for review. 9. Count errored requests as completions or drop them from λp; make `sweep_kv_table` skip runs without metrics.
+
+**Changed because of it:**
+- **A:** `holds` needs c_upper below both λ_test and λp. A test reproduces trace A (c = 3.10, λ = 3.0, λp = 3.39 → does not hold).
+- **B:** a matched-span negative control (`gate.control_backlog`); the control is judged at `control_t_s: 1080`; `gate_verdict` raises otherwise.
+- **C and D:** a new `inconclusive` label for an `unclear` verdict on either run, a `bad_baseline` burst run, or undefined spans, with a test for each.
+- **E, 4.5:**
+  - `cold_floor` uses finite rows only, requires every row at λ ≥ λ_sat to be saturated, and refuses duplicate rates. Its four statuses are registered, and an undefined floor means "unmeasured".
+  - G2 is extended to λ = 4.
+- **E, 4.6:** G1 now uses 0.5 steps (2, 3, 3.5, …, 6, 7), `capacity` gains `monotone` (on for L1 only), and the prediction is restated.
+- **Recommendation 6:** `gate.slo_feasible` and `gate.choose_lambda`, registered as part of the λ_test rule.
+- **4.4 and recommendation 7:** `gate.overlap_share`, defined and tested, decides the closed-loop branch.
+- **4.7:** item 42's rule stays as the owner approved it; the review's numbers on how strict it is are stated in Design.
+- **Recommendation 8, modified:** the G3 configs' exact contents are registered above, and the files are committed before they run. λ_test is not known until G1 and G2 are done.
+- **4.10, not changed:** an errored request fails `no_errors`, so the run is invalid and `gate_verdict` raises.
+- **4.11:** `sweep_rows` skips runs without metrics, and duplicates raise.
+- **4.9 is accepted as stated:** it biases against `pass`.
+- Full suite after the changes: `uv run pytest`, 183 passed. `analysis.tables published`: no difference.

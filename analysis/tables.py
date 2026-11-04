@@ -5,6 +5,7 @@
 Every table carries the commit it was computed at (`provenance`), so a quoted number can name its code
 (docs/process.md §6). Thresholds come from the run configs or are the registered ones named below; nothing is chosen here.
 """
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -87,8 +88,30 @@ def sweep_table() -> pd.DataFrame:
         has_hit = "vllm:prefix_cache_queries_total" in r["metrics"] and r["metrics"]["vllm:prefix_cache_queries_total"].iloc[-1] > 0
         s["whole_run_hit"] = L.whole_run_hit_rate(r) if has_hit else np.nan
         s["preemptions"] = _preemptions(r["metrics"])
+        s["capacity_rule"] = json.dumps(capacity_rule(r["cfg"]), sort_keys=True)
         rows.append(s)
     return pd.DataFrame(rows)
+
+
+def capacity_rule(cfg: dict) -> dict:
+    """The capacity rule a sweep registered in its own config (`capacity:` block; item 42, future sweeps only), or the
+    2026-10-30 rule for every sweep that has none. Old configs are never edited, so they keep the old rule."""
+    rule = cfg.get("capacity")
+    if not rule:
+        return {**CAPACITY_RULE, "against": "rate", "monotone": False}
+    return {**{k: rule[k] for k in ("min_throughput_frac", "max_q_slope", "against")}, "monotone": bool(rule.get("monotone", False))}
+
+
+def sweep_capacity(parent: str, sweeps: pd.DataFrame | None = None) -> float:
+    """μ for one sweep parent, over its valid runs, by the rule its configs registered. Raises if the runs disagree."""
+    sw = sweep_table() if sweeps is None else sweeps
+    rows = sw[(sw.parent == parent) & sw.valid.astype(bool)]
+    if not len(rows):
+        return float("nan")
+    rules = set(rows.capacity_rule)
+    if len(rules) != 1:
+        raise ValueError(f"{parent}: runs registered different capacity rules: {sorted(rules)}")
+    return L.capacity(rows, **json.loads(rules.pop()))
 
 
 def capacity_table(sweeps: pd.DataFrame | None = None) -> pd.DataFrame:

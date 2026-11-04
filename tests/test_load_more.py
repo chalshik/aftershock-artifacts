@@ -134,3 +134,13 @@ def test_ramp_step_without_scrapes_is_nan_not_an_error():
     run = wipe_run(lambda x: (1.0, 0.6, 0.0))
     lv = _level(_cut(run, 1000), 1500, 1600)
     assert all(np.isnan(lv[k]) for k in ("hit", "q", "q_slope", "n", "kv"))
+
+
+def test_capacity_against_the_realized_planned_rate():
+    # Item 42 (decisions.md 2026-11-04): λ = 3 run whose schedule carried 3.3 req/s and completed 3.0 keeps up by the old
+    # rule (3.0 >= 0.95 x 3) but not against what it was asked to do (3.0 < 0.95 x 3.3).
+    curve = pd.DataFrame({"rate": [2, 3], "throughput": [2.0, 3.0], "planned_rate": [2.0, 3.3], "q_slope_per_s": [0, 0]})
+    assert capacity(curve, 0.95, 0.01) == 3
+    assert capacity(curve, 0.95, 0.01, against="planned_rate") == 2
+    with pytest.raises(ValueError):
+        capacity(curve, 0.95, 0.01, against="lambda")

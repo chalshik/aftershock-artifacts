@@ -1,0 +1,10 @@
+# REG-7 G2: capacity of setup L1 with prefix caching off (mu_off, and the cold floor mu_sat,off). Same run shape as
+# sweep_l1_pc_on.yaml. See docs/decisions.md 2026-11-05 [REG] REG-7.
+extends: l1_base.yaml
+name: sweep_l1_pc_off
+server:
+  args:
+    --enable-prefix-caching: null
+    --no-enable-prefix-caching: true
+sweep:
+  rates: [1, 1.5, 2, 2.5, 3, 3.5, 4]          # up to 4, so the cold floor is reached if it lies above 3

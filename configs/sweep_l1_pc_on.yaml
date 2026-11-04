@@ -1,0 +1,6 @@
+# REG-7 G1: capacity of setup L1 with prefix caching on (mu_warm). Stage 1 run shape: 900 s per rate, seed 0, no dev
+# mode. Capacity rule from l1_base.yaml (item 42). See docs/decisions.md 2026-11-05 [REG] REG-7.
+extends: l1_base.yaml
+name: sweep_l1_pc_on
+sweep:
+  rates: [2, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7]   # 0.5 steps where lambda_test can fall (REG-7 review)

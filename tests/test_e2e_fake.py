@@ -106,3 +106,18 @@ def test_no_trigger_in_dev_mode_writes_no_trigger_file(tmp_path):
     assert not (run_dir / "trigger.jsonl").exists()
     res = json.loads((run_dir / "checks.json").read_text())
     assert res["valid"] and "trigger" not in [c["name"] for c in res["checks"]]
+
+
+def test_l1_setup_runs_end_to_end_with_its_prompt_lengths(tmp_path):
+    """REG-7's setup L1 (configs/l1_base.yaml) against the fake server: the 2048-token system prompt reaches the
+    schedule and the server, and the run records the item-42 capacity rule."""
+    run_dir = run_fake(tmp_path, extends=str(REPO / "configs" / "sweep_l1_pc_on.yaml"), sweep=None,
+                       # 8 turns at 5 s gaps need ~40 s to ramp up, so the warm-up covers it (configs/base.yaml)
+                       workload={"rate": 2.0, "duration_s": 55, "warmup_s": 40, "output_tokens": 8},
+                       checks={"require_clean_git": False, "expected_kv_tokens": None})
+    sched = pd.read_parquet(run_dir / "schedule.parquet")
+    assert set(sched[sched.turn == 0].prompt_len) == {2048 + 128}
+    assert ((sched.prompt_len - 2176) % 256 == 0).all()
+    cfg = yaml.safe_load((run_dir / "config.yaml").read_text())
+    assert cfg["capacity"]["against"] == "planned_rate"
+    assert json.loads((run_dir / "checks.json").read_text())["valid"]

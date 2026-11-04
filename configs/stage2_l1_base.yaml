@@ -1,0 +1,14 @@
+# REG-7 G3: Stage 2 run shape (dev mode, SLO, verdict rule, cap) for setup L1: 5 s turn gaps, 2048-token system
+# prompt, default KV pool. The control and the burst run at lambda_test extend this file; they share seed and
+# duration, so their session schedules are the same (the burst draws from its own generator, harness/workload.py).
+# See docs/decisions.md 2026-11-05 [REG] REG-7.
+extends: stage2_gap5_base.yaml
+name: stage2_l1_base
+workload:
+  duration_s: 2580               # 900 s before the burst + 180 s burst + the 1500 s watch
+  sessions:
+    system_tokens: 2048
+checks:
+  expected_kv_tokens: 96656
+  manipulation:
+    burst_min_kv_max: 0.95       # the burst must fill the pool; registered before any run is judged by it

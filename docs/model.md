@@ -15,7 +15,7 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## M2. Completion-rate margin (bistability needs a capacity loss)
 
-**Use:** whether a stuck state can exist at λ at all, independent of memory details. Feasibility gate (process.md §4). Not yet registered or tested; item 25 of the 2026-11-04 audit.
+**Use:** whether a stuck state can exist at λ at all, independent of memory details. Feasibility gate (process.md §4). Item 25 of the 2026-11-04 audit. Assumption A was tested by REG-1 (inconclusive); the gate for setup L1 is REG-7 (decisions.md 2026-11-05). Corrected 2026-11-05 [CORR]: this line said "not yet registered or tested".
 
 - The waiting line obeys dQ/dt = λ − c(s), where c(s) is the completion rate in server state s.
 - A run can stay stuck after a trigger only if the post-trigger state s* has c(s*) < λ for as long as it lasts; otherwise the line drains, N and KV fall, eviction pressure goes, and S11 (self-refill, `docs/open-questions.md`) restores the cache.
@@ -67,5 +67,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 | 8 | 2026-11-03 | sweeps | 5 s gaps: recovery, because prefixes survived overload | Stuck in 0 of 12 | Hit | as row 7 |
 | 9 | 2026-11-04 | M2 (REG-1) | ≤ 2 of 12 default-pool burst spans and 0 of 12 wipe spans qualify; outcome most likely inconclusive (≈ 0.6); qualifying c in 4.3–4.7 | 0 of 24 qualify (wipes never backlogged; burst spans never burst-free); inconclusive | Hit on qualification and outcome; c range not testable | RUN(the 30 REG-1 runs, margin.reg1_table) |
 | 10 | 2026-11-04 | REG-2 (A3) | λ = 4 control: `arrival_driven` ≈ 0.5 (modal); 72k λ = 3.5: `too_few_episodes` ≈ 0.6 (modal), `arrival_driven` ≈ 0.25; `ao_like_cycle` ≤ 0.05 | λ = 4 `arrival_driven` (arrival share exactly at the 2/3 threshold); 72k `arrival_driven` | Hit (λ = 4); miss of the modal prediction (72k) | RUN(20261101-202808_stage2_control_cap_r4, mechanisms.reg2_table), RUN(20261102-225146_stage2_control_kv72k_r3.5, mechanisms.reg2_table) |
+| 11 | 2026-11-05 | M2 (REG-7, setup L1) | μ_sat,off ∈ [1.4, 2.2] (point 1.7, DERIVED from 5.3k prefill tok/s ÷ 3070); μ_warm ∈ [3, 6] (point 4.5); λ_test exists p ≈ 0.7 (point 3.5); given G3: `pass` ≈ 0.3, `drains` ≈ 0.45, `control_not_healthy` ≈ 0.1, `inconclusive` ≈ 0.15 | Not run (awaits the owner's approval) | Untested | — |
 
 **Record so far:** M1 is 0 for 3 on tested predictions (rows 1, 3, 4). It should not be used to choose loads again until it is revised and its revision predicts the existing runs it missed.

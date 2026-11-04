@@ -1,20 +1,34 @@
 # Study status
 
-Living document: update it after every run or decision. Last updated: 2026-11-04.
+Living document: update it after every run or decision. Last updated: 2026-11-05.
 
 **Stage 1 is complete; Stage 2 is in progress (started 2026-10-31).** Stage 1 inputs: μ_warm = 4 req/s, μ_off = 2 req/s (Stage 1 grid 1, 2, 3, …), λ = 3 healthy for 2 h, SLO TTFT ≤ 1.0 s, τ = 300 s (`20261101-131823_tau`), so the watch window is 1500 s.
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: finish REG-6** (approved 2026-11-04; interrupted when the VM went offline at about 14:35 UTC, decisions.md [OPS] same date). Nothing is running.
-1. When the VM is back: inspect `runs/20261104-134159_long_pc_off_r3_s0` and the journal for the cause; copy the folder to the Mac (kept on record, incomplete); `python3 tools/manifest.py update`; delete its line from `manifests/pending_copy.txt`; remove the VM copy only after a checksum-verified copy.
-2. With the owner's go: `git pull` on the VM, then `uv run python -m harness.run configs/long_pc_off_r3_s0.yaml` (rerun, new run id) and `..._s1.yaml`, about 2.2 GPU h. Start them only when the GPU is idle.
-3. Copy both folders back, update the manifest, compute `uv run python -m analysis.floor` **once**, and write the `[RESULT]`. Its decision table is in the REG-6 entry.
+**Next action: the owner reviews and approves REG-7** (decisions.md 2026-11-05: the feasibility gate for setup L1, a 2048-token system prompt at 5 s gaps; ≤ 9 GPU h). Nothing is running, and nothing from 2026-11-05 is committed yet. The VM was offline at the session's start (Tailscale: last seen about 4 h earlier).
+1. **On the Mac, before any run:** the owner reviews and commits the 2026-11-05 changes (REG-7 is committed with its code and configs before it runs); push.
+2. **When the VM is back:**
+   - REG-6's recovery steps: inspect `runs/20261104-134159_long_pc_off_r3_s0` and the journal (`journalctl --list-boots`; the VM was seen online after the 14:35 loss); copy the folder to the Mac (kept, incomplete); `python3 tools/manifest.py update`; delete its line from `manifests/pending_copy.txt`; remove the VM copy only after a checksum-verified copy.
+   - Probe and record the scheduler limits (open-questions A10).
+   - Log the microk8s decision.
+3. **With the owner's go, GPU idle, after `git pull`:**
+   - G1 `uv run python -m harness.run configs/sweep_l1_pc_on.yaml` (about 3 h);
+   - G2 `configs/sweep_l1_pc_off.yaml` (about 2.3 h);
+   - copy back, update the manifest, compute `uv run python -m analysis.gate` **once** (λ_test);
+   - write and commit the two G3 configs exactly as registered, run them (about 1.7 h), compute `gate.gate_verdict` once, and write the `[RESULT]`.
+4. **REG-6** (approved; about 2.2 GPU h) runs after the gate, when the GPU is idle (owner, 2026-11-05).
 
 **Then, the owner's open items:**
-- items 18–23: paper layer, framing, C1 metric, canonical hit rate, backup location, push (pushed 2026-11-04);
-- the next direction (60 s gaps, a write-up, or another setup), which REG-6's result informs;
-- whether to stop microk8s on the VM during runs.
+- items 18–22: paper layer, framing, canonical hit rate, backup location. The C1 metric is decided for future cells (decisions.md 2026-11-05); push was done 2026-11-04;
+- whether to stop microk8s on the VM during runs;
+- for the owner's approval: three doc fixes in process.md, PROTOCOL.md and CLAUDE.md (decisions.md 2026-11-05 [CORR], item 7).
+
+**Done 2026-11-05 (0 GPU h):**
+- Audit of all runs, code, docs and literature: every published verdict and μ reproduces; why nothing got stuck (the capacity loss is too small at the default pool); design rules for future cells; the owner's choices.
+- `[CORR]` entries: doc contradictions, and `derived.hit_between` on a counter reset (no published value changed).
+- Item 42's capacity rule implemented, for future sweeps only.
+- REG-7 written, reviewed (rule F) and revised; `analysis/gate.py` with tests.
 
 **Done 2026-11-04, after the audit:**
 - REG-1 (post-trigger margin): inconclusive.
@@ -34,7 +48,9 @@ Living document: update it after every run or decision. Last updated: 2026-11-04
 - **The VM can shut down mid-run** (2026-10-31, 2026-11-01, and REG-6 seed 0 on 2026-11-04). An interrupted run is kept and rerun; a stopped sweep has no resume.
 - **REG-6 seed 0 exists only on the VM** until copied.
 - **microk8s runs on the VM**, unrecorded in `env.json` (decisions.md [OPS] 2026-11-04).
-- **Manipulation checks are off** (thresholds null in `configs/defaults.yaml`). They must be registered before any run is judged by them.
+- **Manipulation checks are off** for every past run (thresholds null in `configs/defaults.yaml`). REG-7 registers `burst_min_kv_max: 0.95` for its burst runs (`configs/stage2_l1_base.yaml`).
+- **Scheduler limits unrecorded** (`max_num_batched_tokens`, `--scheduler-reserve-full-isl`; open-questions A10).
+- **Open-loop turns protect the cache under slowdown** (decisions.md 2026-11-01, limits): REG-7 measures the overlap share.
 - **Data:** one copy only (Watch, below). A backup can now be verified with `python3 tools/manifest.py verify <copy>`.
 
 ## Stage 2 results

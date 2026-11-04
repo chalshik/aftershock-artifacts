@@ -11,10 +11,15 @@ from analysis.load import rates, window
 
 
 def hit_between(metrics: pd.DataFrame, a: float, b: float) -> float:
-    """Hit rate over [a, b) from the raw counters (interpolated at a and b), the same reading as `load._level`."""
+    """Hit rate over [a, b) from the raw counters (interpolated at a and b), the same reading as `load._level`.
+    NaN when the query counter does not rise or either counter goes down inside [a, b] (a restart), as in `_level`
+    (decisions.md 2026-11-05 [CORR]; before, a negative difference gave a number)."""
     h, q = metrics["vllm:prefix_cache_hits_total"], metrics["vllm:prefix_cache_queries_total"]
+    span = (metrics.t >= a) & (metrics.t <= b)
+    if (np.diff(h[span].to_numpy()) < 0).any() or (np.diff(q[span].to_numpy()) < 0).any():
+        return float("nan")
     dq = np.interp(b, metrics.t, q) - np.interp(a, metrics.t, q)
-    return float((np.interp(b, metrics.t, h) - np.interp(a, metrics.t, h)) / dq) if dq else float("nan")
+    return float((np.interp(b, metrics.t, h) - np.interp(a, metrics.t, h)) / dq) if dq > 0 else float("nan")
 
 
 def trigger_times(run: dict) -> tuple[float, float] | None:

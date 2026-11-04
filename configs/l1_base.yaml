@@ -1,0 +1,16 @@
+# Setup L1 (REG-7, docs/decisions.md 2026-11-05): the 5 s-gap setup with one factor changed, a 2048-token system
+# prompt per session instead of 512. Default KV pool, cap stated, open-loop turns, no retries, gateway off.
+# Why: the working set fits the pool when warm (W/C ~0.38 at lambda 3, ~0.53 at 4) while a cold turn must prefill
+# ~3070 tokens instead of ~498, so a lost cache should cost far more capacity than at 512 tokens (docs/model.md M2).
+extends: gap5_base.yaml
+name: l1_base
+workload:
+  sessions:
+    system_tokens: 2048
+capacity:                        # item 42 (decisions.md 2026-11-04): judged against the realized planned rate
+  min_throughput_frac: 0.95
+  max_q_slope: 0.01              # req/s
+  against: planned_rate
+  monotone: true                 # REG-7: mu is the highest rate with every lower swept rate passing too
+checks:
+  expected_kv_tokens: 96656      # the default pool every default-pool run logged

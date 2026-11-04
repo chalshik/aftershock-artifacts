@@ -49,3 +49,12 @@ def test_overlap_fraction_counts_sends_before_previous_first_token():
         (1, 1, 5.0, 5.0, 5.1, 6.0, "ok", 0, 100),
     ])
     assert overlap_fraction(run) == 0.5
+
+
+def test_hit_between_is_nan_on_a_counter_reset_or_no_queries():
+    m = pd.DataFrame({"t": [0.0, 10.0, 20.0], "vllm:prefix_cache_hits_total": [50.0, 10.0, 30.0],
+                      "vllm:prefix_cache_queries_total": [100.0, 20.0, 60.0]})
+    assert np.isnan(hit_between(m, 0, 20))       # both counters went down at t = 10: a restart
+    assert hit_between(m, 10, 20) == 0.5         # after the reset the window is clean
+    flat = m.assign(**{"vllm:prefix_cache_queries_total": [5.0, 5.0, 5.0], "vllm:prefix_cache_hits_total": [1.0, 1.0, 1.0]})
+    assert np.isnan(hit_between(flat, 0, 20))    # no queries

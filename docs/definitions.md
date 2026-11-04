@@ -29,6 +29,7 @@ One entry per term: one text definition, its source, and the code that computes 
 ### μ_warm
 - **Text:** "μ is the highest swept λ whose run is valid, with throughput ≥ 0.95 λ and waiting-queue slope ≤ 0.01 req/s², both over the measured window", with prefix caching on. `docs/decisions.md:61`.
 - **Code:** `load.capacity` (`load.py:243`), on `load.summarize` rows.
+- **Reference for future sweeps (item 42, decisions.md 2026-11-04; code 2026-11-05):** a sweep whose config has a `capacity:` block with `against: planned_rate` is judged against `load.summarize` `planned_rate`, the requests planned in [warm-up, end of arrivals) per second, instead of λ. Read by `tables.capacity_rule` and `tables.sweep_capacity`. Every sweep up to 2026-11-04 has no such block and keeps the 2026-10-30 rule. With `monotone: true`, μ is the highest rate that passes along with every lower swept rate (`load.capacity(monotone=True)`). First used by `configs/l1_base.yaml` (REG-7).
 - **Other text:** "Highest load the server keeps up with when the cache works" (`docs/experiment-plan.md:201`).
 
 ### μ_off
@@ -76,7 +77,7 @@ One entry per term: one text definition, its source, and the code that computes 
 - **Code:**
   - `load.rates` `hit_rate` (`load.py:66`): one ratio per scrape interval.
   - `load.summarize` `"hit_rate"` (`load.py:101`): the mean of the per-scrape ratios over the measured window.
-  - `load._level` `"hit"` (`load.py:150`), `derived.hit_between` (`derived.py:13`) and `derived.thirds(how="counter")` (`derived.py:37`): the ratio of counter differences over the span. This feeds `verdict`.
+  - `load._level` `"hit"` (`load.py:150`), `derived.hit_between` (`derived.py:13`) and `derived.thirds(how="counter")` (`derived.py:37`): the ratio of counter differences over the span. This feeds `verdict`. Since 2026-11-05, `hit_between` is also NaN on a counter decrease or no queries, like `_level` (decisions.md 2026-11-05 [CORR]).
   - `load.whole_run_hit_rate` (`load.py:108`): first scrape to last.
 - **Undefined windows (REG-4, 2026-11-04):** `_level` gives NaN hit when the query counter does not rise, a cache counter goes down (restart), or the scrapes don't cover the window (`checks.max_scrape_gap_s`). Before REG-4 a window with no queries gave 0.0.
 - **Different numbers for the same run:** e.g. the long run's last third, 0.6004 (mean of ratios) vs 0.6255 (counters), `docs/decisions.md:116`.
@@ -170,6 +171,31 @@ The original code, recovered verbatim from session transcripts, is in `analysis/
 ### post-trigger margin
 - **Text:** completions − λ over a span after a trigger's end. Defined with its windows in the registration REG-1 (`docs/model.md` M2), **not yet computed**.
 - **Code:** none yet; to be written only after REG-1 is approved.
+
+## Feasibility gate for setup L1 (REG-7, decisions.md 2026-11-05)
+
+### μ_sat,off (cold floor)
+- **Text:** the mean `load.summarize` throughput of a cache-off sweep's valid, finite runs at λ ≥ λ_sat, λ_sat being the lowest swept λ whose measured-window mean `kv_cache_usage_perc` is ≥ 0.85. Every such run must be saturated (KV ≥ 0.85 and throughput < 0.95 × planned_rate). Statuses: `ok`; `unsaturated`, `not_monotone`, `too_few` (< 2 runs), all meaning "unmeasured". Threshold 0.85: owner's decisions on items 38–42 (decisions.md 2026-11-04).
+- **Code:** `gate.cold_floor`, inputs from `gate.sweep_rows`.
+- **Other text:** the REG-5 draft (`docs/drafts/addendum_34-43.md`), never computed for the default pool (decisions.md 2026-11-04 [DECISION] REG-5).
+
+### λ_test
+- **Text:** the largest multiple of 0.5 that is ≤ 0.8 μ_warm and ≥ 1.3 μ_sat,off, stepped down by 0.5 until the cache-on sweep run at the smallest swept rate ≥ λ_test had pooled percent fast ≥ 0.98 at TTFT ≤ 1.0 s, staying ≥ 1.3 μ_sat,off; none if no value fits.
+- **Code:** `gate.zone_check`, `gate.slo_feasible`, `gate.choose_lambda`; driver `gate.reg7_zone`.
+
+### c_b (completion rate in the cold backlog) ⚠ more than one computation
+- **Text:** completions per second while requests wait and the sessions' cache is cold, against the planned session rate λp of the same span.
+- **Code:**
+  - `gate.burst_backlog` (via `margin.post_trigger_margin`): per fixed span after a burst, with its 99 % Poisson upper bound, against both λ and the span's planned session rate; decides REG-7's gate together with the matched control span (`gate.control_backlog`).
+  - `floor.sustained_capacity`: over backlogged stretches (waiting ≥ 1 for ≥ 30 s); REG-6's measure, and REG-7's secondary readout only.
+
+### gate verdict
+- **Text:** `pass`, `drains`, `control_not_healthy` or `inconclusive` (an instrument gap, or a `stuck` burst run that no span confirms), from a control and a burst run with the same seed and duration, the control judged at the burst's end (REG-7).
+- **Code:** `gate.gate_verdict`.
+
+### overlap share
+- **Text:** of the session cache hits in a span (by first token), the share served while the previous turn was still running: Σ cached tokens of later turns whose first token came before the previous turn's end ÷ Σ cached tokens of all later turns.
+- **Code:** `gate.overlap_share`. Related, not the same: `derived.overlap_fraction` (share of turns *sent* before the previous first token) and `derived.cached_share_split` (mean shares over the whole window).
 
 ## Used configs that cannot be fixed (rule 5)
 

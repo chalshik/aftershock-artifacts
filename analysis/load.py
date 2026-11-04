@@ -96,6 +96,8 @@ def summarize(run: dict) -> dict:
         "run": run["dir"].name, "rate": cfg["workload"]["rate"],
         "prefix_caching": bool(cfg["server"]["args"].get("--enable-prefix-caching")),
         "throughput": float((done.status == "ok").sum() / span),
+        # Realized planned arrival rate in the window, from the run's own schedule (item 42, decisions.md 2026-11-04).
+        "planned_rate": float(len(r) / span),
         "ttft_p50": r.ttft.quantile(.5), "ttft_p99": r.ttft.quantile(.99),
         "e2e_p50": r.e2e.quantile(.5), "unfinished": int((r.status == "unfinished").sum()),
         "hit_rate": float(m.hit_rate.mean()) if "hit_rate" in m else np.nan,
@@ -240,8 +242,19 @@ def verdict(run: dict) -> dict:
     return {"verdict": v, "t_start": t_start, "t_wipe": t, "baseline": base, "previous": prev, "end": end}
 
 
-def capacity(curve: pd.DataFrame, min_throughput_frac: float, max_q_slope: float) -> float:
-    """mu = highest rate where the server keeps up: throughput >= frac x rate and the queue is not growing.
+def capacity(curve: pd.DataFrame, min_throughput_frac: float, max_q_slope: float, against: str = "rate",
+             monotone: bool = False) -> float:
+    """mu = highest rate where the server keeps up: throughput >= frac x reference and the queue is not growing.
+    `against` is the reference: "rate" (λ as configured; the 2026-10-30 rule, used by every sweep up to 2026-11-04) or
+    "planned_rate" (the realized planned rate in the window; item 42, future sweeps only, decisions.md 2026-11-04).
+    `monotone` (REG-7, future sweeps only): the highest rate such that it and every lower swept rate pass, so a rate
+    that passes by noise above a failing one cannot set mu. The default keeps the old reading (any passing rate).
     Thresholds must be pre-registered in docs/decisions.md before reading the sweep."""
-    ok = curve[(curve.throughput >= min_throughput_frac * curve.rate) & (curve.q_slope_per_s <= max_q_slope)]
+    if against not in ("rate", "planned_rate"):
+        raise ValueError(f"unknown capacity reference {against!r}")
+    c = curve.sort_values("rate")
+    passes = (c.throughput >= min_throughput_frac * c[against]) & (c.q_slope_per_s <= max_q_slope)
+    if monotone:
+        passes = passes.cumprod().astype(bool)
+    ok = c[passes]
     return float(ok.rate.max()) if len(ok) else np.nan
