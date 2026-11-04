@@ -110,11 +110,11 @@ def with_trigger(d, attempts):
 
 
 def test_trigger_one_wipe_passes(tmp_path):
-    assert failed(with_trigger(make_run(tmp_path), [{"success": True, "t_end": 10.1}])) == []
+    assert failed(with_trigger(make_run(tmp_path), [{"success": True, "t_start": 10.0, "t_end": 10.1}])) == []
 
 
 def test_trigger_no_successful_wipe_fails(tmp_path):
-    assert "trigger" in failed(with_trigger(make_run(tmp_path), [{"success": False, "t_end": 10.1}]))
+    assert "trigger" in failed(with_trigger(make_run(tmp_path), [{"success": False, "t_start": 10.0, "t_end": 10.1}]))
 
 
 def test_trigger_no_attempt_fails(tmp_path):
@@ -122,11 +122,11 @@ def test_trigger_no_attempt_fails(tmp_path):
 
 
 def test_trigger_two_wipes_fail(tmp_path):
-    assert "trigger" in failed(with_trigger(make_run(tmp_path), [{"success": True, "t_end": 10.1}] * 2))
+    assert "trigger" in failed(with_trigger(make_run(tmp_path), [{"success": True, "t_start": 10.0, "t_end": 10.1}] * 2))
 
 
 def test_trigger_wipe_after_arrivals_end_fails(tmp_path):
-    assert "trigger" in failed(with_trigger(make_run(tmp_path), [{"success": True, "t_end": 500.0}]))
+    assert "trigger" in failed(with_trigger(make_run(tmp_path), [{"success": True, "t_start": 10.0, "t_end": 500.0}]))
 
 
 def with_burst(d, sent_all=True):
@@ -190,3 +190,76 @@ def test_gpu_hw_throttle_fails(tmp_path):
 
 def test_gpu_sustained_sw_thermal_fails(tmp_path):
     assert "gpu_steady" in failed(with_gpu(make_run(tmp_path), [0x20] * 10 + [0] * 90))
+
+
+# ---- checks added 2026-11-04 (audit items 1-8), all off or lenient by default (configs/defaults.yaml)
+
+def set_checks(d, **kw):
+    cfg = yaml.safe_load((d / "config.yaml").read_text())
+    cfg.setdefault("checks", {}).update(kw)
+    (d / "config.yaml").write_text(yaml.safe_dump(cfg))
+    return d
+
+
+def names(run_dir):
+    return [c["name"] for c in checks.run_checks(run_dir)["checks"]]
+
+
+def test_new_checks_are_skipped_by_default(tmp_path):
+    d = make_run(tmp_path)
+    assert "kv_capacity" not in names(d) and "manipulation" not in names(d) and failed(d) == []
+
+
+def test_kv_capacity(tmp_path):
+    d = set_checks(make_run(tmp_path), expected_kv_tokens=96656)
+    (d / "server.log").write_text("INFO GPU KV cache size: 96,656 tokens\n")
+    assert "kv_capacity" in names(d) and "kv_capacity" not in failed(d)
+    (d / "server.log").write_text("INFO GPU KV cache size: 72,480 tokens\n")
+    assert "kv_capacity" in failed(d)
+    (d / "server.log").write_text("no such line\n")
+    assert "kv_capacity" in failed(d)
+
+
+def test_trigger_first_attempt_must_start_on_time(tmp_path):
+    d = with_trigger(make_run(tmp_path), [{"success": True, "t_start": 12.5, "t_end": 12.6}])  # at_s = 10
+    assert "trigger" in failed(d)
+    d = with_trigger(make_run(tmp_path), [{"success": True, "t_start": 10.2, "t_end": 10.3}])
+    assert "trigger" not in failed(d)
+
+
+def test_idle_retries_are_allowed_after_an_on_time_first_attempt(tmp_path):
+    attempts = [{"success": False, "t_start": 10.0, "t_end": 10.01}, {"success": True, "t_start": 21.5, "t_end": 21.6}]
+    assert "trigger" not in failed(with_trigger(make_run(tmp_path), attempts))
+
+
+def _with_hits(d, hit_after):
+    """Rewrite metrics: hit 0.6 per scrape, `hit_after` from t = 10 (the wipe) on; KV 0.5, or 1.0 from t = 40 to 50."""
+    lines = []
+    for k in range(0, 102):
+        h = 0.6 if k <= 10 else hit_after
+        lines.append({"t": float(k), "values": {'vllm:request_success_total{finished_reason="length"}': 100.0 * k / 101,
+                                                "vllm:prefix_cache_queries_total{}": 100.0 * k,
+                                                "vllm:prefix_cache_hits_total{}": sum(100 * (0.6 if j <= 10 else hit_after) for j in range(1, k + 1)),
+                                                "vllm:kv_cache_usage_perc{}": 1.0 if 40 <= k < 50 else 0.5}})
+    (d / "metrics.jsonl").write_text("".join(json.dumps(x) + "\n" for x in lines))
+    return d
+
+
+def test_manipulation_wipe(tmp_path):
+    attempts = [{"success": True, "t_start": 10.0, "t_end": 10.0}]
+    d = set_checks(_with_hits(with_trigger(make_run(tmp_path), attempts), 0.2), manipulation={"wipe_window_s": 15, "wipe_max_hit": 0.4})
+    assert "manipulation" in names(d) and "manipulation" not in failed(d)
+    d = set_checks(_with_hits(with_trigger(make_run(tmp_path), attempts), 0.55), manipulation={"wipe_window_s": 15, "wipe_max_hit": 0.4})
+    assert "manipulation" in failed(d)
+
+
+def test_manipulation_burst(tmp_path):
+    d = _with_hits(with_burst(make_run(tmp_path)), 0.6)
+    cfg = yaml.safe_load((d / "config.yaml").read_text())
+    cfg["trigger"].update(at_s=40, duration_s=10)
+    (d / "config.yaml").write_text(yaml.safe_dump(cfg))
+    assert "manipulation" not in failed(set_checks(d, manipulation={"burst_min_kv_max": 0.99}))
+    cfg = yaml.safe_load((d / "config.yaml").read_text())
+    cfg["trigger"].update(at_s=60, duration_s=10)  # KV stays at 0.5 in this burst
+    (d / "config.yaml").write_text(yaml.safe_dump(cfg))
+    assert "manipulation" in failed(d)

@@ -6,9 +6,11 @@ Order: config + env + schedule -> vLLM -> ready -> recorder + trigger -> loadgen
 """
 import argparse
 import copy
+import fcntl
 import json
 import os
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -19,23 +21,10 @@ from pathlib import Path
 import yaml
 
 from harness import checks, env_snapshot, trigger, workload
+from harness.config import _merge, load_config, with_defaults  # noqa: F401  (load_config is imported from here by tests)
 from harness.recorder import scrape
 
 REPO = Path(__file__).resolve().parent.parent
-LOAD_LEAD_S = 3.0  # time between starting loadgen and t0, so the first request is not late
-
-
-def _merge(base: dict, over: dict) -> dict:
-    out = copy.deepcopy(base)
-    for k, v in over.items():
-        out[k] = _merge(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else v
-    return out
-
-
-def load_config(path: Path) -> dict:
-    raw = yaml.safe_load(path.read_text())
-    parent = raw.pop("extends", None)
-    return _merge(load_config(path.parent / parent), raw) if parent else raw
 
 
 def expand(cfg: dict) -> list[dict]:
@@ -67,10 +56,10 @@ def _pin(cores: str | None) -> list[str]:
     return ["taskset", "-c", str(cores)] if cores else []
 
 
-def _scrape_once(run_dir: Path, base: str, t: float):
+def _scrape_once(run_dir: Path, base: str, t: float, timeout_s: float):
     """With the recorder off: one scrape on each side of the load, so accounting still works and the load sees none."""
     try:
-        rec = {"t": t, "values": scrape(f"{base}/metrics")}
+        rec = {"t": t, "values": scrape(f"{base}/metrics", timeout_s)}
     except Exception as e:
         rec = {"t": t, "error": f"{type(e).__name__}: {e}"[:200]}
     with open(run_dir / "metrics.jsonl", "a") as f:
@@ -90,11 +79,26 @@ class Events:
         print(f"[run] {event} {kw if kw else ''}", flush=True)
 
 
-def _http_ok(url: str) -> bool:
+def _http_ok(url: str, timeout_s: float) -> bool:
     try:
-        return urllib.request.urlopen(url, timeout=2).status == 200
+        return urllib.request.urlopen(url, timeout=timeout_s).status == 200
     except Exception:
         return False
+
+
+def _port_in_use(host: str, port: int, timeout_s: float) -> bool:
+    """Something already listens there: our server would fail to bind, and the readiness probe would reach the other one."""
+    with socket.socket() as s:
+        s.settimeout(timeout_s)
+        return s.connect_ex((host, port)) == 0
+
+
+def _gpu_processes() -> str | None:
+    try:
+        return subprocess.run(["nvidia-smi", "--query-compute-apps=pid,process_name,used_memory", "--format=csv,noheader"],
+                              capture_output=True, text=True, check=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
 
 
 def _stop(proc: subprocess.Popen | None, sig: int, grace: float):
@@ -119,7 +123,10 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
 
     env = env_snapshot.snapshot()
     if env["git_dirty"] and cfg["checks"]["require_clean_git"] and not allow_dirty:
-        raise SystemExit("git tree is dirty: commit first (or --allow-dirty, which marks the run invalid)")
+        raise SystemExit("git tree is dirty (or untracked files under configs/): commit first "
+                         "(or --allow-dirty, which marks the run invalid)")
+    if _port_in_use(srv["host"], srv["port"], srv["health_timeout_s"]):
+        raise SystemExit(f"{srv['host']}:{srv['port']} is already in use: another server is running")
 
     run_id = f"{datetime.now(timezone.utc):%Y%m%d-%H%M%S}_{cfg['name']}"
     run_dir = runs_dir / run_id
@@ -148,14 +155,14 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
                                       start_new_session=True, env={**child_env, **server_env})
         base = f"http://{srv['host']}:{srv['port']}"
         deadline = time.monotonic() + srv["startup_timeout_s"]
-        while not _http_ok(f"{base}/health"):
+        while not _http_ok(f"{base}/health", srv["health_timeout_s"]):
             if server.poll() is not None or time.monotonic() > deadline:
                 ev("server_failed", returncode=server.poll())
                 raise SystemExit(f"server did not become ready; see {run_dir / 'server.log'}")
             time.sleep(1)
         ev("server_ready", engine_config=_engine_config_lines(run_dir / "server.log"))
 
-        t0 = time.monotonic() + LOAD_LEAD_S
+        t0 = time.monotonic() + cfg["load_lead_s"]
         ev.t0 = t0
         recording = cfg["recorder"].get("enabled", True)  # configs from before this switch have no key
         if recording:
@@ -163,7 +170,7 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
                                         ["harness.recorder", str(run_dir), repr(t0)],
                                         start_new_session=True, env=child_env, cwd=REPO)
         else:
-            _scrape_once(run_dir, base, time.monotonic() - t0)
+            _scrape_once(run_dir, base, time.monotonic() - t0, cfg["recorder"]["scrape_timeout_s"])
         if (cfg.get("trigger") or {}).get("kind") == "cache_wipe":  # a burst is already in the schedule
             trig = subprocess.Popen(_pin(cfg["cpus"]["recorder"]) + py +  # sleeps until at_s, then one short call
                                     ["harness.trigger", str(run_dir), repr(t0)],
@@ -182,16 +189,18 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
                 warm_logged = True
             time.sleep(0.5)
         ev("load_end", loadgen_returncode=loadgen.poll())
-        time.sleep(2 * cfg["recorder"]["interval_s"])  # one more scrape after the last completion
+        time.sleep(cfg["recorder"]["after_load_scrapes"] * cfg["recorder"]["interval_s"])  # a scrape after the last completion
         if not recording:
-            _scrape_once(run_dir, base, time.monotonic() - t0)
+            _scrape_once(run_dir, base, time.monotonic() - t0, cfg["recorder"]["scrape_timeout_s"])
     except KeyboardInterrupt:
         ev("aborted", reason="KeyboardInterrupt")
         aborted = True
     finally:
-        _stop(loadgen, signal.SIGINT, 10)
-        _stop(trig, signal.SIGTERM, 10)
-        _stop(recorder, signal.SIGTERM, 10)
+        grace = cfg["stop_grace_children_s"]
+        _stop(loadgen, signal.SIGINT, grace)
+        _stop(trig, signal.SIGTERM, grace)
+        _stop(recorder, signal.SIGTERM, grace)
+        ev("gpu_processes_end", processes=_gpu_processes())  # before the server stops: anything not ours shows here
         _stop(server, signal.SIGINT, srv["stop_grace_s"])
         ev("stopped")
 
@@ -213,9 +222,14 @@ def main():
     ap.add_argument("--allow-dirty", action="store_true", help="run from a dirty tree; the run is marked invalid")
     ap.add_argument("--runs-dir", type=Path, default=REPO / "runs")
     a = ap.parse_args()
-    cfg = load_config(a.config)
+    cfg = with_defaults(load_config(a.config))
     cfg["source_config"] = str(a.config)
-    results = [run_one(c, a.runs_dir, a.allow_dirty) for c in expand(cfg)]
+    with open(REPO / cfg["lock_file"], "w") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise SystemExit(f"another harness run holds {cfg['lock_file']}: one run at a time")
+        results = [run_one(c, a.runs_dir, a.allow_dirty) for c in expand(cfg)]
     for d in results:
         v = json.loads((d / "checks.json").read_text())
         print(f"{d.name}: {'VALID' if v['valid'] else 'INVALID ' + ','.join(v['failed'])}")

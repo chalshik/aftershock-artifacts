@@ -992,3 +992,20 @@ Summary of its answers:
 - **Prediction:** λ = 4 `arrival_driven` was the modal prediction (≈ 0.5): **hit**. 72k: `too_few_episodes` was predicted at ≈ 0.6 and `arrival_driven` at ≈ 0.25; the outcome was the latter, so a **miss** of the modal prediction. `ao_like_cycle` (≈ 0.05 and less) did not occur. Ledger row 10.
 - **Alternatives still open:** these runs are KV-full episodes started by arrival excesses. Labelling them `arrival_driven` names the trigger. It does not rule out preemptions amplifying a dip (alternative 3), and n = 1 per setup.
 - **Decision taken, as registered (no `ao_like_cycle`, `arrival_driven` in both):** the two `bad_baseline` controls are attributed to arrival excesses of the seed-1 schedule at the capacity edge. This is recorded as support for the owner's proposed upper edge for future cells (the highest λ with a `recovered` 2400 s control). No run is proposed. A3 closes.
+
+## 2026-11-04 · [DECISION] Harness and check changes, audit items 1–8 (owner-approved, future runs only)
+- **Where the new knobs live:** `configs/defaults.yaml`, merged **beneath** every config by `harness/config.py` `with_defaults`. Every new run's saved `config.yaml` records the values. `base.yaml` is not edited (rule 5). Old run folders get the same defaults when re-checked. A check whose setting is null is skipped. `load_config` moved to `harness/config.py`; `harness.run` re-exports it.
+- **1. `kv_capacity` check:** the server log's "GPU KV cache size: N tokens" must equal `checks.expected_kv_tokens`. That is null by default, so a future config must set it to use the check.
+- **2. GPU processes:** `env.json` gains `persistence_mode` and `gpu_processes` (`nvidia-smi --query-compute-apps`) at start, and `events.jsonl` gains `gpu_processes_end` before the server stops. Recorded only, not judged.
+- **3. One run at a time:** `run.py` holds an `fcntl` lock on `lock_file` (`.run.lock`, gitignored), and refuses to start if the server's host:port already answers. Before this, a foreign server answering `/health` would have been accepted (audit item 20).
+- **4. Magic numbers into config:** `load_lead_s`, `server.health_timeout_s`, `recorder.scrape_timeout_s`, `recorder.after_load_scrapes`, `stop_grace_children_s` and `checks.rate_sigma`, all at their old values. `recorder.scrape(url, timeout_s=0.9)` keeps 0.9 as its default only for callers without a config.
+- **5.** `checks.py` no longer reuses `sent`: it is now `sent_df` and `sent_ids`. No behaviour change.
+- **6.** Untracked files under `configs/` make the tree dirty (`env.json` `untracked_configs`; the `clean_git` detail shows them).
+- **7. Trigger timing:** a wipe's **first** attempt must start within `checks.max_trigger_delay_s` = 1.0 s of `trigger.at_s`. The first attempt is used because `idle` mode then retries by design.
+- **8. Manipulation checks, off until registered:** a wipe's counter hit over `wipe_window_s` after the successful call must be ≤ `wipe_max_hit`, and a burst's KV max must reach `burst_min_kv_max`. All three are null. Their values must be registered in a `[REG]` before any run is judged by them (owner's condition).
+- **Effect on recorded runs:** none; `checks.json` files are not rewritten.
+  - `harness.checks.run_checks` was re-run read-only on the 101 run folders it can read. Valid/failed matches the recorded `checks.json` in all but one.
+  - That one is `20261030-145339_sweep_pc_on_r8`, which now passes `accounting`. This is the 2026-10-30 allowance ("the new rule would pass it"), not these changes. It stays INVALID as recorded.
+  - `20261023-145613_smoke` cannot be re-checked: its config predates `gpu_busy_util_pct`. This was already so at HEAD before these changes.
+- **Tests:** `tests/test_checks.py` (+7) and `tests/test_run_guards.py` (new, 4). The old trigger fixtures gained the `t_start` field that real `trigger.jsonl` records always have. Full suite: 138 passed, 2 xfailed.
+- `harness/CLAUDE.md` updated: knobs go in `defaults.yaml`; one run at a time.

@@ -1,0 +1,21 @@
+# Defaults under every config, for knobs added after base.yaml was first used (base.yaml can't be edited: CLAUDE.md
+# rule 5). harness.run merges this file *beneath* the resolved config, so every run's saved config.yaml records the
+# values, and harness.checks applies the same defaults to run folders that predate it. A check whose setting is null
+# is skipped. Added 2026-11-04 (decisions.md, audit items 1-8). Once a run has used this file, never edit it.
+name: defaults
+load_lead_s: 3.0                 # time between starting loadgen and t0, so the first request is not late
+lock_file: .run.lock             # repo-relative; one harness run at a time on this machine
+server:
+  health_timeout_s: 2.0          # timeout of one readiness or port probe
+recorder:
+  scrape_timeout_s: 0.9          # one /metrics scrape; below interval_s so a slow scrape doesn't shift the grid
+  after_load_scrapes: 2          # scrape intervals to wait after the load ends, so one scrape follows the last completion
+stop_grace_children_s: 10        # SIGINT/SIGTERM grace for loadgen, trigger and recorder before SIGKILL
+checks:
+  rate_sigma: 3.0                # arrival-count tolerance: max(rate_rel_tolerance x expected, rate_sigma x sqrt(expected))
+  expected_kv_tokens: null       # pool size the server log must report ("GPU KV cache size: N tokens"); null = not checked
+  max_trigger_delay_s: 1.0       # a wipe's first attempt must start within this of trigger.at_s
+  manipulation:                  # the shock did what it is for; thresholds must be registered before any run is judged
+    wipe_window_s: null          # span after the successful wipe over which the counter hit rate is measured
+    wipe_max_hit: null           # that hit rate must be at or below this
+    burst_min_kv_max: null       # max kv_cache_usage_perc during a burst must reach this

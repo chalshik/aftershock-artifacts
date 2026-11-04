@@ -26,9 +26,10 @@ def _on_signal(*_):
     _stop = True
 
 
-def scrape(url: str) -> dict[str, float]:
-    """Raw vllm:* samples as {'name{label="v",...}': value}. Counters stay raw totals."""
-    text = urllib.request.urlopen(url, timeout=0.9).read().decode()
+def scrape(url: str, timeout_s: float = 0.9) -> dict[str, float]:
+    """Raw vllm:* samples as {'name{label="v",...}': value}. Counters stay raw totals. Callers pass the configured
+    `recorder.scrape_timeout_s`; the default is that knob's value, for callers without a config."""
+    text = urllib.request.urlopen(url, timeout=timeout_s).read().decode()
     out = {}
     for fam in text_string_to_metric_families(text):
         for s in fam.samples:
@@ -101,7 +102,7 @@ def main(run_dir: Path, t0: float):
         while not _stop:
             t = time.monotonic() - t0
             try:
-                sample = scrape(url)
+                sample = scrape(url, cfg["recorder"]["scrape_timeout_s"])  # in every config via configs/defaults.yaml
                 fm.write(json.dumps({"t": t, "values": sample}) + "\n")
                 fm.flush()
             except Exception as e:

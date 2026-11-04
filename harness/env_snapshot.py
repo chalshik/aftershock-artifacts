@@ -40,8 +40,13 @@ def snapshot() -> dict:
         "torch_cuda": torch_cuda,
         "nvidia_smi": gpu,
         "cuda_driver": _cmd("nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"),
+        "persistence_mode": _cmd("nvidia-smi", "--query-gpu=persistence_mode", "--format=csv,noheader"),
+        "gpu_processes": _cmd("nvidia-smi", "--query-compute-apps=pid,process_name,used_memory", "--format=csv,noheader"),
         "git_commit": _cmd("git", "rev-parse", "HEAD"),
-        "git_dirty": bool(_cmd("git", "status", "--porcelain", "--untracked-files=no")),
+        # Untracked files under configs/ count: a run could otherwise use a config that was never committed.
+        "untracked_configs": (_cmd("git", "ls-files", "--others", "--exclude-standard", "configs") or "").split(),
+        "git_dirty": bool(_cmd("git", "status", "--porcelain", "--untracked-files=no"))
+                     or bool(_cmd("git", "ls-files", "--others", "--exclude-standard", "configs")),
         "uv_lock_sha": _cmd("git", "hash-object", "uv.lock"),
     }
 

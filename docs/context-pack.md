@@ -489,24 +489,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-04 · [RESULT] The two "pending committed code" numbers, now from committed functions
-- **Registration:** none; this recomputes published numbers (rule I). It clears both marks of the [CORR] "Two audit numbers rest on scratch scripts".
-- **Verdicts:** RUN(all 44 runs with a full verdict block, ramps excluded, tables.verdict_table) at `d7a8edc`, clean tree.
-  - It gives 43 verdicts, plus `20261102-093229_wipe_preempt_r3_s3` (invalid, stopped early), which raises on an empty window (item N7).
-  - Every verdict and every baseline and end level (pf, hit, q, KV, N) equals the scratch recompute to within 0.001.
-  - `tables.published_check` finds **no difference** from the published claims: every valid judged run is `recovered`, except the two `bad_baseline` controls.
-  - μ_warm / μ_off by the registered rule (`tables.capacity_table`) are 4 / 2 (default pool, 20 s), 4 / 2.5 (72k pool) and 6 / 2.5 (5 s gaps), as published.
-- **Throughputs and hit rates quoted in the audit:** RUN(the sweep runs named in `docs/model.md` M2, tables.sweep_table) at `d7a4f85`.
-  - All match: 4.735, 4.723, 4.185, 3.453, 3.511, 3.521, 3.533, 4.567, 7.185, 2.906, and slope 0.013.
-  - 72k cache-off λ = 4 is 3.4485, quoted as 3.449 (rounding).
-  - Hit rates: `summarize` 0.732 / 0.627 / 0.490 and whole-run 0.767 / 0.661 / 0.525.
-- **Schedules:** RUN(the 43 capacity sweeps, tables.arrival_table) at `d7a4f85`, all seed 0.
-  - 240–390 s: 0.673–0.971 λ. 750–900 s: 1.047–1.336 λ. Window: 0.992–1.056 λ.
-  - λ = 3: 2.493 → 3.520 req/s.
-  - These are the values of the [RESULT] "Sweep schedules share one rising-load pattern". That entry stands, now with this evidence.
-  - A first version of `arrival_table` also picked up control and recorder-off runs. It was fixed in `d7a4f85` before any output was quoted.
-- **Decision taken:** none. Both "pending committed code" marks are cleared.
-
 ### 2026-11-04 · [DECISION] Tests for untested analysis functions (audit item N15)
 - **New `tests/test_load_more.py`:** `metrics_wide` (label sums, buckets dropped, failed scrapes skipped); `rates` (a counter decrease becomes NaN, a no-query interval NaN hit); `percent_fast` (bins by planned arrival, unfinished requests are misses); `capacity` (both tests, nothing passing → NaN); `_level` (pooled levels, NaN percent fast with no requests). One more test pins the verdict fixture to `configs/stage2_cap_base.yaml`. `tests/test_tables.py` covers `analysis/tables.py`.
 - **Two strict `xfail` tests** state the approved target of the registered verdict-code change (items 9–10): a window with no queries gives NaN hit, and an empty window gives `unclear`. Both fail today for the stated reasons (hit 0.0; `np.polyfit` raises). Because they are strict, they turn into errors when the change lands, so the markers must be removed in that commit.
@@ -592,3 +574,20 @@ Summary of its answers:
 - **Prediction:** λ = 4 `arrival_driven` was the modal prediction (≈ 0.5): **hit**. 72k: `too_few_episodes` was predicted at ≈ 0.6 and `arrival_driven` at ≈ 0.25; the outcome was the latter, so a **miss** of the modal prediction. `ao_like_cycle` (≈ 0.05 and less) did not occur. Ledger row 10.
 - **Alternatives still open:** these runs are KV-full episodes started by arrival excesses. Labelling them `arrival_driven` names the trigger. It does not rule out preemptions amplifying a dip (alternative 3), and n = 1 per setup.
 - **Decision taken, as registered (no `ao_like_cycle`, `arrival_driven` in both):** the two `bad_baseline` controls are attributed to arrival excesses of the seed-1 schedule at the capacity edge. This is recorded as support for the owner's proposed upper edge for future cells (the highest λ with a `recovered` 2400 s control). No run is proposed. A3 closes.
+
+### 2026-11-04 · [DECISION] Harness and check changes, audit items 1–8 (owner-approved, future runs only)
+- **Where the new knobs live:** `configs/defaults.yaml`, merged **beneath** every config by `harness/config.py` `with_defaults`. Every new run's saved `config.yaml` records the values. `base.yaml` is not edited (rule 5). Old run folders get the same defaults when re-checked. A check whose setting is null is skipped. `load_config` moved to `harness/config.py`; `harness.run` re-exports it.
+- **1. `kv_capacity` check:** the server log's "GPU KV cache size: N tokens" must equal `checks.expected_kv_tokens`. That is null by default, so a future config must set it to use the check.
+- **2. GPU processes:** `env.json` gains `persistence_mode` and `gpu_processes` (`nvidia-smi --query-compute-apps`) at start, and `events.jsonl` gains `gpu_processes_end` before the server stops. Recorded only, not judged.
+- **3. One run at a time:** `run.py` holds an `fcntl` lock on `lock_file` (`.run.lock`, gitignored), and refuses to start if the server's host:port already answers. Before this, a foreign server answering `/health` would have been accepted (audit item 20).
+- **4. Magic numbers into config:** `load_lead_s`, `server.health_timeout_s`, `recorder.scrape_timeout_s`, `recorder.after_load_scrapes`, `stop_grace_children_s` and `checks.rate_sigma`, all at their old values. `recorder.scrape(url, timeout_s=0.9)` keeps 0.9 as its default only for callers without a config.
+- **5.** `checks.py` no longer reuses `sent`: it is now `sent_df` and `sent_ids`. No behaviour change.
+- **6.** Untracked files under `configs/` make the tree dirty (`env.json` `untracked_configs`; the `clean_git` detail shows them).
+- **7. Trigger timing:** a wipe's **first** attempt must start within `checks.max_trigger_delay_s` = 1.0 s of `trigger.at_s`. The first attempt is used because `idle` mode then retries by design.
+- **8. Manipulation checks, off until registered:** a wipe's counter hit over `wipe_window_s` after the successful call must be ≤ `wipe_max_hit`, and a burst's KV max must reach `burst_min_kv_max`. All three are null. Their values must be registered in a `[REG]` before any run is judged by them (owner's condition).
+- **Effect on recorded runs:** none; `checks.json` files are not rewritten.
+  - `harness.checks.run_checks` was re-run read-only on the 101 run folders it can read. Valid/failed matches the recorded `checks.json` in all but one.
+  - That one is `20261030-145339_sweep_pc_on_r8`, which now passes `accounting`. This is the 2026-10-30 allowance ("the new rule would pass it"), not these changes. It stays INVALID as recorded.
+  - `20261023-145613_smoke` cannot be re-checked: its config predates `gpu_busy_util_pct`. This was already so at HEAD before these changes.
+- **Tests:** `tests/test_checks.py` (+7) and `tests/test_run_guards.py` (new, 4). The old trigger fixtures gained the `t_start` field that real `trigger.jsonl` records always have. Full suite: 138 passed, 2 xfailed.
+- `harness/CLAUDE.md` updated: knobs go in `defaults.yaml`; one run at a time.
