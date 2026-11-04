@@ -14,7 +14,16 @@ Living document: update it after every run or decision. Last updated: 2026-11-04
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action:** the owner's decision on a deliberate cold-overload run, the only way left to test assumption A (REG-1 was inconclusive; decisions.md 2026-11-04). Other open choices: 60 s gaps or a write-up; paper layer; C1 metric; canonical hit rate. Nothing is running.
+**Next action:** the owner's answers to items 18–23 (paper layer, framing, C1 metric, canonical hit rate, backup location, push). Then the A1 registration (cache-off λ = 3, 3600 s, seeds 0 and 1; GPU) and the A8 registration (cold-state floor under assumption B; no GPU). Nothing is running.
+
+**Done 2026-11-04, after the audit:**
+- REG-1 (post-trigger margin): inconclusive.
+- REG-2 (control dips): both arrival-driven, no Ao-like cycle; A3 answered.
+- REG-3 (A4): dropped.
+- REG-4 (verdict code): no valid verdict changed.
+- Harness and check items 1–8: done, for future runs only.
+- Checksum manifest: `manifests/runs.sha256`.
+- Committed table drivers: `analysis/tables.py`.
 
 ## Open risks
 
@@ -22,7 +31,9 @@ Living document: update it after every run or decision. Last updated: 2026-11-04
 - **μ from one arrival pattern:** every sweep used seed 0, whose planned load rises from 0.67–0.97 λ to 1.05–1.34 λ across the measured window; μ_off = 2 may be low (`docs/model.md` M4, open-questions A1).
 - **M1 (F + W) is 0 for 3** on tested predictions; do not use it to choose loads until revised.
 - **Single-seed controls** in every cell.
-- **Data:** one copy only (Watch, below).
+- **The VM runs the old harness** until it pulls `main`. Items 1–8 change `harness/` and add `configs/defaults.yaml`; a run from the old checkout won't record or check them.
+- **Manipulation checks are off** (thresholds null in `configs/defaults.yaml`). They must be registered before any run is judged by them.
+- **Data:** one copy only (Watch, below). A backup can now be verified with `python3 tools/manifest.py verify <copy>`.
 
 ## Stage 2 results
 
