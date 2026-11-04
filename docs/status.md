@@ -4,9 +4,17 @@ Living document: update it after every run or decision. Last updated: 2026-11-04
 
 **Stage 1 is complete; Stage 2 is in progress (started 2026-10-31).** Stage 1 inputs: μ_warm = 4 req/s, μ_off = 2 req/s (Stage 1 grid 1, 2, 3, …), λ = 3 healthy for 2 h, SLO TTFT ≤ 1.0 s, τ = 300 s (`20261101-131823_tau`), so the watch window is 1500 s.
 
-**Headline so far: no metastable failure found.** Stuck in 0 of 30 valid shock runs at healthy loads, and no gap in the up-then-down ramp. Details in decisions.md.
+**Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action:** the study owner's decision: longer turn gaps (about 60 s), or write up the negative result. Nothing is running.
+**Next action:** the owner's review of the agent-setup audit (decisions.md 2026-11-04). After that, REG-1, the post-trigger margin analysis of existing runs (no GPU), which feeds the feasibility gate before any further shock matrix. Nothing is running.
+
+## Open risks
+
+- **Feasibility:** the test loads may lie outside any real danger zone. Cache off saturates at about 3.5 completions/s and cache on still completes 4.185 at λ = 10, both above the healthy test loads at 20 s gaps (`docs/model.md` M2). Untested until REG-1.
+- **μ from one arrival pattern:** every sweep used seed 0, whose planned load rises from 0.67–0.97 λ to 1.05–1.34 λ across the measured window; μ_off = 2 may be low (`docs/model.md` M4, open-questions A1).
+- **M1 (F + W) is 0 for 3** on tested predictions; do not use it to choose loads until revised.
+- **Single-seed controls** in every cell.
+- **Data:** one copy only (Watch, below).
 
 ## Stage 2 results
 

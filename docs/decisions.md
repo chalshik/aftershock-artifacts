@@ -679,3 +679,15 @@ The nine entries below come from a read-only audit of the repo, done before any 
 - **`tools/context_pack.py`** writes `docs/context-pack.md`, which `.claude/settings.json` forbids editing by hand.
 - **SessionStart hook** (`.claude/settings.json`) prints `context_pack.py --digest`. Claude Code caps SessionStart context at 10,000 characters and sets `CLAUDE_PROJECT_DIR` for hook commands (Claude Code docs, hooks page, read 2026-11-04). The pack is about 50,000 characters, so the hook prints a digest under 9,500 and the agent still reads the pack.
 - **`analysis/stats.py`:** `cp_upper` (exact Clopper–Pearson) and `cell`, with tests.
+
+## 2026-11-04 · [RESULT] Sweep schedules share one rising-load pattern (audit, descriptive)
+- **Registration:** none. A look at the schedules (inputs, written before each run) during the agent-setup audit. No threshold was judged and no verdict changed.
+- **Observed:** in all 43 capacity sweeps (Stage 1, 72,480-token pool, 5 s gaps), planned arrivals are 0.67–0.97 λ in 240–390 s and 1.05–1.34 λ in 750–900 s, while the window average is 0.99–1.06 λ. RUN(every `*_sweep_*` run, `schedule.parquet` counted per span; audit scratch script, to be committed as a function before any further use). Every sweep used seed 0, and session starts come from the same random stream at every rate, so the pattern repeats.
+- **λ = 3:** 2.49 req/s in 240–390 s and 3.52 req/s in 750–900 s, RUN(20261030-161749_sweep_pc_off_r3, schedule.parquet). The cache-on and both 72k runs at λ = 3 have this same schedule.
+- **Cache-off completions** at λ = 4, 5, 6, 8: 3.453, 3.511, 3.521, 3.533 req/s, RUN(20261030-163358_sweep_pc_off_r4 … 20261030-173356_sweep_pc_off_r8, load.summarize).
+- **Alternatives still open:**
+  1. μ_off = 2 is low. The cache-off λ = 3 run failed on slope (0.0130) because its last 150 s carried load at cache-off saturation, not because λ = 3 is unsustainable without the cache.
+  2. λ = 3 is truly unsustainable without the cache. The 72k cache-off failure (slope 0.0211) is no second sample: same schedule.
+  - Separating evidence: a cache-off run at λ = 3 with other seeds or a longer window (GPU, owner's decision; open-questions A1).
+- **Also:** the 2026-10-30 hit drift at λ = 3 (thirds 0.674, 0.625, 0.585; "cause not established") coincides with this rising load. Candidate explanation, not tested.
+- **Decision taken:** none. μ values stand as measured by their rule; `docs/status.md` (Open risks) and `docs/model.md` (M4) carry the risk. Prediction ledger unchanged.

@@ -12,9 +12,17 @@ Living document: update it after every run or decision. Last updated: 2026-11-04
 
 **Stage 1 is complete; Stage 2 is in progress (started 2026-10-31).** Stage 1 inputs: μ_warm = 4 req/s, μ_off = 2 req/s (Stage 1 grid 1, 2, 3, …), λ = 3 healthy for 2 h, SLO TTFT ≤ 1.0 s, τ = 300 s (`20261101-131823_tau`), so the watch window is 1500 s.
 
-**Headline so far: no metastable failure found.** Stuck in 0 of 30 valid shock runs at healthy loads, and no gap in the up-then-down ramp. Details in decisions.md.
+**Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action:** the study owner's decision: longer turn gaps (about 60 s), or write up the negative result. Nothing is running.
+**Next action:** the owner's review of the agent-setup audit (decisions.md 2026-11-04). After that, REG-1, the post-trigger margin analysis of existing runs (no GPU), which feeds the feasibility gate before any further shock matrix. Nothing is running.
+
+## Open risks
+
+- **Feasibility:** the test loads may lie outside any real danger zone. Cache off saturates at about 3.5 completions/s and cache on still completes 4.185 at λ = 10, both above the healthy test loads at 20 s gaps (`docs/model.md` M2). Untested until REG-1.
+- **μ from one arrival pattern:** every sweep used seed 0, whose planned load rises from 0.67–0.97 λ to 1.05–1.34 λ across the measured window; μ_off = 2 may be low (`docs/model.md` M4, open-questions A1).
+- **M1 (F + W) is 0 for 3** on tested predictions; do not use it to choose loads until revised.
+- **Single-seed controls** in every cell.
+- **Data:** one copy only (Watch, below).
 
 ## Stage 2 results
 
@@ -447,20 +455,19 @@ Every model used to choose a run or read a result, with its equations, the evide
 | S3 | Can the power limit be changed while vLLM runs, and how fast does it take effect? | **Open.** `nvidia-smi -pl` needs root, and `sudo` asks for a password on the VM, so trigger 3 needs the owner's help. Range is 100–450 W | `sudo -n nvidia-smi -pl 420` on the VM; `nvidia-smi -q -d POWER` |
 | S4 | Can cached prefixes be protected from eviction, for the protected-prefixes control? | **Open, not investigated.** Not needed so far: no stuck run exists to break | — |
 | S6 | Does turn spacing matter? (try at least two turn gaps) | **Partly answered.** At 5 s gaps the cache is worth far more (μ_warm 6 vs 4; hit 0.79 vs 0.53 at λ = 4, which mixes two hit computations; like for like 0.79 vs 0.49 or 0.80 vs 0.53, see decisions.md 2026-11-04 (4)) but is much harder to crowd out, and every shock recovered (0 of 12). At 20 s, also no stuck run (0 of 18). Longer gaps (about 60 s) are untested | decisions.md 2026-11-03 and 2026-11-04 |
+| A1 | What is the sustainable completion rate with caching off at λ = 3, default pool, 20 s gaps? μ_off = 2 rests on one 900 s run whose last 150 s carried 3.52 req/s of planned load, above the cache-off saturation of about 3.5 | **Open.** Cheapest test: other seeds or a longer cache-off run (GPU, owner) | `20261030-161749_sweep_pc_off_r3` `schedule.parquet`; `docs/model.md` M4 |
+| A2 | Assumption A: does any post-trigger state complete less than the λ = 10 overload state (4.185 req/s)? | **Open.** REG-1 (post-trigger margin), pending approval | `docs/model.md` M2 |
+| A3 | Are the dips in the no-trigger controls at λ = 4 (default pool) and λ = 3.5 (72k pool) eviction cycles of the Ao et al. kind? | **Open.** Needs a registered analysis of `20261101-202808_stage2_control_cap_r4` and `20261102-225146_stage2_control_kv72k_r3.5` | — |
+| A4 | Is the cache-on capacity loss under overload (4.735 → 4.185 req/s) prefix eviction or preemption recompute? | **Open.** Needs a registered analysis (preemptions and `prompt_tokens_by_source` per completion, cache on vs off, matched λ) | — |
+| A5 | How much of client TTFT is client receive lag? `vllm:time_to_first_token_seconds` is recorded and never compared | **Open** | `metrics.jsonl` of any run |
+| A6 | Does dev mode change speed? μ was measured without it, controls and shocks with it | **Open.** Needs a GPU run (owner) | decisions.md 2026-11-04 (2) |
+| A7 | Was another process using the GPU during any run? Memory and power give no sign, but neither can show a compute-only co-tenant; `env.json` does not list GPU processes | **Open** | `gpu.jsonl` (mem_used 22.9–24.6 GB default pool; power limit 420 W in every sample) |
 
 ---
 
 <!-- source: docs/decisions.md, last 5 entries -->
 
 ## Last decisions
-
-### 2026-11-04 · [CORR] An old entry was edited in place on 2026-11-02
-- **What was wrong:** commit `cfc18da` (2026-11-02, "Drop lambda 4; register a 72,480-token KV pool and its capacity sweeps") changed the earlier entry "λ = 3.5 bursts: stuck in 0 of 3; burst total 0 of 6". Its bullet "**Status of the burst result:**" gained "(see the next entry for what follows)". This file is append-only (its header).
-- **How it was found:** the 2026-11-04 agent-setup audit (finding N10) compared each committed version of this file with the one before. 42 of 43 later versions only appended; `cfc18da` is the one exception.
-- **Since when:** 2026-11-02.
-- **Which results it affects:** none. The inserted text is a pointer; no number, verdict or rule changed.
-- **Re-check done:** `git show` of every version of `docs/decisions.md` against the previous one.
-- **Rule that would have caught it:** the `append_only` check of `tools/check_docs.py`, which holds from `cfc18da` on (added in this audit's tools commit). The edited text stays as it is.
 
 ### 2026-11-04 · [CORR] Queue slope is in req/s, not req/s²; "goodput" has two meanings
 - **What was wrong:** the capacity rule and later entries give the waiting-queue slope limit as "0.01 req/s²" (this file: 2026-10-23 "Pending", 2026-10-30 capacity rule, and later). The slope is a least-squares fit of a request count against time (FILE(analysis/load.py:103)), so its unit is req/s.
@@ -493,3 +500,15 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **`tools/context_pack.py`** writes `docs/context-pack.md`, which `.claude/settings.json` forbids editing by hand.
 - **SessionStart hook** (`.claude/settings.json`) prints `context_pack.py --digest`. Claude Code caps SessionStart context at 10,000 characters and sets `CLAUDE_PROJECT_DIR` for hook commands (Claude Code docs, hooks page, read 2026-11-04). The pack is about 50,000 characters, so the hook prints a digest under 9,500 and the agent still reads the pack.
 - **`analysis/stats.py`:** `cp_upper` (exact Clopper–Pearson) and `cell`, with tests.
+
+### 2026-11-04 · [RESULT] Sweep schedules share one rising-load pattern (audit, descriptive)
+- **Registration:** none. A look at the schedules (inputs, written before each run) during the agent-setup audit. No threshold was judged and no verdict changed.
+- **Observed:** in all 43 capacity sweeps (Stage 1, 72,480-token pool, 5 s gaps), planned arrivals are 0.67–0.97 λ in 240–390 s and 1.05–1.34 λ in 750–900 s, while the window average is 0.99–1.06 λ. RUN(every `*_sweep_*` run, `schedule.parquet` counted per span; audit scratch script, to be committed as a function before any further use). Every sweep used seed 0, and session starts come from the same random stream at every rate, so the pattern repeats.
+- **λ = 3:** 2.49 req/s in 240–390 s and 3.52 req/s in 750–900 s, RUN(20261030-161749_sweep_pc_off_r3, schedule.parquet). The cache-on and both 72k runs at λ = 3 have this same schedule.
+- **Cache-off completions** at λ = 4, 5, 6, 8: 3.453, 3.511, 3.521, 3.533 req/s, RUN(20261030-163358_sweep_pc_off_r4 … 20261030-173356_sweep_pc_off_r8, load.summarize).
+- **Alternatives still open:**
+  1. μ_off = 2 is low. The cache-off λ = 3 run failed on slope (0.0130) because its last 150 s carried load at cache-off saturation, not because λ = 3 is unsustainable without the cache.
+  2. λ = 3 is truly unsustainable without the cache. The 72k cache-off failure (slope 0.0211) is no second sample: same schedule.
+  - Separating evidence: a cache-off run at λ = 3 with other seeds or a longer window (GPU, owner's decision; open-questions A1).
+- **Also:** the 2026-10-30 hit drift at λ = 3 (thirds 0.674, 0.625, 0.585; "cause not established") coincides with this rising load. Candidate explanation, not tested.
+- **Decision taken:** none. μ values stand as measured by their rule; `docs/status.md` (Open risks) and `docs/model.md` (M4) carry the risk. Prediction ledger unchanged.
