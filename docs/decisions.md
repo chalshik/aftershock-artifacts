@@ -639,3 +639,11 @@ The nine entries below come from a read-only audit of the repo, done before any 
 
 ## 2026-11-04 · (9) status.md Watch sorted; data backup first
 - The Watch list is now sorted by priority. **Backup is the top item**: the Mac holds the only copy of all 104 runs (9.4 GB), per the entry above. Heat is second. Nothing was removed.
+
+## 2026-11-04 · [CORR] An old entry was edited in place on 2026-11-02
+- **What was wrong:** commit `cfc18da` (2026-11-02, "Drop lambda 4; register a 72,480-token KV pool and its capacity sweeps") changed the earlier entry "λ = 3.5 bursts: stuck in 0 of 3; burst total 0 of 6". Its bullet "**Status of the burst result:**" gained "(see the next entry for what follows)". This file is append-only (its header).
+- **How it was found:** the 2026-11-04 agent-setup audit (finding N10) compared each committed version of this file with the one before. 42 of 43 later versions only appended; `cfc18da` is the one exception.
+- **Since when:** 2026-11-02.
+- **Which results it affects:** none. The inserted text is a pointer; no number, verdict or rule changed.
+- **Re-check done:** `git show` of every version of `docs/decisions.md` against the previous one.
+- **Rule that would have caught it:** the `append_only` check of `tools/check_docs.py`, which holds from `cfc18da` on (added in this audit's tools commit). The edited text stays as it is.
