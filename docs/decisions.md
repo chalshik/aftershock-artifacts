@@ -519,3 +519,16 @@ Items 5 and 6 cost GPU time only for loads that reach `stuck`. Their configs get
   - λ = 4.5 then 3.5, seeds 1–3: bursts at both loads first, then wipes (`configs/burst_gap5_r*_s*.yaml`, `configs/wipe_gap5_r*_s*.yaml`). 12 runs, about 9 h, about 2 GB of disk (7.7 GB free).
   - At λ = 4.5 the burst brings the total to 7.5 req/s, above μ_warm = 6.
 - **Prediction (from the sweeps):** recovery, because cached prefixes survived even overload at 5 s gaps. The burst runs keep the same 2520 s vs 2400 s control mismatch as before.
+
+## 2026-11-04 · 5 s-gap shocks: stuck in 0 of 12
+- **Runs, commit `79d3fcc`, all 12 VALID, 0 HW thermal samples, all recovered:** bursts `20261103-161947_burst_gap5_r4.5_s1` … `20261103-195529_burst_gap5_r3.5_s3`; wipes `20261103-203837_wipe_gap5_r4.5_s1` … `20261104-000416_wipe_gap5_r3.5_s3`.
+- **Bursts:** KV reached 1.00 and waiting peaked at 181–372 (372 at λ = 4.5, seed 1). Percent fast 60–300 s after the burst was 0.66–0.90 at λ = 4.5 and 0.86–1.00 at λ = 3.5. Every run was back to baseline at the end (percent fast 1.000; hit 0.800–0.802 against 0.801–0.804 before).
+- **Wipes:** percent fast was 1.000 from 60 s after the wipe in every run; waiting peaked at 3–28.
+- **As predicted:** with 5 s gaps the cache barely matters for recovery. Prefixes return before they can be evicted, so the server refills almost at once.
+- **Stage 2 total: stuck in 0 of 30 valid shock runs at healthy loads, plus no ramp gap.** This covers two triggers, two KV pool sizes, two turn gaps (5 s and 20 s) and two ramp dwells.
+
+## 2026-11-04 · VM run copies removed after a verified copy to the Mac (study owner's decision)
+- **Why:** the VM had 6.1 GB free, too little for another round of runs.
+- **Check before removal:** all 104 run folders (1,054 files, 9,942,117,131 bytes) were copied to `runs/` on the Mac and compared by checksum against the VM: 0 differences.
+- **Removal:** `rsync -a -c --remove-source-files` from the VM to the Mac. A VM file is removed only after rsync confirms an identical copy on the Mac; empty folders are removed after. Nothing on the Mac was changed or deleted.
+- **Effect on rule 4 (raw data immutable):** the data is unchanged, but **the Mac now holds the only copy** of every run. `runs/` is not in git. A second copy (external drive or cloud) is recommended, and not yet made. New runs still land on the VM and are copied to the Mac after each round, as before.
