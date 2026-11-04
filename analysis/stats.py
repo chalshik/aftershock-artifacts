@@ -24,3 +24,25 @@ def cp_upper(k: int, n: int, conf: float = 0.95, one_sided: bool = True) -> floa
 def cell(k: int, n: int) -> str:
     """The reporting form: 'k of n (≤ upper, one-sided 95 %)'."""
     return f"{k} of {n} (≤ {cp_upper(k, n):.2f}, one-sided 95 %)"
+
+
+def _poisson_cdf(k: int, mu: float) -> float:
+    from math import exp
+    term, total = exp(-mu), 0.0
+    for i in range(k + 1):
+        if i:
+            term *= mu / i
+        total += term
+    return total
+
+
+def poisson_rate_upper(n: int, t: float, conf: float = 0.95) -> float:
+    """One-sided exact upper bound on a rate from n events in time t: the mu with P(X <= n | mu) = 1 - conf, over t.
+    Completions come in batches, so this is optimistic about precision; use it as a floor on doubt, not a ceiling."""
+    if n < 0 or t <= 0:
+        raise ValueError("need n >= 0 and t > 0")
+    lo, hi = float(n), float(n) + 50.0 + 10.0 * n ** 0.5
+    for _ in range(200):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if _poisson_cdf(n, mid) > 1 - conf else (lo, mid)
+    return hi / t

@@ -22,3 +22,10 @@ def test_all_successes_and_bad_input():
 
 def test_cell_text():
     assert cell(0, 3) == "0 of 3 (≤ 0.63, one-sided 95 %)"
+
+
+def test_poisson_rate_upper():
+    from analysis.stats import poisson_rate_upper
+    assert poisson_rate_upper(0, 1.0) == pytest.approx(2.9957, abs=1e-3)   # -ln(0.05)
+    assert poisson_rate_upper(10, 1.0) == pytest.approx(17.0, abs=0.05)    # standard table, one-sided 95 %
+    assert poisson_rate_upper(270, 60.0) > 4.5

@@ -469,14 +469,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-04 · [CORR] Queue slope is in req/s, not req/s²; "goodput" has two meanings
-- **What was wrong:** the capacity rule and later entries give the waiting-queue slope limit as "0.01 req/s²" (this file: 2026-10-23 "Pending", 2026-10-30 capacity rule, and later). The slope is a least-squares fit of a request count against time (FILE(analysis/load.py:103)), so its unit is req/s.
-- **Since when:** 2026-10-23.
-- **Which results it affects:** none. The number 0.01 and every comparison with it are unchanged; only the unit was misnamed. The comment in the used config `configs/stage2_base.yaml` keeps the old wording (rule 5).
-- **Also in definitions.md:** "goodput" is marked ⚠. In this repo it is a synonym of percent fast (FILE(docs/experiment-plan.md:205)); the owner's paper notes use it for completions/s (BELIEF, outside the repo). Until the owner chooses the C1 metric, the docs say "percent fast" or "completions/s". New entries: rule J, "throughput (completion rate c)", "capacity loss", and "post-trigger margin" (defined, not computed).
-- **analysis/CLAUDE.md** now names both percent-fast computations instead of "per arrival second" (audit finding 10), and forbids computing an analysis that a pending `[REG]` covers.
-- **Rule that would have caught it:** J (single definitions, with units).
-
 ### 2026-11-04 · [CORR] PROTOCOL: incomplete check list and deviations; which setups are negative
 - **What was wrong** (audit findings 6, 7, 8, N16):
   - §5 left out the recorder check and the SM-clock CV limit (FILE(harness/checks.py:64)).
@@ -512,3 +504,67 @@ Every model used to choose a run or read a result, with its equations, the evide
   - Separating evidence: a cache-off run at λ = 3 with other seeds or a longer window (GPU, owner's decision; open-questions A1).
 - **Also:** the 2026-10-30 hit drift at λ = 3 (thirds 0.674, 0.625, 0.585; "cause not established") coincides with this rising load. Candidate explanation, not tested.
 - **Decision taken:** none. μ values stand as measured by their rule; `docs/status.md` (Open risks) and `docs/model.md` (M4) carry the risk. Prediction ledger unchanged.
+
+### 2026-11-04 · [REG] REG-1: post-trigger completion margin (tests assumption A of M2)
+- **ID:** REG-1. Nothing below has been computed on any run. **Approved by the study owner on 2026-11-04**, before any computation, and committed with `analysis/margin.py` (`post_trigger_margin`; registered settings and runs in `REG1`, driver `reg1_table`) and `tests/test_margin.py`.
+- **Question:** after each trigger ends, when the server is backlogged and the sessions' cache is cold, does it still complete at least as fast as the deepest valid cache-on overload?
+- **Claim tested:** assumption A of `docs/model.md` M2: no post-trigger state completes less than the λ = 10 overload state, c_ref = 4.185 req/s, RUN(20261030-151441_sweep_pc_on_r10, load.summarize). If A holds, no healthy test load ≤ 3.5 at the default pool with 20 s gaps could have been stuck.
+- **Definitions** (`analysis/margin.py`, `post_trigger_margin`; one clock, seconds from t0; scrapes every 1 s):
+  - **Trigger end:** `derived.trigger_times` (a wipe's first successful call `t_end`; a burst's `at_s + duration_s`).
+  - **Spans after the end:** [0, 60) s and [60, 180) s.
+  - **c:** ok completions with `t_end` in the span ÷ span length. **c_upper:** its one-sided 99 % exact Poisson upper bound (`stats.poisson_rate_upper`). 99 %, not 95 %, because about two dozen spans are judged.
+  - **share:** the sessions' own cached share, Σ `cached_tokens` ÷ Σ `prompt_tokens` over ok session requests whose first token is in the span. **share_base:** the same over the 600 s before the trigger starts.
+  - **Qualifying span:** all three of:
+    - capacity-limited: Q > 0 at every scrape;
+    - burst-free: no burst request completes in the span;
+    - cold: share ≤ share_base − 0.06, the stuck threshold.
+  - Also reported, not judged: λ, the server counter hit, KV, N, Q (mean, minimum), preemptions.
+- **Runs:** the 30 valid shock runs, listed below. Invalid runs are excluded.
+  - **Default pool, 20 s gaps** (A is defined here):
+    - wipes: `20261102-072216_wipe_preempt_r3_s1`, `20261102-053935_wipe_preempt_r3_s2`, `20261102-100744_wipe_preempt_r3_s3`, `20261102-110200_wipe_preempt_r3.5_s1`, `20261102-114305_wipe_preempt_r3.5_s2`, `20261102-122411_wipe_preempt_r3.5_s3`;
+    - bursts: `20261102-131353_burst_r3_s1`, `20261102-135701_burst_r3_s2`, `20261102-144008_burst_r3_s3`, `20261102-152316_burst_r3.5_s1`, `20261102-160625_burst_r3.5_s2`, `20261102-164933_burst_r3.5_s3`.
+  - **Reported only, no reference overload exists:**
+    - 72k pool: `20261103-015156_wipe_kv72k_r3_s1`, `20261103-023254_wipe_kv72k_r3_s2`, `20261103-031353_wipe_kv72k_r3_s3`, `20261102-234257_burst_kv72k_r3_s1`, `20261103-002556_burst_kv72k_r3_s2`, `20261103-010856_burst_kv72k_r3_s3`;
+    - 5 s gaps: `20261103-203837_wipe_gap5_r4.5_s1`, `20261103-211946_wipe_gap5_r4.5_s2`, `20261103-220054_wipe_gap5_r4.5_s3`, `20261103-224202_wipe_gap5_r3.5_s1`, `20261103-232310_wipe_gap5_r3.5_s2`, `20261104-000416_wipe_gap5_r3.5_s3`, `20261103-161947_burst_gap5_r4.5_s1`, `20261103-170255_burst_gap5_r4.5_s2`, `20261103-174604_burst_gap5_r4.5_s3`, `20261103-182912_burst_gap5_r3.5_s1`, `20261103-191220_burst_gap5_r3.5_s2`, `20261103-195529_burst_gap5_r3.5_s3`.
+- **Prediction, as numbers** (default pool):
+  1. At most 2 of the 12 burst spans qualify, because burst requests are still completing for most of them. 0 of the 12 wipe spans qualify; published peak waiting after a wipe was ≤ 9.
+  2. Every qualifying span has c between 4.3 and 4.7. None has c_upper < 4.185.
+  3. **Most likely outcome: inconclusive** (fewer than 3 qualifying spans), at a stated probability of about 0.6.
+- **Decision rule and the decision under each outcome** (default pool; counted per trigger and per run):
+  - **A contradicted:** some qualifying span has c_upper < 4.185. Let c_min be the lowest c among those spans.
+    - c_min < 3.5: a stuck state was possible in principle at loads in (c_min, 3.5]. The default-pool negative is informative there, and a registered follow-up at that λ (a longer watch or a larger shock) is proposed to the owner.
+    - c_min ≥ 3.5: A is false, but no tested load is affected. M2's window becomes (c_min, c_warm), recorded in model.md.
+  - **A supported:** no qualifying span contradicts A, and there are ≥ 3 qualifying spans from ≥ 3 distinct runs.
+    - The default-pool negative is restated as forced by capacity (M2), **for the triggers that contributed a qualifying span only**.
+    - No further shock matrix at λ ≤ 3.5 on this setup is proposed for those triggers.
+    - Any new setup must pass gate G with a measured cold completion rate.
+  - **Inconclusive** (fewer than 3 qualifying spans, or fewer than 3 runs): A stays a BELIEF. A deliberate cold-overload run is proposed to the owner (GPU). A sketch: cache wipes repeated during a sustained overload, so that both backlog and cold cache hold for minutes.
+  - **Wipes that never qualify because Q reached 0:** recorded as "the wipe built no backlog". Completions kept up with demand, which agrees with M2 but does not test A. That is evidence that the wipe never reached a state that could be stuck, and is stated as such, not as a test of the cold capacity.
+  - **72k pool and 5 s gaps:** reported as margins for gate G; no decision rests on them.
+- **Alternatives:**
+  1. Right after a burst, the running batch is already prefilled. Completions then drain a full pipeline, so c is a best case. A state that stays cold with a small batch would not be sampled. Ruled in: this tests A only for states the triggers reached.
+  2. Completions arrive in batches, so the Poisson bound understates their spread; c_upper is a floor on doubt. A contradiction therefore needs the 99 % bound below c_ref.
+  3. c_ref = 4.185 comes from one 660 s window of one run with the seed-0 schedule (decisions.md 2026-11-04 [RESULT]).
+  4. After a `preempt` wipe, `cached_tokens` on readmitted requests reflects their final admission, while the server counters exclude readmissions (S8). The two hit measures can disagree; both are reported.
+- **Stopping rule:** one pass over the 30 listed runs, after approval. No reruns, no new spans, no new thresholds.
+- **Cost:** 0 GPU hours.
+
+### Adversarial review (separate subagent; it saw only this registration's first draft, `analysis/margin.py`, `tests/test_margin.py` and `derived.trigger_times`/`hit_between`)
+
+Verbatim summary of its three answers:
+1. **A trace where the verdict is wrong.** The first draft judged "cold" from the server counters. Burst prompts (1408 random tokens) always miss, so draining burst prefills (11,264 tokens per 5 s, 0 hits) gave a span counter hit of 0.339 against a baseline of 0.598 while the sessions' cache stayed at 0.6. The span then qualified as cold with c_all = 4.5, and six such burst spans would have declared "A holds" without ever sampling a cold session state. **Reverse:** with a true capacity of 4.5, a 60 s span holds about 270 completions (±0.27 req/s), so P(c < 4.185) ≈ 0.12 per span, and with about 12 spans P(min < 4.185) ≈ 0.78. The minimum of noisy spans against a point reference, with no tolerance, would most likely report "A fails" even if A is true.
+2. **Alternatives.** For "A holds": burst dilution, and a draining, already-prefilled pipeline; both bias c upward. For "A fails": the burst-request mix in c_all, noise in the minimum, and a one-off recompute transient after a `preempt` wipe. For "inconclusive": the backlog rule is strict, and wipes that build no backlog are evidence for a margin, not a lack of evidence.
+3. **Can it change a decision?** Weakly, with skewed outcomes. "A holds" would stop wipe follow-ups on burst spans alone, which cannot represent a cold wipe state.
+   - Also found: the baseline window is silently clamped when it starts before the first scrape; a test for `t_start == t_end` cannot tell which is used; no test covers dilution, clamping or one empty scrape; the clocks and the burst-identification rule were unverified from the allowed files.
+
+**Changed because of it:**
+- "Cold" now uses the sessions' own `cached_tokens` share, not the server counters.
+- A span must be burst-free, so only session requests are counted.
+- A contradiction needs the one-sided 99 % Poisson upper bound below c_ref, not the point value.
+- Support needs ≥ 3 qualifying spans from ≥ 3 distinct runs. It is counted per trigger, and conclusions are restricted to the triggers that contributed.
+- Wipes with no backlog get their own reading.
+- The baseline-clamp check raises an error.
+- New tests cover the dilution trace, one empty scrape, a failed call before the successful one, the clamp, and the indistinguishable burst prompt (13 tests pass).
+- Clocks are checked: one monotonic clock, as `time.monotonic() − t0`, in FILE(harness/recorder.py:102), FILE(harness/loadgen.py:46) and FILE(harness/trigger.py:64). A session's turn 0 is always 512 + 128 tokens (FILE(harness/workload.py:97)).
+- The predictions were revised to the new rule before any computation: inconclusive is now the most likely outcome.
+- **Not changed:** the spans stay [0, 60) and [60, 180), as the owner specified.
