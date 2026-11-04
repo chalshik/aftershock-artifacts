@@ -971,3 +971,24 @@ Summary of its answers:
 - **What:** the REG-3 draft (does first-admission prefill growth exceed any possible recompute growth, λ = 6 against λ = 10, cache on) is not registered and not computed. The owner's "Let's finish it" was read as accepting the agent's recommendation to drop it.
 - **Why** (the draft's adversarial review, and rule A1): even after revision, the likely outcome follows from published numbers (first-admission hit 0.317 → 0.197; flat preemptions per unit time, ≈ 79 and 78). It would change one write-up sentence and nothing else.
 - **What stays:** A4 is open in `docs/open-questions.md`. The informative test is a logging run that exports vLLM's internal recompute count (`preempted_queries − preempted_hits`, SOURCE(vLLM 0.32.0 v1/metrics/stats.py:PrefixCacheStats)), which needs the GPU and the owner. Its code (`work_per_completion`, `attribute_loss`) was removed before commit, so no unregistered analysis code is left in `analysis/`.
+
+## 2026-11-04 · [RESULT] REG-2 (A3): both control dips are arrival-driven; no Ao-like cycle
+- **Registration:** REG-2 (commit `c70c9e6`), approved before computation. One pass: RUN(20261101-202808_stage2_control_cap_r4, mechanisms.reg2_table) and RUN(20261102-225146_stage2_control_kv72k_r3.5, mechanisms.reg2_table), at `c70c9e6`.
+- **Default pool, λ = 4: `arrival_driven`.**
+  - 3 episodes (11 of 36 bins), starting at 540, 1980 and 2340 s.
+  - arrival_share 0.667 against base_share 0.306 (excess 0.36).
+  - Spacing CV 0.85, cv_chance 0.67, so not regular.
+  - Preemptions in 2 of 3 episodes; all 32 of the run's preemptions fall inside episodes.
+  - **Knife edge:** arrival_share is exactly the 2/3 threshold (2 of 3 episodes). One episode fewer with a high lead would have given `unclassified`.
+- **72k pool, λ = 3.5: `arrival_driven`.**
+  - 2 episodes (bins at 720 and 2100 s), both with a high lead (arrival_share 1.0 against base 0.278).
+  - All 13 preemptions fall inside them.
+- **Also seen, not judged:**
+  - Every low bin in both runs had KV max ≥ 0.948, and every bin with preemptions had KV max ≥ 0.978.
+  - Planned arrivals in the low bins were 3.9–5.2 req/s at λ = 4 and 4.1–4.3 at λ = 3.5.
+  - No unfinished requests, so the last-bin episode at λ = 4 is not an end-of-run artifact.
+  - Mean planned prompt in low bins was 1,480–1,598 tokens at λ = 4 and 1,598–1,686 at λ = 3.5 (not compared with other bins).
+  - Busy SM clock 1,889–1,941 MHz.
+- **Prediction:** λ = 4 `arrival_driven` was the modal prediction (≈ 0.5): **hit**. 72k: `too_few_episodes` was predicted at ≈ 0.6 and `arrival_driven` at ≈ 0.25; the outcome was the latter, so a **miss** of the modal prediction. `ao_like_cycle` (≈ 0.05 and less) did not occur. Ledger row 10.
+- **Alternatives still open:** these runs are KV-full episodes started by arrival excesses. Labelling them `arrival_driven` names the trigger. It does not rule out preemptions amplifying a dip (alternative 3), and n = 1 per setup.
+- **Decision taken, as registered (no `ao_like_cycle`, `arrival_driven` in both):** the two `bad_baseline` controls are attributed to arrival excesses of the seed-1 schedule at the capacity edge. This is recorded as support for the owner's proposed upper edge for future cells (the highest λ with a `recovered` 2400 s control). No run is proposed. A3 closes.

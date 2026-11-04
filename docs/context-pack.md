@@ -459,6 +459,7 @@ Every model used to choose a run or read a result, with its equations, the evide
 | 7 | 2026-11-03 | W at 5 s gaps (0.19 vs 0.77 of the pool, λ = 3) | Getting stuck is less likely at 5 s gaps | Stuck in 0 of 12 | Hit, but not discriminating: 20 s gaps also gave 0 of 18 | `20261103-161947_burst_gap5_r4.5_s1` … `20261104-000416_wipe_gap5_r3.5_s3` |
 | 8 | 2026-11-03 | sweeps | 5 s gaps: recovery, because prefixes survived overload | Stuck in 0 of 12 | Hit | as row 7 |
 | 9 | 2026-11-04 | M2 (REG-1) | ≤ 2 of 12 default-pool burst spans and 0 of 12 wipe spans qualify; outcome most likely inconclusive (≈ 0.6); qualifying c in 4.3–4.7 | 0 of 24 qualify (wipes never backlogged; burst spans never burst-free); inconclusive | Hit on qualification and outcome; c range not testable | RUN(the 30 REG-1 runs, margin.reg1_table) |
+| 10 | 2026-11-04 | REG-2 (A3) | λ = 4 control: `arrival_driven` ≈ 0.5 (modal); 72k λ = 3.5: `too_few_episodes` ≈ 0.6 (modal), `arrival_driven` ≈ 0.25; `ao_like_cycle` ≤ 0.05 | λ = 4 `arrival_driven` (arrival share exactly at the 2/3 threshold); 72k `arrival_driven` | Hit (λ = 4); miss of the modal prediction (72k) | RUN(20261101-202808_stage2_control_cap_r4, mechanisms.reg2_table), RUN(20261102-225146_stage2_control_kv72k_r3.5, mechanisms.reg2_table) |
 
 **Record so far:** M1 is 0 for 3 on tested predictions (rows 1, 3, 4). It should not be used to choose loads again until it is revised and its revision predicts the existing runs it missed.
 
@@ -475,8 +476,7 @@ Every model used to choose a run or read a result, with its equations, the evide
 | S6 | Does turn spacing matter? (try at least two turn gaps) | **Partly answered.** At 5 s gaps the cache is worth far more (μ_warm 6 vs 4; hit 0.79 vs 0.53 at λ = 4, which mixes two hit computations; like for like 0.79 vs 0.49 or 0.80 vs 0.53, see decisions.md 2026-11-04 (4)) but is much harder to crowd out, and every shock recovered (0 of 12). At 20 s, also no stuck run (0 of 18). Longer gaps (about 60 s) are untested | decisions.md 2026-11-03 and 2026-11-04 |
 | A1 | What is the sustainable completion rate with caching off at λ = 3, default pool, 20 s gaps? μ_off = 2 rests on one 900 s run whose last 150 s carried 3.52 req/s of planned load, above the cache-off saturation of about 3.5 | **Open.** Cheapest test: other seeds or a longer cache-off run (GPU, owner) | `20261030-161749_sweep_pc_off_r3` `schedule.parquet`; `docs/model.md` M4 |
 | A2 | Assumption A: does any post-trigger state complete less than the λ = 10 overload state (4.185 req/s)? | **Open; REG-1 inconclusive** (0 of 24 default-pool spans qualified). The existing triggers never held a cold backlog; testing A needs a deliberate cold-overload run (GPU, owner) | `docs/model.md` M2 |
-| A3 | Are the dips in the no-trigger controls at λ = 4 (default pool) and λ = 3.5 (72k pool) eviction cycles of the Ao et al. kind? | **Open.** Needs a registered analysis of `20261101-202808_stage2_control_cap_r4` and `20261102-225146_stage2_control_kv72k_r3.5` | — |
-| A4 | Is the cache-on capacity loss under overload (4.735 → 4.185 req/s) prefix eviction or preemption recompute? | **Open.** Needs a registered analysis (preemptions and `prompt_tokens_by_source` per completion, cache on vs off, matched λ) | — |
+| A4 | Is the cache-on capacity loss under overload (4.735 → 4.185 req/s) prefix eviction or preemption recompute? | **Open.** An analysis of existing runs was drafted (REG-3) and dropped: its outcome followed from published numbers. The informative test is a logging run exporting vLLM's internal recompute count (GPU, owner) | decisions.md 2026-11-04 [DECISION] REG-3 dropped |
 | A5 | How much of client TTFT is client receive lag? `vllm:time_to_first_token_seconds` is recorded and never compared | **Open** | `metrics.jsonl` of any run |
 | A6 | Does dev mode change speed? μ was measured without it, controls and shocks with it | **Open.** Needs a GPU run (owner) | decisions.md 2026-11-04 (2) |
 | A7 | Was another process using the GPU during any run? Memory and power give no sign, but neither can show a compute-only co-tenant; `env.json` does not list GPU processes | **Open** | `gpu.jsonl` (mem_used 22.9–24.6 GB default pool; power limit 420 W in every sample) |
@@ -488,30 +488,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 <!-- source: docs/decisions.md, last 5 entries -->
 
 ## Last decisions
-
-### 2026-11-04 · [DECISION] One writer, one numbering; the other session's items 34–43 mapped (study owner)
-- **Writer:** session `4de6c4e2` (this agent) is the only writing session. The other session stops after committing its drafts as DRAFT (`docs/drafts/addendum_34-43.md`, already committed as such in `9211d6b`). This supersedes "any other session stays read-only" in the entry above only in naming which session writes.
-- **Numbering:** the audit numbering of `PROPOSAL.md` rules: items 1–33, N1–N17, open items A1–A7, registrations REG-1 onward. The other session's numbers are retired. Its committed entries stay as written (append-only) and are read through this map:
-
-| Other session | Here | Status |
-|---|---|---|
-| 34 (push; `vm` remote key) | owner item 23 (push) | owner to answer |
-| 35 (λ = 7 vs λ = 5 hit mix) | item 9 (hit computations) | logged: [CORR] "Hit rates from different computations compared again" |
-| 36 (session median) | item 13 | logged: [DECISION] "Session median defined" |
-| 37 (recovered originals) | item 12 (provenance) | logged: [CORR] "Derived-figure differences explained by the recovered originals" |
-| 38 (cold-state floor μ_sat,off; REG-2 draft) | new open item **A8**: the floor under assumption B (`docs/model.md` M2, "weaker floor") | to register; the owner notes the floor argument needs only B |
-| 39 (cache-off λ = 3, 3600 s; REG-3 draft) | **A1** | one registration, merged with the owner's item 12 |
-| 40 (5 s-gap cache-off beyond λ = 3.5; REG-4 draft) | new open item **A9** | on hold until the next direction |
-| 41 (danger-zone edge) | owner decision, recorded in the entry above | as recorded there |
-| 42 (capacity rule vs realized arrivals) | **N1** | one entry; future sweeps only |
-| 43 (stage2_base.yaml defects) | items 24 and N7 | logged: [CORR] "A used config that cannot be fixed" |
-
-- **One ambiguity, flagged:** the owner's instruction reads "its REG-2 / item 39 = your A1". In the draft, REG-2 is item 38 (the floor) and item 39 is REG-3 (the λ = 3 run). This map reads it as item 39 = A1, which is what A1 asks. Item 38 becomes A8. The owner may correct this.
-- **Owner's answers to the approval list, same date:**
-  - Items 1–8 (harness and checks) are approved for future runs only. Item 6 means untracked files under `configs/` make the tree dirty. Item 8's thresholds are registered before any run is judged by them.
-  - Items 9–10 are approved as one registered verdict-code change (NaN → `unclear`, empty window → `unclear`), with all 43 verdicts rechecked and any change logged.
-  - Item 11 (cold-overload run) is deferred, because no decision depends on assumption A. Item 12 is merged into A1. Items 13 and 14 are deferred until the owner chooses the next direction.
-  - A3 and A4 registrations are to be drafted now, with code and review passes. A5 comes later. Items 18–23 are to be answered separately.
 
 ### 2026-11-04 · [RESULT] The two "pending committed code" numbers, now from committed functions
 - **Registration:** none; this recomputes published numbers (rule I). It clears both marks of the [CORR] "Two audit numbers rest on scratch scripts".
@@ -595,3 +571,24 @@ Summary of its answers:
 - **What:** the REG-3 draft (does first-admission prefill growth exceed any possible recompute growth, λ = 6 against λ = 10, cache on) is not registered and not computed. The owner's "Let's finish it" was read as accepting the agent's recommendation to drop it.
 - **Why** (the draft's adversarial review, and rule A1): even after revision, the likely outcome follows from published numbers (first-admission hit 0.317 → 0.197; flat preemptions per unit time, ≈ 79 and 78). It would change one write-up sentence and nothing else.
 - **What stays:** A4 is open in `docs/open-questions.md`. The informative test is a logging run that exports vLLM's internal recompute count (`preempted_queries − preempted_hits`, SOURCE(vLLM 0.32.0 v1/metrics/stats.py:PrefixCacheStats)), which needs the GPU and the owner. Its code (`work_per_completion`, `attribute_loss`) was removed before commit, so no unregistered analysis code is left in `analysis/`.
+
+### 2026-11-04 · [RESULT] REG-2 (A3): both control dips are arrival-driven; no Ao-like cycle
+- **Registration:** REG-2 (commit `c70c9e6`), approved before computation. One pass: RUN(20261101-202808_stage2_control_cap_r4, mechanisms.reg2_table) and RUN(20261102-225146_stage2_control_kv72k_r3.5, mechanisms.reg2_table), at `c70c9e6`.
+- **Default pool, λ = 4: `arrival_driven`.**
+  - 3 episodes (11 of 36 bins), starting at 540, 1980 and 2340 s.
+  - arrival_share 0.667 against base_share 0.306 (excess 0.36).
+  - Spacing CV 0.85, cv_chance 0.67, so not regular.
+  - Preemptions in 2 of 3 episodes; all 32 of the run's preemptions fall inside episodes.
+  - **Knife edge:** arrival_share is exactly the 2/3 threshold (2 of 3 episodes). One episode fewer with a high lead would have given `unclassified`.
+- **72k pool, λ = 3.5: `arrival_driven`.**
+  - 2 episodes (bins at 720 and 2100 s), both with a high lead (arrival_share 1.0 against base 0.278).
+  - All 13 preemptions fall inside them.
+- **Also seen, not judged:**
+  - Every low bin in both runs had KV max ≥ 0.948, and every bin with preemptions had KV max ≥ 0.978.
+  - Planned arrivals in the low bins were 3.9–5.2 req/s at λ = 4 and 4.1–4.3 at λ = 3.5.
+  - No unfinished requests, so the last-bin episode at λ = 4 is not an end-of-run artifact.
+  - Mean planned prompt in low bins was 1,480–1,598 tokens at λ = 4 and 1,598–1,686 at λ = 3.5 (not compared with other bins).
+  - Busy SM clock 1,889–1,941 MHz.
+- **Prediction:** λ = 4 `arrival_driven` was the modal prediction (≈ 0.5): **hit**. 72k: `too_few_episodes` was predicted at ≈ 0.6 and `arrival_driven` at ≈ 0.25; the outcome was the latter, so a **miss** of the modal prediction. `ao_like_cycle` (≈ 0.05 and less) did not occur. Ledger row 10.
+- **Alternatives still open:** these runs are KV-full episodes started by arrival excesses. Labelling them `arrival_driven` names the trigger. It does not rule out preemptions amplifying a dip (alternative 3), and n = 1 per setup.
+- **Decision taken, as registered (no `ao_like_cycle`, `arrival_driven` in both):** the two `bad_baseline` controls are attributed to arrival excesses of the seed-1 schedule at the capacity edge. This is recorded as support for the owner's proposed upper edge for future cells (the highest λ with a `recovered` 2400 s control). No run is proposed. A3 closes.
