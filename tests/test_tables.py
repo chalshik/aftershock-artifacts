@@ -13,9 +13,11 @@ def test_arrival_profile_shares_of_lambda():
 
 def test_judgeable_needs_the_full_verdict_block():
     full = {k: 1 for k in VERDICT_KEYS}
-    assert judgeable({"cfg": {"verdict": full}})
-    assert not judgeable({"cfg": {"verdict": {**full, "pf_climb": None}}})
-    assert not judgeable({"cfg": {}})
+    wl = {"workload": {}}
+    assert judgeable({"cfg": {"verdict": full, **wl}})
+    assert not judgeable({"cfg": {"verdict": {**full, "pf_climb": None}, **wl}})
+    assert not judgeable({"cfg": {**wl}})
+    assert not judgeable({"cfg": {"verdict": full, "workload": {"steps": [{"at_s": 300, "rate": 3}]}}})  # a ramp
 
 
 def test_published_check_flags_only_differences():

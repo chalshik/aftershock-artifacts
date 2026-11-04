@@ -37,8 +37,9 @@ def provenance() -> dict:
 
 
 def judgeable(run: dict) -> bool:
+    """Has the full verdict block and is not a ramp (ramps inherit the block but are judged by `ramp_table`)."""
     v = run["cfg"].get("verdict") or {}
-    return all(v.get(k) is not None for k in VERDICT_KEYS)
+    return all(v.get(k) is not None for k in VERDICT_KEYS) and not run["cfg"]["workload"].get("steps")
 
 
 def _preemptions(m: pd.DataFrame) -> float:
