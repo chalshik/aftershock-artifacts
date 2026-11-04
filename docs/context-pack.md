@@ -489,29 +489,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-04 · [OPS] Checksum manifest of runs/ (owner's decision: manifests/runs.sha256, committed, append-only)
-- **`manifests/runs.sha256`:** one line per file, `<sha256>  <run_id>/<path>`, relative to `runs/` (the `sha256sum` format). First write: 1,053 files in 104 run folders. With `runs/.gitkeep`, which is not data, that is the 1,054 files of the 2026-11-04 copy. Total 9,942,117,131 bytes, matching that copy's checksum comparison exactly. `shasum -a 256 -c` agrees on spot checks.
-- **`tools/manifest.py update`** appends lines only for new files. It stops and writes nothing if a listed file is missing or its hash changed: raw data is immutable, so that is damage to investigate.
-- **`tools/manifest.py verify <copy>`** checks a backup against the manifest (missing, different, unlisted). Without the script: `cd <copy> && shasum -a 256 -c <repo>/manifests/runs.sha256`. `verify runs` passes: 1,053 listed, 0 missing, 0 different.
-- **`tools/check_docs.py`** now checks that the manifest only grows (git history and working copy), and that every run folder in `runs/` is listed. So after each copy from the VM, `manifest.py update` is due before the docs check passes.
-- **Not done:** the second copy itself. A copy can now be verified, but none exists yet (status.md, Watch).
-
-### 2026-11-04 · [DECISION] Owner's decisions on audit items 38–42
-- **Draft kept:** the audit addendum (items 34–43) is in `docs/drafts/addendum_34-43.md`, marked DRAFT and not registered.
-- **Item 38, the cold-state floor μ_sat,off** (to be registered as REG-2):
-  - Saturation threshold: mean KV ≥ 0.85, as in the entry above.
-  - "At the floor": |λ − μ_sat,off| ≤ 0.05 μ_sat,off. Chosen over the min–max of the contributing runs because it works with one contributing point; per the owner, the 72k pool has one cache-off point at KV ≥ 0.85 (not checked by the agent, since that would compute part of the pending registration).
-  - **Both values were chosen after the default-pool and 72k sweep data had been seen.** The default-pool inputs are published (cache-off KV 0.415 and 0.867 at λ = 3 and 4, 2026-11-01; throughputs 3.453–3.533, `docs/model.md` M2). So the default-pool classification is not a blind test, and REG-2 must say so.
-- **Items 38 and 39:** approved to write up. Each gets its separate review pass (rule F), and both registrations and their review output go to the owner before anything is committed or any GPU time is used. Item 39's 2.2 GPU h is approved once that review is done.
-- **Item 40, the 5 s-gap cache-off extension:** on hold until the owner chooses the next direction. If it runs, its stopping rule is two consecutive λ steps at mean KV ≥ 0.85.
-- **Item 41, the danger zone:**
-  - The registered zone (μ_off < λ < μ_warm, PROTOCOL §5) stays unchanged for every existing result.
-  - The floor is written up as a **[new] post-hoc analysis** that answers the plan's question "why the loop did not hold". It does not re-judge any cell.
-  - For future cells only, to be proposed: lower edge μ_sat,off; upper edge the highest load whose 2400 s no-trigger control is `recovered`.
-- **Item 42, the capacity rule:** approved for future sweeps only. The throughput test becomes throughput ≥ 0.95 × the realized planned arrival rate over the measured window. Past μ values stand as judged, and **every past capacity sweep used seed 0** (2026-11-04 [RESULT], schedules). The code change goes to the owner with the registrations, because another session is editing `analysis/` at the same time.
-- **Push:** the owner pushes after reviewing `git log --stat origin/main..main`.
-- **One writing session at a time:** a lockfile is to be proposed; any other session stays read-only.
-
 ### 2026-11-04 · [DECISION] One writer, one numbering; the other session's items 34–43 mapped (study owner)
 - **Writer:** session `4de6c4e2` (this agent) is the only writing session. The other session stops after committing its drafts as DRAFT (`docs/drafts/addendum_34-43.md`, already committed as such in `9211d6b`). This supersedes "any other session stays read-only" in the entry above only in naming which session writes.
 - **Numbering:** the audit numbering of `PROPOSAL.md` rules: items 1–33, N1–N17, open items A1–A7, registrations REG-1 onward. The other session's numbers are retired. Its committed entries stay as written (append-only) and are read through this map:
@@ -558,3 +535,63 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **New `tests/test_load_more.py`:** `metrics_wide` (label sums, buckets dropped, failed scrapes skipped); `rates` (a counter decrease becomes NaN, a no-query interval NaN hit); `percent_fast` (bins by planned arrival, unfinished requests are misses); `capacity` (both tests, nothing passing → NaN); `_level` (pooled levels, NaN percent fast with no requests). One more test pins the verdict fixture to `configs/stage2_cap_base.yaml`. `tests/test_tables.py` covers `analysis/tables.py`.
 - **Two strict `xfail` tests** state the approved target of the registered verdict-code change (items 9–10): a window with no queries gives NaN hit, and an empty window gives `unclear`. Both fail today for the stated reasons (hit 0.0; `np.polyfit` raises). Because they are strict, they turn into errors when the change lands, so the markers must be removed in that commit.
 - No analysis code was changed.
+
+### 2026-11-04 · [REG] REG-2 (A3): what the no-trigger control dips are
+- **ID:** REG-2, open item A3. **Approved by the owner on 2026-11-04** ("Let's finish it", in reply to the agent's recommendation to approve), before any computation. Not computed on any run at commit. Code: `analysis/mechanisms.py` (`bin_series`, `episodes`, `cv`, `cv_chance`, `classify_dips`; settings `REG2`; driver `reg2_table`); `tests/test_mechanisms.py`.
+- **Question:** the two no-trigger controls that came out `bad_baseline` dipped with no shock. Is the pattern a regular preemption cycle of the Ao et al. kind, or arrival excesses of the seed-1 schedule at a load on the capacity edge?
+- **Claim tested:** whether a competing mechanism to C2's loop shows at the zone's edge. This can at most motivate the Paper Tracker's output-length question, not answer it: output length is fixed in both runs.
+- **Runs:** `20261101-202808_stage2_control_cap_r4` (default pool, λ = 4) and `20261102-225146_stage2_control_kv72k_r3.5` (72k pool, λ = 3.5). VALID, single seed each.
+- **Already seen** (not blind): the published verdict levels, the percent fast per 300 s range, and the preemption totals (32, 13). The time series were not looked at.
+- **Method** (60 s bins, 240–2400 s):
+  - **Per bin:** planned arrival rate in the bin, and over **[a − 180 s, a + 60 s)**, which includes the bin itself because percent fast is counted by arrival; `load._level` values; KV max; preemptions; mean planned prompt tokens; unfinished requests; busy SM clock.
+  - **Episode:** a run of bins with percent fast < 0.98, with runs separated by ≤ 2 healthy bins merged into one.
+  - **High lead:** that 240 s rate ≥ 1.05 λ. arrival_share is the share of episodes with a high lead in any of their bins; base_share is the share of all bins with one.
+  - **Spacing:** CV of the intervals between episode starts, sample SD (ddof = 1). **cv_chance** is the share of 20,000 random placements of the same number of starts among the bins (seed 0) whose CV is at or below the observed one.
+- **Labels, in order:**
+  1. `too_few_episodes`: fewer than 2 episodes.
+  2. `ao_like_cycle`: ≥ 4 episodes, cv_chance ≤ 0.05, preemptions in or in the bin before ≥ 2/3 of episodes, and arrival_share − base_share < 0.3.
+  3. `arrival_driven`: arrival_share ≥ 2/3 and arrival_share − base_share ≥ 0.3.
+  4. `unclassified`: anything else.
+- **Prediction:**
+  - λ = 4: `arrival_driven` ≈ 0.5, `unclassified` ≈ 0.35, `too_few_episodes` ≈ 0.1, `ao_like_cycle` ≈ 0.05.
+  - 72k λ = 3.5: `too_few_episodes` ≈ 0.6, `arrival_driven` ≈ 0.25.
+- **Decision, over the pair of labels:**
+  - **`ao_like_cycle` in either run:** open a new open item, add the cycle to claims.md as a C2 alternative, and propose (registered, to the owner) a test that varies output length.
+  - **No `ao_like_cycle`, and `arrival_driven` in at least one run:** the `bad_baseline` dips are attributed to the schedule at the capacity edge, for that run only. Recorded as support for the owner's proposed upper edge for future cells (the highest λ with a `recovered` 2400 s control). No run proposed.
+  - **Neither label in either run:** A3 closes as "not resolved by existing data". No run proposed.
+  - This analysis changes at most whether a new item and a proposal are opened. The λ = 4 exclusion stands either way.
+- **Alternatives:**
+  1. Heat. The SM clock is reported; λ = 4 had a SW thermal share of 0.047 against 0.05.
+  2. Session-mix excursions, i.e. long late-turn prompts. Mean prompt per bin is reported, not judged.
+  3. Arrival-driven dips amplified by preemptions. `arrival_driven` names the trigger, not the absence of a preemption mechanism.
+  4. n = 1 per setup.
+- **Stopping rule:** one pass after approval. **Cost:** 0 GPU hours.
+
+### Adversarial review (separate subagent; it saw only the first draft, `analysis/mechanisms.py`, the tests and `load._level`)
+
+Summary of its answers:
+1. **Wrong labels, checked against the code:**
+   - **(A)** Dips land in their own excess bin, because percent fast is counted by arrival. A lead window that ended at the bin's start never saw the excess, so arrival-driven dips came out `ao_like_cycle`: arrival_share 0, preempt_share 1, CV 0.167.
+   - **(B)** One slump flickering across 0.98 split into 4 "episodes" with CV 0 and came out `ao_like_cycle`.
+   - **(C)** With 3 episodes, chance alone gives CV ≤ 0.3 with probability 0.33 (0.14 for 4).
+   - **(D)** 1.10 λ over 120 s is about a 2.2σ excess, too high to see the small sustained excesses that matter near ρ ≈ 1.
+   - **(E)** Unfinished requests at the end could create a spurious final episode.
+2. **Alternatives:** `ao_like_cycle` could be (A), (B) or (C); `arrival_driven` does not exclude a preemption-amplified, excitable edge; `unclassified` could be a real arrival link hidden by (A) or (D); `too_few` says nothing about cause.
+3. **Decision value:** barely; only `ao_like_cycle` triggers action, and it was the label most prone to false positives. The table had no row for a mixed result, which was the most likely one.
+   - **Code issues:** mean prompt per bin was promised but missing; the lead window excluded the bin; ddof was unstated; there was no merge rule; preemptions just before an episode were not counted; no test covered noise, the excess-in-bin case or fragmentation.
+
+**Changed because of it:**
+- The lead window now includes the bin ([a − 180, a + 60)), and the threshold is 1.05 λ (A, D).
+- Runs separated by ≤ 2 healthy bins are merged (B).
+- `ao_like_cycle` needs ≥ 4 episodes and a seeded chance test, cv_chance ≤ 0.05; ddof = 1 is stated (C).
+- Preemptions in the bin before an episode count.
+- Mean prompt and unfinished counts per bin are reported (E).
+- The decision table now covers every pair of labels.
+- New tests reproduce traces A and B and the chance case; 10 pass.
+- The predictions were revised before any computation.
+- **Not changed:** n = 1 per setup, which only another seed could fix (GPU, deferred).
+
+### 2026-11-04 · [DECISION] REG-3 (A4) dropped; A4 stays open
+- **What:** the REG-3 draft (does first-admission prefill growth exceed any possible recompute growth, λ = 6 against λ = 10, cache on) is not registered and not computed. The owner's "Let's finish it" was read as accepting the agent's recommendation to drop it.
+- **Why** (the draft's adversarial review, and rule A1): even after revision, the likely outcome follows from published numbers (first-admission hit 0.317 → 0.197; flat preemptions per unit time, ≈ 79 and 78). It would change one write-up sentence and nothing else.
+- **What stays:** A4 is open in `docs/open-questions.md`. The informative test is a logging run that exports vLLM's internal recompute count (`preempted_queries − preempted_hits`, SOURCE(vLLM 0.32.0 v1/metrics/stats.py:PrefixCacheStats)), which needs the GPU and the owner. Its code (`work_per_completion`, `attribute_loss`) was removed before commit, so no unregistered analysis code is left in `analysis/`.
