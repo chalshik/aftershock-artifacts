@@ -51,7 +51,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-04
 
 ## Open questions
 
-Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 open. See `open-questions.md`.
+Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 open. Source questions S8–S11 (hit-counter units, eviction order, preempted blocks, self-refill), added 2026-11-04, answered from the v0.32.0 source. See `open-questions.md`. Terms and the code that computes them: `definitions.md`.
 
 ## Environment
 
@@ -69,5 +69,7 @@ Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 
 
 ## Watch
 
+Sorted by priority, most urgent first.
+
+- **Backup (top item):** the Mac holds the only copy of all 104 runs (9.4 GB). Make a second copy of `runs/` before anything else could happen to the Mac.
 - **Heat:** before the backplate fan, hardware thermal flags at 83–84 °C invalidated 5 runs. With the fan: 0 flags in every run since. A flag still invalidates a run; the rule is not loosened.
-- **Backup:** make a second copy of `runs/` before anything else could happen to the Mac.

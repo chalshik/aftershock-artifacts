@@ -33,7 +33,7 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
 3. Most seeds are `stuck`.
 4. A memory-limited loop: mean KV ≥ 0.80, mean N ≥ 2 × baseline, N below the 256 cap, and the traces follow the plan's order.
 5. Persistence: a 4500 s-watch confirmation run is also `stuck`.
-6. Two states at one load: drop to λ = 1 until the queue empties, return to λ, and the server comes back `recovered`.
+6. Two states at one load: in that same confirmation run, after the watch, λ drops to 1 req/s for 1800 s, then returns to the original λ for 1500 s. The last 600 s must be `recovered` against the original baseline, and the line must have reached 0 during the drop; if it did not, this item is inconclusive, not passed. **[restated 2026-11-04 to match decisions.md 2026-11-01 "Stuck" redefined]**
 
 **The ramp test** (decisions.md 2026-11-03): a gap is a down-step with percent fast ≤ up − 0.10 and hit ≤ up − 0.06, at a load healthy going up (≥ 0.98). It counts only if it appears at both the 300 s and the 600 s dwell.
 
@@ -47,7 +47,7 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
 | Hardware | One RTX 3090, 24 GB (Gigabyte AORUS Xtreme, backplate fan since 2026-11-02), power limit 420 W; Proxmox VM, Ubuntu 24.04, 8 cores, 31 GB RAM; GPU shared with another user |
 | Software | vLLM 0.32.0, torch 2.13.0 (CUDA 13.0), driver 595.99.02, Python 3.12.13, all pinned in `pyproject.toml` and `uv.lock` |
 | Model | Qwen/Qwen3-4B, bf16; 147,456 bytes of KV per token |
-| Server | Single replica, served directly. Flags: `--enable-prefix-caching`, `--kv-cache-metrics`, `--enable-prompt-tokens-details`, `--seed 0`, `--max-num-seqs 256`. Everything else at vLLM defaults. Dev mode (`VLLM_SERVER_DEV_MODE=1`) in all Stage 2 runs |
+| Server | Single replica, served directly. Flags: `--enable-prefix-caching`, `--kv-cache-metrics`, `--enable-prompt-tokens-details`, `--seed 0`, `--max-num-seqs 256`. Everything else at vLLM defaults. Dev mode (`VLLM_SERVER_DEV_MODE=1`) in every shock run (wipes, bursts), every no-trigger control, both wipe tests and both ramps: 49 runs. **Not** in the capacity sweeps (Stage 1 and both Stage 2 setups: 72,480-token pool, 5 s gaps), the τ runs, the recorder-off runs or the other Stage 1 runs: 55 runs. So each setup's μ was measured without dev mode and its controls and shocks with it. **[corrected 2026-11-04; previously "in all Stage 2 runs"]** |
 | KV pool | Default 96,656 tokens; or set to 72,480 tokens with `--kv-cache-memory-bytes 10687610880` |
 | Workload | Open-loop sessions: 8 turns, 512 system + 128 user + 128 recorded-reply tokens per turn, 128 output tokens, exponential turn gap (mean 20 s, or 5 s), session starts at λ/8 |
 | Client | No retries, no timeouts, unlimited connection pool, gateway off |

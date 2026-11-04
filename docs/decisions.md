@@ -532,3 +532,110 @@ Items 5 and 6 cost GPU time only for loads that reach `stuck`. Their configs get
 - **Check before removal:** all 104 run folders (1,054 files, 9,942,117,131 bytes) were copied to `runs/` on the Mac and compared by checksum against the VM: 0 differences.
 - **Removal:** `rsync -a -c --remove-source-files` from the VM to the Mac. A VM file is removed only after rsync confirms an identical copy on the Mac; empty folders are removed after. Nothing on the Mac was changed or deleted.
 - **Effect on rule 4 (raw data immutable):** the data is unchanged, but **the Mac now holds the only copy** of every run. `runs/` is not in git. A second copy (external drive or cloud) is recommended, and not yet made. New runs still land on the VM and are copied to the Mac after each round, as before.
+
+## 2026-11-04 · Documentation audit, changes 1–9 (study owner's request)
+The nine entries below come from a read-only audit of the repo, done before any edit. No run, verdict, threshold, config or file in `runs/` was changed. `analysis/load.py` and `verdict` are untouched.
+
+## 2026-11-04 · (1) CLAUDE.md now states PROTOCOL's precedence rule
+- **Before:** `CLAUDE.md` line 3, "The source of truth is `docs/experiment-plan.md`." That conflicted with `PROTOCOL.md:3`, "Where they differ, the newer decisions.md entry rules."
+- **Now:** "`docs/experiment-plan.md` is the source of truth for intent and `docs/decisions.md` is the append-only log of every change; where they differ, the newer decisions.md entry rules (`PROTOCOL.md`)."
+- **Effect:** none on any result. Every deviation from the plan was already logged here, and PROTOCOL §6 lists them.
+
+## 2026-11-04 · (2) PROTOCOL §4 corrected: dev mode was not on in all Stage 2 runs
+- **Error:** PROTOCOL §4 said "Dev mode (`VLLM_SERVER_DEV_MODE=1`) in all Stage 2 runs." The saved `config.yaml` of every run folder (`server.env`) shows otherwise.
+- **Dev mode on, 49 runs:**
+  - every wipe (`wipe_preempt_*`, `wipe_kv72k_*`, `wipe_gap5_*`, including the invalid attempts);
+  - every burst (`burst_*`);
+  - every no-trigger control (`stage2_control*`, including the stopped `20261101-151707_stage2_control_r1.5`);
+  - both wipe tests and both ramps.
+- **Dev mode off, 55 runs:**
+  - all capacity sweeps: Stage 1 (`sweep_pc_on/off`) and both Stage 2 setups (`sweep_kv72k_pc_on/off`, 15 runs; `sweep_gap5_pc_on/off`, 12 runs);
+  - both τ runs (`20261031-025032_tau`, `20261101-131823_tau`);
+  - the recorder-off runs, smoke, first_real, repeat and long_run.
+- **Consequence, already implied by decisions 2026-10-31 ("controls are compared within Stage 2 only"):** in every setup, μ_warm and μ_off were measured without dev mode, and the test loads' controls and shocks ran with it. The effect of dev mode on speed has not been measured. Verdicts compare a shock with its control, and both had dev mode on, so no verdict is affected. A capacity value would be affected only if dev mode changed speed.
+- PROTOCOL §4 now lists both groups.
+
+## 2026-11-04 · (3) PROTOCOL §3 item 6 restated as registered
+- **Before:** "drop to λ = 1 until the queue empties, return to λ, and the server comes back `recovered`." That is not what the 2026-11-01 entry registered ("Stuck" redefined, item 6): a fixed 1800 s drop.
+- **Now, quoting that entry:** "in that same run, after the watch, λ drops to 1 req/s for 1800 s, then returns to the original λ for 1500 s. The last 600 s must be `recovered` against the original baseline, and the line must have reached 0 during the drop; if it did not, this item is inconclusive, not passed."
+- **Effect:** none. No run has reached item 6.
+
+## 2026-11-04 · (4) docs/definitions.md created
+- One entry per term: percent fast, goodput, throughput, μ_warm, μ_off, danger zone, τ, K, watch window, baseline window, h, KV usage, N, Q, preemption, R, the five verdicts, metastable failure and trigger end. Plus W, F, the cached-share split and the overlap fraction, now that they have code (entry 6).
+- Each entry has one text definition (the newer decisions.md entry where texts differ, by the precedence rule), its file:line, and the code function. Other wordings are listed, not removed.
+- **Marked as having more than one computation, with none chosen yet:**
+  - **percent fast:** per 1 s bin in `percent_fast`, pooled over a window in `_level`;
+  - **hit rate:** mean of per-scrape ratios in `summarize`, counter ratio in `_level`/`hit_between`, first-to-last in `whole_run_hit_rate`;
+  - **trigger end:** the same rule in `verdict` and in `derived.trigger_times`.
+- **No code exists** for R, K, danger zone, metastable failure, or the registered preemption comparison.
+- **Hit-rate values that differ between entries for the same runs are the different computations (checked):**
+  - The 2026-10-30 step 4 follow-up gives λ = 2 / 3 / 4 as 0.73 / 0.63 / 0.49. That is `summarize` (the mean of per-scrape ratios over the window): 0.732 / 0.627 / 0.490.
+  - The 2026-11-02 72k comparison gives 0.767 / 0.661 / 0.525 for the same default-pool runs (`sweep_pc_on_r2/r3/r4`). That is `whole_run_hit_rate` (first scrape to last, warm-up and drain included): 0.767 / 0.661 / 0.525.
+  - Counter hit over the measured window gives a third set: 0.765 / 0.644 / 0.510.
+  - **Mixed computations in two published comparisons (checked):**
+    - The 72k pool's own values in the 2026-11-02 capacity table (λ = 2 / 3 / 4: 0.658 / 0.511 / 0.397) are `summarize` means of ratios. They were compared with whole-run values at the default pool. Like for like, the 72k pool is **0.07–0.12 lower**, not "0.10–0.15 lower":
+      - mean of ratios: 0.658 vs 0.732, 0.511 vs 0.627, 0.397 vs 0.490;
+      - whole run: 0.698 vs 0.767, 0.552 vs 0.661, 0.430 vs 0.525.
+    - The 5 s-gap comparison (2026-11-03, "hit at λ = 4: 0.786 vs 0.525", and open-questions S6, "0.79 vs 0.53") has the same mix. Like for like it is 0.786 vs 0.490 (mean of ratios) or 0.800 vs 0.525 (whole run).
+  - **Direction:** both conclusions keep their direction: a smaller pool lowers the hit rate, and 5 s gaps raise it. Only the sizes quoted change. The old entries stay as written. `open-questions.md` S6 is left as is, and this entry supersedes its numbers.
+
+## 2026-11-04 · (5) Source questions S8–S11: hit-counter units, eviction order, preempted blocks, self-refill
+- **Why:** these had been used as beliefs (audit, section 13) with no evidence. Rule 9 allows only probe output, the pinned source or a run id. They are now open items in `docs/open-questions.md`, answered from the vLLM v0.32.0 source only: the GitHub tag tarball, sha256 `bf592c132f27bbb5f65cff0bbd2ee873eae722b79c8286934fd5b5cf88b43d61`. It has not yet been diffed against the wheel installed on the VM.
+- **S8, hit counters:** they count tokens, once per admission. **Readmissions of preempted requests are excluded** (they go to `preempted_*`, which is not exported).
+  - Consequence for the `preempt` wipe: the requests it preempts start over, and their re-prefill does not appear in h.
+  - So the post-wipe hit dips in this log describe new turns only. The dips are not changed by this. Their meaning is narrower than "all prefill".
+- **S9, eviction:** approximately LRU by release time. Within one freed request, its tail blocks are evicted before its head blocks. So a session's shared beginning survives longest.
+  - This fits the plan's link 5 as written: a session's newest blocks go first.
+- **S10, preempted blocks:** they stay cached as eviction candidates until reused. The exception is the `preempt` wipe, which clears every hash right after the preemption.
+- **S11, self-refill:** blocks are committed to the cache as they are computed. A missed turn therefore re-caches its own prompt at once, and the generated output's full blocks are cached too. With recorded replies, the output blocks never match a later turn.
+  - INFERRED, not tested: this is one plausible reason the wipe never held. A wipe costs each session about one turn; for the loss to persist, eviction must happen within a turn gap. This is a hypothesis for the negative-result write-up, not a finding.
+
+## 2026-11-04 · (6) Derived figures moved into analysis/ and recomputed
+- **The original code was never committed.** The W, F, cached-share-split and per-span hit figures in earlier entries were computed by scripts that are not in the repo.
+- **New code:** `analysis/derived.py`, with `working_set`, `kv_footprint`, `cached_share_split`, `overlap_fraction`, `hit_between`, `span_hits`, `thirds`, `span_hit_spread`, `adjacent_change` and `trigger_times`, tested in `tests/test_derived.py`. `analysis/recompute_published.py` makes 104 comparisons with published values (some are alternative readings of the same value) and prints them side by side: 79 agree to the published rounding, 25 do not, and they are summarized below.
+- **These are reconstructions.** Each function is the reading of the entry's text that reproduces the published numbers. A match shows the reading is consistent with the text, not that it is the original code.
+- **Readings fixed by the data** (the text alone was ambiguous):
+  - **W:** a session is active from its first planned turn to its last planned turn. The reported centre is the **mean**, not the median. The grid is 1 s from t = 600 s, seeds 1 and 2, the stage2_cap_base 2400 s schedule. The rebuilt schedule was checked against `20261102-072216_wipe_preempt_r3_s1`.
+  - **F:** mean `kv_cache_usage_perc` over the sweep run's measured window (240–900 s) and its last third. Warm: `sweep_pc_on_r2/r3/r4`; cold: `sweep_pc_off_r2/r3/r4`.
+  - **Cached-share split:** "starting after the previous turn had finished" means **this turn's first token** at or after the previous turn's end. Send time does not reproduce λ = 5 (0.178 against 0.143) or λ = 10 (0.000 against 0.030). Turns are selected by planned arrival inside the measured window. The sweep runs used are `_r3`, `_r5` and `_r10`.
+  - **Burst "hit fell to 0.17–0.35"** (2026-11-02, λ = 3) and **"0.11–0.28"** (72k pool) are the counter hit over **the first 60 s after the burst ended**. They are not the low point during the burst: over the burst's own 120 s the λ = 3 runs were 0.169–0.194, and lower at finer resolution. The 72k wipe "dip to 0.43 at most" is the lowest 0–60 s value after the wipe (0.429).
+  - **Wipe-test "before":** counter hit from the end of warm-up (240 s) to the wipe. The λ = 3.5 "first-minute hit" means 0–60 s after the wipe call ends.
+- **Values that differ beyond the published rounding:**
+
+| Value (entry) | Published | Recomputed | Note |
+|---|---|---|---|
+| W/C p90, λ = 2.5 (2026-11-01) | 0.75 | 0.756 | rounding edge |
+| W/C mean, λ = 4 (2026-11-01) | 1.01 | 1.004 | unexplained; the median is 0.985 |
+| W tokens, λ = 2 / 2.5 / 3 (2026-11-02) | 47.6k / 59.7k / 73.0k | 47.5k / 59.6k / 72.9k | unexplained, ≤ 0.3 %; no tried variant (start 240/600/900 s, end at last turn or 2400 s) matches |
+| W tokens, 20 s gaps, λ = 3, seed 1 (2026-11-03) | 74.8k | 74.5k | same; the 5 s value matches (18.7k) |
+| 72,480 / W at λ = 2.5; 96,656 / W at λ = 3 | 1.21; 1.32 | 1.215; 1.327 | follows from W |
+| F_warm/C mean, λ = 3 (2026-11-01) | 0.13 | 0.125 | rounding edge |
+| (W+F)/C: λ = 3 warm high, λ = 3 cold low, λ = 4 warm | 0.91; 1.16; 1.32–1.36 | 0.918; 1.168; 1.311–1.353 | follows from W and F; every fits/holds yes/no is unchanged |
+| F_warm tokens, λ = 2 and λ = 2.5 (2026-11-02) | 6.4k; 8.7k | 6.51k (`wipe_test_preempt`, 240–900 s), 5.96k (`sweep_pc_on_r2`); 8.78k (control r2.5, 240–2400 s), 9.08k (240–900 s) | **the entry names no source run**; not reproduced exactly; the 72k predictions' yes/no are unchanged |
+| Hit "before", `wipe_test_idle` (2026-11-01) | 0.773 | 0.771 (to the successful wipe), 0.774 (to `at_s`) | small; unexplained |
+| Adjacent-window hit noise (2026-11-01 "Stuck" redefined): 300 s rose ≥ 0.02 / p95 change; 600 s p95 | 34 % / 0.076; 0.059 | sliding 60 s from t = 0: 34.2 % / 0.075; 0.059. From t = 240 s: 35.5 % / 0.076; 0.059 | **no single reading reproduces all three**; the 600 s value, from which `hit_climb: 0.06` was set, is reproduced by both. The threshold is unchanged |
+
+- **Rounding only, not real differences:** λ = 3 wipe 0–15 s maximum 0.295 published as 0.30; long-run last third 0.62549 published as 0.6254.
+- **Every other recomputed value matches its published rounding**, including:
+  - all F values for the 2026-11-01 table except λ = 3 warm;
+  - all six cached-share values and all four overlap fractions;
+  - every wipe-test and λ = 3 / λ = 3.5 span value;
+  - the long-run thirds (both readings), the 300 s range 0.593–0.679 and the 60 s SD 0.045.
+- **No conclusion in any entry changes.** The differences are ≤ 0.01 in every share-of-pool value and ≤ 0.4 % in tokens.
+- **Rerun:** `uv run --extra analysis python -m analysis.recompute_published`.
+
+## 2026-11-04 · (7) "1408 = session median" checked against workload.py
+- **The claim:** 2026-11-02, burst design: "1408-token prompts (the session median)". It is also in the `burst_*.yaml` comments ("median session prompt").
+- **From `harness/workload.py:97-108`:** turn k's prompt is 512 + 128 + 256k tokens, so 640, 896, …, 2432 for k = 0…7. Turn 3 is 1408. For a full 8-turn session the median of its 8 prompts is 1536, between 1408 and 1664.
+- **From the written schedules** (session rows only), in five runs: `20261030-181851_long_run`, `20261101-215502_stage2_control_cap_r3_rerun`, `20261101-190602_stage2_control_cap_r3.5`, `20261102-131353_burst_r3_s1`, `20261103-145356_stage2_control_gap5_r3.5`.
+  - The median over all session requests is 1408 in all five, because sessions cut off at the end of arrivals have fewer late turns.
+  - **It is a knife edge:** the share of requests at or below 1408 tokens is 0.502–0.510.
+  - Over the measured window only (t ≥ 240 s), the median is 1664 in 3 of the 5. The mean is 1522–1534.
+- **Verdict:** the claim holds as stated, for the whole schedule's median, but only just, and not over the steady window. "About the session median" is accurate; "the median" depends on the window. The burst size is unchanged, since the configs were used.
+
+## 2026-11-04 · (8) CLAUDE.md: the first reply of each session lists the files read, in order
+- **Why:** the audit found the start-of-session reading order (`PROTOCOL.md`, then `docs/status.md`) is not checked by anything. In this session the order was not followed: the first reply read `PROTOCOL.md:1-60` after a grep, and `docs/status.md` only in the second turn.
+- **New rule in `CLAUDE.md`:** "The first reply of every session lists the files read so far, in order, including any read before the first reply."
+
+## 2026-11-04 · (9) status.md Watch sorted; data backup first
+- The Watch list is now sorted by priority. **Backup is the top item**: the Mac holds the only copy of all 104 runs (9.4 GB), per the entry above. Heat is second. Nothing was removed.
