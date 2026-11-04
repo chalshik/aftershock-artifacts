@@ -66,10 +66,18 @@ def claims(text: str) -> list[tuple[int, str, str | None]]:
     return out
 
 
-def check_runs(docs: dict[str, str], state: dict[str, str]) -> list[str]:
-    errs = []
+def pending_copy() -> set[str]:
+    """Run ids that exist only on the VM, listed in manifests/pending_copy.txt."""
+    f = REPO / "manifests" / "pending_copy.txt"
+    return {l.strip() for l in f.read_text().splitlines() if l.strip() and not l.startswith("#")} if f.exists() else set()
+
+
+def check_runs(docs: dict[str, str], state: dict[str, str], pending: set[str] = frozenset()) -> list[str]:
+    errs = [f"run_ids: {rid} is in runs/ but still listed in manifests/pending_copy.txt" for rid in sorted(pending & set(state))]
     for path, text in docs.items():
         for n, rid, c in claims(text):
+            if rid not in state and rid in pending:
+                continue
             if rid not in state:
                 errs.append(f"run_ids: {path}:{n} names {rid}, which is not in runs/")
             elif c and not (c == state[rid] or (c == "INVALID" and state[rid] == "NOCHECKS")):
@@ -221,7 +229,9 @@ def main(argv=None) -> int:
         state = run_state(a.runs_dir) if a.runs_dir.exists() else {}
         errs += check_manifest(a.runs_dir if state else None)
         if state:
-            errs += check_runs(docs, state) + check_inventory(docs.get("docs/status.md", ""), state) + check_configs(a.runs_dir)
+            pend = pending_copy()
+            notes += [f"pending copy from the VM: {r}" for r in sorted(pend - set(state))]
+            errs += check_runs(docs, state, pend) + check_inventory(docs.get("docs/status.md", ""), state) + check_configs(a.runs_dir)
         else:
             notes.append(f"run checks skipped: no run folders in {a.runs_dir}")
     for line in notes + errs:

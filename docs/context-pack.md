@@ -14,7 +14,15 @@ Living document: update it after every run or decision. Last updated: 2026-11-04
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action:** run REG-6 (approved 2026-11-04). The owner pushes `main`, the VM pulls it, then `uv run python -m harness.run configs/long_pc_off_r3_s0.yaml` and `..._s1.yaml` (about 2.2 GPU h). Then copy the run folders to the Mac, `python3 tools/manifest.py update`, and compute `uv run python -m analysis.floor` once. Separately: the owner's answers to items 18–23.
+**Next action: finish REG-6** (approved 2026-11-04; interrupted when the VM went offline at about 14:35 UTC, decisions.md [OPS] same date). Nothing is running.
+1. When the VM is back: inspect `runs/20261104-134159_long_pc_off_r3_s0` and the journal for the cause; copy the folder to the Mac (kept on record, incomplete); `python3 tools/manifest.py update`; delete its line from `manifests/pending_copy.txt`; remove the VM copy only after a checksum-verified copy.
+2. With the owner's go: `git pull` on the VM, then `uv run python -m harness.run configs/long_pc_off_r3_s0.yaml` (rerun, new run id) and `..._s1.yaml`, about 2.2 GPU h. Start them only when the GPU is idle.
+3. Copy both folders back, update the manifest, compute `uv run python -m analysis.floor` **once**, and write the `[RESULT]`. Its decision table is in the REG-6 entry.
+
+**Then, the owner's open items:**
+- items 18–23: paper layer, framing, C1 metric, canonical hit rate, backup location, push (pushed 2026-11-04);
+- the next direction (60 s gaps, a write-up, or another setup), which REG-6's result informs;
+- whether to stop microk8s on the VM during runs.
 
 **Done 2026-11-04, after the audit:**
 - REG-1 (post-trigger margin): inconclusive.
@@ -31,7 +39,9 @@ Living document: update it after every run or decision. Last updated: 2026-11-04
 - **μ from one arrival pattern:** every sweep used seed 0, whose planned load rises from 0.67–0.97 λ to 1.05–1.34 λ across the measured window; μ_off = 2 may be low (`docs/model.md` M4, open-questions A1).
 - **M1 (F + W) is 0 for 3** on tested predictions; do not use it to choose loads until revised.
 - **Single-seed controls** in every cell.
-- **The VM runs the old harness** until it pulls `main`. Items 1–8 change `harness/` and add `configs/defaults.yaml`; a run from the old checkout won't record or check them.
+- **The VM can shut down mid-run** (2026-10-31, 2026-11-01, and REG-6 seed 0 on 2026-11-04). An interrupted run is kept and rerun; a stopped sweep has no resume.
+- **REG-6 seed 0 exists only on the VM** until copied.
+- **microk8s runs on the VM**, unrecorded in `env.json` (decisions.md [OPS] 2026-11-04).
 - **Manipulation checks are off** (thresholds null in `configs/defaults.yaml`). They must be registered before any run is judged by them.
 - **Data:** one copy only (Watch, below). A backup can now be verified with `python3 tools/manifest.py verify <copy>`.
 
@@ -504,23 +514,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-04 · [DECISION] Harness and check changes, audit items 1–8 (owner-approved, future runs only)
-- **Where the new knobs live:** `configs/defaults.yaml`, merged **beneath** every config by `harness/config.py` `with_defaults`. Every new run's saved `config.yaml` records the values. `base.yaml` is not edited (rule 5). Old run folders get the same defaults when re-checked. A check whose setting is null is skipped. `load_config` moved to `harness/config.py`; `harness.run` re-exports it.
-- **1. `kv_capacity` check:** the server log's "GPU KV cache size: N tokens" must equal `checks.expected_kv_tokens`. That is null by default, so a future config must set it to use the check.
-- **2. GPU processes:** `env.json` gains `persistence_mode` and `gpu_processes` (`nvidia-smi --query-compute-apps`) at start, and `events.jsonl` gains `gpu_processes_end` before the server stops. Recorded only, not judged.
-- **3. One run at a time:** `run.py` holds an `fcntl` lock on `lock_file` (`.run.lock`, gitignored), and refuses to start if the server's host:port already answers. Before this, a foreign server answering `/health` would have been accepted (audit item 20).
-- **4. Magic numbers into config:** `load_lead_s`, `server.health_timeout_s`, `recorder.scrape_timeout_s`, `recorder.after_load_scrapes`, `stop_grace_children_s` and `checks.rate_sigma`, all at their old values. `recorder.scrape(url, timeout_s=0.9)` keeps 0.9 as its default only for callers without a config.
-- **5.** `checks.py` no longer reuses `sent`: it is now `sent_df` and `sent_ids`. No behaviour change.
-- **6.** Untracked files under `configs/` make the tree dirty (`env.json` `untracked_configs`; the `clean_git` detail shows them).
-- **7. Trigger timing:** a wipe's **first** attempt must start within `checks.max_trigger_delay_s` = 1.0 s of `trigger.at_s`. The first attempt is used because `idle` mode then retries by design.
-- **8. Manipulation checks, off until registered:** a wipe's counter hit over `wipe_window_s` after the successful call must be ≤ `wipe_max_hit`, and a burst's KV max must reach `burst_min_kv_max`. All three are null. Their values must be registered in a `[REG]` before any run is judged by them (owner's condition).
-- **Effect on recorded runs:** none; `checks.json` files are not rewritten.
-  - `harness.checks.run_checks` was re-run read-only on the 101 run folders it can read. Valid/failed matches the recorded `checks.json` in all but one.
-  - That one is `20261030-145339_sweep_pc_on_r8`, which now passes `accounting`. This is the 2026-10-30 allowance ("the new rule would pass it"), not these changes. It stays INVALID as recorded.
-  - `20261023-145613_smoke` cannot be re-checked: its config predates `gpu_busy_util_pct`. This was already so at HEAD before these changes.
-- **Tests:** `tests/test_checks.py` (+7) and `tests/test_run_guards.py` (new, 4). The old trigger fixtures gained the `t_start` field that real `trigger.jsonl` records always have. Full suite: 138 passed, 2 xfailed.
-- `harness/CLAUDE.md` updated: knobs go in `defaults.yaml`; one run at a time.
-
 ### 2026-11-04 · [REG] REG-4: verdict-code change, values a window can't give are NaN; a branch that needs one gives `unclear` (audit items 9–10, 11, N7)
 - **ID:** REG-4. The owner approved it in principle (approval list items 9–10: "one registered verdict-code change (NaN → unclear; empty window → unclear). Recheck all 43 verdicts after and log any change"). This entry fixes the exact change and the recheck. It is committed together with the change and before the recheck.
 - **Change to `load._level`** (diff in the commit):
@@ -663,3 +656,17 @@ Summary:
 - "Comparable" is removed, and the schedules' planned rates and the seed-0 burst are stated.
 - The decision is restricted to the 6 default-pool λ = 3 runs (the first draft said 12, which was wrong).
 - New tests: a burst that drains, a saturated server below its load, a capacity just above it, and NaN or a gap; 6 pass.
+
+### 2026-11-04 · [OPS] REG-6 interrupted: the VM went offline during seed 0; microk8s found on the VM
+- **Started:** `20261104-134159_long_pc_off_r3_s0` at 13:41:59 UTC from `4d30f1d`, clean tree. The GPU was idle (1 MiB, no compute processes), with 16 GB disk free. Seed 1 was queued behind it in one shell.
+- **Lost:** at about 14:35 UTC, with seed 0 at about t = 3161 s of 3600, the VM stopped answering on both addresses (Tailscale: offline; ping and SSH time out). The Mac's network was fine. The cause is not known.
+  - Earlier shutdowns were attributed to the shared GPU (decisions.md 2026-11-02).
+  - The owner had just asked to pause. The agent's stop command (to the wrapper shell only, so seed 0 would finish and seed 1 would not start) never reached the VM.
+- **State:** seed 0 is incomplete and almost certainly has no `checks.json`, so it does not count. It is **only on the VM**, not yet copied. Seed 1 never started. REG-6 has no valid run.
+- **When the VM is back, in order:**
+  1. Inspect the seed-0 folder and the VM's journal for the cause.
+  2. Copy the folder to the Mac (it stays on record, never deleted), run `python3 tools/manifest.py update`, delete its line from `manifests/pending_copy.txt` (new: the list of run ids that exist only on the VM, which `tools/check_docs.py` accepts until the folder is copied), and remove the VM copy only after a checksum-verified copy (decisions.md 2026-11-04).
+  3. Log what the journal shows.
+  4. With the owner's go, rerun `configs/long_pc_off_r3_s0.yaml` unchanged at a new run id, then `..._s1.yaml`. REG-6's stopping rule allows an invalid run to be rerun unchanged, at most twice.
+  5. Compute `uv run python -m analysis.floor` once, and write the `[RESULT]`.
+- **Found while checking the VM:** microk8s (Kubernetes: kubelite, containerd, calico) runs on the VM. It was installed 2026-10-23 at 11:49 UTC (`/var/snap/microk8s/common`, the first kubelite start), about 3 hours before the first run, so it was present for all 104 runs. It sat at load 0.1–0.2 when idle and is not pinned. It is the same for every run, so it confounds no comparison, but `env.json` doesn't record it, and it shares the cores the harness pins. Whether to stop it during runs is the owner's decision.

@@ -56,3 +56,10 @@ def test_the_repo_passes(capsys):
     """The real docs, git history and run folders. Run checks are skipped where runs/ is empty (the VM)."""
     code = C.main(["--runs-dir", str(REPO / "runs")])
     assert code == 0, capsys.readouterr().out
+
+
+def test_pending_copy_ids_are_accepted_until_copied():
+    vm_only = "20261104-134159_long_pc_off_r3_s0"
+    assert C.check_runs({"d.md": f"`{vm_only}` ran"}, STATE, {vm_only}) == []
+    assert C.check_runs({"d.md": f"`{vm_only}` ran"}, STATE) != []
+    assert C.check_runs({}, {**STATE, vm_only: "NOCHECKS"}, {vm_only})  # copied but still listed: error

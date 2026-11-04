@@ -6,7 +6,15 @@ Living document: update it after every run or decision. Last updated: 2026-11-04
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action:** run REG-6 (approved 2026-11-04). The owner pushes `main`, the VM pulls it, then `uv run python -m harness.run configs/long_pc_off_r3_s0.yaml` and `..._s1.yaml` (about 2.2 GPU h). Then copy the run folders to the Mac, `python3 tools/manifest.py update`, and compute `uv run python -m analysis.floor` once. Separately: the owner's answers to items 18–23.
+**Next action: finish REG-6** (approved 2026-11-04; interrupted when the VM went offline at about 14:35 UTC, decisions.md [OPS] same date). Nothing is running.
+1. When the VM is back: inspect `runs/20261104-134159_long_pc_off_r3_s0` and the journal for the cause; copy the folder to the Mac (kept on record, incomplete); `python3 tools/manifest.py update`; delete its line from `manifests/pending_copy.txt`; remove the VM copy only after a checksum-verified copy.
+2. With the owner's go: `git pull` on the VM, then `uv run python -m harness.run configs/long_pc_off_r3_s0.yaml` (rerun, new run id) and `..._s1.yaml`, about 2.2 GPU h. Start them only when the GPU is idle.
+3. Copy both folders back, update the manifest, compute `uv run python -m analysis.floor` **once**, and write the `[RESULT]`. Its decision table is in the REG-6 entry.
+
+**Then, the owner's open items:**
+- items 18–23: paper layer, framing, C1 metric, canonical hit rate, backup location, push (pushed 2026-11-04);
+- the next direction (60 s gaps, a write-up, or another setup), which REG-6's result informs;
+- whether to stop microk8s on the VM during runs.
 
 **Done 2026-11-04, after the audit:**
 - REG-1 (post-trigger margin): inconclusive.
@@ -23,7 +31,9 @@ Living document: update it after every run or decision. Last updated: 2026-11-04
 - **μ from one arrival pattern:** every sweep used seed 0, whose planned load rises from 0.67–0.97 λ to 1.05–1.34 λ across the measured window; μ_off = 2 may be low (`docs/model.md` M4, open-questions A1).
 - **M1 (F + W) is 0 for 3** on tested predictions; do not use it to choose loads until revised.
 - **Single-seed controls** in every cell.
-- **The VM runs the old harness** until it pulls `main`. Items 1–8 change `harness/` and add `configs/defaults.yaml`; a run from the old checkout won't record or check them.
+- **The VM can shut down mid-run** (2026-10-31, 2026-11-01, and REG-6 seed 0 on 2026-11-04). An interrupted run is kept and rerun; a stopped sweep has no resume.
+- **REG-6 seed 0 exists only on the VM** until copied.
+- **microk8s runs on the VM**, unrecorded in `env.json` (decisions.md [OPS] 2026-11-04).
 - **Manipulation checks are off** (thresholds null in `configs/defaults.yaml`). They must be registered before any run is judged by them.
 - **Data:** one copy only (Watch, below). A backup can now be verified with `python3 tools/manifest.py verify <copy>`.
 

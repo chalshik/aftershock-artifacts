@@ -1152,3 +1152,17 @@ Summary:
 - "Comparable" is removed, and the schedules' planned rates and the seed-0 burst are stated.
 - The decision is restricted to the 6 default-pool λ = 3 runs (the first draft said 12, which was wrong).
 - New tests: a burst that drains, a saturated server below its load, a capacity just above it, and NaN or a gap; 6 pass.
+
+## 2026-11-04 · [OPS] REG-6 interrupted: the VM went offline during seed 0; microk8s found on the VM
+- **Started:** `20261104-134159_long_pc_off_r3_s0` at 13:41:59 UTC from `4d30f1d`, clean tree. The GPU was idle (1 MiB, no compute processes), with 16 GB disk free. Seed 1 was queued behind it in one shell.
+- **Lost:** at about 14:35 UTC, with seed 0 at about t = 3161 s of 3600, the VM stopped answering on both addresses (Tailscale: offline; ping and SSH time out). The Mac's network was fine. The cause is not known.
+  - Earlier shutdowns were attributed to the shared GPU (decisions.md 2026-11-02).
+  - The owner had just asked to pause. The agent's stop command (to the wrapper shell only, so seed 0 would finish and seed 1 would not start) never reached the VM.
+- **State:** seed 0 is incomplete and almost certainly has no `checks.json`, so it does not count. It is **only on the VM**, not yet copied. Seed 1 never started. REG-6 has no valid run.
+- **When the VM is back, in order:**
+  1. Inspect the seed-0 folder and the VM's journal for the cause.
+  2. Copy the folder to the Mac (it stays on record, never deleted), run `python3 tools/manifest.py update`, delete its line from `manifests/pending_copy.txt` (new: the list of run ids that exist only on the VM, which `tools/check_docs.py` accepts until the folder is copied), and remove the VM copy only after a checksum-verified copy (decisions.md 2026-11-04).
+  3. Log what the journal shows.
+  4. With the owner's go, rerun `configs/long_pc_off_r3_s0.yaml` unchanged at a new run id, then `..._s1.yaml`. REG-6's stopping rule allows an invalid run to be rerun unchanged, at most twice.
+  5. Compute `uv run python -m analysis.floor` once, and write the `[RESULT]`.
+- **Found while checking the VM:** microk8s (Kubernetes: kubelite, containerd, calico) runs on the VM. It was installed 2026-10-23 at 11:49 UTC (`/var/snap/microk8s/common`, the first kubelite start), about 3 hours before the first run, so it was present for all 104 runs. It sat at load 0.1–0.2 when idle and is not pinned. It is the same for every run, so it confounds no comparison, but `env.json` doesn't record it, and it shares the cores the harness pins. Whether to stop it during runs is the owner's decision.
