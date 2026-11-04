@@ -23,8 +23,8 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
 | Judged window | The last 600 s of a 1500 s watch after the trigger ends, against the 600 s before it |
 | bad_baseline | Baseline percent fast < 0.98. The run says nothing |
 | recovered | Percent fast ≥ baseline − 0.02, hit ≥ baseline − 0.06, mean waiting ≤ baseline + 1 |
-| slow_drain | Any sign of recovery: hit up ≥ 0.06, percent fast up ≥ 0.05, or a queue that would empty within 3600 s |
-| stuck | Percent fast ≤ baseline − 0.10 and hit ≤ baseline − 0.06, with no sign of recovery |
+| slow_drain | Any one sign of recovery: hit up ≥ 0.06, percent fast up ≥ 0.05, or a queue that would empty within 3600 s. The plan asks for all three signs (deviation, §6) |
+| stuck | Percent fast ≤ baseline − 0.10 and hit ≤ baseline − 0.06, with no sign of recovery. A line that shrinks too slowly to empty within 3600 s counts; the plan says "flat or growing" (deviation, §6) |
 | unclear | Anything else; never rounded to another verdict |
 
 **Support for a metastable failure at a load: all six must hold** (decisions.md 2026-11-01):
@@ -39,6 +39,8 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
 
 **Against the hypothesis:** the plan says only: "If no load    gets stuck even after shrinking the KV pool, that is a result too: write down the conditions tested and why the loop did not hold."
 - **[new 2026-11-04]** A negative result is stated only for the conditions tested: setups, triggers, sizes, loads and seeds. It never says "vLLM cannot fail this way". A result is negative for a setup when every valid trigger run at its healthy loads is `recovered` or `slow_drain`, none is `stuck`, and the ramp shows no gap.
+- **[new 2026-11-04]** By that rule only the default pool with 20 s gaps is negative. The 72,480-token pool and the 5 s-gap setup had no ramp, so they are reported as "no stuck run", not as negative.
+- **[new 2026-11-04]** Before a negative is stated for a setup, the feasibility gate (`docs/process.md` §4, `docs/model.md` M2) says whether a stuck state was possible at its test loads at all. If it was not, the negative says only that those loads recover.
 
 ## 4. System setup
 
@@ -57,7 +59,7 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
 
 ## 5. Procedure
 
-1. **Capacity per setup:** 900 s sweeps with caching on and off. μ is the highest λ with a valid run, throughput ≥ 0.95 λ and waiting slope ≤ 0.01 req/s².
+1. **Capacity per setup:** 900 s sweeps with caching on and off, seed 0. μ is the highest λ with a valid run, throughput ≥ 0.95 λ and waiting slope ≤ 0.01 req/s (written "req/s²" before 2026-11-04; the number is unchanged). Every sweep shares seed 0's arrival pattern, whose planned load rises through the measured window (`docs/model.md` M4).
 2. **Test loads:** λ inside μ_off < λ < μ_warm whose no-trigger control is `recovered`.
 3. **Shock runs:** 2400 s (2520 s for a burst), trigger at t = 900 s, seeds 1–3, plus seeds 4–5 if seeds disagree.
    - **Cache wipe:** `POST /reset_prefix_cache?reset_running_requests=true`, which preempts running requests.
@@ -67,7 +69,8 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
    - client lag p99 ≤ 50 ms
    - no errors, and accounting matches vLLM's counters
    - recorder intact
-   - GPU steady: no HW throttle sample, SW thermal ≤ 5 %
+   - recorder: no counter decrease, no failed scrape, scrape gap ≤ 2 s
+   - GPU steady: no HW throttle sample, SW thermal ≤ 5 %, busy SM-clock CV ≤ 5 %
    - arrival rate within tolerance
    - clean git
    - the trigger fired as specified
@@ -89,10 +92,16 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
 | Burst runs are 2520 s against 2400 s controls | A stuck burst run would need a matching control | 2026-11-02 |
 | The caching-off burst control is undefined | λ = 3 with caching off is already failing | 2026-11-01 |
 | VM copies of runs removed after a verified copy | Disk space; the Mac now holds the canonical copy | 2026-11-04 |
+| `slow_drain` needs any one sign, not all three; `stuck` accepts a line too slow to empty within 3600 s | Noise in single signs; a slowly shrinking line is not recovery. Set before any Stage 2 verdict | 2026-11-01 ("Stuck" redefined) |
+| `throughput` changed from arrivals that completed to completions per second | The plan's definition; changed **after** the step 4 sweep results, μ_warm unchanged | 2026-10-30 |
+| `accounting` allows requests cut off after a first token | Changed **after** `sweep_pc_on_r8` failed it; that run stays invalid | 2026-10-30 |
+| `base.yaml` edited after the first smoke run used it | `gpu_steady` refined during harness debugging; the run stays invalid | 2026-10-23 |
+| One no-trigger control per load, seed 1 only | Cost; shock seeds 2–3 have no same-schedule control | 2026-11-01 |
+| No ramp at the 72,480-token pool or with 5 s gaps | Not registered; so neither setup is negative by §3 | 2026-11-04 (audit) |
 
 ## 7. Current result (details in `docs/status.md`)
 
-Stuck in 0 of 30 valid shock runs across two KV pools and two turn gaps; no ramp gap. Untested:
+Stuck in 0 of 3 in each of 10 cells (setup × trigger × load), each with a one-sided 95 % upper bound of 0.63 on the stuck probability; no ramp gap at the default pool. Pooled, 0 of 30 bounds a common probability at 0.095, only under the assumption that all cells share one (`docs/process.md` §5). Whether these loads could get stuck at all is untested (`docs/model.md` M2). Untested:
 - triggers 3–5 (power cap, engine restart, popularity shift)
 - larger bursts
 - 60 s turn gaps

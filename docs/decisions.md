@@ -655,3 +655,13 @@ The nine entries below come from a read-only audit of the repo, done before any 
 - **Also in definitions.md:** "goodput" is marked ⚠. In this repo it is a synonym of percent fast (FILE(docs/experiment-plan.md:205)); the owner's paper notes use it for completions/s (BELIEF, outside the repo). Until the owner chooses the C1 metric, the docs say "percent fast" or "completions/s". New entries: rule J, "throughput (completion rate c)", "capacity loss", and "post-trigger margin" (defined, not computed).
 - **analysis/CLAUDE.md** now names both percent-fast computations instead of "per arrival second" (audit finding 10), and forbids computing an analysis that a pending `[REG]` covers.
 - **Rule that would have caught it:** J (single definitions, with units).
+
+## 2026-11-04 · [CORR] PROTOCOL: incomplete check list and deviations; which setups are negative
+- **What was wrong** (audit findings 6, 7, 8, N16):
+  - §5 left out the recorder check and the SM-clock CV limit (FILE(harness/checks.py:64)).
+  - §6 omitted these deviations: `slow_drain` needs one sign and `stuck` accepts a slowly shrinking line (2026-11-01, before any Stage 2 verdict); `throughput` redefined (2026-10-30, **after** the step 4 results); the `accounting` allowance (2026-10-30, **after** `20261030-145339_sweep_pc_on_r8` failed it); `base.yaml` edited after the first smoke run used it; single-seed controls; no ramp at the 72,480-token pool or with 5 s gaps.
+  - By §3's own negative-result rule (itself written after results), only the default pool with 20 s gaps is negative. The only ramps, `20261103-043121_ramp_d300` and `20261103-053730_ramp_d600`, ran there. The other two setups are "no stuck run".
+  - §7 pooled 30 runs without stating the assumption.
+- **Since when:** PROTOCOL.md was created 2026-11-04.
+- **Effect:** no verdict changes. The result's statement narrows, and §3 gains a rule: a negative is stated for a setup only after the feasibility gate (`docs/process.md` §4) has said whether a stuck state was possible at its loads. The gate has not been run.
+- **Approval:** the study owner, with the audit proposal.
