@@ -673,3 +673,9 @@ The nine entries below come from a read-only audit of the repo, done before any 
 - **Choices made where the request needed one** (proposal, "Where I disagree"): one-sided 95 % Clopper–Pearson bounds by default, always stated; unregistered descriptive findings use `[RESULT]` with "Registration: none"; old entries are not retagged; a decisions entry is a record, not evidence.
 - **Owner's decisions left open:** where the paper layer lives; yes/no question or thesis; C1 metric; canonical hit rate.
 - From this entry on, every heading carries exactly one tag.
+
+## 2026-11-04 · [DECISION] Provenance tools and the session-start hook
+- **`tools/check_docs.py`** (stdlib only): run ids named in the docs exist; validity claims match `checks.json`; status.md's run inventory matches `runs/`; heading tags, and `RUN(...)` in every `[RESULT]`; decisions.md append-only from `cfc18da`; `FILE(path:line)` targets exist; the context pack is current; no used config changed after use, with one named exception (`configs/base.yaml`, `20261023-145613_smoke`, logged 2026-10-23). Run by `uv run pytest` (`tests/test_check_docs.py`); run checks are skipped where `runs/` is empty (the VM).
+- **`tools/context_pack.py`** writes `docs/context-pack.md`, which `.claude/settings.json` forbids editing by hand.
+- **SessionStart hook** (`.claude/settings.json`) prints `context_pack.py --digest`. Claude Code caps SessionStart context at 10,000 characters and sets `CLAUDE_PROJECT_DIR` for hook commands (Claude Code docs, hooks page, read 2026-11-04). The pack is about 50,000 characters, so the hook prints a digest under 9,500 and the agent still reads the pack.
+- **`analysis/stats.py`:** `cp_upper` (exact Clopper–Pearson) and `cell`, with tests.

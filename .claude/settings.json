@@ -5,7 +5,22 @@
       "Write(runs/**)",
       "Bash(rm -rf runs*)",
       "Bash(uv add vllm*)",
-      "Bash(uv lock --upgrade*)"
+      "Bash(uv lock --upgrade*)",
+      "Edit(docs/context-pack.md)",
+      "Write(docs/context-pack.md)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && python3 tools/context_pack.py --digest"
+          }
+        ]
+      }
     ]
   }
 }
