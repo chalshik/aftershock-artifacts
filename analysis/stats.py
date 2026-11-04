@@ -27,13 +27,13 @@ def cell(k: int, n: int) -> str:
 
 
 def _poisson_cdf(k: int, mu: float) -> float:
-    from math import exp
-    term, total = exp(-mu), 0.0
-    for i in range(k + 1):
-        if i:
-            term *= mu / i
-        total += term
-    return total
+    """P(X <= k) for X ~ Poisson(mu), summed in log space so that exp(-mu) cannot underflow for large mu."""
+    from math import exp, lgamma, log
+    if mu <= 0:
+        return 1.0
+    logs = [-mu + i * log(mu) - lgamma(i + 1) for i in range(k + 1)]
+    top = max(logs)
+    return min(1.0, exp(top) * sum(exp(x - top) for x in logs))
 
 
 def poisson_rate_upper(n: int, t: float, conf: float = 0.95) -> float:

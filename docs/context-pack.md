@@ -14,11 +14,11 @@ Living document: update it after every run or decision. Last updated: 2026-11-04
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action:** the owner's review of the agent-setup audit (decisions.md 2026-11-04). After that, REG-1, the post-trigger margin analysis of existing runs (no GPU), which feeds the feasibility gate before any further shock matrix. Nothing is running.
+**Next action:** the owner's decision on a deliberate cold-overload run, the only way left to test assumption A (REG-1 was inconclusive; decisions.md 2026-11-04). Other open choices: 60 s gaps or a write-up; paper layer; C1 metric; canonical hit rate. Nothing is running.
 
 ## Open risks
 
-- **Feasibility:** the test loads may lie outside any real danger zone. Cache off saturates at about 3.5 completions/s and cache on still completes 4.185 at λ = 10, both above the healthy test loads at 20 s gaps (`docs/model.md` M2). Untested until REG-1.
+- **Feasibility:** the test loads may lie outside any real danger zone. Cache off saturates at about 3.5 completions/s and cache on still completes 4.185 at λ = 10, both above the healthy test loads at 20 s gaps (`docs/model.md` M2). REG-1 (0 GPU h) was inconclusive: no trigger so far held a cold backlog, so the floor is still unmeasured.
 - **μ from one arrival pattern:** every sweep used seed 0, whose planned load rises from 0.67–0.97 λ to 1.05–1.34 λ across the measured window; μ_off = 2 may be low (`docs/model.md` M4, open-questions A1).
 - **M1 (F + W) is 0 for 3** on tested predictions; do not use it to choose loads until revised.
 - **Single-seed controls** in every cell.
@@ -346,10 +346,18 @@ All five come from one rule, `docs/decisions.md:272-277`, restated at `PROTOCOL.
 ## Derived quantities
 
 Added 2026-11-04 with their code. Each is the reading that reproduces the published values (`docs/decisions.md`, 2026-11-04 "Derived figures moved into analysis/").
+The original code, recovered verbatim from session transcripts, is in `analysis/recovered/` (INDEX.md there). Where its reading differs from the function below, the entry says so; the function stays the definition (decisions.md 2026-11-04, "[CORR] Derived-figure differences explained by the recovered originals").
 
 ### W (working set)
 - **Text:** "sum of the latest prompt over active sessions from the schedule". `docs/decisions.md:248`.
 - **Code:** `derived.working_set` (`derived.py:63`). A session counts as active from its first planned turn to its last.
+- **Original reading:** the same rule sampled every 5 s from t = 600 s (every 10 s for the 5 s-gap comparison), against a 1 s grid here. This explains the ≤ 0.4 % differences in published W values.
+
+### session median (prompt length)
+- **Text:** the p50 of `prompt_len` over every scheduled **session** request of a run's whole schedule (`schedule.parquet`): warm-up included, sessions cut off at the end of arrivals included, burst requests excluded. Computed as pandas `median` (linear interpolation).
+- **Value:** 1408 tokens (turn 3) in every schedule checked. It is a knife edge: the share of session requests at or below 1408 is 0.502–0.510 (decisions.md 2026-11-04 (7)), because truncated sessions add early turns. A full 8-turn session alone has median 1536, and over the measured window (t ≥ 240 s) the median is 1664 in 3 of 5 schedules.
+- **Used by:** the burst size, "1408-token prompts (the session median)" (decisions.md 2026-11-02) and the `burst_*.yaml` comments ("median session prompt").
+- **Code:** none; a one-line count on `schedule.parquet`.
 
 ### F (running-batch footprint)
 - **Text:** no definition in the original entry (`docs/decisions.md:248-250`).
@@ -370,6 +378,16 @@ Added 2026-11-04 with their code. Each is the reading that reproduces the publis
 ### post-trigger margin
 - **Text:** completions − λ over a span after a trigger's end. Defined with its windows in the registration REG-1 (`docs/model.md` M2), **not yet computed**.
 - **Code:** none yet; to be written only after REG-1 is approved.
+
+## Used configs that cannot be fixed (rule 5)
+
+Used configs are never edited. Their known defects are recorded here instead.
+
+### `configs/stage2_base.yaml`
+- **Unit:** the comment at `:21` says "req/s^2". The unit is req/s (queue slope, above; decisions.md 2026-11-04 [CORR]).
+- **Verdict block (`:10-22`):** it lacks `pf_climb`, `hit_climb` and `drain_horizon_s`, which `load.verdict` needs (`load.py:192-193`). It keeps the retired `q_slope`, `climb` and `end_s: 300`.
+- **Effect:** the runs that use it directly cannot be judged by `load.verdict`: `20261101-144335_wipe_test_preempt`, `20261101-145940_wipe_test_idle`, and the stopped `20261101-151707_stage2_control_r1.5`. The wipe tests fail even before the missing keys. They are 900 s runs with the wipe at 450 s, so the 600 s baseline and the 1500 s watch do not fit, and `verdict` raises on an empty window. None of these runs was meant to be judged (decisions.md 2026-11-01, "Live wipe test").
+- Every judged Stage 2 run gets the missing keys from `configs/stage2_cap_base.yaml:7-13`.
 
 ---
 
@@ -413,7 +431,7 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **Assumption A** (BELIEF, untested): no post-trigger state completes less than the λ = 10 overload state. Under A, c(s*) ≥ 4.185 > 3.5, so no stuck state is possible at any healthy test load of this setup, and the 12 default-pool shock runs at λ = 3 and 3.5 were bound to recover. The other setups need their own inputs (below).
 - **Weaker floor** (BELIEF): a state with some cache hits completes no less than the cache-off saturation, about 3.5 req/s. Under this floor alone, λ = 3 cannot be stuck; λ = 3.5 is at the edge.
 - **Per setup:** 72,480-token pool: cache on at λ = 5 completes 4.567 (RUN(20261102-194816_sweep_kv72k_pc_on_r5, load.summarize)), cache off at λ = 4 3.449 (RUN(20261102-214207_sweep_kv72k_pc_off_r4, load.summarize)); no deep-overload run, so c(s*) has no measured floor. 5 s gaps: cache on keeps up to λ = 7 (7.185, RUN(20261103-132357_sweep_gap5_pc_on_r7, load.summarize)) and cache off was not swept past 3.5, so neither bound is measured.
-- **Test of A:** the post-trigger margin analysis (completions − λ over 0–60 s and 60–180 s after each trigger end, with h, KV, N and Q), to be registered as REG-1 before it is computed.
+- **Test of A:** REG-1 (2026-11-04) found no span that was backlogged, cold and burst-free at once, so A is **untested**. Wipes built no backlog; bursts were cold and backlogged only while their own requests still completed. Testing A needs a run that holds a cold backlog for minutes (GPU, owner).
 
 ## M3. Self-refill (why a single wipe may not hold)
 
@@ -440,7 +458,7 @@ Every model used to choose a run or read a result, with its equations, the evide
 | 6 | 2026-11-03 | (ramp registration) | "A gap at 300 s only … is expected" (backlog from the peak) | No gap at either dwell at λ ≤ 3.5; λ = 4.5 down at 300 s had percent fast 0.526 but no hit drop | Miss (no lag gap either) | RUN(20261103-043121_ramp_d300, load.ramp_table), RUN(20261103-053730_ramp_d600, load.ramp_table) |
 | 7 | 2026-11-03 | W at 5 s gaps (0.19 vs 0.77 of the pool, λ = 3) | Getting stuck is less likely at 5 s gaps | Stuck in 0 of 12 | Hit, but not discriminating: 20 s gaps also gave 0 of 18 | `20261103-161947_burst_gap5_r4.5_s1` … `20261104-000416_wipe_gap5_r3.5_s3` |
 | 8 | 2026-11-03 | sweeps | 5 s gaps: recovery, because prefixes survived overload | Stuck in 0 of 12 | Hit | as row 7 |
-| 9 | — | M2 | Post-trigger margin: registration pending (REG-1) | — | Open | — |
+| 9 | 2026-11-04 | M2 (REG-1) | ≤ 2 of 12 default-pool burst spans and 0 of 12 wipe spans qualify; outcome most likely inconclusive (≈ 0.6); qualifying c in 4.3–4.7 | 0 of 24 qualify (wipes never backlogged; burst spans never burst-free); inconclusive | Hit on qualification and outcome; c range not testable | RUN(the 30 REG-1 runs, margin.reg1_table) |
 
 **Record so far:** M1 is 0 for 3 on tested predictions (rows 1, 3, 4). It should not be used to choose loads again until it is revised and its revision predicts the existing runs it missed.
 
@@ -456,7 +474,7 @@ Every model used to choose a run or read a result, with its equations, the evide
 | S4 | Can cached prefixes be protected from eviction, for the protected-prefixes control? | **Open, not investigated.** Not needed so far: no stuck run exists to break | — |
 | S6 | Does turn spacing matter? (try at least two turn gaps) | **Partly answered.** At 5 s gaps the cache is worth far more (μ_warm 6 vs 4; hit 0.79 vs 0.53 at λ = 4, which mixes two hit computations; like for like 0.79 vs 0.49 or 0.80 vs 0.53, see decisions.md 2026-11-04 (4)) but is much harder to crowd out, and every shock recovered (0 of 12). At 20 s, also no stuck run (0 of 18). Longer gaps (about 60 s) are untested | decisions.md 2026-11-03 and 2026-11-04 |
 | A1 | What is the sustainable completion rate with caching off at λ = 3, default pool, 20 s gaps? μ_off = 2 rests on one 900 s run whose last 150 s carried 3.52 req/s of planned load, above the cache-off saturation of about 3.5 | **Open.** Cheapest test: other seeds or a longer cache-off run (GPU, owner) | `20261030-161749_sweep_pc_off_r3` `schedule.parquet`; `docs/model.md` M4 |
-| A2 | Assumption A: does any post-trigger state complete less than the λ = 10 overload state (4.185 req/s)? | **Open.** REG-1 (post-trigger margin), pending approval | `docs/model.md` M2 |
+| A2 | Assumption A: does any post-trigger state complete less than the λ = 10 overload state (4.185 req/s)? | **Open; REG-1 inconclusive** (0 of 24 default-pool spans qualified). The existing triggers never held a cold backlog; testing A needs a deliberate cold-overload run (GPU, owner) | `docs/model.md` M2 |
 | A3 | Are the dips in the no-trigger controls at λ = 4 (default pool) and λ = 3.5 (72k pool) eviction cycles of the Ao et al. kind? | **Open.** Needs a registered analysis of `20261101-202808_stage2_control_cap_r4` and `20261102-225146_stage2_control_kv72k_r3.5` | — |
 | A4 | Is the cache-on capacity loss under overload (4.735 → 4.185 req/s) prefix eviction or preemption recompute? | **Open.** Needs a registered analysis (preemptions and `prompt_tokens_by_source` per completion, cache on vs off, matched λ) | — |
 | A5 | How much of client TTFT is client receive lag? `vllm:time_to_first_token_seconds` is recorded and never compared | **Open** | `metrics.jsonl` of any run |
@@ -469,102 +487,61 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-04 · [CORR] PROTOCOL: incomplete check list and deviations; which setups are negative
-- **What was wrong** (audit findings 6, 7, 8, N16):
-  - §5 left out the recorder check and the SM-clock CV limit (FILE(harness/checks.py:64)).
-  - §6 omitted these deviations: `slow_drain` needs one sign and `stuck` accepts a slowly shrinking line (2026-11-01, before any Stage 2 verdict); `throughput` redefined (2026-10-30, **after** the step 4 results); the `accounting` allowance (2026-10-30, **after** `20261030-145339_sweep_pc_on_r8` failed it); `base.yaml` edited after the first smoke run used it; single-seed controls; no ramp at the 72,480-token pool or with 5 s gaps.
-  - By §3's own negative-result rule (itself written after results), only the default pool with 20 s gaps is negative. The only ramps, `20261103-043121_ramp_d300` and `20261103-053730_ramp_d600`, ran there. The other two setups are "no stuck run".
-  - §7 pooled 30 runs without stating the assumption.
-- **Since when:** PROTOCOL.md was created 2026-11-04.
-- **Effect:** no verdict changes. The result's statement narrows, and §3 gains a rule: a negative is stated for a setup only after the feasibility gate (`docs/process.md` §4) has said whether a stuck state was possible at its loads. The gate has not been run.
-- **Approval:** the study owner, with the audit proposal.
+### 2026-11-04 · [CORR] REG-1: Poisson upper bound underflowed for large counts
+- **What was wrong:** `analysis/stats.py` `poisson_rate_upper` summed `exp(-mu)` terms directly. Near mu ≈ 745 that underflows to 0, and the bound collapsed to n / t or a stale value. In the REG-1 output, four spans with n = 714–861 showed `c_upper` ≤ c + 0.26 (e.g. n = 861: 7.175 against a correct 7.765, DERIVED from the fixed function).
+- **Since when:** the function was added with REG-1 (`c83751c`).
+- **Which results it affects:** none. The REG-1 outcome rests on no span qualifying, and qualification uses neither c nor `c_upper`. No span had a wrong bound and qualified.
+- **Re-check done:** the CDF is now summed in log space; `tests/test_stats.py` gains a large-count test (bounds rise with n and match the normal approximation within 2). REG-1 is not rerun (its stopping rule); its recorded numbers stand, with this defect noted.
+- **Rule that would have caught it:** F asked for a trace on which the verdict is wrong, but not for one on which a helper is wrong at the scale of the real data. Tests of numeric helpers now include counts at the real scale (process.md §7 row added).
 
-### 2026-11-04 · [DECISION] Agent rules A–J installed (owner's request and approval)
-- **CLAUDE.md** is now a 60-line index: role (A), evidence tags (B), authority (C), session protocol (D), and short forms of E–J. The full text is in the new `docs/process.md`: templates, adversarial review, feasibility gate, statistics, provenance, a table of past errors and the rule that now catches each, the stage-end rule, data.
-- **New `docs/model.md`:** M1 (F + W), M2 (completion-rate margin), M3 (self-refill), M4 (capacity measured on one arrival pattern), and a prediction ledger. M1 is 0 for 3 on its tested predictions and is not to be used to choose loads until revised.
-- **New `docs/claims.md`:** C1 and C2 with test, support, refutation and status. C3–C9 stay in the owner's Paper Plan v2 for now.
-- **Choices made where the request needed one** (proposal, "Where I disagree"): one-sided 95 % Clopper–Pearson bounds by default, always stated; unregistered descriptive findings use `[RESULT]` with "Registration: none"; old entries are not retagged; a decisions entry is a record, not evidence.
-- **Owner's decisions left open:** where the paper layer lives; yes/no question or thesis; C1 metric; canonical hit rate.
-- From this entry on, every heading carries exactly one tag.
+### 2026-11-04 · [CORR] Hit rates from different computations compared again: λ = 7 at 5 s gaps vs λ = 5 at 20 s
+- **What was wrong:** 2026-11-03 "Capacity with 5 s turn gaps": "cached prefixes survive (hit 0.757 at λ = 7 against about 0.42 at λ = 5 with 20 s gaps)".
+  - 0.757 is a mean of per-scrape ratios: RUN(20261103-132357_sweep_gap5_pc_on_r7, load.summarize).
+  - "About 0.42" is a counter ratio: either the measured window of the λ = 5 sweep, 0.424 RUN(20261030-141658_sweep_pc_on_r5, load._level over 240–900 s), or the ramp peak, 0.419 RUN(20261103-043121_ramp_d300, load.ramp_table) / 0.407 RUN(20261103-053730_ramp_d600, load.ramp_table). Which one was meant is not recorded.
+- **Like for like:**
+  - mean of ratios 0.757 vs 0.378 (load.summarize);
+  - counter over the measured window 0.785 vs 0.424 (load._level over 240–900 s);
+  - whole run 0.785 vs 0.446 (load.whole_run_hit_rate).
+- **Source of the default-pool values in the 2026-11-02 72k comparison (0.767 / 0.661 / 0.525):** the original F script printed `hit` as first scrape to last over the whole run (`analysis/recovered/2026-11-01T173632_toolu_015jLzJdYAJ9HPDZ9RCwj2UE.out.txt`). This is what `load.whole_run_hit_rate` computes, as found in entry (4) above.
+- **Pool effect, one method at a time,** λ = 2 / 3 / 4, 72,480-token pool minus default pool:
+  - counter over the measured window: 0.686 − 0.765, 0.526 − 0.644, 0.415 − 0.510, so −0.079 / −0.118 / −0.095. RUN(20261102-182839_sweep_kv72k_pc_on_r2 … 20261102-193218_sweep_kv72k_pc_on_r4, load._level over 240–900 s) and RUN(20261030-132844_sweep_pc_on_r2 … 20261030-140051_sweep_pc_on_r4, load._level over 240–900 s).
+  - mean of ratios: −0.074 / −0.116 / −0.093. Whole run: −0.069 / −0.109 / −0.095 (entry (4)).
+  - By any single method the pool lowers hit by about 0.07–0.12, not "0.10–0.15".
+- **Since when:** 2026-11-02 (pool comparison), 2026-11-03 (λ = 7 vs λ = 5).
+- **Which results it affects:** none. Every method keeps the direction: the cache holds up better under overload at 5 s gaps, and the smaller pool lowers hit. No verdict uses these values. The old entries stay as written.
+- **Re-check done:** the three computations on the eight sweep runs above.
+- **Rule that would have caught it:** J (every quoted hit names its computation).
 
-### 2026-11-04 · [DECISION] Provenance tools and the session-start hook
-- **`tools/check_docs.py`** (stdlib only): run ids named in the docs exist; validity claims match `checks.json`; status.md's run inventory matches `runs/`; heading tags, and `RUN(...)` in every `[RESULT]`; decisions.md append-only from `cfc18da`; `FILE(path:line)` targets exist; the context pack is current; no used config changed after use, with one named exception (`configs/base.yaml`, `20261023-145613_smoke`, logged 2026-10-23). Run by `uv run pytest` (`tests/test_check_docs.py`); run checks are skipped where `runs/` is empty (the VM).
-- **`tools/context_pack.py`** writes `docs/context-pack.md`, which `.claude/settings.json` forbids editing by hand.
-- **SessionStart hook** (`.claude/settings.json`) prints `context_pack.py --digest`. Claude Code caps SessionStart context at 10,000 characters and sets `CLAUDE_PROJECT_DIR` for hook commands (Claude Code docs, hooks page, read 2026-11-04). The pack is about 50,000 characters, so the hook prints a digest under 9,500 and the agent still reads the pack.
-- **`analysis/stats.py`:** `cp_upper` (exact Clopper–Pearson) and `cell`, with tests.
+### 2026-11-04 · [CORR] Derived-figure differences explained by the recovered originals
+- **What was wrong:** entry (6) above says "The original code was never committed", and it lists 25 published values that the reconstruction (`analysis/derived.py`) does not reproduce, several marked "unexplained". The original code was never committed, but it was recoverable: the commands and their outputs are in the Claude Code session transcripts.
+- **Now committed:** `analysis/recovered/`, verbatim. That is 19 tool calls (command + recorded output), the scratch `judge.py` behind the long-run thirds, and `INDEX.md` (figure → file, transcript, timestamp, tool id, sha256).
+  - It is one file per tool call, not per figure: some calls print several figures, and some figures need several calls.
+  - `analysis/recompute_published.py` gains an "Original" column: the value the original printed, read from its `.out.txt`. The originals are not re-run, because several ssh to the VM or read scratch files.
+- **Result, 104 comparisons:**
+  - The original agrees with the published value in 91 rows and differs in 3. 10 rows have no recovered original.
+  - Of the 25 values the reconstruction does not reproduce, the original reproduces 18.
+- **Explained by a different reading in the original** (14 values):
+  - **W:** sampled every 5 s from 600 s (every 10 s for the 5 s-gap comparison), not every 1 s. This covers W/C p90 at λ = 2.5, W/C mean at λ = 4, the W tokens at λ = 2 / 2.5 / 3 (original 47,580 / 59,722 / 72,968), the two pool/W ratios, and 74.8k at 20 s gaps (original 74,843).
+  - **Wipe-test "before":** the 120 s before the wipe, not 240 s → wipe. Original 0.773 for `wipe_test_idle`.
+  - **Adjacent-window noise:** 60 s steps from t = 600 s, a start the reconstruction never tried. The original gives 0.34 / 0.076 / 0.059, all three.
+- **Rounding** (4 values): F_warm/C at λ = 3 (original 0.125, published 0.13), λ = 3 wipe 0–15 s max (0.295, published 0.30), long-run last third (0.6254), and (W+F_warm)/C high at λ = 4.
+- **Hand arithmetic** (3 values): (W+F)/C 0.91, 1.16 and 1.32 are sums of 2-decimal values (0.75 + 0.16, 0.75 + 0.41, 1.01 + 0.31). At the original's precision they are 0.919, 1.170 and 1.313. Every fits/holds yes/no is unchanged.
+- **Still without an original:** F_warm 6.4k and 8.7k (2026-11-02). 8.7k = 0.090 × 96,656 = 8,699, where 0.09 is the control r2.5 end-window KV printed to 2 decimals in `analysis/recovered/2026-11-01T215355_toolu_01ERXSiZtFdmg4pHCtdknqgA.out.txt`; that this is its origin is a BELIEF. 6.4k: no source found. Also not recovered: the 72k spans (0.11–0.28, 0.43), the long-run 60 s SD 0.045, and the λ = 3.5 seed-3 first minute.
+- **Canonical functions unchanged:** `derived.py` keeps its readings, and `docs/definitions.md` notes the original's reading where it differs. Aligning the functions with the originals would change a definition (rule J), so it is left for the owner.
+- **Since when:** 2026-11-04, entry (6).
+- **Which results it affects:** none. No verdict uses these values, and `hit_climb: 0.06` rests on the 600 s value 0.059, which both the original and the reconstruction reproduce.
+- **Re-check done:** `uv run --extra analysis python -m analysis.recompute_published`.
+- **Rule that would have caught it:** I (numbers only from committed functions).
 
-### 2026-11-04 · [RESULT] Sweep schedules share one rising-load pattern (audit, descriptive)
-- **Registration:** none. A look at the schedules (inputs, written before each run) during the agent-setup audit. No threshold was judged and no verdict changed.
-- **Observed:** in all 43 capacity sweeps (Stage 1, 72,480-token pool, 5 s gaps), planned arrivals are 0.67–0.97 λ in 240–390 s and 1.05–1.34 λ in 750–900 s, while the window average is 0.99–1.06 λ. RUN(every `*_sweep_*` run, `schedule.parquet` counted per span; audit scratch script, to be committed as a function before any further use). Every sweep used seed 0, and session starts come from the same random stream at every rate, so the pattern repeats.
-- **λ = 3:** 2.49 req/s in 240–390 s and 3.52 req/s in 750–900 s, RUN(20261030-161749_sweep_pc_off_r3, schedule.parquet). The cache-on and both 72k runs at λ = 3 have this same schedule.
-- **Cache-off completions** at λ = 4, 5, 6, 8: 3.453, 3.511, 3.521, 3.533 req/s, RUN(20261030-163358_sweep_pc_off_r4 … 20261030-173356_sweep_pc_off_r8, load.summarize).
-- **Alternatives still open:**
-  1. μ_off = 2 is low. The cache-off λ = 3 run failed on slope (0.0130) because its last 150 s carried load at cache-off saturation, not because λ = 3 is unsustainable without the cache.
-  2. λ = 3 is truly unsustainable without the cache. The 72k cache-off failure (slope 0.0211) is no second sample: same schedule.
-  - Separating evidence: a cache-off run at λ = 3 with other seeds or a longer window (GPU, owner's decision; open-questions A1).
-- **Also:** the 2026-10-30 hit drift at λ = 3 (thirds 0.674, 0.625, 0.585; "cause not established") coincides with this rising load. Candidate explanation, not tested.
-- **Decision taken:** none. μ values stand as measured by their rule; `docs/status.md` (Open risks) and `docs/model.md` (M4) carry the risk. Prediction ledger unchanged.
+### 2026-11-04 · [CORR] A used config that cannot be fixed: stage2_base.yaml
+- **What was wrong:** the verdict block of `configs/stage2_base.yaml` (FILE(configs/stage2_base.yaml:10)) lacks `pf_climb`, `hit_climb` and `drain_horizon_s`, which `load.verdict` needs (FILE(analysis/load.py:192)). It keeps the retired `q_slope`, `climb` and `end_s: 300`. Its comment still says "req/s^2" (FILE(configs/stage2_base.yaml:21)).
+- **Since when:** 2026-11-01, when `stage2_cap_base.yaml` introduced the new keys (FILE(configs/stage2_cap_base.yaml:7)) and every later Stage 2 config extended that file.
+- **Which results it affects:** none. `load.verdict` cannot judge the runs that use the file directly: `20261101-144335_wipe_test_preempt`, `20261101-145940_wipe_test_idle`, and the stopped `20261101-151707_stage2_control_r1.5`. None was meant to be judged (2026-11-01, "Live wipe test"). The wipe tests fail before the missing keys are even read: they are 900 s runs with the wipe at 450 s, so the watch window is empty and `np.polyfit` raises a TypeError (`load.verdict` on `20261101-144335_wipe_test_preempt`).
+- **Re-check done:** that call, and the `extends:` chain of every config.
+- **Not changed:** the config (rule 5). Both defects are recorded in `docs/definitions.md`, "Used configs that cannot be fixed".
+- **Rule that would have caught it:** a test that resolves every used config and runs `verdict` on a synthetic trace of its shape (audit finding N15, not yet written).
 
-### 2026-11-04 · [REG] REG-1: post-trigger completion margin (tests assumption A of M2)
-- **ID:** REG-1. Nothing below has been computed on any run. **Approved by the study owner on 2026-11-04**, before any computation, and committed with `analysis/margin.py` (`post_trigger_margin`; registered settings and runs in `REG1`, driver `reg1_table`) and `tests/test_margin.py`.
-- **Question:** after each trigger ends, when the server is backlogged and the sessions' cache is cold, does it still complete at least as fast as the deepest valid cache-on overload?
-- **Claim tested:** assumption A of `docs/model.md` M2: no post-trigger state completes less than the λ = 10 overload state, c_ref = 4.185 req/s, RUN(20261030-151441_sweep_pc_on_r10, load.summarize). If A holds, no healthy test load ≤ 3.5 at the default pool with 20 s gaps could have been stuck.
-- **Definitions** (`analysis/margin.py`, `post_trigger_margin`; one clock, seconds from t0; scrapes every 1 s):
-  - **Trigger end:** `derived.trigger_times` (a wipe's first successful call `t_end`; a burst's `at_s + duration_s`).
-  - **Spans after the end:** [0, 60) s and [60, 180) s.
-  - **c:** ok completions with `t_end` in the span ÷ span length. **c_upper:** its one-sided 99 % exact Poisson upper bound (`stats.poisson_rate_upper`). 99 %, not 95 %, because about two dozen spans are judged.
-  - **share:** the sessions' own cached share, Σ `cached_tokens` ÷ Σ `prompt_tokens` over ok session requests whose first token is in the span. **share_base:** the same over the 600 s before the trigger starts.
-  - **Qualifying span:** all three of:
-    - capacity-limited: Q > 0 at every scrape;
-    - burst-free: no burst request completes in the span;
-    - cold: share ≤ share_base − 0.06, the stuck threshold.
-  - Also reported, not judged: λ, the server counter hit, KV, N, Q (mean, minimum), preemptions.
-- **Runs:** the 30 valid shock runs, listed below. Invalid runs are excluded.
-  - **Default pool, 20 s gaps** (A is defined here):
-    - wipes: `20261102-072216_wipe_preempt_r3_s1`, `20261102-053935_wipe_preempt_r3_s2`, `20261102-100744_wipe_preempt_r3_s3`, `20261102-110200_wipe_preempt_r3.5_s1`, `20261102-114305_wipe_preempt_r3.5_s2`, `20261102-122411_wipe_preempt_r3.5_s3`;
-    - bursts: `20261102-131353_burst_r3_s1`, `20261102-135701_burst_r3_s2`, `20261102-144008_burst_r3_s3`, `20261102-152316_burst_r3.5_s1`, `20261102-160625_burst_r3.5_s2`, `20261102-164933_burst_r3.5_s3`.
-  - **Reported only, no reference overload exists:**
-    - 72k pool: `20261103-015156_wipe_kv72k_r3_s1`, `20261103-023254_wipe_kv72k_r3_s2`, `20261103-031353_wipe_kv72k_r3_s3`, `20261102-234257_burst_kv72k_r3_s1`, `20261103-002556_burst_kv72k_r3_s2`, `20261103-010856_burst_kv72k_r3_s3`;
-    - 5 s gaps: `20261103-203837_wipe_gap5_r4.5_s1`, `20261103-211946_wipe_gap5_r4.5_s2`, `20261103-220054_wipe_gap5_r4.5_s3`, `20261103-224202_wipe_gap5_r3.5_s1`, `20261103-232310_wipe_gap5_r3.5_s2`, `20261104-000416_wipe_gap5_r3.5_s3`, `20261103-161947_burst_gap5_r4.5_s1`, `20261103-170255_burst_gap5_r4.5_s2`, `20261103-174604_burst_gap5_r4.5_s3`, `20261103-182912_burst_gap5_r3.5_s1`, `20261103-191220_burst_gap5_r3.5_s2`, `20261103-195529_burst_gap5_r3.5_s3`.
-- **Prediction, as numbers** (default pool):
-  1. At most 2 of the 12 burst spans qualify, because burst requests are still completing for most of them. 0 of the 12 wipe spans qualify; published peak waiting after a wipe was ≤ 9.
-  2. Every qualifying span has c between 4.3 and 4.7. None has c_upper < 4.185.
-  3. **Most likely outcome: inconclusive** (fewer than 3 qualifying spans), at a stated probability of about 0.6.
-- **Decision rule and the decision under each outcome** (default pool; counted per trigger and per run):
-  - **A contradicted:** some qualifying span has c_upper < 4.185. Let c_min be the lowest c among those spans.
-    - c_min < 3.5: a stuck state was possible in principle at loads in (c_min, 3.5]. The default-pool negative is informative there, and a registered follow-up at that λ (a longer watch or a larger shock) is proposed to the owner.
-    - c_min ≥ 3.5: A is false, but no tested load is affected. M2's window becomes (c_min, c_warm), recorded in model.md.
-  - **A supported:** no qualifying span contradicts A, and there are ≥ 3 qualifying spans from ≥ 3 distinct runs.
-    - The default-pool negative is restated as forced by capacity (M2), **for the triggers that contributed a qualifying span only**.
-    - No further shock matrix at λ ≤ 3.5 on this setup is proposed for those triggers.
-    - Any new setup must pass gate G with a measured cold completion rate.
-  - **Inconclusive** (fewer than 3 qualifying spans, or fewer than 3 runs): A stays a BELIEF. A deliberate cold-overload run is proposed to the owner (GPU). A sketch: cache wipes repeated during a sustained overload, so that both backlog and cold cache hold for minutes.
-  - **Wipes that never qualify because Q reached 0:** recorded as "the wipe built no backlog". Completions kept up with demand, which agrees with M2 but does not test A. That is evidence that the wipe never reached a state that could be stuck, and is stated as such, not as a test of the cold capacity.
-  - **72k pool and 5 s gaps:** reported as margins for gate G; no decision rests on them.
-- **Alternatives:**
-  1. Right after a burst, the running batch is already prefilled. Completions then drain a full pipeline, so c is a best case. A state that stays cold with a small batch would not be sampled. Ruled in: this tests A only for states the triggers reached.
-  2. Completions arrive in batches, so the Poisson bound understates their spread; c_upper is a floor on doubt. A contradiction therefore needs the 99 % bound below c_ref.
-  3. c_ref = 4.185 comes from one 660 s window of one run with the seed-0 schedule (decisions.md 2026-11-04 [RESULT]).
-  4. After a `preempt` wipe, `cached_tokens` on readmitted requests reflects their final admission, while the server counters exclude readmissions (S8). The two hit measures can disagree; both are reported.
-- **Stopping rule:** one pass over the 30 listed runs, after approval. No reruns, no new spans, no new thresholds.
-- **Cost:** 0 GPU hours.
-
-### Adversarial review (separate subagent; it saw only this registration's first draft, `analysis/margin.py`, `tests/test_margin.py` and `derived.trigger_times`/`hit_between`)
-
-Verbatim summary of its three answers:
-1. **A trace where the verdict is wrong.** The first draft judged "cold" from the server counters. Burst prompts (1408 random tokens) always miss, so draining burst prefills (11,264 tokens per 5 s, 0 hits) gave a span counter hit of 0.339 against a baseline of 0.598 while the sessions' cache stayed at 0.6. The span then qualified as cold with c_all = 4.5, and six such burst spans would have declared "A holds" without ever sampling a cold session state. **Reverse:** with a true capacity of 4.5, a 60 s span holds about 270 completions (±0.27 req/s), so P(c < 4.185) ≈ 0.12 per span, and with about 12 spans P(min < 4.185) ≈ 0.78. The minimum of noisy spans against a point reference, with no tolerance, would most likely report "A fails" even if A is true.
-2. **Alternatives.** For "A holds": burst dilution, and a draining, already-prefilled pipeline; both bias c upward. For "A fails": the burst-request mix in c_all, noise in the minimum, and a one-off recompute transient after a `preempt` wipe. For "inconclusive": the backlog rule is strict, and wipes that build no backlog are evidence for a margin, not a lack of evidence.
-3. **Can it change a decision?** Weakly, with skewed outcomes. "A holds" would stop wipe follow-ups on burst spans alone, which cannot represent a cold wipe state.
-   - Also found: the baseline window is silently clamped when it starts before the first scrape; a test for `t_start == t_end` cannot tell which is used; no test covers dilution, clamping or one empty scrape; the clocks and the burst-identification rule were unverified from the allowed files.
-
-**Changed because of it:**
-- "Cold" now uses the sessions' own `cached_tokens` share, not the server counters.
-- A span must be burst-free, so only session requests are counted.
-- A contradiction needs the one-sided 99 % Poisson upper bound below c_ref, not the point value.
-- Support needs ≥ 3 qualifying spans from ≥ 3 distinct runs. It is counted per trigger, and conclusions are restricted to the triggers that contributed.
-- Wipes with no backlog get their own reading.
-- The baseline-clamp check raises an error.
-- New tests cover the dilution trace, one empty scrape, a failed call before the successful one, the clamp, and the indistinguishable burst prompt (13 tests pass).
-- Clocks are checked: one monotonic clock, as `time.monotonic() − t0`, in FILE(harness/recorder.py:102), FILE(harness/loadgen.py:46) and FILE(harness/trigger.py:64). A session's turn 0 is always 512 + 128 tokens (FILE(harness/workload.py:97)).
-- The predictions were revised to the new rule before any computation: inconclusive is now the most likely outcome.
-- **Not changed:** the spans stay [0, 60) and [60, 180), as the owner specified.
+### 2026-11-04 · [DECISION] "Session median" defined; saturation threshold 0.85 (study owner)
+- **"Session median"** is now defined in `docs/definitions.md`: the p50 of prompt length over every scheduled session request of the whole schedule, truncated sessions included, burst requests excluded. The claim "1408 = the session median" (2026-11-02) is correct under this definition (entry (7)).
+  - Recount: p50 = 1408 and share ≤ 1408 = 0.508, RUN(20261101-215502_stage2_control_cap_r3_rerun, schedule.parquet).
+- **Saturation threshold:** the owner chose mean KV ≥ 0.85 for the pending drafts of the cold-state floor μ_sat,off (audit item 38) and of the 5 s-gap cache-off extension (item 40, whose draft had 0.9). This is fixed before any μ_sat,off is computed. Those registrations are not yet written or approved, and nothing has been computed under them.

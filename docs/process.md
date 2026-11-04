@@ -110,6 +110,7 @@ The model is M2 in `docs/model.md`. Default pass condition, to be restated in ea
 | Hit rates from two computations compared as one (2026-11-02, 2026-11-03; found 2026-11-04) | J: every quoted hit names its computation |
 | 5 s gaps recommended as the most promising change, then reversed (2026-11-03) | A1: a numeric prediction (here W at 5 s) before proposing a run |
 | An old decisions entry edited in place (commit `cfc18da`, 2026-11-02; found 2026-11-04) | `check_docs` append-only check |
+| `poisson_rate_upper` underflowed at real-data counts (REG-1, 2026-11-04) | Tests of numeric helpers include inputs at the scale of the real data |
 
 ## 8. Ending a stage
 

@@ -42,7 +42,7 @@ Beliefs used in the docs or the audit that can be checked. Each is answered only
 | # | Question | Answer | Evidence |
 |---|---|---|---|
 | A1 | What is the sustainable completion rate with caching off at λ = 3, default pool, 20 s gaps? μ_off = 2 rests on one 900 s run whose last 150 s carried 3.52 req/s of planned load, above the cache-off saturation of about 3.5 | **Open.** Cheapest test: other seeds or a longer cache-off run (GPU, owner) | `20261030-161749_sweep_pc_off_r3` `schedule.parquet`; `docs/model.md` M4 |
-| A2 | Assumption A: does any post-trigger state complete less than the λ = 10 overload state (4.185 req/s)? | **Open.** REG-1 (post-trigger margin), pending approval | `docs/model.md` M2 |
+| A2 | Assumption A: does any post-trigger state complete less than the λ = 10 overload state (4.185 req/s)? | **Open; REG-1 inconclusive** (0 of 24 default-pool spans qualified). The existing triggers never held a cold backlog; testing A needs a deliberate cold-overload run (GPU, owner) | `docs/model.md` M2 |
 | A3 | Are the dips in the no-trigger controls at λ = 4 (default pool) and λ = 3.5 (72k pool) eviction cycles of the Ao et al. kind? | **Open.** Needs a registered analysis of `20261101-202808_stage2_control_cap_r4` and `20261102-225146_stage2_control_kv72k_r3.5` | — |
 | A4 | Is the cache-on capacity loss under overload (4.735 → 4.185 req/s) prefix eviction or preemption recompute? | **Open.** Needs a registered analysis (preemptions and `prompt_tokens_by_source` per completion, cache on vs off, matched λ) | — |
 | A5 | How much of client TTFT is client receive lag? `vllm:time_to_first_token_seconds` is recorded and never compared | **Open** | `metrics.jsonl` of any run |

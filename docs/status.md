@@ -6,11 +6,11 @@ Living document: update it after every run or decision. Last updated: 2026-11-04
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action:** the owner's review of the agent-setup audit (decisions.md 2026-11-04). After that, REG-1, the post-trigger margin analysis of existing runs (no GPU), which feeds the feasibility gate before any further shock matrix. Nothing is running.
+**Next action:** the owner's decision on a deliberate cold-overload run, the only way left to test assumption A (REG-1 was inconclusive; decisions.md 2026-11-04). Other open choices: 60 s gaps or a write-up; paper layer; C1 metric; canonical hit rate. Nothing is running.
 
 ## Open risks
 
-- **Feasibility:** the test loads may lie outside any real danger zone. Cache off saturates at about 3.5 completions/s and cache on still completes 4.185 at λ = 10, both above the healthy test loads at 20 s gaps (`docs/model.md` M2). Untested until REG-1.
+- **Feasibility:** the test loads may lie outside any real danger zone. Cache off saturates at about 3.5 completions/s and cache on still completes 4.185 at λ = 10, both above the healthy test loads at 20 s gaps (`docs/model.md` M2). REG-1 (0 GPU h) was inconclusive: no trigger so far held a cold backlog, so the floor is still unmeasured.
 - **μ from one arrival pattern:** every sweep used seed 0, whose planned load rises from 0.67–0.97 λ to 1.05–1.34 λ across the measured window; μ_off = 2 may be low (`docs/model.md` M4, open-questions A1).
 - **M1 (F + W) is 0 for 3** on tested predictions; do not use it to choose loads until revised.
 - **Single-seed controls** in every cell.

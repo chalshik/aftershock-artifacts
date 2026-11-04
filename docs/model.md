@@ -36,7 +36,7 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **Assumption A** (BELIEF, untested): no post-trigger state completes less than the λ = 10 overload state. Under A, c(s*) ≥ 4.185 > 3.5, so no stuck state is possible at any healthy test load of this setup, and the 12 default-pool shock runs at λ = 3 and 3.5 were bound to recover. The other setups need their own inputs (below).
 - **Weaker floor** (BELIEF): a state with some cache hits completes no less than the cache-off saturation, about 3.5 req/s. Under this floor alone, λ = 3 cannot be stuck; λ = 3.5 is at the edge.
 - **Per setup:** 72,480-token pool: cache on at λ = 5 completes 4.567 (RUN(20261102-194816_sweep_kv72k_pc_on_r5, load.summarize)), cache off at λ = 4 3.449 (RUN(20261102-214207_sweep_kv72k_pc_off_r4, load.summarize)); no deep-overload run, so c(s*) has no measured floor. 5 s gaps: cache on keeps up to λ = 7 (7.185, RUN(20261103-132357_sweep_gap5_pc_on_r7, load.summarize)) and cache off was not swept past 3.5, so neither bound is measured.
-- **Test of A:** the post-trigger margin analysis (completions − λ over 0–60 s and 60–180 s after each trigger end, with h, KV, N and Q), to be registered as REG-1 before it is computed.
+- **Test of A:** REG-1 (2026-11-04) found no span that was backlogged, cold and burst-free at once, so A is **untested**. Wipes built no backlog; bursts were cold and backlogged only while their own requests still completed. Testing A needs a run that holds a cold backlog for minutes (GPU, owner).
 
 ## M3. Self-refill (why a single wipe may not hold)
 
@@ -63,6 +63,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 | 6 | 2026-11-03 | (ramp registration) | "A gap at 300 s only … is expected" (backlog from the peak) | No gap at either dwell at λ ≤ 3.5; λ = 4.5 down at 300 s had percent fast 0.526 but no hit drop | Miss (no lag gap either) | RUN(20261103-043121_ramp_d300, load.ramp_table), RUN(20261103-053730_ramp_d600, load.ramp_table) |
 | 7 | 2026-11-03 | W at 5 s gaps (0.19 vs 0.77 of the pool, λ = 3) | Getting stuck is less likely at 5 s gaps | Stuck in 0 of 12 | Hit, but not discriminating: 20 s gaps also gave 0 of 18 | `20261103-161947_burst_gap5_r4.5_s1` … `20261104-000416_wipe_gap5_r3.5_s3` |
 | 8 | 2026-11-03 | sweeps | 5 s gaps: recovery, because prefixes survived overload | Stuck in 0 of 12 | Hit | as row 7 |
-| 9 | — | M2 | Post-trigger margin: registration pending (REG-1) | — | Open | — |
+| 9 | 2026-11-04 | M2 (REG-1) | ≤ 2 of 12 default-pool burst spans and 0 of 12 wipe spans qualify; outcome most likely inconclusive (≈ 0.6); qualifying c in 4.3–4.7 | 0 of 24 qualify (wipes never backlogged; burst spans never burst-free); inconclusive | Hit on qualification and outcome; c range not testable | RUN(the 30 REG-1 runs, margin.reg1_table) |
 
 **Record so far:** M1 is 0 for 3 on tested predictions (rows 1, 3, 4). It should not be used to choose loads again until it is revised and its revision predicts the existing runs it missed.

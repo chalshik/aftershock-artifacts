@@ -755,3 +755,81 @@ Verbatim summary of its three answers:
 - Clocks are checked: one monotonic clock, as `time.monotonic() − t0`, in FILE(harness/recorder.py:102), FILE(harness/loadgen.py:46) and FILE(harness/trigger.py:64). A session's turn 0 is always 512 + 128 tokens (FILE(harness/workload.py:97)).
 - The predictions were revised to the new rule before any computation: inconclusive is now the most likely outcome.
 - **Not changed:** the spans stay [0, 60) and [60, 180), as the owner specified.
+
+## 2026-11-04 · [RESULT] REG-1: no qualifying span, so assumption A is untested (inconclusive)
+- **Registration:** REG-1 (2026-11-04, commit `c83751c`), approved before computation. One pass, as registered: RUN(each of the 30 runs listed in REG-1, margin.reg1_table), at commit `c83751c`.
+- **Qualifying spans (capacity-limited, burst-free, cold): 0 of 60** (30 runs × 2 spans). Default pool: 0 of 24, so 0 runs contribute. **By the registered rule the outcome is inconclusive**: A stays a BELIEF.
+- **Why nothing qualified, by condition:**
+  - **Wipes, all setups: no backlog.** Q fell to 0 at some scrape in every wipe span (q_min = 0 in 30 of 30). This is the registered reading "the wipe built no backlog": completions kept up with demand, and the wipe never reached a state that could be stuck. It is not a test of cold capacity. Several wipe spans were cold by the session share (default pool [0, 60): 4 of 6, share 0.486–0.560 against baselines 0.550–0.652) but never backlogged.
+  - **Bursts, [0, 60):** capacity-limited and cold in 6 of 6 default-pool runs (q_min 45–282; share 0.302–0.512 against 0.552–0.629), but **none burst-free**: 96–132 burst requests completed in each. c (all requests) was 4.050–4.683.
+  - **Bursts, [60, 180):** no default-pool span was cold (share 0.542–0.652 against baselines 0.552–0.629); only `20261102-152316_burst_r3.5_s1` stayed capacity-limited, and it was not burst-free.
+- **Prediction (REG-1):**
+  1. ≤ 2 of 12 default-pool burst spans and 0 of 12 wipe spans qualify. **Hit** (0 and 0).
+  2. c 4.3–4.7 in qualifying spans. **Not testable** (no qualifying span).
+  3. Most likely outcome inconclusive (stated about 0.6). **Hit.** Update `docs/model.md` ledger row 9.
+- **Not judged, reported because it bears on the reviewer's alternative 1:** default-pool burst spans at [60, 180) completed up to 5.950 req/s, RUN(20261102-160625_burst_r3.5_s2, margin.reg1_table), above the best steady value 4.735. Draining an already-prefilled backlog runs faster than steady state, so post-burst spans are a best case, as the review warned.
+- **Defect found in the output (see the next entry):** `c_upper` was wrong for spans with more than about 700 completions. No span qualified on the other three conditions, which do not use `c_upper`, so the outcome does not depend on it. Not rerun, per the stopping rule.
+- **Alternatives still open:**
+  1. A is true, and no trigger tested so far makes a lasting cold backlog at these loads.
+  2. A is false, but these triggers cannot reach the cold, backlogged state where it would fail.
+  - Separating evidence: a run that holds both backlog and cold cache for minutes. That needs the GPU, so it is the owner's call.
+- **Decision taken, as registered:** propose to the owner a deliberate cold-overload run (GPU). Its full `[REG]`, with prediction, decisions, cost and adversarial review, is written only if the owner wants it. Gate G stays unpassed for every setup.
+
+## 2026-11-04 · [CORR] REG-1: Poisson upper bound underflowed for large counts
+- **What was wrong:** `analysis/stats.py` `poisson_rate_upper` summed `exp(-mu)` terms directly. Near mu ≈ 745 that underflows to 0, and the bound collapsed to n / t or a stale value. In the REG-1 output, four spans with n = 714–861 showed `c_upper` ≤ c + 0.26 (e.g. n = 861: 7.175 against a correct 7.765, DERIVED from the fixed function).
+- **Since when:** the function was added with REG-1 (`c83751c`).
+- **Which results it affects:** none. The REG-1 outcome rests on no span qualifying, and qualification uses neither c nor `c_upper`. No span had a wrong bound and qualified.
+- **Re-check done:** the CDF is now summed in log space; `tests/test_stats.py` gains a large-count test (bounds rise with n and match the normal approximation within 2). REG-1 is not rerun (its stopping rule); its recorded numbers stand, with this defect noted.
+- **Rule that would have caught it:** F asked for a trace on which the verdict is wrong, but not for one on which a helper is wrong at the scale of the real data. Tests of numeric helpers now include counts at the real scale (process.md §7 row added).
+
+## 2026-11-04 · [CORR] Hit rates from different computations compared again: λ = 7 at 5 s gaps vs λ = 5 at 20 s
+- **What was wrong:** 2026-11-03 "Capacity with 5 s turn gaps": "cached prefixes survive (hit 0.757 at λ = 7 against about 0.42 at λ = 5 with 20 s gaps)".
+  - 0.757 is a mean of per-scrape ratios: RUN(20261103-132357_sweep_gap5_pc_on_r7, load.summarize).
+  - "About 0.42" is a counter ratio: either the measured window of the λ = 5 sweep, 0.424 RUN(20261030-141658_sweep_pc_on_r5, load._level over 240–900 s), or the ramp peak, 0.419 RUN(20261103-043121_ramp_d300, load.ramp_table) / 0.407 RUN(20261103-053730_ramp_d600, load.ramp_table). Which one was meant is not recorded.
+- **Like for like:**
+  - mean of ratios 0.757 vs 0.378 (load.summarize);
+  - counter over the measured window 0.785 vs 0.424 (load._level over 240–900 s);
+  - whole run 0.785 vs 0.446 (load.whole_run_hit_rate).
+- **Source of the default-pool values in the 2026-11-02 72k comparison (0.767 / 0.661 / 0.525):** the original F script printed `hit` as first scrape to last over the whole run (`analysis/recovered/2026-11-01T173632_toolu_015jLzJdYAJ9HPDZ9RCwj2UE.out.txt`). This is what `load.whole_run_hit_rate` computes, as found in entry (4) above.
+- **Pool effect, one method at a time,** λ = 2 / 3 / 4, 72,480-token pool minus default pool:
+  - counter over the measured window: 0.686 − 0.765, 0.526 − 0.644, 0.415 − 0.510, so −0.079 / −0.118 / −0.095. RUN(20261102-182839_sweep_kv72k_pc_on_r2 … 20261102-193218_sweep_kv72k_pc_on_r4, load._level over 240–900 s) and RUN(20261030-132844_sweep_pc_on_r2 … 20261030-140051_sweep_pc_on_r4, load._level over 240–900 s).
+  - mean of ratios: −0.074 / −0.116 / −0.093. Whole run: −0.069 / −0.109 / −0.095 (entry (4)).
+  - By any single method the pool lowers hit by about 0.07–0.12, not "0.10–0.15".
+- **Since when:** 2026-11-02 (pool comparison), 2026-11-03 (λ = 7 vs λ = 5).
+- **Which results it affects:** none. Every method keeps the direction: the cache holds up better under overload at 5 s gaps, and the smaller pool lowers hit. No verdict uses these values. The old entries stay as written.
+- **Re-check done:** the three computations on the eight sweep runs above.
+- **Rule that would have caught it:** J (every quoted hit names its computation).
+
+## 2026-11-04 · [CORR] Derived-figure differences explained by the recovered originals
+- **What was wrong:** entry (6) above says "The original code was never committed", and it lists 25 published values that the reconstruction (`analysis/derived.py`) does not reproduce, several marked "unexplained". The original code was never committed, but it was recoverable: the commands and their outputs are in the Claude Code session transcripts.
+- **Now committed:** `analysis/recovered/`, verbatim. That is 19 tool calls (command + recorded output), the scratch `judge.py` behind the long-run thirds, and `INDEX.md` (figure → file, transcript, timestamp, tool id, sha256).
+  - It is one file per tool call, not per figure: some calls print several figures, and some figures need several calls.
+  - `analysis/recompute_published.py` gains an "Original" column: the value the original printed, read from its `.out.txt`. The originals are not re-run, because several ssh to the VM or read scratch files.
+- **Result, 104 comparisons:**
+  - The original agrees with the published value in 91 rows and differs in 3. 10 rows have no recovered original.
+  - Of the 25 values the reconstruction does not reproduce, the original reproduces 18.
+- **Explained by a different reading in the original** (14 values):
+  - **W:** sampled every 5 s from 600 s (every 10 s for the 5 s-gap comparison), not every 1 s. This covers W/C p90 at λ = 2.5, W/C mean at λ = 4, the W tokens at λ = 2 / 2.5 / 3 (original 47,580 / 59,722 / 72,968), the two pool/W ratios, and 74.8k at 20 s gaps (original 74,843).
+  - **Wipe-test "before":** the 120 s before the wipe, not 240 s → wipe. Original 0.773 for `wipe_test_idle`.
+  - **Adjacent-window noise:** 60 s steps from t = 600 s, a start the reconstruction never tried. The original gives 0.34 / 0.076 / 0.059, all three.
+- **Rounding** (4 values): F_warm/C at λ = 3 (original 0.125, published 0.13), λ = 3 wipe 0–15 s max (0.295, published 0.30), long-run last third (0.6254), and (W+F_warm)/C high at λ = 4.
+- **Hand arithmetic** (3 values): (W+F)/C 0.91, 1.16 and 1.32 are sums of 2-decimal values (0.75 + 0.16, 0.75 + 0.41, 1.01 + 0.31). At the original's precision they are 0.919, 1.170 and 1.313. Every fits/holds yes/no is unchanged.
+- **Still without an original:** F_warm 6.4k and 8.7k (2026-11-02). 8.7k = 0.090 × 96,656 = 8,699, where 0.09 is the control r2.5 end-window KV printed to 2 decimals in `analysis/recovered/2026-11-01T215355_toolu_01ERXSiZtFdmg4pHCtdknqgA.out.txt`; that this is its origin is a BELIEF. 6.4k: no source found. Also not recovered: the 72k spans (0.11–0.28, 0.43), the long-run 60 s SD 0.045, and the λ = 3.5 seed-3 first minute.
+- **Canonical functions unchanged:** `derived.py` keeps its readings, and `docs/definitions.md` notes the original's reading where it differs. Aligning the functions with the originals would change a definition (rule J), so it is left for the owner.
+- **Since when:** 2026-11-04, entry (6).
+- **Which results it affects:** none. No verdict uses these values, and `hit_climb: 0.06` rests on the 600 s value 0.059, which both the original and the reconstruction reproduce.
+- **Re-check done:** `uv run --extra analysis python -m analysis.recompute_published`.
+- **Rule that would have caught it:** I (numbers only from committed functions).
+
+## 2026-11-04 · [CORR] A used config that cannot be fixed: stage2_base.yaml
+- **What was wrong:** the verdict block of `configs/stage2_base.yaml` (FILE(configs/stage2_base.yaml:10)) lacks `pf_climb`, `hit_climb` and `drain_horizon_s`, which `load.verdict` needs (FILE(analysis/load.py:192)). It keeps the retired `q_slope`, `climb` and `end_s: 300`. Its comment still says "req/s^2" (FILE(configs/stage2_base.yaml:21)).
+- **Since when:** 2026-11-01, when `stage2_cap_base.yaml` introduced the new keys (FILE(configs/stage2_cap_base.yaml:7)) and every later Stage 2 config extended that file.
+- **Which results it affects:** none. `load.verdict` cannot judge the runs that use the file directly: `20261101-144335_wipe_test_preempt`, `20261101-145940_wipe_test_idle`, and the stopped `20261101-151707_stage2_control_r1.5`. None was meant to be judged (2026-11-01, "Live wipe test"). The wipe tests fail before the missing keys are even read: they are 900 s runs with the wipe at 450 s, so the watch window is empty and `np.polyfit` raises a TypeError (`load.verdict` on `20261101-144335_wipe_test_preempt`).
+- **Re-check done:** that call, and the `extends:` chain of every config.
+- **Not changed:** the config (rule 5). Both defects are recorded in `docs/definitions.md`, "Used configs that cannot be fixed".
+- **Rule that would have caught it:** a test that resolves every used config and runs `verdict` on a synthetic trace of its shape (audit finding N15, not yet written).
+
+## 2026-11-04 · [DECISION] "Session median" defined; saturation threshold 0.85 (study owner)
+- **"Session median"** is now defined in `docs/definitions.md`: the p50 of prompt length over every scheduled session request of the whole schedule, truncated sessions included, burst requests excluded. The claim "1408 = the session median" (2026-11-02) is correct under this definition (entry (7)).
+  - Recount: p50 = 1408 and share ≤ 1408 = 0.508, RUN(20261101-215502_stage2_control_cap_r3_rerun, schedule.parquet).
+- **Saturation threshold:** the owner chose mean KV ≥ 0.85 for the pending drafts of the cold-state floor μ_sat,off (audit item 38) and of the 5 s-gap cache-off extension (item 40, whose draft had 0.9). This is fixed before any μ_sat,off is computed. Those registrations are not yet written or approved, and nothing has been computed under them.
