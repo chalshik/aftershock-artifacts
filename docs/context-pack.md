@@ -480,17 +480,14 @@ Every model used to choose a run or read a result, with its equations, the evide
 | A5 | How much of client TTFT is client receive lag? `vllm:time_to_first_token_seconds` is recorded and never compared | **Open** | `metrics.jsonl` of any run |
 | A6 | Does dev mode change speed? μ was measured without it, controls and shocks with it | **Open.** Needs a GPU run (owner) | decisions.md 2026-11-04 (2) |
 | A7 | Was another process using the GPU during any run? Memory and power give no sign, but neither can show a compute-only co-tenant; `env.json` does not list GPU processes | **Open** | `gpu.jsonl` (mem_used 22.9–24.6 GB default pool; power limit 420 W in every sample) |
+| A8 | Cold-state floor under assumption B (`docs/model.md` M2, weaker floor): what is μ_sat,off per setup, and which shock runs lie above it? (the other session's item 38) | **Open.** To be registered. Saturation threshold KV ≥ 0.85 and the "at the floor" band were chosen with the default-pool data visible (decisions.md 2026-11-04, owner's decisions on items 38–42), so the default-pool classification is not a blind test | — |
+| A9 | 5 s-gap cache-off capacity beyond λ = 3.5 (the other session's item 40) | **Open, on hold** until the owner chooses the next direction | `20261103-142848_sweep_gap5_pc_off_r3.5` |
 
 ---
 
 <!-- source: docs/decisions.md, last 5 entries -->
 
 ## Last decisions
-
-### 2026-11-04 · [DECISION] "Session median" defined; saturation threshold 0.85 (study owner)
-- **"Session median"** is now defined in `docs/definitions.md`: the p50 of prompt length over every scheduled session request of the whole schedule, truncated sessions included, burst requests excluded. The claim "1408 = the session median" (2026-11-02) is correct under this definition (entry (7)).
-  - Recount: p50 = 1408 and share ≤ 1408 = 0.508, RUN(20261101-215502_stage2_control_cap_r3_rerun, schedule.parquet).
-- **Saturation threshold:** the owner chose mean KV ≥ 0.85 for the pending drafts of the cold-state floor μ_sat,off (audit item 38) and of the 5 s-gap cache-off extension (item 40, whose draft had 0.9). This is fixed before any μ_sat,off is computed. Those registrations are not yet written or approved, and nothing has been computed under them.
 
 ### 2026-11-04 · [CORR] Two audit numbers rest on scratch scripts: marked "pending committed code"
 - **What was wrong:** two results from the 2026-11-04 audit were computed by scripts in the session's scratch directory, not by committed functions, against rule I (`docs/process.md` §6):
@@ -546,3 +543,21 @@ Every model used to choose a run or read a result, with its equations, the evide
   - Items 9–10 are approved as one registered verdict-code change (NaN → `unclear`, empty window → `unclear`), with all 43 verdicts rechecked and any change logged.
   - Item 11 (cold-overload run) is deferred, because no decision depends on assumption A. Item 12 is merged into A1. Items 13 and 14 are deferred until the owner chooses the next direction.
   - A3 and A4 registrations are to be drafted now, with code and review passes. A5 comes later. Items 18–23 are to be answered separately.
+
+### 2026-11-04 · [RESULT] The two "pending committed code" numbers, now from committed functions
+- **Registration:** none; this recomputes published numbers (rule I). It clears both marks of the [CORR] "Two audit numbers rest on scratch scripts".
+- **Verdicts:** RUN(all 44 runs with a full verdict block, ramps excluded, tables.verdict_table) at `d7a8edc`, clean tree.
+  - It gives 43 verdicts, plus `20261102-093229_wipe_preempt_r3_s3` (invalid, stopped early), which raises on an empty window (item N7).
+  - Every verdict and every baseline and end level (pf, hit, q, KV, N) equals the scratch recompute to within 0.001.
+  - `tables.published_check` finds **no difference** from the published claims: every valid judged run is `recovered`, except the two `bad_baseline` controls.
+  - μ_warm / μ_off by the registered rule (`tables.capacity_table`) are 4 / 2 (default pool, 20 s), 4 / 2.5 (72k pool) and 6 / 2.5 (5 s gaps), as published.
+- **Throughputs and hit rates quoted in the audit:** RUN(the sweep runs named in `docs/model.md` M2, tables.sweep_table) at `d7a4f85`.
+  - All match: 4.735, 4.723, 4.185, 3.453, 3.511, 3.521, 3.533, 4.567, 7.185, 2.906, and slope 0.013.
+  - 72k cache-off λ = 4 is 3.4485, quoted as 3.449 (rounding).
+  - Hit rates: `summarize` 0.732 / 0.627 / 0.490 and whole-run 0.767 / 0.661 / 0.525.
+- **Schedules:** RUN(the 43 capacity sweeps, tables.arrival_table) at `d7a4f85`, all seed 0.
+  - 240–390 s: 0.673–0.971 λ. 750–900 s: 1.047–1.336 λ. Window: 0.992–1.056 λ.
+  - λ = 3: 2.493 → 3.520 req/s.
+  - These are the values of the [RESULT] "Sweep schedules share one rising-load pattern". That entry stands, now with this evidence.
+  - A first version of `arrival_table` also picked up control and recorder-off runs. It was fixed in `d7a4f85` before any output was quoted.
+- **Decision taken:** none. Both "pending committed code" marks are cleared.

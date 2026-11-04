@@ -888,3 +888,21 @@ Verbatim summary of its three answers:
   - Items 9–10 are approved as one registered verdict-code change (NaN → `unclear`, empty window → `unclear`), with all 43 verdicts rechecked and any change logged.
   - Item 11 (cold-overload run) is deferred, because no decision depends on assumption A. Item 12 is merged into A1. Items 13 and 14 are deferred until the owner chooses the next direction.
   - A3 and A4 registrations are to be drafted now, with code and review passes. A5 comes later. Items 18–23 are to be answered separately.
+
+## 2026-11-04 · [RESULT] The two "pending committed code" numbers, now from committed functions
+- **Registration:** none; this recomputes published numbers (rule I). It clears both marks of the [CORR] "Two audit numbers rest on scratch scripts".
+- **Verdicts:** RUN(all 44 runs with a full verdict block, ramps excluded, tables.verdict_table) at `d7a8edc`, clean tree.
+  - It gives 43 verdicts, plus `20261102-093229_wipe_preempt_r3_s3` (invalid, stopped early), which raises on an empty window (item N7).
+  - Every verdict and every baseline and end level (pf, hit, q, KV, N) equals the scratch recompute to within 0.001.
+  - `tables.published_check` finds **no difference** from the published claims: every valid judged run is `recovered`, except the two `bad_baseline` controls.
+  - μ_warm / μ_off by the registered rule (`tables.capacity_table`) are 4 / 2 (default pool, 20 s), 4 / 2.5 (72k pool) and 6 / 2.5 (5 s gaps), as published.
+- **Throughputs and hit rates quoted in the audit:** RUN(the sweep runs named in `docs/model.md` M2, tables.sweep_table) at `d7a4f85`.
+  - All match: 4.735, 4.723, 4.185, 3.453, 3.511, 3.521, 3.533, 4.567, 7.185, 2.906, and slope 0.013.
+  - 72k cache-off λ = 4 is 3.4485, quoted as 3.449 (rounding).
+  - Hit rates: `summarize` 0.732 / 0.627 / 0.490 and whole-run 0.767 / 0.661 / 0.525.
+- **Schedules:** RUN(the 43 capacity sweeps, tables.arrival_table) at `d7a4f85`, all seed 0.
+  - 240–390 s: 0.673–0.971 λ. 750–900 s: 1.047–1.336 λ. Window: 0.992–1.056 λ.
+  - λ = 3: 2.493 → 3.520 req/s.
+  - These are the values of the [RESULT] "Sweep schedules share one rising-load pattern". That entry stands, now with this evidence.
+  - A first version of `arrival_table` also picked up control and recorder-off runs. It was fixed in `d7a4f85` before any output was quoted.
+- **Decision taken:** none. Both "pending committed code" marks are cleared.
