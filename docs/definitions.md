@@ -13,7 +13,7 @@ One entry per term: one text definition, its source, and the code that computes 
 - **Text:** "a request is fast if its first token arrives within 1.0 s of its planned arrival and it finishes ok. Unfinished requests are misses." `docs/decisions.md:122`. It is counted by arrival time: "Each second, take the requests that **arrived** in that second and count how many met the limit." `docs/experiment-plan.md:115`.
 - **Code:**
   - `load.percent_fast` (`load.py:76`): a share for each 1 s arrival bin.
-  - `load._level` `"pf"` (`load.py:151`): one share pooled over every request arriving in [a, b). This one feeds `verdict` and `ramp_table`. It counts requests, not bins, and it includes burst requests.
+  - `load._level` `"pf"` (`load.py:150`): one share pooled over every request arriving in [a, b). This one feeds `verdict` and `ramp_table`. It counts requests, not bins, and it includes burst requests.
 - **Other text:** `analysis/CLAUDE.md:4` ("percent fast per arrival second").
 
 ### goodput ⚠ two meanings
@@ -28,12 +28,12 @@ One entry per term: one text definition, its source, and the code that computes 
 
 ### μ_warm
 - **Text:** "μ is the highest swept λ whose run is valid, with throughput ≥ 0.95 λ and waiting-queue slope ≤ 0.01 req/s², both over the measured window", with prefix caching on. `docs/decisions.md:61`.
-- **Code:** `load.capacity` (`load.py:208`), on `load.summarize` rows.
+- **Code:** `load.capacity` (`load.py:243`), on `load.summarize` rows.
 - **Other text:** "Highest load the server keeps up with when the cache works" (`docs/experiment-plan.md:201`).
 
 ### μ_off
 - **Text:** the same rule as μ_warm (`docs/decisions.md:61`), with prefix caching off.
-- **Code:** `load.capacity` (`load.py:208`).
+- **Code:** `load.capacity` (`load.py:243`).
 - **Other text:** "Highest load the server keeps up with when nothing comes from the cache" (`docs/experiment-plan.md:202`).
 
 ### danger zone
@@ -54,18 +54,18 @@ One entry per term: one text definition, its source, and the code that computes 
 
 ### watch window
 - **Text:** "Watch window = max(1200 s, 5 × 300 s) = **1500 s**" (`docs/decisions.md:192`). It is judged on "the last 600 s (`end`) against the 600 s before them (`previous`) and the baseline" (`docs/decisions.md:272`).
-- **Code:** `load.verdict` (`load.py:187-190`): `t_end = trigger end + watch_s`; `end_s` is set in `configs/stage2_cap_base.yaml:8`.
+- **Code:** `load.verdict` (`load.py:197`): `t_end = trigger end + watch_s`; `end_s` is set in `configs/stage2_cap_base.yaml:8`.
 - **Other text:** an `end_s` of 300 s in `configs/stage2_base.yaml:14`, superseded before any verdict. It is still inherited by `wipe_test_*.yaml` and `stage2_control.yaml`, none of which was judged.
 
 ### baseline window
 - **Text:** "the baseline is the 600 s before the trigger *starts*". `docs/decisions.md:391`.
-- **Code:** `load.verdict` (`load.py:188`).
+- **Code:** `load.verdict` (`load.py:197`).
 - **Other text:** "the last 600 s before the wipe" (`docs/decisions.md:210`); the 600 s before the trigger's end (the error corrected at `:389`).
 
 ### trigger end ⚠ more than one computation (two copies of one rule)
-- **Text:** no text definition. Closest: "The baseline ends where the trigger starts; the watch starts where it ends (a successful wipe, a burst, or control_t_s for a control...)" (`analysis/load.py:174-176`).
+- **Text:** no text definition. Closest: "The baseline ends where the trigger starts; the watch starts where it ends (a successful wipe, a burst, or control_t_s for a control...)" (`analysis/load.py:198-200`).
 - **Code:**
-  - `load.verdict` (`load.py:179-185`): a wipe ends at the `t_end` of the successful call in `trigger.jsonl`; a burst at `at_s + duration_s` (its planned arrivals end, not its backlog); a control at `control_t_s`.
+  - `load.verdict` (`load.py:197`): a wipe ends at the `t_end` of the successful call in `trigger.jsonl`; a burst at `at_s + duration_s` (its planned arrivals end, not its backlog); a control at `control_t_s`.
   - `derived.trigger_times` (`derived.py:20`) is the same rule, copied so that `verdict` stays unchanged.
 
 ## Server metrics
@@ -76,22 +76,23 @@ One entry per term: one text definition, its source, and the code that computes 
 - **Code:**
   - `load.rates` `hit_rate` (`load.py:66`): one ratio per scrape interval.
   - `load.summarize` `"hit_rate"` (`load.py:101`): the mean of the per-scrape ratios over the measured window.
-  - `load._level` `"hit"` (`load.py:152`), `derived.hit_between` (`derived.py:13`) and `derived.thirds(how="counter")` (`derived.py:37`): the ratio of counter differences over the span. This feeds `verdict`.
+  - `load._level` `"hit"` (`load.py:150`), `derived.hit_between` (`derived.py:13`) and `derived.thirds(how="counter")` (`derived.py:37`): the ratio of counter differences over the span. This feeds `verdict`.
   - `load.whole_run_hit_rate` (`load.py:108`): first scrape to last.
+- **Undefined windows (REG-4, 2026-11-04):** `_level` gives NaN hit when the query counter does not rise, a cache counter goes down (restart), or the scrapes don't cover the window (`checks.max_scrape_gap_s`). Before REG-4 a window with no queries gave 0.0.
 - **Different numbers for the same run:** e.g. the long run's last third, 0.6004 (mean of ratios) vs 0.6255 (counters), `docs/decisions.md:116`.
 
 ### KV usage
 - **Text:** "usage is 1 − free blocks / total ... So usage counts blocks held by running requests, and saved prefixes with no running user count as free." `docs/decisions.md:244`. Source: `vllm/v1/core/block_pool.py` `get_usage`.
-- **Code:** the gauge `vllm:kv_cache_usage_perc`, through `load.rates` (`load.py:70-72`); `load._level` `"kv"` (mean, `load.py:154`); `derived.kv_footprint` (`derived.py:76`).
+- **Code:** the gauge `vllm:kv_cache_usage_perc`, through `load.rates` (`load.py:70-72`); `load._level` `"kv"` (mean, `load.py:150`); `derived.kv_footprint` (`derived.py:76`).
 
 ### running batch N
 - **Text:** "`vllm:num_requests_running` | How many requests share the GPU". `docs/experiment-plan.md:124`.
-- **Code:** gauge; `load._level` `"n"` (mean, `load.py:154`).
+- **Code:** gauge; `load._level` `"n"` (mean, `load.py:150`).
 
 ### waiting Q
 - **Text:** "`vllm:num_requests_waiting` | Whether requests pile up". `docs/experiment-plan.md:123`.
 - **Queue slope, units:** a least-squares slope of a request count against time, so its unit is **req/s**. The docs write "req/s²" (`docs/decisions.md:21`, `:61` and later); the numbers and thresholds are unchanged, only the unit was misnamed (2026-11-04 audit).
-- **Code:** gauge; `load._level` `"q"` (mean) and `"q_slope"` (least-squares slope, `load.py:153`); `load.summarize` `"q_mean"` and `"q_slope_per_s"` (`load.py:102-103`).
+- **Code:** gauge; `load._level` `"q"` (mean) and `"q_slope"` (least-squares slope, `load.py:150`); `load.summarize` `"q_mean"` and `"q_slope_per_s"` (`load.py:102-103`).
 
 ### preemption
 - **Text:** "report preemptions per minute in the watch window, excluding the wipe's own, against the no-trigger control and the caching-off run at the same λ". `docs/decisions.md:247`. Counter: `vllm:num_preemptions` (`docs/experiment-plan.md:128`).
@@ -103,7 +104,7 @@ One entry per term: one text definition, its source, and the code that computes 
 
 ## Run verdicts
 
-All five come from one rule, `docs/decisions.md:272-277`, restated at `PROTOCOL.md:24-28`. Code: `load.verdict` (`load.py:173-205`), with thresholds under `verdict:` in `configs/stage2_base.yaml:10-22` and `configs/stage2_cap_base.yaml:7-13`.
+All five come from one rule, `docs/decisions.md:272-277`, restated at `PROTOCOL.md:24-28`. Code: `load.verdict` (`load.py:197-241`), with thresholds under `verdict:` in `configs/stage2_base.yaml:10-22` and `configs/stage2_cap_base.yaml:7-13`.
 
 ### bad_baseline
 - **Text:** "baseline percent fast < 0.98." `docs/decisions.md:273`.
@@ -126,6 +127,7 @@ All five come from one rule, `docs/decisions.md:272-277`, restated at `PROTOCOL.
 
 ### unclear
 - **Text:** "anything else." `docs/decisions.md:277`. "never rounded to another verdict" (`PROTOCOL.md:28`).
+- **Also `unclear` (REG-4, 2026-11-04):** a branch that needs a value the window cannot give (NaN). `bad_baseline` and `recovered` are still decided when their own inputs exist; `slow_drain` and `stuck` are not reached if a sign of recovery can't be computed.
 - **Code:** `load.verdict`.
 
 ### metastable failure
@@ -175,6 +177,6 @@ Used configs are never edited. Their known defects are recorded here instead.
 
 ### `configs/stage2_base.yaml`
 - **Unit:** the comment at `:21` says "req/s^2". The unit is req/s (queue slope, above; decisions.md 2026-11-04 [CORR]).
-- **Verdict block (`:10-22`):** it lacks `pf_climb`, `hit_climb` and `drain_horizon_s`, which `load.verdict` needs (`load.py:192-193`). It keeps the retired `q_slope`, `climb` and `end_s: 300`.
+- **Verdict block (`:10-22`):** it lacks `pf_climb`, `hit_climb` and `drain_horizon_s`, which `load.verdict` needs (`load.py:197`). It keeps the retired `q_slope`, `climb` and `end_s: 300`.
 - **Effect:** the runs that use it directly cannot be judged by `load.verdict`: `20261101-144335_wipe_test_preempt`, `20261101-145940_wipe_test_idle`, and the stopped `20261101-151707_stage2_control_r1.5`. The wipe tests fail even before the missing keys. They are 900 s runs with the wipe at 450 s, so the 600 s baseline and the 1500 s watch do not fit, and `verdict` raises on an empty window. None of these runs was meant to be judged (decisions.md 2026-11-01, "Live wipe test").
 - Every judged Stage 2 run gets the missing keys from `configs/stage2_cap_base.yaml:7-13`.

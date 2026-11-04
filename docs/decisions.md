@@ -1068,3 +1068,14 @@ Summary:
 - The diff's no-op edits are described as such.
 - New tests cover each trace. The fixtures gain `checks.max_scrape_gap_s`, which `_level` now requires (no magic default). Full suite: 147 passed.
 - **Disclosure:** the "switching" file the reviewer saw was the agent stashing the change to capture the before-outputs during the review. Its scratch copy was the right response.
+
+## 2026-11-04 · [RESULT] REG-4: no valid verdict changed; the stopped run is now `unclear`
+- **Registration:** REG-4 (commit `ebb0647`, with the change). Before: RUN(all runs with a full verdict block, tables.verdict_table), `tables.ramp_tables` and `mechanisms.reg2_table` at `677559d`, clean tree. After: the same three at `ebb0647`, clean tree.
+- **Comparison** (labels exact; levels NaN-aware to 1e-9; NaN positions explicit): 9 differences, **all in `20261102-093229_wipe_preempt_r3_s3`** (INVALID, stopped at about 1618 s).
+  - Before, it raised.
+  - Now its baseline is computed (pf 1.000, hit 0.652, q 0.0, 6 preemptions) and its verdict is `unclear`, because its end window has no requests or scrapes.
+  - The `error` column is gone, because no run raises any more.
+- **Unchanged:** every verdict and every level of the other 43 rows; all 26 ramp steps (RUN(20261103-043121_ramp_d300, tables.ramp_tables), RUN(20261103-053730_ramp_d600, tables.ramp_tables)); both REG-2 rows (RUN(20261101-202808_stage2_control_cap_r4, mechanisms.reg2_table), RUN(20261102-225146_stage2_control_kv72k_r3.5, mechanisms.reg2_table)), episode starts included.
+- **Published claims:** `tables.published_check` still finds no difference. The valid runs are 37 `recovered` and 2 `bad_baseline`.
+- **Prediction:** 1 hit (all 43 unchanged); 2 hit (the stopped run became `unclear`, its baseline being complete with pf 1.000); 3 hit (ramps and REG-2 unchanged).
+- **Decision, as registered:** the change stands. Audit items 9–10 (the owner's approval list), 11 (`_level` hit 0.0) and N7 (the crash on an empty window) are closed. `docs/definitions.md` now gives the new NaN rules and the shifted `load.py` line numbers.

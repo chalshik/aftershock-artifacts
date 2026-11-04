@@ -223,7 +223,7 @@ One entry per term: one text definition, its source, and the code that computes 
 - **Text:** "a request is fast if its first token arrives within 1.0 s of its planned arrival and it finishes ok. Unfinished requests are misses." `docs/decisions.md:122`. It is counted by arrival time: "Each second, take the requests that **arrived** in that second and count how many met the limit." `docs/experiment-plan.md:115`.
 - **Code:**
   - `load.percent_fast` (`load.py:76`): a share for each 1 s arrival bin.
-  - `load._level` `"pf"` (`load.py:151`): one share pooled over every request arriving in [a, b). This one feeds `verdict` and `ramp_table`. It counts requests, not bins, and it includes burst requests.
+  - `load._level` `"pf"` (`load.py:150`): one share pooled over every request arriving in [a, b). This one feeds `verdict` and `ramp_table`. It counts requests, not bins, and it includes burst requests.
 - **Other text:** `analysis/CLAUDE.md:4` ("percent fast per arrival second").
 
 ### goodput ⚠ two meanings
@@ -238,12 +238,12 @@ One entry per term: one text definition, its source, and the code that computes 
 
 ### μ_warm
 - **Text:** "μ is the highest swept λ whose run is valid, with throughput ≥ 0.95 λ and waiting-queue slope ≤ 0.01 req/s², both over the measured window", with prefix caching on. `docs/decisions.md:61`.
-- **Code:** `load.capacity` (`load.py:208`), on `load.summarize` rows.
+- **Code:** `load.capacity` (`load.py:243`), on `load.summarize` rows.
 - **Other text:** "Highest load the server keeps up with when the cache works" (`docs/experiment-plan.md:201`).
 
 ### μ_off
 - **Text:** the same rule as μ_warm (`docs/decisions.md:61`), with prefix caching off.
-- **Code:** `load.capacity` (`load.py:208`).
+- **Code:** `load.capacity` (`load.py:243`).
 - **Other text:** "Highest load the server keeps up with when nothing comes from the cache" (`docs/experiment-plan.md:202`).
 
 ### danger zone
@@ -264,18 +264,18 @@ One entry per term: one text definition, its source, and the code that computes 
 
 ### watch window
 - **Text:** "Watch window = max(1200 s, 5 × 300 s) = **1500 s**" (`docs/decisions.md:192`). It is judged on "the last 600 s (`end`) against the 600 s before them (`previous`) and the baseline" (`docs/decisions.md:272`).
-- **Code:** `load.verdict` (`load.py:187-190`): `t_end = trigger end + watch_s`; `end_s` is set in `configs/stage2_cap_base.yaml:8`.
+- **Code:** `load.verdict` (`load.py:197`): `t_end = trigger end + watch_s`; `end_s` is set in `configs/stage2_cap_base.yaml:8`.
 - **Other text:** an `end_s` of 300 s in `configs/stage2_base.yaml:14`, superseded before any verdict. It is still inherited by `wipe_test_*.yaml` and `stage2_control.yaml`, none of which was judged.
 
 ### baseline window
 - **Text:** "the baseline is the 600 s before the trigger *starts*". `docs/decisions.md:391`.
-- **Code:** `load.verdict` (`load.py:188`).
+- **Code:** `load.verdict` (`load.py:197`).
 - **Other text:** "the last 600 s before the wipe" (`docs/decisions.md:210`); the 600 s before the trigger's end (the error corrected at `:389`).
 
 ### trigger end ⚠ more than one computation (two copies of one rule)
-- **Text:** no text definition. Closest: "The baseline ends where the trigger starts; the watch starts where it ends (a successful wipe, a burst, or control_t_s for a control...)" (`analysis/load.py:174-176`).
+- **Text:** no text definition. Closest: "The baseline ends where the trigger starts; the watch starts where it ends (a successful wipe, a burst, or control_t_s for a control...)" (`analysis/load.py:198-200`).
 - **Code:**
-  - `load.verdict` (`load.py:179-185`): a wipe ends at the `t_end` of the successful call in `trigger.jsonl`; a burst at `at_s + duration_s` (its planned arrivals end, not its backlog); a control at `control_t_s`.
+  - `load.verdict` (`load.py:197`): a wipe ends at the `t_end` of the successful call in `trigger.jsonl`; a burst at `at_s + duration_s` (its planned arrivals end, not its backlog); a control at `control_t_s`.
   - `derived.trigger_times` (`derived.py:20`) is the same rule, copied so that `verdict` stays unchanged.
 
 ## Server metrics
@@ -286,22 +286,23 @@ One entry per term: one text definition, its source, and the code that computes 
 - **Code:**
   - `load.rates` `hit_rate` (`load.py:66`): one ratio per scrape interval.
   - `load.summarize` `"hit_rate"` (`load.py:101`): the mean of the per-scrape ratios over the measured window.
-  - `load._level` `"hit"` (`load.py:152`), `derived.hit_between` (`derived.py:13`) and `derived.thirds(how="counter")` (`derived.py:37`): the ratio of counter differences over the span. This feeds `verdict`.
+  - `load._level` `"hit"` (`load.py:150`), `derived.hit_between` (`derived.py:13`) and `derived.thirds(how="counter")` (`derived.py:37`): the ratio of counter differences over the span. This feeds `verdict`.
   - `load.whole_run_hit_rate` (`load.py:108`): first scrape to last.
+- **Undefined windows (REG-4, 2026-11-04):** `_level` gives NaN hit when the query counter does not rise, a cache counter goes down (restart), or the scrapes don't cover the window (`checks.max_scrape_gap_s`). Before REG-4 a window with no queries gave 0.0.
 - **Different numbers for the same run:** e.g. the long run's last third, 0.6004 (mean of ratios) vs 0.6255 (counters), `docs/decisions.md:116`.
 
 ### KV usage
 - **Text:** "usage is 1 − free blocks / total ... So usage counts blocks held by running requests, and saved prefixes with no running user count as free." `docs/decisions.md:244`. Source: `vllm/v1/core/block_pool.py` `get_usage`.
-- **Code:** the gauge `vllm:kv_cache_usage_perc`, through `load.rates` (`load.py:70-72`); `load._level` `"kv"` (mean, `load.py:154`); `derived.kv_footprint` (`derived.py:76`).
+- **Code:** the gauge `vllm:kv_cache_usage_perc`, through `load.rates` (`load.py:70-72`); `load._level` `"kv"` (mean, `load.py:150`); `derived.kv_footprint` (`derived.py:76`).
 
 ### running batch N
 - **Text:** "`vllm:num_requests_running` | How many requests share the GPU". `docs/experiment-plan.md:124`.
-- **Code:** gauge; `load._level` `"n"` (mean, `load.py:154`).
+- **Code:** gauge; `load._level` `"n"` (mean, `load.py:150`).
 
 ### waiting Q
 - **Text:** "`vllm:num_requests_waiting` | Whether requests pile up". `docs/experiment-plan.md:123`.
 - **Queue slope, units:** a least-squares slope of a request count against time, so its unit is **req/s**. The docs write "req/s²" (`docs/decisions.md:21`, `:61` and later); the numbers and thresholds are unchanged, only the unit was misnamed (2026-11-04 audit).
-- **Code:** gauge; `load._level` `"q"` (mean) and `"q_slope"` (least-squares slope, `load.py:153`); `load.summarize` `"q_mean"` and `"q_slope_per_s"` (`load.py:102-103`).
+- **Code:** gauge; `load._level` `"q"` (mean) and `"q_slope"` (least-squares slope, `load.py:150`); `load.summarize` `"q_mean"` and `"q_slope_per_s"` (`load.py:102-103`).
 
 ### preemption
 - **Text:** "report preemptions per minute in the watch window, excluding the wipe's own, against the no-trigger control and the caching-off run at the same λ". `docs/decisions.md:247`. Counter: `vllm:num_preemptions` (`docs/experiment-plan.md:128`).
@@ -313,7 +314,7 @@ One entry per term: one text definition, its source, and the code that computes 
 
 ## Run verdicts
 
-All five come from one rule, `docs/decisions.md:272-277`, restated at `PROTOCOL.md:24-28`. Code: `load.verdict` (`load.py:173-205`), with thresholds under `verdict:` in `configs/stage2_base.yaml:10-22` and `configs/stage2_cap_base.yaml:7-13`.
+All five come from one rule, `docs/decisions.md:272-277`, restated at `PROTOCOL.md:24-28`. Code: `load.verdict` (`load.py:197-241`), with thresholds under `verdict:` in `configs/stage2_base.yaml:10-22` and `configs/stage2_cap_base.yaml:7-13`.
 
 ### bad_baseline
 - **Text:** "baseline percent fast < 0.98." `docs/decisions.md:273`.
@@ -336,6 +337,7 @@ All five come from one rule, `docs/decisions.md:272-277`, restated at `PROTOCOL.
 
 ### unclear
 - **Text:** "anything else." `docs/decisions.md:277`. "never rounded to another verdict" (`PROTOCOL.md:28`).
+- **Also `unclear` (REG-4, 2026-11-04):** a branch that needs a value the window cannot give (NaN). `bad_baseline` and `recovered` are still decided when their own inputs exist; `slow_drain` and `stuck` are not reached if a sign of recovery can't be computed.
 - **Code:** `load.verdict`.
 
 ### metastable failure
@@ -385,7 +387,7 @@ Used configs are never edited. Their known defects are recorded here instead.
 
 ### `configs/stage2_base.yaml`
 - **Unit:** the comment at `:21` says "req/s^2". The unit is req/s (queue slope, above; decisions.md 2026-11-04 [CORR]).
-- **Verdict block (`:10-22`):** it lacks `pf_climb`, `hit_climb` and `drain_horizon_s`, which `load.verdict` needs (`load.py:192-193`). It keeps the retired `q_slope`, `climb` and `end_s: 300`.
+- **Verdict block (`:10-22`):** it lacks `pf_climb`, `hit_climb` and `drain_horizon_s`, which `load.verdict` needs (`load.py:197`). It keeps the retired `q_slope`, `climb` and `end_s: 300`.
 - **Effect:** the runs that use it directly cannot be judged by `load.verdict`: `20261101-144335_wipe_test_preempt`, `20261101-145940_wipe_test_idle`, and the stopped `20261101-151707_stage2_control_r1.5`. The wipe tests fail even before the missing keys. They are 900 s runs with the wipe at 450 s, so the 600 s baseline and the 1500 s watch do not fit, and `verdict` raises on an empty window. None of these runs was meant to be judged (decisions.md 2026-11-01, "Live wipe test").
 - Every judged Stage 2 run gets the missing keys from `configs/stage2_cap_base.yaml:7-13`.
 
@@ -489,61 +491,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-04 · [REG] REG-2 (A3): what the no-trigger control dips are
-- **ID:** REG-2, open item A3. **Approved by the owner on 2026-11-04** ("Let's finish it", in reply to the agent's recommendation to approve), before any computation. Not computed on any run at commit. Code: `analysis/mechanisms.py` (`bin_series`, `episodes`, `cv`, `cv_chance`, `classify_dips`; settings `REG2`; driver `reg2_table`); `tests/test_mechanisms.py`.
-- **Question:** the two no-trigger controls that came out `bad_baseline` dipped with no shock. Is the pattern a regular preemption cycle of the Ao et al. kind, or arrival excesses of the seed-1 schedule at a load on the capacity edge?
-- **Claim tested:** whether a competing mechanism to C2's loop shows at the zone's edge. This can at most motivate the Paper Tracker's output-length question, not answer it: output length is fixed in both runs.
-- **Runs:** `20261101-202808_stage2_control_cap_r4` (default pool, λ = 4) and `20261102-225146_stage2_control_kv72k_r3.5` (72k pool, λ = 3.5). VALID, single seed each.
-- **Already seen** (not blind): the published verdict levels, the percent fast per 300 s range, and the preemption totals (32, 13). The time series were not looked at.
-- **Method** (60 s bins, 240–2400 s):
-  - **Per bin:** planned arrival rate in the bin, and over **[a − 180 s, a + 60 s)**, which includes the bin itself because percent fast is counted by arrival; `load._level` values; KV max; preemptions; mean planned prompt tokens; unfinished requests; busy SM clock.
-  - **Episode:** a run of bins with percent fast < 0.98, with runs separated by ≤ 2 healthy bins merged into one.
-  - **High lead:** that 240 s rate ≥ 1.05 λ. arrival_share is the share of episodes with a high lead in any of their bins; base_share is the share of all bins with one.
-  - **Spacing:** CV of the intervals between episode starts, sample SD (ddof = 1). **cv_chance** is the share of 20,000 random placements of the same number of starts among the bins (seed 0) whose CV is at or below the observed one.
-- **Labels, in order:**
-  1. `too_few_episodes`: fewer than 2 episodes.
-  2. `ao_like_cycle`: ≥ 4 episodes, cv_chance ≤ 0.05, preemptions in or in the bin before ≥ 2/3 of episodes, and arrival_share − base_share < 0.3.
-  3. `arrival_driven`: arrival_share ≥ 2/3 and arrival_share − base_share ≥ 0.3.
-  4. `unclassified`: anything else.
-- **Prediction:**
-  - λ = 4: `arrival_driven` ≈ 0.5, `unclassified` ≈ 0.35, `too_few_episodes` ≈ 0.1, `ao_like_cycle` ≈ 0.05.
-  - 72k λ = 3.5: `too_few_episodes` ≈ 0.6, `arrival_driven` ≈ 0.25.
-- **Decision, over the pair of labels:**
-  - **`ao_like_cycle` in either run:** open a new open item, add the cycle to claims.md as a C2 alternative, and propose (registered, to the owner) a test that varies output length.
-  - **No `ao_like_cycle`, and `arrival_driven` in at least one run:** the `bad_baseline` dips are attributed to the schedule at the capacity edge, for that run only. Recorded as support for the owner's proposed upper edge for future cells (the highest λ with a `recovered` 2400 s control). No run proposed.
-  - **Neither label in either run:** A3 closes as "not resolved by existing data". No run proposed.
-  - This analysis changes at most whether a new item and a proposal are opened. The λ = 4 exclusion stands either way.
-- **Alternatives:**
-  1. Heat. The SM clock is reported; λ = 4 had a SW thermal share of 0.047 against 0.05.
-  2. Session-mix excursions, i.e. long late-turn prompts. Mean prompt per bin is reported, not judged.
-  3. Arrival-driven dips amplified by preemptions. `arrival_driven` names the trigger, not the absence of a preemption mechanism.
-  4. n = 1 per setup.
-- **Stopping rule:** one pass after approval. **Cost:** 0 GPU hours.
-
-### Adversarial review (separate subagent; it saw only the first draft, `analysis/mechanisms.py`, the tests and `load._level`)
-
-Summary of its answers:
-1. **Wrong labels, checked against the code:**
-   - **(A)** Dips land in their own excess bin, because percent fast is counted by arrival. A lead window that ended at the bin's start never saw the excess, so arrival-driven dips came out `ao_like_cycle`: arrival_share 0, preempt_share 1, CV 0.167.
-   - **(B)** One slump flickering across 0.98 split into 4 "episodes" with CV 0 and came out `ao_like_cycle`.
-   - **(C)** With 3 episodes, chance alone gives CV ≤ 0.3 with probability 0.33 (0.14 for 4).
-   - **(D)** 1.10 λ over 120 s is about a 2.2σ excess, too high to see the small sustained excesses that matter near ρ ≈ 1.
-   - **(E)** Unfinished requests at the end could create a spurious final episode.
-2. **Alternatives:** `ao_like_cycle` could be (A), (B) or (C); `arrival_driven` does not exclude a preemption-amplified, excitable edge; `unclassified` could be a real arrival link hidden by (A) or (D); `too_few` says nothing about cause.
-3. **Decision value:** barely; only `ao_like_cycle` triggers action, and it was the label most prone to false positives. The table had no row for a mixed result, which was the most likely one.
-   - **Code issues:** mean prompt per bin was promised but missing; the lead window excluded the bin; ddof was unstated; there was no merge rule; preemptions just before an episode were not counted; no test covered noise, the excess-in-bin case or fragmentation.
-
-**Changed because of it:**
-- The lead window now includes the bin ([a − 180, a + 60)), and the threshold is 1.05 λ (A, D).
-- Runs separated by ≤ 2 healthy bins are merged (B).
-- `ao_like_cycle` needs ≥ 4 episodes and a seeded chance test, cv_chance ≤ 0.05; ddof = 1 is stated (C).
-- Preemptions in the bin before an episode count.
-- Mean prompt and unfinished counts per bin are reported (E).
-- The decision table now covers every pair of labels.
-- New tests reproduce traces A and B and the chance case; 10 pass.
-- The predictions were revised before any computation.
-- **Not changed:** n = 1 per setup, which only another seed could fix (GPU, deferred).
-
 ### 2026-11-04 · [DECISION] REG-3 (A4) dropped; A4 stays open
 - **What:** the REG-3 draft (does first-admission prefill growth exceed any possible recompute growth, λ = 6 against λ = 10, cache on) is not registered and not computed. The owner's "Let's finish it" was read as accepting the agent's recommendation to drop it.
 - **Why** (the draft's adversarial review, and rule A1): even after revision, the likely outcome follows from published numbers (first-admission hit 0.317 → 0.197; flat preemptions per unit time, ≈ 79 and 78). It would change one write-up sentence and nothing else.
@@ -645,3 +592,14 @@ Summary:
 - The diff's no-op edits are described as such.
 - New tests cover each trace. The fixtures gain `checks.max_scrape_gap_s`, which `_level` now requires (no magic default). Full suite: 147 passed.
 - **Disclosure:** the "switching" file the reviewer saw was the agent stashing the change to capture the before-outputs during the review. Its scratch copy was the right response.
+
+### 2026-11-04 · [RESULT] REG-4: no valid verdict changed; the stopped run is now `unclear`
+- **Registration:** REG-4 (commit `ebb0647`, with the change). Before: RUN(all runs with a full verdict block, tables.verdict_table), `tables.ramp_tables` and `mechanisms.reg2_table` at `677559d`, clean tree. After: the same three at `ebb0647`, clean tree.
+- **Comparison** (labels exact; levels NaN-aware to 1e-9; NaN positions explicit): 9 differences, **all in `20261102-093229_wipe_preempt_r3_s3`** (INVALID, stopped at about 1618 s).
+  - Before, it raised.
+  - Now its baseline is computed (pf 1.000, hit 0.652, q 0.0, 6 preemptions) and its verdict is `unclear`, because its end window has no requests or scrapes.
+  - The `error` column is gone, because no run raises any more.
+- **Unchanged:** every verdict and every level of the other 43 rows; all 26 ramp steps (RUN(20261103-043121_ramp_d300, tables.ramp_tables), RUN(20261103-053730_ramp_d600, tables.ramp_tables)); both REG-2 rows (RUN(20261101-202808_stage2_control_cap_r4, mechanisms.reg2_table), RUN(20261102-225146_stage2_control_kv72k_r3.5, mechanisms.reg2_table)), episode starts included.
+- **Published claims:** `tables.published_check` still finds no difference. The valid runs are 37 `recovered` and 2 `bad_baseline`.
+- **Prediction:** 1 hit (all 43 unchanged); 2 hit (the stopped run became `unclear`, its baseline being complete with pf 1.000); 3 hit (ramps and REG-2 unchanged).
+- **Decision, as registered:** the change stands. Audit items 9–10 (the owner's approval list), 11 (`_level` hit 0.0) and N7 (the crash on an empty window) are closed. `docs/definitions.md` now gives the new NaN rules and the shifted `load.py` line numbers.
