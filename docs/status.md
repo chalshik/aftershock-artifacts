@@ -1,19 +1,26 @@
 # Study status
 
-Living document: update it after every run or decision. Last updated: 2026-11-03.
+Living document: update it after every run or decision. Last updated: 2026-11-04.
 
-**Stage 2 has started (2026-10-31), and Stage 1's inputs are all in.** τ = 300 s from `20261101-131823_tau` (VALID), so the watch window is 1500 s; see decisions.md for the limits of that number. All 6 run steps are done. μ_warm = 4 req/s, μ_off = 2 req/s, λ = 3 stayed healthy for 2 h, and the SLO is TTFT ≤ 1.0 s.
+**Stage 1 is complete; Stage 2 is in progress (started 2026-10-31).** Stage 1 inputs: μ_warm = 4 req/s, μ_off = 2 req/s (Stage 1 grid 1, 2, 3, …), λ = 3 healthy for 2 h, SLO TTFT ≤ 1.0 s, τ = 300 s (`20261101-131823_tau`), so the watch window is 1500 s.
 
-**Stage 2 so far (details in decisions.md):**
-- **Default KV pool (96,656 tokens):** cache wipe, stuck in 0 of 6; load burst (+3 req/s for 120 s), stuck in 0 of 6; both at λ = 3 and 3.5. λ = 4 dropped (`bad_baseline` control). Wipe matrix stopped early by decision.
-- **Smaller KV pool (72,480 tokens):** μ_warm = 4, μ_off = 2.5; danger zone 2.5 < λ < 4. Controls: λ = 3 healthy, λ = 3.5 `bad_baseline`. Burst and wipe at λ = 3: stuck in 0 of 6.
-- **Overall:** stuck in 0 of 30 valid shock runs at healthy loads.
-- **Up-then-down ramp (default pool):** no gap at 300 s or 600 s steps.
-- **5 s turn gaps (default pool):** μ_warm = 6, μ_off = 2.5; danger zone 2.5 < λ < 6. Controls at λ = 3.5 and 4.5 healthy. Burst and wipe: stuck in 0 of 12.
+**Headline so far: no metastable failure found.** Stuck in 0 of 30 valid shock runs at healthy loads, and no gap in the up-then-down ramp. Details in decisions.md.
 
 **Next action:** the study owner's decision: longer turn gaps (about 60 s), or write up the negative result. Nothing is running.
 
-## Run steps
+## Stage 2 results
+
+| Setup | Capacity (μ_warm / μ_off) | Healthy test loads (no-trigger control) | Cache wipe | Load burst | Other |
+|---|---|---|---|---|---|
+| Default pool (96,656 tokens), 20 s gaps | 4 / 2 | 3, 3.5 (4 `bad_baseline`, dropped) | 0 of 6 stuck | 0 of 6 stuck | Ramp, 300 s and 600 s steps: no gap |
+| Smaller pool (72,480 tokens), 20 s gaps | 4 / 2.5 | 3 (3.5 `bad_baseline`) | 0 of 3 stuck | 0 of 3 stuck | — |
+| Default pool, 5 s gaps | 6 / 2.5 | 3.5, 4.5 | 0 of 6 stuck | 0 of 6 stuck | — |
+
+- **Triggers:** cache wipe in `preempt` mode at t = 900 s; burst of +3 req/s of one-off 1408-token requests for 120 s from t = 900 s. Seeds 1–3. Verdict rule: decisions.md 2026-11-01 ("Stuck" redefined), with the baseline-window correction of 2026-11-02.
+- **Stopped early by decision:** the wipe matrix at λ = 2.5 and 1.5 and the `idle` wipe comparison.
+- **Not yet done:** triggers 3–5 (power cap, engine restart, popularity shift), bigger bursts, the ramp at the smaller pool, 60 s gaps, the caching-off and protected-prefixes controls, and the plan's four Stage 2 figures (danger-zone map, loop figure, ramp figure, control figure).
+
+## Stage 1 run steps
 
 | # | Step | Config | Status | Run id |
 |---|---|---|---|---|
@@ -24,43 +31,43 @@ Living document: update it after every run or decision. Last updated: 2026-11-03
 | 5 | Load sweep, prefix caching off → μ_off | `sweep_pc_off.yaml` | Done: μ_off = 2 req/s; λ = 10 INVALID (`recorder`), others VALID | `20261030-154544_sweep_pc_off_r1` … `20261030-175458_sweep_pc_off_r10` |
 | 6 | Long run at a λ between μ_off and μ_warm | `long_run.yaml` (λ = 3) | Done, VALID, healthy under the pre-registered criteria | `20261030-181851_long_run` |
 
-Invalid runs kept on record: `20261023-145613_smoke` (`gpu_steady`, before the check was refined; see decisions.md). Failed start, no load sent: `20261030-114021_first_real` (see decisions.md).
+## Runs on record
 
-GPU time still needed: Stage 2.
+104 run folders: 93 VALID, 9 INVALID, 2 without checks. All kept; none counts unless VALID.
+
+- **No checks:** `20261030-114021_first_real` (failed start, no load sent); `20261031-025032_tau` (VM shut down 140 s in).
+- **Invalid, Stage 1:** `20261023-145613_smoke` (`gpu_steady`, before the check was refined); `20261030-145339_sweep_pc_on_r8` (`accounting`); `20261030-175458_sweep_pc_off_r10` (`recorder`).
+- **Invalid, Stage 2:** `20261101-151707_stage2_control_r1.5` (stopped on request); `20261101-182452_stage2_control_cap_r3`, `20261102-045827_wipe_preempt_r3_s1`, `20261102-062040_wipe_preempt_r3_s3`, `20261102-080323_wipe_preempt_r3_s3` (hardware thermal samples, before the backplate fan); `20261102-093229_wipe_preempt_r3_s3` (stopped on request after a thermal sample).
 
 ## Done when (from the plan)
 
-- [x] Repeated runs agree within a set tolerance (decisions.md, step 3 result)
-- [x] Every run up to the capacity knee passes all checks (decisions.md, steps 4 and 5)
-- [x] Load–latency curves with prefix caching on and off; μ_warm and μ_off known (`analysis/analysis.ipynb`, valid runs only)
-- [x] A λ inside the gap stays healthy in a long run (decisions.md, step 6 result)
-- [x] SLO for later stages fixed from measured healthy latency: TTFT ≤ 1.0 s (decisions.md)
-- [x] Harness can switch on the gateway and a trigger without a rewrite (config switches exist and are off; trigger logic is Stage 2)
+**Stage 1:** all six boxes done (decisions.md, steps 3–6 results and SLO).
 
-## Decide before the results they judge (pre-registration)
-
-- [x] Repeat tolerance (step 3): throughput ±2 %, TTFT p50 ±10 %, TTFT p99 ±25 %, hit rate ±0.02 (decisions.md, 2026-10-30)
-- [x] Capacity rule for μ: valid run, throughput ≥ 0.95 λ and waiting-queue slope ≤ 0.01 req/s² (decisions.md, 2026-10-30)
-- [x] Sweep λ grid: kept as [1, 2, 3, 4, 5, 6, 8, 10] (decisions.md, 2026-10-30)
+**Stage 2** (from the plan):
+- [ ] At least one load inside the danger zone gets stuck in most repeats, while its no-trigger control stays healthy. **Not met: no stuck run.**
+- [ ] Stuck runs show the loop metrics in the expected order. Not applicable yet. The "few preemptions" part was replaced by a comparison with controls (decisions.md, 2026-11-01).
+- [ ] With prefix caching off, the same setup does not get stuck. Not run; needs a defined form (decisions.md, 2026-11-01).
+- [ ] The ramp gap stays when dwell time is increased. No gap at either dwell.
 
 ## Open questions
 
-Answered with evidence: all 7 (see `open-questions.md`). Question 5, the recorder, was tested with prefix caching on only.
+Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 open. See `open-questions.md`.
 
 ## Environment
 
 | Item | Value |
 |---|---|
-| VM | Ubuntu 24.04, 8 cores, 31 GB RAM, Proxmox |
-| GPU | RTX 3090, 24 GB, driver 595.99.02, power limit 420 W |
-| Software | vLLM 0.32.0, torch 2.13.0 (CUDA 13.0), Python 3.12.13 (uv-managed) |
-| KV cache | Qwen3-4B: 96,656 tokens in load runs, 92,432 in the probe (see decisions.md) · Qwen3-1.7B: 165,792 tokens |
+| VM | Ubuntu 24.04, 8 cores, 31 GB RAM, Proxmox; GPU shared with another user, so the VM can be shut down from outside |
+| GPU | RTX 3090 (Gigabyte AORUS Xtreme), 24 GB, driver 595.99.02, power limit 420 W; fan on the backplate since 2026-11-02 |
+| Software | vLLM 0.32.0, torch 2.13.0 (CUDA 13.0), Python 3.12.13 (uv-managed); `unattended-upgrades` disabled |
+| KV cache | Qwen3-4B: 96,656 tokens by default in load runs; 72,480 tokens when set with `--kv-cache-memory-bytes` |
 | Pinning | vLLM cores 0–5, loadgen 6, recorder 7 |
-| Disk | 15 GB free on the VM; all runs total 1.4G |
-| Address | `inference-vm.tail3b0112.ts.net` / 100.83.53.50 (Tailscale, from anywhere); 192.168.3.249 at home (DHCP, can change on reboot); key `~/.ssh/id_ed25519_vllm` |
-| Sync | Mac `git push vm main` → VM `git pull` in `~/aftershock-artifacts` |
+| Data | **All 104 runs (9.4 GB) are only on the Mac** in `runs/`, checksum-verified; the VM's copies were removed 2026-11-04. No second backup yet |
+| Disk | 16 GB free on the VM after cleanup; about 170 MB per 40-minute run |
+| Address | `inference-vm.tail3b0112.ts.net` / 100.83.53.50 (Tailscale); 192.168.3.249 at home; key `~/.ssh/id_ed25519_vllm`. The `vm` git remote still uses the home address |
+| Sync | Mac `git push vm main` → VM `git pull` in `~/aftershock-artifacts`; don't pull during a sweep |
 
 ## Watch
 
-- The software thermal flag hit exactly the 5 % limit at low load. If heavier runs fail `gpu_steady`, that is a hardware finding (cooling or power limit) to decide on. Don't just loosen the threshold.
-- `first_real` (λ = 2) already reached 84 °C and drew 402 W on average against the 420 W limit, with the SW thermal flag on 3.2 % of samples and no HW throttle samples. The higher sweep rates are the test of this.
+- **Heat:** before the backplate fan, hardware thermal flags at 83–84 °C invalidated 5 runs. With the fan: 0 flags in every run since. A flag still invalidates a run; the rule is not loosened.
+- **Backup:** make a second copy of `runs/` before anything else could happen to the Mac.
