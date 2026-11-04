@@ -1,0 +1,5 @@
+rsync=0
+control 20261101-190602_stage2_control_cap_r3.5 recovered
+20261102-110200_wipe_preempt_r3.5_s1 valid True [] | VERDICT recovered | base hit 0.550 end hit 0.565 prev 0.603 | end pf 0.999 q 0.022 kv 0.201 n 13.2 | preempt 8
+20261102-114305_wipe_preempt_r3.5_s2 valid True [] | VERDICT recovered | base hit 0.542 end hit 0.578 prev 0.582 | end pf 1.000 q 0.012 kv 0.163 n 10.6 | preempt 4
+20261102-122411_wipe_preempt_r3.5_s3 valid True [] | VERDICT recovered | base hit 0.575 end hit 0.612 prev 0.570 | end pf 0.999 q 0.003 kv 0.148 n 9.4 | preempt 15

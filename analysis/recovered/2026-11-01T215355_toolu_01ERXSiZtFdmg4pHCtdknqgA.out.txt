@@ -1,0 +1,43 @@
+5
+EXIT=0
+EXIT=0
+
+[exited with code 0]
+rsync=0
+20261101-182452_stage2_control_cap_r3 valid False ['gpu_steady'] verdict recovered
+   baseline {'pf': 1.0, 'hit': 0.608, 'q': 0.003, 'q_slope': -0.0, 'n': 8.755, 'kv': 0.137}
+   previous {'pf': 1.0, 'hit': 0.673, 'q': 0.002, 'q_slope': -0.0, 'n': 6.5, 'kv': 0.104}
+   end      {'pf': 1.0, 'hit': 0.607, 'q': 0.005, 'q_slope': -0.0, 'n': 9.292, 'kv': 0.146}
+   preempt 0 gpu {'busy_sm_clock_cv': 0.009871664843563855, 'busy_samples': 2151, 'hw_throttle_samples': 1, 'sw_thermal_frac': 0.02175925925925926, 'max_temp_c': 83.0}
+20261101-190602_stage2_control_cap_r3.5 valid True [] verdict recovered
+   baseline {'pf': 0.996, 'hit': 0.55, 'q': 0.023, 'q_slope': 0.0, 'n': 14.203, 'kv': 0.218}
+   previous {'pf': 1.0, 'hit': 0.603, 'q': 0.005, 'q_slope': 0.0, 'n': 8.93, 'kv': 0.14}
+   end      {'pf': 0.999, 'hit': 0.565, 'q': 0.017, 'q_slope': -0.0, 'n': 13.15, 'kv': 0.2}
+   preempt 0 gpu {'busy_sm_clock_cv': 0.009472660799610772, 'busy_samples': 2148, 'hw_throttle_samples': 0, 'sw_thermal_frac': 0.026851851851851852, 'max_temp_c': 83.0}
+20261101-194705_stage2_control_cap_r2.5 valid True [] verdict recovered
+   baseline {'pf': 1.0, 'hit': 0.684, 'q': 0.0, 'q_slope': 0.0, 'n': 6.042, 'kv': 0.095}
+   previous {'pf': 1.0, 'hit': 0.722, 'q': 0.0, 'q_slope': 0.0, 'n': 4.973, 'kv': 0.08}
+   end      {'pf': 1.0, 'hit': 0.702, 'q': 0.0, 'q_slope': 0.0, 'n': 5.69, 'kv': 0.09}
+   preempt 0 gpu {'busy_sm_clock_cv': 0.007411940722497778, 'busy_samples': 2133, 'hw_throttle_samples': 0, 'sw_thermal_frac': 0.008796296296296297, 'max_temp_c': 83.0}
+20261101-202808_stage2_control_cap_r4 valid True [] verdict bad_baseline
+   baseline {'pf': 0.956, 'hit': 0.516, 'q': 0.257, 'q_slope': 0.001, 'n': 23.652, 'kv': 0.333}
+   previous {'pf': 0.998, 'hit': 0.536, 'q': 0.018, 'q_slope': -0.0, 'n': 14.807, 'kv': 0.229}
+   end      {'pf': 0.88, 'hit': 0.495, 'q': 1.045, 'q_slope': -0.001, 'n': 29.012, 'kv': 0.412}
+   preempt 32 gpu {'busy_sm_clock_cv': 0.012188038047176136, 'busy_samples': 2157, 'hw_throttle_samples': 0, 'sw_thermal_frac': 0.04675925925925926, 'max_temp_c': 83.0}
+20261101-210915_stage2_control_cap_r1.5 valid True [] verdict recovered
+   baseline {'pf': 1.0, 'hit': 0.792, 'q': 0.0, 'q_slope': 0.0, 'n': 3.01, 'kv': 0.049}
+   previous {'pf': 1.0, 'hit': 0.799, 'q': 0.0, 'q_slope': 0.0, 'n': 2.647, 'kv': 0.043}
+   end      {'pf': 1.0, 'hit': 0.791, 'q': 0.0, 'q_slope': 0.0, 'n': 2.503, 'kv': 0.04}
+   preempt 0 gpu {'busy_sm_clock_cv': 0.008118067375968702, 'busy_samples': 1944, 'hw_throttle_samples': 0, 'sw_thermal_frac': 0.02962962962962963, 'max_temp_c': 83.0}
+ M docs/decisions.md
+?? configs/stage2_control_cap_r3_rerun.yaml
+133b6ce Log invalid lambda 3 control; add rerun config
+pushvm=0
+VM 133b6ce dirty=0
+no server running on /tmp/tmux-1000/default
+40, 1 MiB, 0 %
+rerun: 1 windows (created Sun Nov  1 21:55:01 2026
+runs/20261101-215502_stage2_control_cap_r3_rerun
+"event": "server_start", "cmd": "taskset -c 0-5 vllm serve Qwen/Qwen3-4B --host 127.0.0.1 --port 8000 --enable-prefix-caching --kv-cache-metrics --enable-prompt-tokens-details --seed 0 --max-num-seqs 256", "ser
+Free memory on device (23.3/23.56 GiB)
+t=   16.1s  h=0.71  N=1  Q=0  KV=1%  lag=0.001s  sm=2025MHz

@@ -1,0 +1,78 @@
+## Verdict rules
+
+Each run gets one of three verdicts, judged in the watch window after the trigger has ended, using thresholds written down before the first run.
+
+| Verdict | Percent fast | Waiting line | Hit rate |
+| --- | --- | --- | --- |
+| **Recovered** | Back to its baseline level before the window ends | Back to its baseline length | Back to baseline |
+| **Slow drain** (not metastable) | Still low but climbing | Shrinking steadily | Climbing |
+| **Stuck** | Still low at the end of the window | Flat or growing | Stays low |
+
+**Why "slow drain" is separate:** a trigger can leave a long waiting line that takes a while to clear even when no loop holds the server down. If the line is shrinking, the server is recovering, just slowly. Calling that "stuck" would be wrong.
+
+**"Stuck" counts as the metastable failure only when all three hold:** the trigger has ended, the load is the same as before, and the same load without a trigger stays healthy (control run below).
+
+## Control runs
+
+Control runs prove that the trigger and the cache caused a stuck result, not the load itself.
+
+| Control | Same as the test run, except | Expected result | Proves |
+| --- | --- | --- | --- |
+| **No trigger** | No shock at all | Stays healthy for the whole run | The load alone does not cause the failure |
+| **Prefix caching off** | Caching disabled; use the load burst, since there is no cache to wipe | Server returns to its single (slower) level; never stuck at a lower level than before | The cache is needed for the failure |
+| **Prefixes protected** (later) | Cached prefixes of active sessions cannot be evicted during the trigger | Recovers | Eviction by the running batch is the link that keeps it stuck |
+
+The no-trigger control is run at every load used in Stage 2. The protected-prefixes control may need a code change or a feature vLLM does not have; see open questions.
+
+## What we vary: the danger-zone map
+
+The main Stage 2 result is a map: for each combination of load and trigger size, does the server recover or get stuck?
+
+| Vary | Values | Learn |
+| --- | --- | --- |
+| Load λ | Several points across the danger zone, plus one just below μ\_off as a sanity check | At which loads the server can get stuck |
+| Trigger size | For bursts and power caps: a few heights and durations. Cache wipe has no size | How big a shock it takes |
+| KV pool size | Only if needed to open up the danger zone | How much memory protects the server |
+
+**Repeats.** Near the edge of the danger zone, the same setup may sometimes recover and sometimes get stuck, just by chance. Run each cell several times with different seeds and report "stuck in k of n runs", not a single yes or no.
+
+**Start small.** Begin with the cache wipe at three or four loads. Add trigger sizes and pool sizes only after those cells give clear results.
+
+# Set the rate to a lambda inside (mu_off, mu_warm) once both sweeps are done.
+extends: base.yaml
+name: long_run
+workload:
+  rate: 3.0         # inside (mu_off = 2, mu_warm = 4); see docs/decisions.md
+  duration_s: 7200
+20261031-013840_recorder_off_r3
+20261031-015442_recorder_off_r4
+20261031-021045_recorder_off_r5
+20261031-025032_tau
+20261101-131823_tau
+
+ 20261030-181851_long_run lam 3 window 240 7200 dur 7200 warm 240
+ pfast bin=60: n=116 min=1.0000 p5=1.0000 med=1.0000
+ pfast bin=300: n=24 min=1.0000 p5=1.0000 med=1.0000
+ pfast bin=500: n=14 min=1.0000 p5=1.0000 med=1.0000
+ hit 300s: [0.647, 0.607, 0.666, 0.621, 0.677, 0.661, 0.607, 0.593, 0.601, 0.622, 0.617, 0.668, 0.657, 0.629, 0.674, 0.609, 0.595, 0.624, 0.679, 0.603, 0.642, 0.606, 0.664]
+ waiting: mean 0.004 p99 0.0 max 2
+ p50 300s range 0.092-0.133
+
+ 20261101-131823_tau lam 2 window 300 900 dur 3300 warm 240
+ pfast bin=60: n=10 min=1.0000 p5=1.0000 med=1.0000
+ pfast bin=300: n=2 min=1.0000 p5=1.0000 med=1.0000
+ pfast bin=500: n=1 min=1.0000 p5=1.0000 med=1.0000
+ hit 300s: [0.781]
+ waiting: mean 0.000 p99 0.0 max 0
+ p50 300s range 0.084-0.084
+
+ 20261101-131823_tau lam 3 window 1200 2100 dur 3300 warm 240
+ pfast bin=60: n=15 min=0.9907 p5=0.9972 med=1.0000
+ pfast bin=300: n=3 min=0.9980 p5=0.9982 med=1.0000
+ pfast bin=500: n=2 min=0.9988 p5=0.9989 med=0.9994
+ hit 300s: [0.619, 0.607]
+ waiting: mean 0.004 p99 0.0 max 2
+ p50 300s range 0.124-0.127
+
+long run first 1800s hit per 120s: [np.float64(0.689), np.float64(0.669), np.float64(0.623), np.float64(0.642), np.float64(0.675), np.float64(0.566), np.float64(0.637), np.float64(0.678), np.float64(0.666), np.float64(0.616), np.float64(0.612), np.float64(0.641), np.float64(0.649), np.float64(0.711), np.float64(0.646)]
+sessions: t of last turn in first 1200s etc; N mean per 300s: [np.float64(6.4), np.float64(7.7), np.float64(10.0), np.float64(8.2), np.float64(9.0), np.float64(6.3), np.float64(6.3), np.float64(8.4)]

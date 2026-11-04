@@ -1,0 +1,29 @@
+valid True failed []
+client_lag True {"p99_s": 0.002565394369526075}
+no_errors True {"ok": 21551}
+accounting True {"scheduled": 21551, "recorded": 21551, "ok": 21551, "vllm_success_delta": 21551.0, "cut_off_with_first_token": 0}
+recorder True {"counter_decreases": [], "max_gap_s": 1.2411296610007412, "failed_scrapes": 0}
+gpu_steady True {"busy_sm_clock_cv": 0.007430715002156017, "busy_samples": 6926, "hw_throttle_samples": 0, "sw_thermal_frac": 0.003017241379310345, "max_temp_c": 81.0}
+arrival_rate True {"measured": 3.011781609195402, "configured": 3.0, "count": 20962, "expected": 20880.0}
+clean_git True {"commit": "edd0a473b43a0cb1f67e6ef51bf21a63c384f98b", "dirty": false}
+{
+ "run": "20261030-181851_long_run",
+ "rate": 3.0,
+ "prefix_caching": true,
+ "throughput": 3.0129310344827585,
+ "ttft_p50": 0.11612236713153834,
+ "ttft_p99": 0.5127679029871438,
+ "e2e_p50": 2.60563254808676,
+ "unfinished": 0,
+ "hit_rate": 0.6059109006934893,
+ "q_mean": 0.003735632183908046,
+ "q_slope_per_s": -6.860020552958561e-07,
+ "valid": true
+}
+throughput/lambda 1.004310344827586
+third 1: ttft p50 0.1165 p99 0.5414 hit(mean of intervals) 0.6090 hit(counter ratio) 0.6333 Qmax 1.0 KVmax 0.545
+third 2: ttft p50 0.1152 p99 0.5010 hit(mean of intervals) 0.6083 hit(counter ratio) 0.6363 Qmax 2.0 KVmax 0.492
+third 3: ttft p50 0.1166 p99 0.4907 hit(mean of intervals) 0.6004 hit(counter ratio) 0.6254 Qmax 1.0 KVmax 0.492
+p50 last/middle 1.0128610197551646 hit drop 0.007862025586092725 counter hit drop 0.010853615689215168
+{'vllm:num_preemptions_total': np.float64(0.0), 'vllm:num_preemptions_created': np.float64(0.0), 'vllm:request_success_total': np.float64(21551.0), 'vllm:request_success_created': np.float64(0.0), 'vllm:request_num_preemptions_count': np.float64(21551.0), 'vllm:request_num_preemptions_sum': np.float64(0.0), 'vllm:request_num_preemptions_created': np.float64(0.0)}
+temp max 81 unfinished total 0

@@ -1,0 +1,67 @@
+FINISHED: 15:16:02
+EXIT_IDLE=0
+EXIT_PREEMPT=0
+EXIT_IDLE=0
+
+[exited with code 0]
+rsync=0
+runs/20261101-144335_wipe_test_preempt
+runs/20261101-145940_wipe_test_idle
+
+=== runs/20261101-144335_wipe_test_preempt
+valid True failed []
+  client_lag True {'p99_s': 0.0027491676742329224}
+  no_errors True {'ok': 1661}
+  accounting True {'scheduled': 1661, 'recorded': 1661, 'ok': 1661, 'vllm_success_delta': 1661.0, 'cut_off_with_first_token': 0}
+  recorder True {'counter_decreases': [], 'max_gap_s': 1.002637937000145, 'failed_scrapes': 0}
+  trigger True {'attempts': 1, 'wipe': {'t_start': 450.0001386739996, 't_end': 450.0139556419999, 'mode': 'preempt', 'status': 200, 'success': True}, 'last_attempt': {'t_start': 450.0001386739996, 't_end': 450.0139556419999, 'mode': 'preempt', 'status': 200, 'success': True}}
+attempts 1 {200: 1}
+[{'t_start': 450.0001386739996, 't_end': 450.0139556419999, 'mode': 'preempt', 'status': 200, 'success': True}]
+wipe t_start 450.000 t_end 450.014 dur 0.014
+preempt cols ['vllm:num_preemptions_total', 'vllm:num_preemptions_created', 'vllm:request_num_preemptions_count', 'vllm:request_num_preemptions_sum', 'vllm:request_num_preemptions_created']
+     t  vllm:num_requests_running  vllm:num_requests_waiting  vllm:kv_cache_usage_perc  vllm:num_preemptions_total  vllm:num_preemptions_created  vllm:request_num_preemptions_count  vllm:request_num_preemptions_sum  vllm:request_num_preemptions_created
+447.16                        2.0                        0.0                      0.04                         0.0                  1.793544e+09                               745.0                               0.0                          1.793544e+09
+448.16                        1.0                        0.0                      0.02                         0.0                  1.793544e+09                               747.0                               0.0                          1.793544e+09
+449.16                        2.0                        0.0                      0.04                         0.0                  1.793544e+09                               747.0                               0.0                          1.793544e+09
+450.16                        1.0                        1.0                      0.02                         0.0                  1.793544e+09                               748.0                               0.0                          1.793544e+09
+451.16                        5.0                        0.0                      0.09                         2.0                  1.793544e+09                               748.0                               0.0                          1.793544e+09
+452.16                        3.0                        0.0                      0.05                         2.0                  1.793544e+09                               750.0                               2.0                          1.793544e+09
+453.16                        9.0                        0.0                      0.13                         2.0                  1.793544e+09                               750.0                               2.0                          1.793544e+09
+  -120..  +0s hit=0.774 n=260 p50=0.087 p99=0.267 max=0.342 cached_mean=1212
+    +0.. +15s hit=0.229 n=30 p50=0.229 p99=0.580 max=0.653 cached_mean=346
+   +15.. +60s hit=0.681 n=83 p50=0.084 p99=0.317 max=0.318 cached_mean=945
+   +60..+120s hit=0.752 n=122 p50=0.086 p99=0.333 max=0.343 cached_mean=1168
+  +120..+300s hit=0.739 n=396 p50=0.087 p99=0.334 max=0.401 cached_mean=1126
+ statuses {'ok': 1661} output_tokens {128: 1661}
+ in flight at wipe: 2 output tokens [128, 128] e2e [2.75, 2.73]
+ normal e2e before p50 1.94
+ log: resets 1 failed 0 tracebacks 0
+
+=== runs/20261101-145940_wipe_test_idle
+valid True failed []
+  client_lag True {'p99_s': 0.0028594049862931607}
+  no_errors True {'ok': 1661}
+  accounting True {'scheduled': 1661, 'recorded': 1661, 'ok': 1661, 'vllm_success_delta': 1661.0, 'cut_off_with_first_token': 0}
+  recorder True {'counter_decreases': [], 'max_gap_s': 1.2047152929999356, 'failed_scrapes': 0}
+  trigger True {'attempts': 178, 'wipe': {'t_start': 461.54307982799946, 't_end': 461.5463657279997, 'mode': 'idle', 'status': 200, 'success': True}, 'last_attempt': {'t_start': 461.54307982799946, 't_end': 461.5463657279997, 'mode': 'idle', 'status': 200, 'success': True}}
+attempts 178 {200: 178}
+[{'t_start': 461.48233895500016, 't_end': 461.49278209299973, 'mode': 'idle', 'status': 200, 'success': False}, {'t_start': 461.54307982799946, 't_end': 461.5463657279997, 'mode': 'idle', 'status': 200, 'success': True}]
+wipe t_start 461.543 t_end 461.546 dur 0.003
+preempt cols ['vllm:num_preemptions_total', 'vllm:num_preemptions_created', 'vllm:request_num_preemptions_count', 'vllm:request_num_preemptions_sum', 'vllm:request_num_preemptions_created']
+     t  vllm:num_requests_running  vllm:num_requests_waiting  vllm:kv_cache_usage_perc  vllm:num_preemptions_total  vllm:num_preemptions_created  vllm:request_num_preemptions_count  vllm:request_num_preemptions_sum  vllm:request_num_preemptions_created
+459.16                        5.0                        0.0                      0.10                         0.0                  1.793545e+09                               768.0                               0.0                          1.793545e+09
+460.16                        7.0                        0.0                      0.10                         0.0                  1.793545e+09                               769.0                               0.0                          1.793545e+09
+461.16                        3.0                        0.0                      0.03                         0.0                  1.793545e+09                               773.0                               0.0                          1.793545e+09
+462.16                        1.0                        0.0                      0.02                         0.0                  1.793545e+09                               776.0                               0.0                          1.793545e+09
+463.16                        1.0                        0.0                      0.02                         0.0                  1.793545e+09                               776.0                               0.0                          1.793545e+09
+464.16                        2.0                        0.0                      0.03                         0.0                  1.793545e+09                               777.0                               0.0                          1.793545e+09
+465.16                        4.0                        0.0                      0.05                         0.0                  1.793545e+09                               777.0                               0.0                          1.793545e+09
+  -120..  +0s hit=0.773 n=257 p50=0.087 p99=0.265 max=0.344 cached_mean=1227
+    +0.. +15s hit=0.249 n=25 p50=0.147 p99=0.327 max=0.327 cached_mean=312
+   +15.. +60s hit=0.634 n=91 p50=0.087 p99=0.339 max=0.343 cached_mean=947
+   +60..+120s hit=0.745 n=114 p50=0.088 p99=0.314 max=0.344 cached_mean=1145
+  +120..+300s hit=0.733 n=403 p50=0.086 p99=0.341 max=0.401 cached_mean=1121
+ statuses {'ok': 1661} output_tokens {128: 1661}
+ in flight at wipe: 0 output tokens [] e2e []
+ normal e2e before p50 1.95
+ log: resets 1 failed 177 tracebacks 0

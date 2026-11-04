@@ -1,0 +1,25 @@
+Sun Nov  1 22:36:30 UTC 2026
+FINISHED: EXIT=0
+
+[exited with code 0]
+rsync=0
+runs/20261101-215502_stage2_control_cap_r3_rerun
+runs/20261101-215502_stage2_control_cap_r3_rerun has checks True
+valid True []
+  client_lag True {'p99_s': 0.002605037513076241}
+  no_errors True {'ok': 7017}
+  accounting True {'scheduled': 7017, 'recorded': 7017, 'ok': 7017, 'vllm_success_delta': 7017.0, 'cut_off_with_first_token': 0}
+  recorder True {'counter_decreases': [], 'max_gap_s': 1.2100008699999307, 'failed_scrapes': 0}
+  gpu_steady True {'busy_sm_clock_cv': 0.008848622665330983, 'busy_samples': 2151, 'hw_throttle_samples': 0, 'sw_thermal_frac': 0.01574074074074074, 'max_temp_c': 84.0}
+  arrival_rate True {'measured': 3.035185185185185, 'configured': 3.0, 'count': 6556, 'expected': 6480.0}
+  clean_git True {'commit': '133b6ce38768eddc7420795e158789a181afec9c', 'dirty': False}
+verdict recovered
+   baseline {'pf': 1.0, 'hit': 0.608, 'q': 0.003, 'q_slope': -0.0, 'n': 8.755, 'kv': 0.137}
+   previous {'pf': 1.0, 'hit': 0.673, 'q': 0.0, 'q_slope': 0.0, 'n': 6.493, 'kv': 0.103}
+   end {'pf': 1.0, 'hit': 0.607, 'q': 0.003, 'q_slope': -0.0, 'n': 9.328, 'kv': 0.147}
+status {'ok': 7017} preempt 0
+p50 0.117 p99 0.529
+20261101-215502_stage2_control_cap_r3_rerun: VALID
+EXIT=0
+no server running on /tmp/tmux-1000/default
+41, 1 MiB

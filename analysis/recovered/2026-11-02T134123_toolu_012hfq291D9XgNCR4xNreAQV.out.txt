@@ -1,0 +1,14 @@
+Mon Nov  2 13:41:23 UTC 2026
+Mon Nov  2 01:41:24 PM UTC 2026
+up 19 hours, 54 minutes
+bursts: 1 windows (created Mon Nov  2 13:13:52 202
+
+t= 1591.1s  h=0.87  N=2  Q=0  KV=5%  lag=0.001s  sm=1980MHz
+74, 91 %, 409.59 W, 100 %
+20261102-131353_burst_r3_s1 | running | t=1592 | reqs 4872 {'ok': 4872} | hw 0 [] sw 0.013 maxT 82
+   burst requests recorded 351/351, sent 351, ok 351, ttft p50 26.19 max 56.2
+   before       sessions-only fast 1.000 p99 0.5 | hit 0.618 | N 8.5 maxN 25 | Q 0.0 maxQ 0 | KV 0.13 maxKV 0.34 | preempt 0
+   BURST        sessions-only fast 0.062 p99 55.6 | hit 0.194 | N 64.9 maxN 77 | Q 109.1 maxQ 229 | KV 0.92 maxKV 1.00 | preempt 32
+   +0..60       sessions-only fast 0.000 p99 56.0 | hit 0.172 | N 67.5 maxN 76 | Q 213.2 maxQ 237 | KV 0.96 maxKV 1.00 | preempt 17
+   +60..300     sessions-only fast 0.646 p99 36.0 | hit 0.608 | N 33.7 maxN 104 | Q 36.8 maxQ 190 | KV 0.40 maxKV 1.00 | preempt 53
+   +300..600    sessions-only fast 1.000 p99 0.4 | hit 0.662 | N 6.2 maxN 16 | Q 0.0 maxQ 0 | KV 0.10 maxKV 0.27 | preempt 0

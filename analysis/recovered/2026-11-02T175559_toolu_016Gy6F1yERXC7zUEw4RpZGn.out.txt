@@ -1,0 +1,10 @@
+bytes/token 147456 | check vs log: 147415
+fraction 0.85 blocks 5134 tokens 82144 bytes 12112625664
+fraction 0.8 blocks 4832 tokens 77312 bytes 11400118272
+fraction 0.75 blocks 4530 tokens 72480 bytes 10687610880
+fraction 0.7 blocks 4228 tokens 67648 bytes 9975103488
+(eval):7: no matches found: /Users/chalshik/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/*/config.json
+  "head_dim": 128,
+  "num_hidden_layers": 36,
+  "num_key_value_heads": 8,
+  "torch_dtype": "bfloat16",

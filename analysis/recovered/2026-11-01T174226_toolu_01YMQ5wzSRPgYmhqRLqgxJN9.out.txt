@@ -1,0 +1,21 @@
+=== noise in healthy long run, λ=3
+ adjacent 300s windows hit diff: sd 0.041 p95|d| 0.076 max 0.092; rises>=.02 share 0.34
+ adjacent 450s windows hit diff: sd 0.036 p95|d| 0.067 max 0.077; rises>=.02 share 0.27
+ adjacent 600s windows hit diff: sd 0.032 p95|d| 0.059 max 0.072; rises>=.02 share 0.26
+ adjacent 750s windows hit diff: sd 0.029 p95|d| 0.049 max 0.063; rises>=.02 share 0.27
+ hit slope per 300s over 900s: sd 0.022 p95|s| 0.040 max 0.041
+=== backlog vs session turns: was the previous turn unfinished when the next was sent?
+sweep_pc_on_r3 later turns 1721 | sent before prev first token 0.013, before prev end 0.118 | gap p50 0s | cached share: all 0.667, prev already done at own start 0.647
+sweep_pc_on_r4 later turns 2325 | sent before prev first token 0.015, before prev end 0.215 | gap p50 0s | cached share: all 0.530, prev already done at own start 0.451
+sweep_pc_on_r5 later turns 2984 | sent before prev first token 0.429, before prev end 0.673 | gap p50 0s | cached share: all 0.438, prev already done at own start 0.143
+sweep_pc_on_r6 later turns 3524 | sent before prev first token 0.906, before prev end 0.948 | gap p50 0s | cached share: all 0.378, prev already done at own start 0.069
+sweep_pc_on_r10 later turns 5906 | sent before prev first token 0.997, before prev end 0.997 | gap p50 0s | cached share: all 0.240, prev already done at own start 0.030
+sweep_pc_off_r3 later turns 1721 | sent before prev first token 0.049, before prev end 0.342 | gap p50 0s | cached share: all 0.000, prev already done at own start 0.000
+sweep_pc_off_r4 later turns 2325 | sent before prev first token 0.619, before prev end 0.790 | gap p50 0s | cached share: all 0.000, prev already done at own start 0.000
+=== sessions in a stage 2 run
+ long run sessions 2720 max turn 7 req 21551 session span p50 132
+=== current verdict rule on existing runs, judged at t=450 (mechanics runs excluded)
+ healthy λ=3 at 900 recovered {'pf': 1.0, 'hit': 0.605, 'q': 0.013, 'q_slope': 0.0} base hit 0.625
+ healthy λ=3 at 2400 recovered {'pf': 1.0, 'hit': 0.69, 'q': 0.0, 'q_slope': 0.0} base hit 0.633
+ healthy λ=3 at 3900 recovered {'pf': 1.0, 'hit': 0.592, 'q': 0.007, 'q_slope': -0.0} base hit 0.648
+ healthy λ=3 at 5400 recovered {'pf': 1.0, 'hit': 0.617, 'q': 0.0, 'q_slope': 0.0} base hit 0.596

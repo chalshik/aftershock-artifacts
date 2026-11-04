@@ -1,0 +1,6 @@
+sweep_gap5_pc_on [2, 3, 3.5, 4, 4.5, 5, 6, 7] 900 240 {'dist': 'exponential', 'mean': 5.0} | gap mean 4.8, turns/session 7.73, span p50 of session 30 s
+   taskset -c 0-5 vllm serve Qwen/Qwen3-4B --host 127.0.0.1 --port 8000 --enable-prefix-caching --kv-cache-metrics --enable-prompt-tokens-details --seed 0 --max-num-seqs 256
+sweep_gap5_pc_off [2, 2.5, 3, 3.5] 900 240 {'dist': 'exponential', 'mean': 5.0} | gap mean 4.8, turns/session 7.73, span p50 of session 30 s
+   taskset -c 0-5 vllm serve Qwen/Qwen3-4B --host 127.0.0.1 --port 8000 --kv-cache-metrics --enable-prompt-tokens-details --seed 0 --max-num-seqs 256 --no-enable-prefix-caching
+gap 20 s: W at lambda 3 mean 74843 tokens (0.77 of 96,656)
+gap 5 s: W at lambda 3 mean 18705 tokens (0.19 of 96,656)

@@ -1,0 +1,24 @@
+Mon Nov  2 12:25:12 UTC 2026
+Mon Nov  2 12:25:12 PM UTC 2026
+up 18 hours, 38 minutes
+wipes35: 1 windows (created Mon Nov  2 11:01:59 20
+SEED_1_EXIT=0 SEED_2_EXIT=0 
+t=    2.2s  h=-  N=0  Q=0  KV=0%  lag=-s  sm=1860MHz
+48, 69 %, 121.22 W, 0 %
+20261102-110200_wipe_preempt_r3.5_s1 | VALID | reqs 8110 {'ok': 8110} | t=2403 | hw 0 [] sw 0.025 meanT 79.2 maxT 83 | wipe (True, 900.06)
+   base        fast 0.995 hit 0.550 N 14.2 maxN 57 Q 0.0 maxQ 3 KV 0.22 maxKV 0.83 preempt 0
+   +0..60      fast 0.972 hit 0.492 N 17.6 maxN 35 Q 0.1 maxQ 5 KV 0.25 maxKV 0.50 preempt 8
+   +60..300    fast 1.000 hit 0.561 N 12.8 maxN 28 Q 0.0 maxQ 1 KV 0.20 maxKV 0.46 preempt 0
+   +300..600   fast 1.000 hit 0.614 N 9.1 maxN 29 Q 0.0 maxQ 1 KV 0.14 maxKV 0.45 preempt 0
+   +600..900   fast 1.000 hit 0.593 N 8.8 maxN 29 Q 0.0 maxQ 1 KV 0.14 maxKV 0.42 preempt 0
+   +900..1200  fast 1.000 hit 0.579 N 13.3 maxN 43 Q 0.0 maxQ 3 KV 0.20 maxKV 0.65 preempt 0
+   +1200..1500 fast 0.998 hit 0.550 N 13.0 maxN 49 Q 0.0 maxQ 1 KV 0.20 maxKV 0.76 preempt 0
+20261102-114305_wipe_preempt_r3.5_s2 | VALID | reqs 7964 {'ok': 7964} | t=2403 | hw 0 [] sw 0.017 meanT 79.2 maxT 83 | wipe (True, 900.02)
+   base        fast 1.000 hit 0.542 N 14.3 maxN 57 Q 0.0 maxQ 1 KV 0.22 maxKV 0.82 preempt 0
+   +0..60      fast 1.000 hit 0.534 N 8.6 maxN 19 Q 0.1 maxQ 2 KV 0.14 maxKV 0.29 preempt 4
+   +60..300    fast 1.000 hit 0.570 N 10.8 maxN 30 Q 0.0 maxQ 1 KV 0.17 maxKV 0.45 preempt 0
+   +300..600   fast 1.000 hit 0.589 N 10.7 maxN 34 Q 0.0 maxQ 1 KV 0.17 maxKV 0.54 preempt 0
+   +600..900   fast 0.999 hit 0.575 N 12.2 maxN 43 Q 0.0 maxQ 1 KV 0.19 maxKV 0.62 preempt 0
+   +900..1200  fast 1.000 hit 0.600 N 9.3 maxN 25 Q 0.0 maxQ 1 KV 0.15 maxKV 0.37 preempt 0
+   +1200..1500 fast 1.000 hit 0.558 N 11.9 maxN 30 Q 0.0 maxQ 2 KV 0.18 maxKV 0.46 preempt 0
+20261102-122411_wipe_preempt_r3.5_s3 | running | reqs 4 {'ok': 4} | t=6 | hw 0 [] sw 0.000 meanT 0.0 maxT 0 | wipe None

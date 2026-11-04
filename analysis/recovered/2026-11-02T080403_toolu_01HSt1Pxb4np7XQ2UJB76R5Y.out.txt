@@ -1,0 +1,6 @@
+recovered
+baseline {'pf': 0.999, 'hit': 0.608, 'q': 0.008, 'q_slope': 0.0, 'n': 8.825, 'kv': 0.138}
+previous {'pf': 1.0, 'hit': 0.673, 'q': 0.002, 'q_slope': -0.0, 'n': 6.535, 'kv': 0.104}
+end {'pf': 1.0, 'hit': 0.608, 'q': 0.005, 'q_slope': 0.0, 'n': 9.323, 'kv': 0.147}
+preempt 11
+hit 0-15s 0.191

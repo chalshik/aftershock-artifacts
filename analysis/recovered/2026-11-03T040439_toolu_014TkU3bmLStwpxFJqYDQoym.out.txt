@@ -1,0 +1,15 @@
+Tue Nov  3 04:04:39 UTC 2026
+FINISHED: burst_kv72k_r3_s1_EXIT=0 burst_kv72k_r3_s2_EXIT=0 burst_kv72k_r3_s3_EXIT=0 wipe_kv72k_r3_s1_EXIT=0 wipe_kv72k_r3_s2_EXIT=0 wipe_kv72k_r3_s3_EXIT=0 ALL_DONE 
+
+[exited with code 0]
+
+rsync=0
+20261102-234257_burst_kv72k_r3_s1 valid True [] | hw 0 | VERDICT recovered | base pf 0.999 hit 0.502 | end pf 0.997 hit 0.506 q 0.02 kv 0.22
+20261103-002556_burst_kv72k_r3_s2 valid True [] | hw 0 | VERDICT recovered | base pf 1.000 hit 0.496 | end pf 1.000 hit 0.514 q 0.01 kv 0.18
+20261103-010856_burst_kv72k_r3_s3 valid True [] | hw 0 | VERDICT recovered | base pf 1.000 hit 0.510 | end pf 0.998 hit 0.560 q 0.01 kv 0.16
+20261103-015156_wipe_kv72k_r3_s1 valid True [] | hw 0 | VERDICT recovered | base pf 0.999 hit 0.500 | end pf 0.998 hit 0.487 q 0.01 kv 0.23
+20261103-023254_wipe_kv72k_r3_s2 valid True [] | hw 0 | VERDICT recovered | base pf 0.997 hit 0.503 | end pf 1.000 hit 0.520 q 0.00 kv 0.17
+20261103-031353_wipe_kv72k_r3_s3 valid True [] | hw 0 | VERDICT recovered | base pf 1.000 hit 0.543 | end pf 1.000 hit 0.562 q 0.00 kv 0.15
+no server running on /tmp/tmux-1000/defa
+35, 1 MiB
+--lv   62G   49G  9.1G  85% /

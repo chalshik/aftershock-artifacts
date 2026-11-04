@@ -1,0 +1,27 @@
+Mon Nov  2 10:53:02 UTC 2026
+start 10:07:42 VM f1ac598 dirty=0 gpu 37, 1 MiB
+rewipe3b: 1 windows (created Mon Nov  2 10:07:42 2
+FINISHED: EXIT=0
+
+[exited with code 0]
+
+rsync=0
+valid True []
+  client_lag True {'p99_s': 0.002542678946792876}
+  no_errors True {'ok': 6641}
+  accounting True {'scheduled': 6641, 'recorded': 6641, 'ok': 6641, 'vllm_success_delta': 6641.0, 'cut_off_with_first_token': 0}
+  recorder True {'counter_decreases': [], 'max_gap_s': 1.0029894090039306, 'failed_scrapes': 0}
+  gpu_steady True {'busy_sm_clock_cv': 0.007867060500581155, 'busy_samples': 2137, 'hw_throttle_samples': 0, 'sw_thermal_frac': 0.009722222222222222, 'max_temp_c': 82.0}
+  arrival_rate True {'measured': 2.8314814814814815, 'configured': 3.0, 'count': 6116, 'expected': 6480.0}
+  clean_git True {'commit': 'f1ac598e6037aa8a7e0b85f42f83b5b10bb7f773', 'dirty': False}
+  trigger True {'attempts': 1, 'wipe': {'t_start': 900.000077196004, 't_end': 900.1393663740018, 'mode': 'preempt', 'status': 200, 'success': True}, 'last_attempt': {'t_start': 900.000077196004, 't_end': 900.1393663
+VERDICT recovered
+   baseline {'pf': 1.0, 'hit': 0.652, 'q': 0.0, 'q_slope': 0.0, 'n': 7.255, 'kv': 0.115}
+   previous {'pf': 1.0, 'hit': 0.641, 'q': 0.002, 'q_slope': 0.0, 'n': 8.12, 'kv': 0.125}
+   end {'pf': 1.0, 'hit': 0.677, 'q': 0.0, 'q_slope': 0.0, 'n': 6.307, 'kv': 0.101}
+status {'ok': 6641} output {128: 6641} preempt 6
+  +0..15 fast 1.000 hit 0.295 maxQ 3 maxKV 0.34
+  +15..60 fast 1.000 hit 0.606 maxQ 0 maxKV 0.36
+  +60..120 fast 1.000 hit 0.659 maxQ 0 maxKV 0.28
+  +120..300 fast 1.000 hit 0.674 maxQ 0 maxKV 0.36
+gpu mean busy T 77.7 p90 80 max 82

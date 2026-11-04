@@ -1,0 +1,27 @@
+Mon Nov  2 15:42:19 UTC 2026
+Mon Nov  2 03:42:24 PM UTC 2026
+up 21 hours, 55 minutes
+bursts: 1 windows (created Mon Nov  2 13:13:52 202
+burst_r3_s1_EXIT=0 burst_r3_s2_EXIT=0 burst_r3_s3_EXIT=0 
+t= 1087.1s  h=0.20  N=68  Q=277  KV=91%  lag=0.002s  sm=1905MHz
+78, 93 %, 417.52 W, 100 %
+20261102-131353_burst_r3_s1 | VALID | t=2523 | reqs 7717 {'ok': 7717} | hw 0 [] sw 0.009 maxT 82
+20261102-135701_burst_r3_s2 | VALID | t=2524 | reqs 7547 {'ok': 7547} | hw 0 [] sw 0.009 maxT 82
+   before       fast 1.000 | hit 0.612 | N 9.0 | Q 0.0 maxQ 1 | KV 0.14 maxKV 0.48 | preempt 0
+   BURST        fast 0.027 | hit 0.169 | N 63.2 | Q 94.5 maxQ 178 | KV 0.91 maxKV 1.00 | preempt 30
+   +0..60       fast 0.000 | hit 0.348 | N 73.3 | Q 128.5 maxQ 173 | KV 0.95 maxKV 1.00 | preempt 32
+   +60..300     fast 0.914 | hit 0.654 | N 16.4 | Q 2.6 maxQ 75 | KV 0.20 maxKV 1.00 | preempt 30
+   +300..600    fast 1.000 | hit 0.666 | N 6.9 | Q 0.0 maxQ 0 | KV 0.11 maxKV 0.30 | preempt 0
+   +600..1200   fast 1.000 | hit 0.613 | N 8.1 | Q 0.0 maxQ 1 | KV 0.13 maxKV 0.38 | preempt 0
+   +1200..1500  fast 1.000 | hit 0.633 | N 7.8 | Q 0.0 maxQ 1 | KV 0.12 maxKV 0.37 | preempt 0
+20261102-144008_burst_r3_s3 | VALID | t=2524 | reqs 7366 {'ok': 7366} | hw 0 [] sw 0.005 maxT 82
+   before       fast 1.000 | hit 0.630 | N 7.4 | Q 0.0 maxQ 0 | KV 0.12 maxKV 0.35 | preempt 0
+   BURST        fast 0.084 | hit 0.194 | N 62.0 | Q 88.7 maxQ 197 | KV 0.89 maxKV 1.00 | preempt 26
+   +0..60       fast 0.000 | hit 0.351 | N 71.8 | Q 149.3 maxQ 199 | KV 0.96 maxKV 1.00 | preempt 18
+   +60..300     fast 0.846 | hit 0.655 | N 19.2 | Q 6.9 maxQ 90 | KV 0.24 maxKV 1.00 | preempt 15
+   +300..600    fast 1.000 | hit 0.644 | N 7.4 | Q 0.0 maxQ 1 | KV 0.12 maxKV 0.56 | preempt 0
+   +600..1200   fast 1.000 | hit 0.648 | N 7.4 | Q 0.0 maxQ 0 | KV 0.12 maxKV 0.43 | preempt 0
+   +1200..1500  fast 1.000 | hit 0.660 | N 6.9 | Q 0.0 maxQ 0 | KV 0.11 maxKV 0.42 | preempt 0
+20261102-152316_burst_r3.5_s1 | running | t=1091 | reqs 3656 {'ok': 3656} | hw 0 [] sw 0.002 maxT 82
+   before       fast 0.998 | hit 0.551 | N 13.5 | Q 0.0 maxQ 1 | KV 0.21 maxKV 0.64 | preempt 0
+   BURST        fast 0.053 | hit 0.197 | N 64.8 | Q 150.0 maxQ 312 | KV 0.93 maxKV 1.00 | preempt 34

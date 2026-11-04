@@ -1,0 +1,1 @@
+PYTHONPATH=. uv run python /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/f5298640-1574-4ceb-a3d1-13cbc96eea3b/scratchpad/judge.py

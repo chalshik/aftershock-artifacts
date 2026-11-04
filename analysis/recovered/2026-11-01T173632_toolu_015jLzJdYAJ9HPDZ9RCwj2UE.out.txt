@@ -1,0 +1,75 @@
+    def free_blocks(self, ordered_blocks: Iterable[KVCacheBlock]) -> None:
+        """Free a list of blocks. The blocks should be ordered by their
+        eviction priority, where the first block will be evicted first.
+
+        Args:
+            ordered_blocks: A list of blocks to free ordered by their eviction
+                priority.
+
+        """
+        # Identify blocks with hash (LRU cache) and without it (never match APC)
+        blocks_to_evict_last = []
+        blocks_to_evict_first = []
+        other_pools: dict[BlockPool, list[KVCacheBlock]] = {}
+        for block in ordered_blocks:
+            if block.pool is not None and block.pool is not self:
+                other_pools.setdefault(block.pool, []).append(block)
+                continue
+            block.ref_cnt -= 1
+            if block.ref_cnt == 0 and not block.is_null:
+                if block.block_hash is None or not self.enable_caching:
+                    # LIFO reuse of non-cached blocks for better GPU locality.
+                    blocks_to_evict_first.append(block)
+                else:
+                    # FIFO reuse of cached blocks for LRU eviction behavior.
+                    blocks_to_evict_last.append(block)
+
+        # Blocks to reuse first are prepended to the front of the free queue.
+        self.free_block_queue.prepend_n(blocks_to_evict_first)
+        # Blocks to reuse last are appended to the end of the free queue.
+        self.free_block_queue.append_n(blocks_to_evict_last)
+        for pool, blocks in other_pools.items():
+            pool.free_blocks(blocks)
+
+185:        # The ref_cnt of null_block is not maintained, needs special care to
+187:        self.null_block = self.free_block_queue.popleft()
+666:    def get_new_blocks(self, num_blocks: int) -> list[KVCacheBlock]:
+681:        ret: list[KVCacheBlock] = self.free_block_queue.popleft_n(num_blocks)
+690:                assert block.ref_cnt == 0
+691:                block.ref_cnt += 1
+696:                assert block.ref_cnt == 0
+697:                block.ref_cnt += 1
+722:            assert block.ref_cnt > 0 and not block.is_null
+723:            block.ref_cnt -= 1
+725:            if block.ref_cnt == 0:
+729:    def _maybe_evict_cached_block(self, block: KVCacheBlock) -> bool:
+762:            # ref_cnt=0 means this block is in the free list (i.e. eviction
+764:            if block.ref_cnt == 0 and not block.is_null:
+2. Recomputed prefill per second rises.
+3. Running batch N grows (same load × longer time per request = more requests running at once).
+4. KV memory fills; cached prefixes are evicted sooner (shorter idle time before eviction).
+5. Hit rate stays low, because new cache entries are evicted before their session's next turn arrives.
+
+Preemptions stay low throughout. Frequent preemptions would point to a different known failure, the eviction limit cycle of Ao et al., not this loop.
+
+Stage 2 is done when:
+
+- [ ] At least one load inside the danger zone gets stuck in most repeats, while its no-trigger control stays healthy
+- [ ] Stuck runs show the loop metrics moving in the expected order, with few preemptions
+- [ ] With prefix caching off, the same setup does not get stuck
+- [ ] The ramp gap stays when dwell time is increased
+λ=2: active 33.8 W mean 47580 = 0.49C p10 0.39 p90 0.59; hit ceiling 0.799
+λ=2.5: active 42.6 W mean 59722 = 0.62C p10 0.49 p90 0.75; hit ceiling 0.800
+λ=3: active 51.6 W mean 72968 = 0.75C p10 0.61 p90 0.89; hit ceiling 0.800
+λ=3.5: active 60.0 W mean 84484 = 0.87C p10 0.73 p90 1.03; hit ceiling 0.799
+λ=4: active 69.1 W mean 97248 = 1.01C p10 0.88 p90 1.16; hit ceiling 0.799
+λ=5: active 86.1 W mean 121201 = 1.25C p10 1.07 p90 1.46; hit ceiling 0.799
+--- F: mean, and last third of the measured window
+sweep_pc_on_r2 dur 900 KV mean 0.062 last third 0.072 hit 0.767 Q last third 0.0
+sweep_pc_on_r3 dur 900 KV mean 0.125 last third 0.164 hit 0.661 Q last third 0.0
+sweep_pc_on_r4 dur 900 KV mean 0.307 last third 0.349 hit 0.525 Q last third 0.0
+sweep_pc_on_r5 dur 900 KV mean 0.816 last third 0.932 hit 0.446 Q last third 188.2
+sweep_pc_off_r2 dur 900 KV mean 0.112 last third 0.141 hit 0.000 Q last third 0.0
+sweep_pc_off_r3 dur 900 KV mean 0.415 last third 0.768 hit 0.000 Q last third 5.0
+sweep_pc_off_r4 dur 900 KV mean 0.867 last third 0.947 hit 0.000 Q last third 287.8
+pc_off r3 pf by 150s: [np.float64(0.99), np.float64(0.98), np.float64(0.98), np.float64(0.97), np.float64(0.88), np.float64(0.3)]

@@ -136,10 +136,18 @@ All five come from one rule, `docs/decisions.md:272-277`, restated at `PROTOCOL.
 ## Derived quantities
 
 Added 2026-11-04 with their code. Each is the reading that reproduces the published values (`docs/decisions.md`, 2026-11-04 "Derived figures moved into analysis/").
+The original code, recovered verbatim from session transcripts, is in `analysis/recovered/` (INDEX.md there). Where its reading differs from the function below, the entry says so; the function stays the definition (decisions.md 2026-11-04, "[CORR] Derived-figure differences explained by the recovered originals").
 
 ### W (working set)
 - **Text:** "sum of the latest prompt over active sessions from the schedule". `docs/decisions.md:248`.
 - **Code:** `derived.working_set` (`derived.py:63`). A session counts as active from its first planned turn to its last.
+- **Original reading:** the same rule sampled every 5 s from t = 600 s (every 10 s for the 5 s-gap comparison), against a 1 s grid here. This explains the ≤ 0.4 % differences in published W values.
+
+### session median (prompt length)
+- **Text:** the p50 of `prompt_len` over every scheduled **session** request of a run's whole schedule (`schedule.parquet`): warm-up included, sessions cut off at the end of arrivals included, burst requests excluded. Computed as pandas `median` (linear interpolation).
+- **Value:** 1408 tokens (turn 3) in every schedule checked. It is a knife edge: the share of session requests at or below 1408 is 0.502–0.510 (decisions.md 2026-11-04 (7)), because truncated sessions add early turns. A full 8-turn session alone has median 1536, and over the measured window (t ≥ 240 s) the median is 1664 in 3 of 5 schedules.
+- **Used by:** the burst size, "1408-token prompts (the session median)" (decisions.md 2026-11-02) and the `burst_*.yaml` comments ("median session prompt").
+- **Code:** none; a one-line count on `schedule.parquet`.
 
 ### F (running-batch footprint)
 - **Text:** no definition in the original entry (`docs/decisions.md:248-250`).
@@ -160,3 +168,13 @@ Added 2026-11-04 with their code. Each is the reading that reproduces the publis
 ### post-trigger margin
 - **Text:** completions − λ over a span after a trigger's end. Defined with its windows in the registration REG-1 (`docs/model.md` M2), **not yet computed**.
 - **Code:** none yet; to be written only after REG-1 is approved.
+
+## Used configs that cannot be fixed (rule 5)
+
+Used configs are never edited. Their known defects are recorded here instead.
+
+### `configs/stage2_base.yaml`
+- **Unit:** the comment at `:21` says "req/s^2". The unit is req/s (queue slope, above; decisions.md 2026-11-04 [CORR]).
+- **Verdict block (`:10-22`):** it lacks `pf_climb`, `hit_climb` and `drain_horizon_s`, which `load.verdict` needs (`load.py:192-193`). It keeps the retired `q_slope`, `climb` and `end_s: 300`.
+- **Effect:** the runs that use it directly cannot be judged by `load.verdict`: `20261101-144335_wipe_test_preempt`, `20261101-145940_wipe_test_idle`, and the stopped `20261101-151707_stage2_control_r1.5`. The wipe tests fail even before the missing keys. They are 900 s runs with the wipe at 450 s, so the 600 s baseline and the 1500 s watch do not fit, and `verdict` raises on an empty window. None of these runs was meant to be judged (decisions.md 2026-11-01, "Live wipe test").
+- Every judged Stage 2 run gets the missing keys from `configs/stage2_cap_base.yaml:7-13`.
