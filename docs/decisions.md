@@ -665,3 +665,11 @@ The nine entries below come from a read-only audit of the repo, done before any 
 - **Since when:** PROTOCOL.md was created 2026-11-04.
 - **Effect:** no verdict changes. The result's statement narrows, and §3 gains a rule: a negative is stated for a setup only after the feasibility gate (`docs/process.md` §4) has said whether a stuck state was possible at its loads. The gate has not been run.
 - **Approval:** the study owner, with the audit proposal.
+
+## 2026-11-04 · [DECISION] Agent rules A–J installed (owner's request and approval)
+- **CLAUDE.md** is now a 60-line index: role (A), evidence tags (B), authority (C), session protocol (D), and short forms of E–J. The full text is in the new `docs/process.md`: templates, adversarial review, feasibility gate, statistics, provenance, a table of past errors and the rule that now catches each, the stage-end rule, data.
+- **New `docs/model.md`:** M1 (F + W), M2 (completion-rate margin), M3 (self-refill), M4 (capacity measured on one arrival pattern), and a prediction ledger. M1 is 0 for 3 on its tested predictions and is not to be used to choose loads until revised.
+- **New `docs/claims.md`:** C1 and C2 with test, support, refutation and status. C3–C9 stay in the owner's Paper Plan v2 for now.
+- **Choices made where the request needed one** (proposal, "Where I disagree"): one-sided 95 % Clopper–Pearson bounds by default, always stated; unregistered descriptive findings use `[RESULT]` with "Registration: none"; old entries are not retagged; a decisions entry is a record, not evidence.
+- **Owner's decisions left open:** where the paper layer lives; yes/no question or thesis; C1 metric; canonical hit rate.
+- From this entry on, every heading carries exactly one tag.
