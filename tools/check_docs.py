@@ -11,6 +11,7 @@ Checks (docs/process.md §6):
   file_refs     every FILE(path:line) tag points at an existing file and line
   context_pack  docs/context-pack.md equals what tools/context_pack.py generates
   configs       no config used by a run differs at HEAD from the run's commit (CLAUDE.md rule 5)
+  manifest      manifests/runs.sha256 only ever grew; every run folder in runs/ is listed in it
 `--quick` runs only the checks that need neither runs/ nor git history (for the session-start hook).
 If runs/ holds no run folders (the VM after copies are removed), the run checks are skipped and say so.
 Exit 1 if any check fails.
@@ -139,6 +140,28 @@ def check_append_only() -> list[str]:
     return errs
 
 
+def check_manifest(runs: Path | None) -> list[str]:
+    """Append-only over git history and against HEAD; with runs/, every run folder has at least one line."""
+    errs, path = [], "manifests/runs.sha256"
+    if _git("rev-parse", "--git-dir").returncode == 0:
+        prev = ""
+        for c in _git("log", "--reverse", "--format=%H", "--", path).stdout.split():
+            cur = _git("show", f"{c}:{path}").stdout
+            if not cur.startswith(prev):
+                errs.append(f"manifest: commit {c[:7]} changed earlier lines of {path}")
+            prev = cur
+        work = (REPO / path).read_text() if (REPO / path).exists() else ""
+        if not work.startswith(prev):
+            errs.append(f"manifest: the working copy of {path} changes lines that are in HEAD")
+    if runs is not None:
+        listed = {line.split("  ", 1)[1].split("/", 1)[0] for line in
+                  ((REPO / path).read_text().splitlines() if (REPO / path).exists() else []) if "  " in line}
+        missing = sorted(d.name for d in runs.iterdir() if d.is_dir() and RUN_ID.fullmatch(d.name) and d.name not in listed)
+        if missing:
+            errs.append(f"manifest: {len(missing)} run folders not in {path} (run `python3 tools/manifest.py update`), e.g. {missing[:3]}")
+    return errs
+
+
 def check_file_refs(docs: dict[str, str]) -> list[str]:
     errs = []
     for path, text in docs.items():
@@ -196,6 +219,7 @@ def main(argv=None) -> int:
     if not a.quick:
         errs += check_append_only()
         state = run_state(a.runs_dir) if a.runs_dir.exists() else {}
+        errs += check_manifest(a.runs_dir if state else None)
         if state:
             errs += check_runs(docs, state) + check_inventory(docs.get("docs/status.md", ""), state) + check_configs(a.runs_dir)
         else:

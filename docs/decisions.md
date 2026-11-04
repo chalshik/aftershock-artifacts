@@ -841,3 +841,10 @@ Verbatim summary of its three answers:
 - **Status:** both are **pending committed code**. Neither may be cited as `RUN(...)` evidence until the functions exist, are committed, and their output is logged in a new entry.
 - **Since when:** both were made today. The REG-1 result is not affected: it was computed by the committed `margin.reg1_table`.
 - **Rule that would have caught it:** I. The agent installed it and broke it in the same session.
+
+## 2026-11-04 · [OPS] Checksum manifest of runs/ (owner's decision: manifests/runs.sha256, committed, append-only)
+- **`manifests/runs.sha256`:** one line per file, `<sha256>  <run_id>/<path>`, relative to `runs/` (the `sha256sum` format). First write: 1,053 files in 104 run folders. With `runs/.gitkeep`, which is not data, that is the 1,054 files of the 2026-11-04 copy. Total 9,942,117,131 bytes, matching that copy's checksum comparison exactly. `shasum -a 256 -c` agrees on spot checks.
+- **`tools/manifest.py update`** appends lines only for new files. It stops and writes nothing if a listed file is missing or its hash changed: raw data is immutable, so that is damage to investigate.
+- **`tools/manifest.py verify <copy>`** checks a backup against the manifest (missing, different, unlisted). Without the script: `cd <copy> && shasum -a 256 -c <repo>/manifests/runs.sha256`. `verify runs` passes: 1,053 listed, 0 missing, 0 different.
+- **`tools/check_docs.py`** now checks that the manifest only grows (git history and working copy), and that every run folder in `runs/` is listed. So after each copy from the VM, `manifest.py update` is due before the docs check passes.
+- **Not done:** the second copy itself. A copy can now be verified, but none exists yet (status.md, Watch).

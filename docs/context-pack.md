@@ -487,24 +487,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-04 · [CORR] Hit rates from different computations compared again: λ = 7 at 5 s gaps vs λ = 5 at 20 s
-- **What was wrong:** 2026-11-03 "Capacity with 5 s turn gaps": "cached prefixes survive (hit 0.757 at λ = 7 against about 0.42 at λ = 5 with 20 s gaps)".
-  - 0.757 is a mean of per-scrape ratios: RUN(20261103-132357_sweep_gap5_pc_on_r7, load.summarize).
-  - "About 0.42" is a counter ratio: either the measured window of the λ = 5 sweep, 0.424 RUN(20261030-141658_sweep_pc_on_r5, load._level over 240–900 s), or the ramp peak, 0.419 RUN(20261103-043121_ramp_d300, load.ramp_table) / 0.407 RUN(20261103-053730_ramp_d600, load.ramp_table). Which one was meant is not recorded.
-- **Like for like:**
-  - mean of ratios 0.757 vs 0.378 (load.summarize);
-  - counter over the measured window 0.785 vs 0.424 (load._level over 240–900 s);
-  - whole run 0.785 vs 0.446 (load.whole_run_hit_rate).
-- **Source of the default-pool values in the 2026-11-02 72k comparison (0.767 / 0.661 / 0.525):** the original F script printed `hit` as first scrape to last over the whole run (`analysis/recovered/2026-11-01T173632_toolu_015jLzJdYAJ9HPDZ9RCwj2UE.out.txt`). This is what `load.whole_run_hit_rate` computes, as found in entry (4) above.
-- **Pool effect, one method at a time,** λ = 2 / 3 / 4, 72,480-token pool minus default pool:
-  - counter over the measured window: 0.686 − 0.765, 0.526 − 0.644, 0.415 − 0.510, so −0.079 / −0.118 / −0.095. RUN(20261102-182839_sweep_kv72k_pc_on_r2 … 20261102-193218_sweep_kv72k_pc_on_r4, load._level over 240–900 s) and RUN(20261030-132844_sweep_pc_on_r2 … 20261030-140051_sweep_pc_on_r4, load._level over 240–900 s).
-  - mean of ratios: −0.074 / −0.116 / −0.093. Whole run: −0.069 / −0.109 / −0.095 (entry (4)).
-  - By any single method the pool lowers hit by about 0.07–0.12, not "0.10–0.15".
-- **Since when:** 2026-11-02 (pool comparison), 2026-11-03 (λ = 7 vs λ = 5).
-- **Which results it affects:** none. Every method keeps the direction: the cache holds up better under overload at 5 s gaps, and the smaller pool lowers hit. No verdict uses these values. The old entries stay as written.
-- **Re-check done:** the three computations on the eight sweep runs above.
-- **Rule that would have caught it:** J (every quoted hit names its computation).
-
 ### 2026-11-04 · [CORR] Derived-figure differences explained by the recovered originals
 - **What was wrong:** entry (6) above says "The original code was never committed", and it lists 25 published values that the reconstruction (`analysis/derived.py`) does not reproduce, several marked "unexplained". The original code was never committed, but it was recoverable: the commands and their outputs are in the Claude Code session transcripts.
 - **Now committed:** `analysis/recovered/`, verbatim. That is 19 tool calls (command + recorded output), the scratch `judge.py` behind the long-run thirds, and `INDEX.md` (figure → file, transcript, timestamp, tool id, sha256).
@@ -546,3 +528,10 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **Status:** both are **pending committed code**. Neither may be cited as `RUN(...)` evidence until the functions exist, are committed, and their output is logged in a new entry.
 - **Since when:** both were made today. The REG-1 result is not affected: it was computed by the committed `margin.reg1_table`.
 - **Rule that would have caught it:** I. The agent installed it and broke it in the same session.
+
+### 2026-11-04 · [OPS] Checksum manifest of runs/ (owner's decision: manifests/runs.sha256, committed, append-only)
+- **`manifests/runs.sha256`:** one line per file, `<sha256>  <run_id>/<path>`, relative to `runs/` (the `sha256sum` format). First write: 1,053 files in 104 run folders. With `runs/.gitkeep`, which is not data, that is the 1,054 files of the 2026-11-04 copy. Total 9,942,117,131 bytes, matching that copy's checksum comparison exactly. `shasum -a 256 -c` agrees on spot checks.
+- **`tools/manifest.py update`** appends lines only for new files. It stops and writes nothing if a listed file is missing or its hash changed: raw data is immutable, so that is damage to investigate.
+- **`tools/manifest.py verify <copy>`** checks a backup against the manifest (missing, different, unlisted). Without the script: `cd <copy> && shasum -a 256 -c <repo>/manifests/runs.sha256`. `verify runs` passes: 1,053 listed, 0 missing, 0 different.
+- **`tools/check_docs.py`** now checks that the manifest only grows (git history and working copy), and that every run folder in `runs/` is listed. So after each copy from the VM, `manifest.py update` is due before the docs check passes.
+- **Not done:** the second copy itself. A copy can now be verified, but none exists yet (status.md, Watch).
