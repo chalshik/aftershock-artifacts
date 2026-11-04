@@ -27,7 +27,7 @@ Every factual statement carries one: `RUN(run_id, function)` · `SOURCE(vLLM 0.3
 - **E. Templates:** every run is registered with `[REG]` before it runs; results use `[RESULT]`, corrections `[CORR]`. Every decisions.md heading carries one of `[REG] [RESULT] [CORR] [DECISION] [OPS]`.
 - **F. Adversarial review:** before any registration, a separate pass sees only the registration and the code diff. It builds a trace on which the verdict is wrong, gives the strongest alternative explanation, and says whether the run can change any decision. Its output goes into the `[REG]` entry.
 - **G. Feasibility gate:** before any shock matrix, compute from existing or cheap runs whether a stuck state is possible at all (`docs/model.md`, M2). Register the pass condition before computing it.
-- **H. Statistics:** report k of n per cell with its 95 % Clopper–Pearson upper bound. Do not pool cells without a stated assumption. A control with a single seed is labeled as such.
+- **H. Statistics:** report k of n per cell with its one-sided 95 % Clopper–Pearson upper bound. Do not pool cells without a stated assumption. A control with a single seed is labeled as such.
 - **I. Provenance:** every number in the docs comes from a named function in `analysis/` applied to named run ids. `tools/check_docs.py` checks run ids, validity, tags, append-only and the context pack (`uv run pytest` runs it).
 - **J. Definitions:** `docs/definitions.md` holds one definition per term with its code; code must match it. Terms with more than one computation are marked and left for the owner.
 

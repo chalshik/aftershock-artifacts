@@ -1322,3 +1322,16 @@ Summary:
 - **4.11:** `sweep_rows` skips runs without metrics, and duplicates raise.
 - **4.9 is accepted as stated:** it biases against `pass`.
 - Full suite after the changes: `uv run pytest`, 183 passed. `analysis.tables published`: no difference.
+
+## 2026-11-05 · [DECISION] Owner approves REG-7; the data copies stay on the Mac; three wording fixes made
+- **REG-7 approved** by the owner on 2026-11-05 ("I approve reg 7"), before any L1 run exists. Registered in commit `d1b360c`.
+  - **One change made after the owner's message and before that commit** (no data existed): in the agent's pre-commit review, a burst run that `load.verdict` calls `stuck` while no span counts is now `inconclusive`, not `drains` (`gate.gate_verdict`; `tests/test_gate.py`).
+  - **Reason:** with a very low c_b, burst requests can still be completing in every span. Then no span is burst-free and none can hold, and the old rule would have read a stuck server as a drain, which leads to "write up the negative".
+  - It makes `pass` no easier. The owner is told of it in the same session.
+- **Data copies:** the owner decided that the copies of `runs/` stay on the Mac ("its ok to mac have copies"). The agent reads this as: no copy off the Mac is required.
+  - **Risk left open, stated and not loosened:** one machine is still a single point of failure. Status.md's Watch keeps it as a risk.
+  - Any copy on the Mac can be checked with `python3 tools/manifest.py verify <copy>`.
+- **Wording fixes approved by the owner ("fix words")**, from the 2026-11-05 [CORR] item 7:
+  1. `docs/process.md` §9: the manifest is at `manifests/runs.sha256` (decided 2026-11-04 [OPS]), and the copy location is the owner's decision above.
+  2. `PROTOCOL.md` §5.1: item 42's rule and the monotone reading for sweeps with a `capacity:` block, marked **[new 2026-11-05]**. Past μ values stand.
+  3. `CLAUDE.md` rule H: "one-sided 95 % Clopper–Pearson upper bound", as in process.md §5.

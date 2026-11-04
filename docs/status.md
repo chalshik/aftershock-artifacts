@@ -116,5 +116,5 @@ Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 
 
 Sorted by priority, most urgent first.
 
-- **Backup (top item):** the Mac holds the only copy of all 104 runs (9.4 GB). Make a second copy of `runs/` before anything else could happen to the Mac.
+- **Backup (top item):** the Mac holds all 104 runs (9.4 GB). The owner decided on 2026-11-05 that the copies stay on the Mac (decisions.md). A copy on the same machine guards against deletion, not against losing the Mac; `python3 tools/manifest.py verify <copy>` checks any copy.
 - **Heat:** before the backplate fan, hardware thermal flags at 83–84 °C invalidated 5 runs. With the fan: 0 flags in every run since. A flag still invalidates a run; the rule is not loosened.

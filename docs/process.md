@@ -118,5 +118,5 @@ A stage is finished only when every row of the plan's input and output tables fo
 
 ## 9. Data
 
-- `runs/` is the canonical raw data and exists only on the Mac (status.md, Watch). Its second copy and its location are the owner's decision.
-- A checksum manifest (`sha256` of every file in `runs/`) is proposed so that any copy can be verified without the VM; its location is the owner's decision (decisions.md 2026-11-04 audit, finding 33).
+- `runs/` is the canonical raw data and exists only on the Mac (status.md, Watch). The owner decided on 2026-11-05 that the copies stay on the Mac (decisions.md 2026-11-05 [DECISION]).
+- A checksum manifest (`sha256` of every file in `runs/`) is kept at `manifests/runs.sha256` (decisions.md 2026-11-04 [OPS]); `python3 tools/manifest.py verify <copy>` checks any copy without the VM.

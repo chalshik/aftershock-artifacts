@@ -59,7 +59,7 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
 
 ## 5. Procedure
 
-1. **Capacity per setup:** 900 s sweeps with caching on and off, seed 0. μ is the highest λ with a valid run, throughput ≥ 0.95 λ and waiting slope ≤ 0.01 req/s (written "req/s²" before 2026-11-04; the number is unchanged). Every sweep shares seed 0's arrival pattern, whose planned load rises through the measured window (`docs/model.md` M4).
+1. **Capacity per setup:** 900 s sweeps with caching on and off, seed 0. μ is the highest λ with a valid run, throughput ≥ 0.95 λ and waiting slope ≤ 0.01 req/s (written "req/s²" before 2026-11-04; the number is unchanged). Every sweep shares seed 0's arrival pattern, whose planned load rises through the measured window (`docs/model.md` M4). **[new 2026-11-05]** Sweeps whose config has a `capacity:` block (from REG-7 on) compare throughput with the realized planned rate in the window instead of λ (item 42, decisions.md 2026-11-04). With `monotone: true`, μ is the highest rate that passes along with every lower swept rate (REG-7, decisions.md 2026-11-05). Past μ values stand as judged.
 2. **Test loads:** λ inside μ_off < λ < μ_warm whose no-trigger control is `recovered`.
 3. **Shock runs:** 2400 s (2520 s for a burst), trigger at t = 900 s, seeds 1–3, plus seeds 4–5 if seeds disagree.
    - **Cache wipe:** `POST /reset_prefix_cache?reset_running_requests=true`, which preempts running requests.

@@ -124,7 +124,7 @@ Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 
 
 Sorted by priority, most urgent first.
 
-- **Backup (top item):** the Mac holds the only copy of all 104 runs (9.4 GB). Make a second copy of `runs/` before anything else could happen to the Mac.
+- **Backup (top item):** the Mac holds all 104 runs (9.4 GB). The owner decided on 2026-11-05 that the copies stay on the Mac (decisions.md). A copy on the same machine guards against deletion, not against losing the Mac; `python3 tools/manifest.py verify <copy>` checks any copy.
 - **Heat:** before the backplate fan, hardware thermal flags at 83–84 °C invalidated 5 runs. With the fan: 0 flags in every run since. A flag still invalidates a run; the rule is not loosened.
 
 ---
@@ -192,7 +192,7 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
 
 ## 5. Procedure
 
-1. **Capacity per setup:** 900 s sweeps with caching on and off, seed 0. μ is the highest λ with a valid run, throughput ≥ 0.95 λ and waiting slope ≤ 0.01 req/s (written "req/s²" before 2026-11-04; the number is unchanged). Every sweep shares seed 0's arrival pattern, whose planned load rises through the measured window (`docs/model.md` M4).
+1. **Capacity per setup:** 900 s sweeps with caching on and off, seed 0. μ is the highest λ with a valid run, throughput ≥ 0.95 λ and waiting slope ≤ 0.01 req/s (written "req/s²" before 2026-11-04; the number is unchanged). Every sweep shares seed 0's arrival pattern, whose planned load rises through the measured window (`docs/model.md` M4). **[new 2026-11-05]** Sweeps whose config has a `capacity:` block (from REG-7 on) compare throughput with the realized planned rate in the window instead of λ (item 42, decisions.md 2026-11-04). With `monotone: true`, μ is the highest rate that passes along with every lower swept rate (REG-7, decisions.md 2026-11-05). Past μ values stand as judged.
 2. **Test loads:** λ inside μ_off < λ < μ_warm whose no-trigger control is `recovered`.
 3. **Shock runs:** 2400 s (2520 s for a burst), trigger at t = 900 s, seeds 1–3, plus seeds 4–5 if seeds disagree.
    - **Cache wipe:** `POST /reset_prefix_cache?reset_running_requests=true`, which preempts running requests.
@@ -559,32 +559,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-05 · [DECISION] Audit of Stage 2, and the owner's choice of the next direction: setup L1 with a feasibility gate first
-- **What was done (0 GPU h):** a read-only audit of all 104 runs, the harness, the analysis code, the docs history and the literature on metastable failures. Nothing in `runs/` was touched.
-- **Data integrity:**
-  - `git_dirty` is false in all 104 runs.
-  - `uv run python -m analysis.tables published` gives "44 judgeable runs, 39 valid, 0 raised" and "differences from published: none" (the commit of this entry, before its own changes to `analysis/`).
-  - The 39 valid judged runs are 37 `recovered` and 2 `bad_baseline`, as in REG-4's result. **Correction of the audit's own draft:** it said "41 valid judged verdicts, 39 `recovered`". That came from an agent summary, not from the table above.
-- **Why no run got stuck** (DERIVED or BELIEF, as marked; to be tested, not asserted):
-  - Metastability without retries needs the bad state to lose capacity. Plain queues are only stable or unstable (Isaacs et al., "Formal Analysis of Metastable Failures in Software Systems", arXiv 2510.03551). A trigger must also exceed the gap between capacity and load (Huang et al., OSDI'22).
-  - This study removed retries on purpose (CLAUDE.md rule 2), so the only possible sustaining effect is a capacity loss from the lost cache: c_b(λ) < λ ≤ c_warm(λ) (`docs/model.md` M2).
-  - At the default pool that loss is small. DERIVED from M2's inputs: 1 − 4.185 / 4.735 = 0.116. BELIEF: larger batches in a backlog make up for most of the lost cache.
-  - Every burst backlog drained, and the λ = 4 control met a natural backlog and recovered from it (REG-2).
-  - At the loads that passed pf ≥ 0.98, mean KV at the end was 0.15–0.20 (decisions.md 2026-11-02, "No-trigger controls done").
-- **Design points for future cells only** (no past verdict changes):
-  1. **The pf ≥ 0.98 baseline excludes loads near capacity.** Future test loads are chosen at ≤ 0.8 μ_warm, so the rule is kept unchanged rather than loosened.
-  2. **Every shock seed gets a control with the same seed and the same duration**, so the session schedules match (the burst uses its own generator, `harness/workload.py`). Until now only seed 1 had one, and no burst run matched any control (2520 s against 2400 s).
-  3. **Seed 3 was a lighter test.** In every valid seed-3 shock run, the `arrival_rate` check's count is 0.944–0.953 of its expected count. Examples: 6116 of 6480 in `20261102-100744_wipe_preempt_r3_s3`; 9237 of 9720 in `20261103-220054_wipe_gap5_r4.5_s3` (FILE(runs/<id>/checks.json), `arrival_rate` detail). This passes the check's tolerance, but it is reported with any pooled statement.
-  4. **Thin heat margins in two counted runs:** SW-thermal share 0.047 against the 0.05 limit in `20261102-072216_wipe_preempt_r3_s1` and `20261101-202808_stage2_control_cap_r4` (`checks.json`, `gpu_steady`). The rule is not changed.
-  5. **The scheduler settings that shape the loop are not recorded:** `max_num_batched_tokens` (probably 2048, from the compile range in `docs/probe/20261023_Qwen3-4B/server.log`; BELIEF) and `--scheduler-reserve-full-isl`. They are to be probed on the VM (open-questions A10).
-  6. **60 s gaps are advised against.** From schedules (`derived.working_set`, seed 1, 2400 s, /96,656): W/C mean is 0.77 at 20 s gaps and λ = 3, but 1.48 at 60 s gaps already at λ = 2. The warm state could not hold its own working set, so there would be no warm state to lose (DERIVED; inputs, not outcomes).
-- **Owner's choices (2026-11-05):**
-  - **Direction:** setup L1. It is the 5 s-gap setup with a 2048-token system prompt per session, measured first by a feasibility gate (REG-7, next entries).
-  - **REG-6:** run after the gate, when the GPU is idle. Its result changes how the default-pool negative is written up, not the next experiment.
-  - **Turns stay open-loop** (rule 2). The overlap share is measured in the gate, and closed-loop turns are proposed only if overlap hits are more than half of the post-burst hits.
-  - **C1 metric for future cells:** the registered pf/hit/queue verdict, unchanged. The completion rate in backlog (c_b against λ) is reported as a pre-registered secondary readout and never decides a verdict.
-- **Rejected claim from the audit:** that preempted readmissions inflate the hit counter. S8 (SOURCE, `docs/open-questions.md`) says their numbers go to unexported `preempted_*` fields, so nothing changes.
-
 ### 2026-11-05 · [CORR] Doc statements found wrong or inconsistent in the 2026-11-05 audit
 - **What was wrong:**
   1. FILE(docs/claims.md:26) says "during bursts KV reached 1.00 and hits fell to 0.11–0.35". The hit values are the first 60 s *after* the burst ended, not during it (decisions.md 2026-11-03, the 72k entry). The counter also includes the burst requests, which never hit, so it overstates how cold the sessions' cache was (REG-1's review, decisions.md 2026-11-04). Corrected in claims.md.
@@ -714,3 +688,16 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **4.11:** `sweep_rows` skips runs without metrics, and duplicates raise.
 - **4.9 is accepted as stated:** it biases against `pass`.
 - Full suite after the changes: `uv run pytest`, 183 passed. `analysis.tables published`: no difference.
+
+### 2026-11-05 · [DECISION] Owner approves REG-7; the data copies stay on the Mac; three wording fixes made
+- **REG-7 approved** by the owner on 2026-11-05 ("I approve reg 7"), before any L1 run exists. Registered in commit `d1b360c`.
+  - **One change made after the owner's message and before that commit** (no data existed): in the agent's pre-commit review, a burst run that `load.verdict` calls `stuck` while no span counts is now `inconclusive`, not `drains` (`gate.gate_verdict`; `tests/test_gate.py`).
+  - **Reason:** with a very low c_b, burst requests can still be completing in every span. Then no span is burst-free and none can hold, and the old rule would have read a stuck server as a drain, which leads to "write up the negative".
+  - It makes `pass` no easier. The owner is told of it in the same session.
+- **Data copies:** the owner decided that the copies of `runs/` stay on the Mac ("its ok to mac have copies"). The agent reads this as: no copy off the Mac is required.
+  - **Risk left open, stated and not loosened:** one machine is still a single point of failure. Status.md's Watch keeps it as a risk.
+  - Any copy on the Mac can be checked with `python3 tools/manifest.py verify <copy>`.
+- **Wording fixes approved by the owner ("fix words")**, from the 2026-11-05 [CORR] item 7:
+  1. `docs/process.md` §9: the manifest is at `manifests/runs.sha256` (decided 2026-11-04 [OPS]), and the copy location is the owner's decision above.
+  2. `PROTOCOL.md` §5.1: item 42's rule and the monotone reading for sweeps with a `capacity:` block, marked **[new 2026-11-05]**. Past μ values stand.
+  3. `CLAUDE.md` rule H: "one-sided 95 % Clopper–Pearson upper bound", as in process.md §5.
