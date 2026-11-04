@@ -1,6 +1,7 @@
 # aftershock-artifacts
 
 A metastable-failure study of vLLM prefix caching. The source of truth is `docs/experiment-plan.md`.
+**Start every session by reading `PROTOCOL.md`** (question, hypothesis, criteria for and against, setup, procedure, deviations), then `docs/status.md`.
 **Current scope: Stage 2** (reproducing the failure), started by the study owner on 2026-10-31. Stage 1's inputs are complete (τ measured 2026-11-01); see `docs/status.md`.
 
 ## Map
