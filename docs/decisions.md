@@ -864,3 +864,27 @@ Verbatim summary of its three answers:
 - **Item 42, the capacity rule:** approved for future sweeps only. The throughput test becomes throughput ≥ 0.95 × the realized planned arrival rate over the measured window. Past μ values stand as judged, and **every past capacity sweep used seed 0** (2026-11-04 [RESULT], schedules). The code change goes to the owner with the registrations, because another session is editing `analysis/` at the same time.
 - **Push:** the owner pushes after reviewing `git log --stat origin/main..main`.
 - **One writing session at a time:** a lockfile is to be proposed; any other session stays read-only.
+
+## 2026-11-04 · [DECISION] One writer, one numbering; the other session's items 34–43 mapped (study owner)
+- **Writer:** session `4de6c4e2` (this agent) is the only writing session. The other session stops after committing its drafts as DRAFT (`docs/drafts/addendum_34-43.md`, already committed as such in `9211d6b`). This supersedes "any other session stays read-only" in the entry above only in naming which session writes.
+- **Numbering:** the audit numbering of `PROPOSAL.md` rules: items 1–33, N1–N17, open items A1–A7, registrations REG-1 onward. The other session's numbers are retired. Its committed entries stay as written (append-only) and are read through this map:
+
+| Other session | Here | Status |
+|---|---|---|
+| 34 (push; `vm` remote key) | owner item 23 (push) | owner to answer |
+| 35 (λ = 7 vs λ = 5 hit mix) | item 9 (hit computations) | logged: [CORR] "Hit rates from different computations compared again" |
+| 36 (session median) | item 13 | logged: [DECISION] "Session median defined" |
+| 37 (recovered originals) | item 12 (provenance) | logged: [CORR] "Derived-figure differences explained by the recovered originals" |
+| 38 (cold-state floor μ_sat,off; REG-2 draft) | new open item **A8**: the floor under assumption B (`docs/model.md` M2, "weaker floor") | to register; the owner notes the floor argument needs only B |
+| 39 (cache-off λ = 3, 3600 s; REG-3 draft) | **A1** | one registration, merged with the owner's item 12 |
+| 40 (5 s-gap cache-off beyond λ = 3.5; REG-4 draft) | new open item **A9** | on hold until the next direction |
+| 41 (danger-zone edge) | owner decision, recorded in the entry above | as recorded there |
+| 42 (capacity rule vs realized arrivals) | **N1** | one entry; future sweeps only |
+| 43 (stage2_base.yaml defects) | items 24 and N7 | logged: [CORR] "A used config that cannot be fixed" |
+
+- **One ambiguity, flagged:** the owner's instruction reads "its REG-2 / item 39 = your A1". In the draft, REG-2 is item 38 (the floor) and item 39 is REG-3 (the λ = 3 run). This map reads it as item 39 = A1, which is what A1 asks. Item 38 becomes A8. The owner may correct this.
+- **Owner's answers to the approval list, same date:**
+  - Items 1–8 (harness and checks) are approved for future runs only. Item 6 means untracked files under `configs/` make the tree dirty. Item 8's thresholds are registered before any run is judged by them.
+  - Items 9–10 are approved as one registered verdict-code change (NaN → `unclear`, empty window → `unclear`), with all 43 verdicts rechecked and any change logged.
+  - Item 11 (cold-overload run) is deferred, because no decision depends on assumption A. Item 12 is merged into A1. Items 13 and 14 are deferred until the owner chooses the next direction.
+  - A3 and A4 registrations are to be drafted now, with code and review passes. A5 comes later. Items 18–23 are to be answered separately.
