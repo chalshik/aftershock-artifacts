@@ -38,6 +38,8 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **Per setup:** 72,480-token pool: cache on at λ = 5 completes 4.567 (RUN(20261102-194816_sweep_kv72k_pc_on_r5, load.summarize)), cache off at λ = 4 3.449 (RUN(20261102-214207_sweep_kv72k_pc_off_r4, load.summarize)); no deep-overload run, so c(s*) has no measured floor. 5 s gaps: cache on keeps up to λ = 7 (7.185, RUN(20261103-132357_sweep_gap5_pc_on_r7, load.summarize)) and cache off was not swept past 3.5, so neither bound is measured.
 - **Test of A:** REG-1 (2026-11-04) found no span that was backlogged, cold and burst-free at once, so A is **untested**. Wipes built no backlog; bursts were cold and backlogged only while their own requests still completed. Testing A needs a run that holds a cold backlog for minutes (GPU, owner).
 
+- **Floor at the default pool (decisions.md 2026-11-04, REG-5 not computed):** DERIVED cache-off saturation ≈ 3.50 req/s. The λ = 3 shock runs lie about 14 % below it; the λ = 3.5 runs lie at it. On B (untested in post-shock states) and on the 900 s saturation being sustained (REG-6), the λ = 3 runs could not have stayed stuck, and the setup has no healthy load clearly above its floor. Nothing follows for λ = 3.5, or for the 72k and 5 s-gap setups.
+
 ## M3. Self-refill (why a single wipe may not hold)
 
 **Use:** reading the wipe results. BELIEF built on SOURCE facts; decisions.md 2026-11-04 (5).

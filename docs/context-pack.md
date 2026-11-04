@@ -446,6 +446,8 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **Per setup:** 72,480-token pool: cache on at λ = 5 completes 4.567 (RUN(20261102-194816_sweep_kv72k_pc_on_r5, load.summarize)), cache off at λ = 4 3.449 (RUN(20261102-214207_sweep_kv72k_pc_off_r4, load.summarize)); no deep-overload run, so c(s*) has no measured floor. 5 s gaps: cache on keeps up to λ = 7 (7.185, RUN(20261103-132357_sweep_gap5_pc_on_r7, load.summarize)) and cache off was not swept past 3.5, so neither bound is measured.
 - **Test of A:** REG-1 (2026-11-04) found no span that was backlogged, cold and burst-free at once, so A is **untested**. Wipes built no backlog; bursts were cold and backlogged only while their own requests still completed. Testing A needs a run that holds a cold backlog for minutes (GPU, owner).
 
+- **Floor at the default pool (decisions.md 2026-11-04, REG-5 not computed):** DERIVED cache-off saturation ≈ 3.50 req/s. The λ = 3 shock runs lie about 14 % below it; the λ = 3.5 runs lie at it. On B (untested in post-shock states) and on the 900 s saturation being sustained (REG-6), the λ = 3 runs could not have stayed stuck, and the setup has no healthy load clearly above its floor. Nothing follows for λ = 3.5, or for the 72k and 5 s-gap setups.
+
 ## M3. Self-refill (why a single wipe may not hold)
 
 **Use:** reading the wipe results. BELIEF built on SOURCE facts; decisions.md 2026-11-04 (5).
@@ -501,11 +503,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 <!-- source: docs/decisions.md, last 5 entries -->
 
 ## Last decisions
-
-### 2026-11-04 · [DECISION] REG-3 (A4) dropped; A4 stays open
-- **What:** the REG-3 draft (does first-admission prefill growth exceed any possible recompute growth, λ = 6 against λ = 10, cache on) is not registered and not computed. The owner's "Let's finish it" was read as accepting the agent's recommendation to drop it.
-- **Why** (the draft's adversarial review, and rule A1): even after revision, the likely outcome follows from published numbers (first-admission hit 0.317 → 0.197; flat preemptions per unit time, ≈ 79 and 78). It would change one write-up sentence and nothing else.
-- **What stays:** A4 is open in `docs/open-questions.md`. The informative test is a logging run that exports vLLM's internal recompute count (`preempted_queries − preempted_hits`, SOURCE(vLLM 0.32.0 v1/metrics/stats.py:PrefixCacheStats)), which needs the GPU and the owner. Its code (`work_per_completion`, `attribute_loss`) was removed before commit, so no unregistered analysis code is left in `analysis/`.
 
 ### 2026-11-04 · [RESULT] REG-2 (A3): both control dips are arrival-driven; no Ao-like cycle
 - **Registration:** REG-2 (commit `c70c9e6`), approved before computation. One pass: RUN(20261101-202808_stage2_control_cap_r4, mechanisms.reg2_table) and RUN(20261102-225146_stage2_control_kv72k_r3.5, mechanisms.reg2_table), at `c70c9e6`.
@@ -614,3 +611,21 @@ Summary:
 - **Published claims:** `tables.published_check` still finds no difference. The valid runs are 37 `recovered` and 2 `bad_baseline`.
 - **Prediction:** 1 hit (all 43 unchanged); 2 hit (the stopped run became `unclear`, its baseline being complete with pf 1.000); 3 hit (ramps and REG-2 unchanged).
 - **Decision, as registered:** the change stands. Audit items 9–10 (the owner's approval list), 11 (`_level` hit 0.0) and N7 (the crash on an empty window) are closed. `docs/definitions.md` now gives the new NaN rules and the shifted `load.py` line numbers.
+
+### 2026-11-04 · [DECISION] REG-5 (A8, cold-state floor) not computed; what it would have shown, written as a calculation
+- **Why it is not computed** (its adversarial review, and rule A1):
+  - **Fixed in advance.** At the default pool the published cache-off throughputs (3.453–3.533 req/s at λ = 4–8) fix the floor in [3.45, 3.53], so λ = 3 is "below" and λ = 3.5 "at" whatever the code computes.
+  - **The check of assumption B would test the wrong states.** The backlogged cache-on windows available are warm, high-hit states, which trivially beat cache-off; the burst windows almost never qualify. The state B is about (cold, thrashing, after a shock) is not among them.
+  - So the analysis could change no decision, and could present a foregone result as evidence. Its code was removed before commit.
+- **The calculation (default pool, 20 s gaps):**
+  - DERIVED: cache-off saturated throughput is about 3.50 req/s, the mean of 3.453, 3.511, 3.521 and 3.533 (RUN(20261030-163358_sweep_pc_off_r4 … 20261030-173356_sweep_pc_off_r8, tables.sweep_table)).
+  - The 6 shock runs at λ = 3 lie about 14 % below it.
+  - The 6 at λ = 3.5 lie at it, within 0.2 %.
+  - The highest load with a `recovered` 2400 s control is 3.5 (λ = 4 was `bad_baseline`).
+- **What follows, and only on two conditions:**
+  1. Assumption B holds in the post-shock state (untested; it could fail exactly where the hypothesis lives, through preemption thrash).
+  2. The 900 s saturation is a sustained capacity (REG-6 tests this).
+  - On both conditions, the 6 λ = 3 runs could not have stayed stuck. The 6 λ = 3.5 runs are at the edge, and nothing follows for them: near zero drift, a backlog need not drain.
+  - On the same conditions, this setup has no healthy load clearly above its cold floor, so a further shock matrix here is unlikely to be informative.
+- **The 18 runs at the 72k pool and with 5 s gaps:** no cache-off floor is measured for them, so nothing is concluded.
+- `docs/model.md` M2 gets this as a note.
