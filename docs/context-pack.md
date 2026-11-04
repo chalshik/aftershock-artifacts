@@ -489,14 +489,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-04 · [CORR] Two audit numbers rest on scratch scripts: marked "pending committed code"
-- **What was wrong:** two results from the 2026-11-04 audit were computed by scripts in the session's scratch directory, not by committed functions, against rule I (`docs/process.md` §6):
-  1. the `[RESULT]` "Sweep schedules share one rising-load pattern" (per-span planned arrival rates of all 43 sweeps);
-  2. the audit's statement that all 43 recomputed Stage 2 verdicts reproduce the published ones (and the sweep throughputs and hit rates quoted with it).
-- **Status:** both are **pending committed code**. Neither may be cited as `RUN(...)` evidence until the functions exist, are committed, and their output is logged in a new entry.
-- **Since when:** both were made today. The REG-1 result is not affected: it was computed by the committed `margin.reg1_table`.
-- **Rule that would have caught it:** I. The agent installed it and broke it in the same session.
-
 ### 2026-11-04 · [OPS] Checksum manifest of runs/ (owner's decision: manifests/runs.sha256, committed, append-only)
 - **`manifests/runs.sha256`:** one line per file, `<sha256>  <run_id>/<path>`, relative to `runs/` (the `sha256sum` format). First write: 1,053 files in 104 run folders. With `runs/.gitkeep`, which is not data, that is the 1,054 files of the 2026-11-04 copy. Total 9,942,117,131 bytes, matching that copy's checksum comparison exactly. `shasum -a 256 -c` agrees on spot checks.
 - **`tools/manifest.py update`** appends lines only for new files. It stops and writes nothing if a listed file is missing or its hash changed: raw data is immutable, so that is damage to investigate.
@@ -561,3 +553,8 @@ Every model used to choose a run or read a result, with its equations, the evide
   - These are the values of the [RESULT] "Sweep schedules share one rising-load pattern". That entry stands, now with this evidence.
   - A first version of `arrival_table` also picked up control and recorder-off runs. It was fixed in `d7a4f85` before any output was quoted.
 - **Decision taken:** none. Both "pending committed code" marks are cleared.
+
+### 2026-11-04 · [DECISION] Tests for untested analysis functions (audit item N15)
+- **New `tests/test_load_more.py`:** `metrics_wide` (label sums, buckets dropped, failed scrapes skipped); `rates` (a counter decrease becomes NaN, a no-query interval NaN hit); `percent_fast` (bins by planned arrival, unfinished requests are misses); `capacity` (both tests, nothing passing → NaN); `_level` (pooled levels, NaN percent fast with no requests). One more test pins the verdict fixture to `configs/stage2_cap_base.yaml`. `tests/test_tables.py` covers `analysis/tables.py`.
+- **Two strict `xfail` tests** state the approved target of the registered verdict-code change (items 9–10): a window with no queries gives NaN hit, and an empty window gives `unclear`. Both fail today for the stated reasons (hit 0.0; `np.polyfit` raises). Because they are strict, they turn into errors when the change lands, so the markers must be removed in that commit.
+- No analysis code was changed.

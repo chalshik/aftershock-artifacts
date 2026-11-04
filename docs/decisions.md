@@ -906,3 +906,8 @@ Verbatim summary of its three answers:
   - These are the values of the [RESULT] "Sweep schedules share one rising-load pattern". That entry stands, now with this evidence.
   - A first version of `arrival_table` also picked up control and recorder-off runs. It was fixed in `d7a4f85` before any output was quoted.
 - **Decision taken:** none. Both "pending committed code" marks are cleared.
+
+## 2026-11-04 · [DECISION] Tests for untested analysis functions (audit item N15)
+- **New `tests/test_load_more.py`:** `metrics_wide` (label sums, buckets dropped, failed scrapes skipped); `rates` (a counter decrease becomes NaN, a no-query interval NaN hit); `percent_fast` (bins by planned arrival, unfinished requests are misses); `capacity` (both tests, nothing passing → NaN); `_level` (pooled levels, NaN percent fast with no requests). One more test pins the verdict fixture to `configs/stage2_cap_base.yaml`. `tests/test_tables.py` covers `analysis/tables.py`.
+- **Two strict `xfail` tests** state the approved target of the registered verdict-code change (items 9–10): a window with no queries gives NaN hit, and an empty window gives `unclear`. Both fail today for the stated reasons (hit 0.0; `np.polyfit` raises). Because they are strict, they turn into errors when the change lands, so the markers must be removed in that commit.
+- No analysis code was changed.
