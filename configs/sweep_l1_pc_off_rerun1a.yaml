@@ -1,0 +1,7 @@
+# REG-7 G2, after the owner stopped the first pass (decisions.md 2026-11-05 [DECISION], G2 stopped), part a: λ = 1 alone,
+# the lightest load, as the cooling check. Its first rerun (REG-7 stopping rule: an invalid run is rerun unchanged, at
+# most twice). Same settings as sweep_l1_pc_off.yaml; only the list of rates differs. `name` keeps the sweep_parent.
+extends: sweep_l1_pc_off.yaml
+name: sweep_l1_pc_off
+sweep:
+  rates: [1]               # failed gpu_steady in the first pass (SW thermal 0.062)

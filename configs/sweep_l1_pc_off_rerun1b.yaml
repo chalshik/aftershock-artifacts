@@ -1,0 +1,7 @@
+# REG-7 G2, part b: runs only if part a's λ = 1 run passes gpu_steady (decisions.md 2026-11-05 [DECISION], G2 stopped).
+# 1.5 failed gpu_steady and 2 was stopped by the owner, so this is their first rerun; 2.5-4 never ran, so this is their
+# first run. Same settings as sweep_l1_pc_off.yaml; only the list of rates differs. `name` keeps the sweep_parent.
+extends: sweep_l1_pc_off.yaml
+name: sweep_l1_pc_off
+sweep:
+  rates: [1.5, 2, 2.5, 3, 3.5, 4]

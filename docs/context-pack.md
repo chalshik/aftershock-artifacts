@@ -14,7 +14,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-05
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: the owner decides how G2 runs** (more cooling first, which the agent recommends; G2 as is; or a power-limit amendment). G1 is closed: valid at λ = 2–5.5, while λ = 6 is invalid 3 times and λ = 7 twice from SW-thermal slowdown. So μ_warm ≤ 5.5 and λ_test ≤ 4.0 (decisions.md 2026-11-05 [OPS] G1 closed). No μ is computed yet. REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`. It is the feasibility gate for setup L1.
+**Next action: retry G2 after the owner's cooling check.** λ = 1 first (`configs/sweep_l1_pc_off_rerun1a.yaml`), at ≥ 18:35 UTC with the GPU idle at ≤ 45 °C. Then λ = 1.5–4 (`..._rerun1b.yaml`) only if λ = 1 passes `gpu_steady`; otherwise ask the owner (decisions.md 2026-11-05 [DECISION] G2 stopped). G1 is closed: valid at λ = 2–5.5, so μ_warm ≤ 5.5. G2's first pass: λ = 1 and 1.5 invalid by heat; λ = 2 was stopped by the owner. No μ is computed yet. REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`.
 
 Steps:
 1. **Read-only VM checks: done 2026-11-05** (decisions.md [OPS], evidence in `docs/probe/20261105_vm_checks/`).
@@ -91,12 +91,14 @@ Steps:
 
 ## Runs on record
 
-120 run folders: 100 VALID, 17 INVALID, 3 without checks. All kept; none counts unless VALID.
+123 run folders: 100 VALID, 19 INVALID, 4 without checks. All kept; none counts unless VALID.
 
 - **No checks:** `20261030-114021_first_real` (failed start, no load sent); `20261031-025032_tau` (VM shut down 140 s in); `20261104-134159_long_pc_off_r3_s0` (REG-6 seed 0, VM powered off at t = 3168 s of 3600, DERIVED: power key 14:35:45.08 − planned load start 13:42:56.74 from `events.jsonl` `load_t0_planned`; copied 2026-11-05).
+- **No checks, REG-7 G2:** `20261105-181511_sweep_l1_pc_off_r2` (stopped by the owner at t = 247 s).
 - **Invalid, Stage 1:** `20261023-145613_smoke` (`gpu_steady`, before the check was refined); `20261030-145339_sweep_pc_on_r8` (`accounting`); `20261030-175458_sweep_pc_off_r10` (`recorder`).
 - **Invalid, Stage 2:** `20261101-151707_stage2_control_r1.5` (stopped on request); `20261101-182452_stage2_control_cap_r3`, `20261102-045827_wipe_preempt_r3_s1`, `20261102-062040_wipe_preempt_r3_s3`, `20261102-080323_wipe_preempt_r3_s3` (hardware thermal samples, before the backplate fan); `20261102-093229_wipe_preempt_r3_s3` (stopped on request after a thermal sample).
 - **Invalid, REG-7 G1 (2026-11-05):** `20261105-130250_sweep_l1_pc_on_r4.5` (`no_errors`, 1 client disconnect); `20261105-132035_sweep_l1_pc_on_r5`, `20261105-134018_sweep_l1_pc_on_r5.5`, `20261105-140120_sweep_l1_pc_on_r6`, `20261105-142221_sweep_l1_pc_on_r7` (`gpu_steady`, SW-thermal slowdown). Reruns, invalid again: `20261105-163225_sweep_l1_pc_on_r6`, `20261105-165327_sweep_l1_pc_on_r7`, `20261105-171648_sweep_l1_pc_on_r6` (`gpu_steady`).
+- **Invalid, REG-7 G2 (2026-11-05):** `20261105-174215_sweep_l1_pc_off_r1`, `20261105-175822_sweep_l1_pc_off_r1.5` (`gpu_steady`).
 
 ## Done when (from the plan)
 
@@ -121,7 +123,7 @@ Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 
 | Software | vLLM 0.32.0, torch 2.13.0 (CUDA 13.0), Python 3.12.13 (uv-managed); `unattended-upgrades` disabled |
 | KV cache | Qwen3-4B: 96,656 tokens by default in load runs; 72,480 tokens when set with `--kv-cache-memory-bytes` |
 | Pinning | vLLM cores 0–5, loadgen 6, recorder 7 |
-| Data | **All 120 runs are on the Mac** in `runs/`, checksum-verified; the VM's copies were removed (2026-11-04, and REG-6 seed 0 on 2026-11-05), except the REG-7 G1 runs, which are also still on the VM. No second backup yet |
+| Data | **All 123 runs are on the Mac** in `runs/`, checksum-verified; the VM's copies were removed (2026-11-04, and REG-6 seed 0 on 2026-11-05), except the REG-7 G1 runs, which are also still on the VM. No second backup yet |
 | Disk | 16 GB free on the VM after cleanup; about 170 MB per 40-minute run |
 | Address | 100.83.53.50 (Tailscale; the name `inference-vm.tail3b0112.ts.net` is not in the Mac's `known_hosts`, so use the IP); 192.168.3.249 at home; key `~/.ssh/id_ed25519_vllm`. The `vm` git remote uses the home address (repointing it was not done: a permission prompt refused it) |
 | Sync | Mac `git push vm main` → VM `git pull origin main` in `~/aftershock-artifacts` (the VM's `origin` is `~/repos/aftershock-artifacts.git`); don't pull during a sweep. Over a non-interactive SSH, `uv` is `~/.local/bin/uv` |
@@ -130,7 +132,7 @@ Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 
 
 Sorted by priority, most urgent first.
 
-- **Backup (top item):** the Mac holds all 120 runs. The owner decided on 2026-11-05 that the copies stay on the Mac (decisions.md). A copy on the same machine guards against deletion, not against losing the Mac; `python3 tools/manifest.py verify <copy>` checks any copy.
+- **Backup (top item):** the Mac holds all 123 runs. The owner decided on 2026-11-05 that the copies stay on the Mac (decisions.md). A copy on the same machine guards against deletion, not against losing the Mac; `python3 tools/manifest.py verify <copy>` checks any copy.
 - **Heat (top item for REG-7):** before the backplate fan, hardware thermal flags at 83–84 °C invalidated 5 runs. With the fan: 0 flags until 2026-11-05, when SW-thermal slowdown invalidated L1's G1 runs at λ = 5–7 at 81–82 °C (decisions.md [OPS]). A flag still invalidates a run; the rule is not loosened.
 
 ---
@@ -564,34 +566,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-05 · [DECISION] Monotone-rule fix approved and implemented; GPU cooling improved; G1's invalid rates rerun unchanged in two parts
-- **Owner:** "approve fix capcity rule … gpu I have enhanced cooling". The agent reads the cooling change as the owner's choice of option 1: improve the cooling, then rerun the invalid G1 rates unchanged, as REG-7's stopping rule allows (at most twice each).
-- **Fix** (the [CORR] entry above):
-  - `load.capacity(..., monotone=True, swept_rates=...)`: a swept rate with no valid run ends the chain. Two valid runs at one rate, or a rate that was not swept, raise.
-  - `tables.sweep_table` records each run's saved `sweep.rates`. `tables.sweep_capacity` passes their union over every run of the parent, valid or not.
-  - The non-monotone rule, used by every sweep before REG-7, is unchanged.
-  - Tests: four in `tests/test_tables.py`, including the trace "λ = 4 invalid, λ = 5 valid and passing → μ = 3, not 5".
-  - Re-check: `uv run python -m analysis.tables published` reports no difference, and `uv run pytest` gives 190 passed.
-  - The fix was made knowing only which G1 runs are valid; no G1 throughput or μ was computed. That `published` output prints μ only for the three old setups.
-- **Cooling:** the owner improved the GPU cooling (details are not recorded). At idle the GPU reads 37 °C with the fan at 0 %, against 35–36 °C idle this morning (FILE(docs/probe/20261105_vm_checks/after_cooling.txt)), so idle readings cannot show the change. The reruns test it.
-- **Reruns, the first allowed rerun of each rate:**
-  - `configs/sweep_l1_pc_on_rerun1a.yaml`: λ = 4.5 and 5.
-  - `configs/sweep_l1_pc_on_rerun1b.yaml`: λ = 5.5, 6 and 7.
-  - Both extend `sweep_l1_pc_on.yaml` and keep `name: sweep_l1_pc_on`. Every resolved per-run config equals the original apart from the `sweep` list, seed 0 included (checked with `harness.run.expand`).
-  - **Order rule, set before either part runs:** part b starts only if part a's λ = 5 run passes `gpu_steady`. Otherwise the agent stops and the owner decides, because further runs at higher load would most likely fail the same way.
-  - This decides only whether to spend GPU time, from a validity check. No outcome is read.
-- **G2** waits until G1 is complete or the owner decides otherwise.
-
-### 2026-11-05 · [CORR] Commit `a0284e0` included `analysis/analysis.ipynb`, which the agent did not change
-- **What was wrong:** the agent staged with `git add -A configs docs analysis tests`. That picked up `analysis/analysis.ipynb`, re-executed outside the agent at 15:28:46 UTC (file mtime; 206 lines added, 163 removed, mostly cell outputs and execution counts). It was committed in `a0284e0` together with the capacity-rule fix.
-- **Since when:** `a0284e0`, 2026-11-05.
-- **Which results it affects:** none.
-  - Notebook output is not provenance (rule I).
-  - Its new outputs contain no 2026-11-05 run id and nothing from setup L1 (checked with `git show a0284e0 -- analysis/analysis.ipynb`), so no G1 outcome was exposed.
-  - Run validity is unaffected: the VM's tree is clean, and the configs are committed.
-- **Not done:** the change is neither reverted nor rewritten out of history (`a0284e0` is pushed). The file holds the owner's working state, so whether it stays is the owner's call.
-- **Rule that would have caught it:** stage files by name, never a whole directory, and read `git status --short` before committing.
-
 ### 2026-11-05 · [OPS] G1 rerun part a: λ = 4.5 and 5 both valid after the cooling change; part b started
 - **Runs** (from `49a6fa1`, clean; `configs/sweep_l1_pc_on_rerun1a.yaml`, 15:33–16:10 UTC):
   - `20261105-153307_sweep_l1_pc_on_r4.5`: VALID. Max 79 °C, SW-thermal share 0.000 (FILE(runs/20261105-153307_sweep_l1_pc_on_r4.5/checks.json)).
@@ -634,3 +608,32 @@ Every model used to choose a run or read a result, with its equations, the evide
     - `20261105-161123_sweep_l1_pc_on_r5.5` (rerun 1b).
 - **Consequence, stated before any μ is computed:** μ_warm ≤ 5.5, so λ_test ≤ 4.0. The heat limit is reported as "rates ≥ 6 unmeasured (SW-thermal slowdown)", not as capacity.
 - **G2 not started.** The agent recommends more cooling first. Cache-off runs at and above saturation keep the GPU as busy as cache-on λ = 6–7, which failed 4 of 5 times, and the cold floor needs ≥ 2 valid saturated runs. The owner decides between more cooling, running G2 as is with the allowed reruns, or a power-limit amendment.
+
+### 2026-11-05 · [DECISION] G2 stopped by the owner after 2 heat-invalid runs; retry after cooling, λ = 1 first
+- **First pass of G2** (`configs/sweep_l1_pc_off.yaml`, from `dccd8ab`, started 17:42 UTC after the owner's added cooling):
+  - `20261105-174215_sweep_l1_pc_off_r1`: INVALID, `gpu_steady`. SW-thermal 0.062, max 82 °C.
+  - `20261105-175822_sweep_l1_pc_off_r1.5`: INVALID, `gpu_steady`. SW-thermal 0.135, max 82 °C.
+  - (FILE(runs/<id>/checks.json).)
+  - `20261105-181511_sweep_l1_pc_off_r2`: stopped at t = 246.7 s on the owner's instruction (`events.jsonl` `aborted`). No `checks.json`, so it never counts.
+  - All three were copied with identical sha256; the manifest gained 29 lines.
+- **Owner:** "lets stop everything, I will check coolig and let gpu cool down, after 15 minutes retry invalid ones". Stopping the registered sweep before it ran in full is a deviation from REG-7 ("the sweep runs in full"), made by the owner.
+- **Retry plan:**
+  - At ≥ 15 min after the stop (18:20 UTC) and with the GPU idle at ≤ 45 °C: `configs/sweep_l1_pc_off_rerun1a.yaml` (λ = 1), the first rerun.
+  - Only if it passes `gpu_steady`: `configs/sweep_l1_pc_off_rerun1b.yaml` (λ = 1.5–4). That is the first rerun of 1.5 and 2, and the first run of 2.5–4.
+  - Otherwise stop and ask the owner. If the lightest load still throttles, the heavier ones would too.
+  - Every resolved per-run config equals the original apart from the `sweep` list (checked with `harness.run.expand`).
+- **Not retried:** cache-on λ = 6, which has had both allowed reruns, and λ = 7, whose rerun was conditional on λ = 6.
+- **Reading of the cold-floor rule, stated before any G2 run is valid or read:** `gate.cold_floor` uses valid runs only. If the lowest saturated rate has no valid run, λ_sat is the lowest *valid* saturated rate. The floor stays a mean over ≥ 2 valid saturated runs, else `too_few`. Unlike the monotone μ chain, a missing rate can't make the floor rest on an unmeasured rate. Recorded so the owner can object; no code change.
+
+### 2026-11-05 · [CORR] The agent's launch command (`… | tee`) left the vLLM server running when the sweep was stopped
+- **What was wrong:**
+  - The agent started every sweep today as `tmux new-session … "uv run python -m harness.run <cfg> 2>&1 | tee -a <log>"`.
+  - The owner's stop was a Ctrl-C to that tmux session. It also killed `tee`.
+  - The harness logged `aborted` and `gpu_processes_end` (FILE(runs/20261105-181511_sweep_l1_pc_off_r2/events.jsonl)), then died before `_stop(server, …)` (FILE(harness/run.py:204)). So `vllm serve` was left running as an orphan (parent PID 1), holding the GPU and port 8000.
+  - BELIEF: its next print hit the broken pipe.
+  - The agent found it in the check after the stop, sent SIGTERM to its process group, and confirmed that no process was left, the GPU was free (1 MiB) and port 8000 was closed. The server log ends with "Application shutdown complete".
+- **Since when:** today's first launch (G1, 11:57 UTC). No earlier stop hit it.
+- **Which results it affects:** none. The stopped run never counts, and every finished run stopped its server normally.
+- **Fix, operational:** launches now redirect to a file (`> <log> 2>&1`), with no pipe.
+- **Proposed to the owner, not done:** make the harness's event print tolerant of a closed stdout. That is a harness change.
+- **Rule that would have caught it:** test the stop path of the exact launch command before relying on it.

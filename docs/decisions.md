@@ -1524,3 +1524,32 @@ Summary:
     - `20261105-161123_sweep_l1_pc_on_r5.5` (rerun 1b).
 - **Consequence, stated before any μ is computed:** μ_warm ≤ 5.5, so λ_test ≤ 4.0. The heat limit is reported as "rates ≥ 6 unmeasured (SW-thermal slowdown)", not as capacity.
 - **G2 not started.** The agent recommends more cooling first. Cache-off runs at and above saturation keep the GPU as busy as cache-on λ = 6–7, which failed 4 of 5 times, and the cold floor needs ≥ 2 valid saturated runs. The owner decides between more cooling, running G2 as is with the allowed reruns, or a power-limit amendment.
+
+## 2026-11-05 · [DECISION] G2 stopped by the owner after 2 heat-invalid runs; retry after cooling, λ = 1 first
+- **First pass of G2** (`configs/sweep_l1_pc_off.yaml`, from `dccd8ab`, started 17:42 UTC after the owner's added cooling):
+  - `20261105-174215_sweep_l1_pc_off_r1`: INVALID, `gpu_steady`. SW-thermal 0.062, max 82 °C.
+  - `20261105-175822_sweep_l1_pc_off_r1.5`: INVALID, `gpu_steady`. SW-thermal 0.135, max 82 °C.
+  - (FILE(runs/<id>/checks.json).)
+  - `20261105-181511_sweep_l1_pc_off_r2`: stopped at t = 246.7 s on the owner's instruction (`events.jsonl` `aborted`). No `checks.json`, so it never counts.
+  - All three were copied with identical sha256; the manifest gained 29 lines.
+- **Owner:** "lets stop everything, I will check coolig and let gpu cool down, after 15 minutes retry invalid ones". Stopping the registered sweep before it ran in full is a deviation from REG-7 ("the sweep runs in full"), made by the owner.
+- **Retry plan:**
+  - At ≥ 15 min after the stop (18:20 UTC) and with the GPU idle at ≤ 45 °C: `configs/sweep_l1_pc_off_rerun1a.yaml` (λ = 1), the first rerun.
+  - Only if it passes `gpu_steady`: `configs/sweep_l1_pc_off_rerun1b.yaml` (λ = 1.5–4). That is the first rerun of 1.5 and 2, and the first run of 2.5–4.
+  - Otherwise stop and ask the owner. If the lightest load still throttles, the heavier ones would too.
+  - Every resolved per-run config equals the original apart from the `sweep` list (checked with `harness.run.expand`).
+- **Not retried:** cache-on λ = 6, which has had both allowed reruns, and λ = 7, whose rerun was conditional on λ = 6.
+- **Reading of the cold-floor rule, stated before any G2 run is valid or read:** `gate.cold_floor` uses valid runs only. If the lowest saturated rate has no valid run, λ_sat is the lowest *valid* saturated rate. The floor stays a mean over ≥ 2 valid saturated runs, else `too_few`. Unlike the monotone μ chain, a missing rate can't make the floor rest on an unmeasured rate. Recorded so the owner can object; no code change.
+
+## 2026-11-05 · [CORR] The agent's launch command (`… | tee`) left the vLLM server running when the sweep was stopped
+- **What was wrong:**
+  - The agent started every sweep today as `tmux new-session … "uv run python -m harness.run <cfg> 2>&1 | tee -a <log>"`.
+  - The owner's stop was a Ctrl-C to that tmux session. It also killed `tee`.
+  - The harness logged `aborted` and `gpu_processes_end` (FILE(runs/20261105-181511_sweep_l1_pc_off_r2/events.jsonl)), then died before `_stop(server, …)` (FILE(harness/run.py:204)). So `vllm serve` was left running as an orphan (parent PID 1), holding the GPU and port 8000.
+  - BELIEF: its next print hit the broken pipe.
+  - The agent found it in the check after the stop, sent SIGTERM to its process group, and confirmed that no process was left, the GPU was free (1 MiB) and port 8000 was closed. The server log ends with "Application shutdown complete".
+- **Since when:** today's first launch (G1, 11:57 UTC). No earlier stop hit it.
+- **Which results it affects:** none. The stopped run never counts, and every finished run stopped its server normally.
+- **Fix, operational:** launches now redirect to a file (`> <log> 2>&1`), with no pipe.
+- **Proposed to the owner, not done:** make the harness's event print tolerant of a closed stdout. That is a harness change.
+- **Rule that would have caught it:** test the stop path of the exact launch command before relying on it.
