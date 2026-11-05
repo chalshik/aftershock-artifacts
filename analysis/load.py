@@ -243,17 +243,37 @@ def verdict(run: dict) -> dict:
 
 
 def capacity(curve: pd.DataFrame, min_throughput_frac: float, max_q_slope: float, against: str = "rate",
-             monotone: bool = False) -> float:
+             monotone: bool = False, swept_rates: list[float] | None = None) -> float:
     """mu = highest rate where the server keeps up: throughput >= frac x reference and the queue is not growing.
     `against` is the reference: "rate" (λ as configured; the 2026-10-30 rule, used by every sweep up to 2026-11-04) or
     "planned_rate" (the realized planned rate in the window; item 42, future sweeps only, decisions.md 2026-11-04).
     `monotone` (REG-7, future sweeps only): the highest rate such that it and every lower swept rate pass, so a rate
     that passes by noise above a failing one cannot set mu. The default keeps the old reading (any passing rate).
+    `swept_rates` (monotone only; decisions.md 2026-11-05 [CORR] and the owner's approval): every rate the sweep
+    registered. `curve` then holds the valid runs only, and a swept rate with no valid run ends the chain like a failing
+    one, so mu can never be set over a rate that was not measured. Two valid runs at one rate, or a rate that was not
+    swept, raise: the registration says which run counts.
     Thresholds must be pre-registered in docs/decisions.md before reading the sweep."""
     if against not in ("rate", "planned_rate"):
         raise ValueError(f"unknown capacity reference {against!r}")
+    if swept_rates is not None and not monotone:
+        raise ValueError("swept_rates is defined for the monotone rule only")
     c = curve.sort_values("rate")
     passes = (c.throughput >= min_throughput_frac * c[against]) & (c.q_slope_per_s <= max_q_slope)
+    if monotone and swept_rates is not None:
+        if c.rate.duplicated().any():
+            raise ValueError("two valid runs at one rate; the registration says which counts")
+        unknown = set(c.rate) - set(swept_rates)
+        if unknown:
+            raise ValueError(f"rates that were not swept: {sorted(unknown)}")
+        by_rate = dict(zip(c.rate, passes))
+        chain, mu = True, np.nan
+        for rate in sorted(swept_rates):
+            chain = chain and bool(by_rate.get(rate, False))  # no valid run at this rate ends the chain
+            if not chain:
+                break
+            mu = float(rate)
+        return mu
     if monotone:
         passes = passes.cumprod().astype(bool)
     ok = c[passes]

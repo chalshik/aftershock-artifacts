@@ -1,0 +1,7 @@
+# REG-7 G1, first rerun of invalid rates, part a (decisions.md 2026-11-05 [DECISION], REG-7 stopping rule: an invalid
+# run is rerun unchanged, at most twice). Same settings as sweep_l1_pc_on.yaml; only the list of rates differs.
+# `name` stays sweep_l1_pc_on so these runs belong to the same sweep (sweep_parent) for the gate.
+extends: sweep_l1_pc_on.yaml
+name: sweep_l1_pc_on
+sweep:
+  rates: [4.5, 5]          # 4.5 failed no_errors, 5 failed gpu_steady (SW thermal) in the first pass

@@ -89,6 +89,7 @@ def sweep_table() -> pd.DataFrame:
         s["whole_run_hit"] = L.whole_run_hit_rate(r) if has_hit else np.nan
         s["preemptions"] = _preemptions(r["metrics"])
         s["capacity_rule"] = json.dumps(capacity_rule(r["cfg"]), sort_keys=True)
+        s["swept_rates"] = json.dumps(sorted(float(x) for x in (r["cfg"].get("sweep") or {}).get("rates", [])))
         rows.append(s)
     return pd.DataFrame(rows)
 
@@ -103,15 +104,26 @@ def capacity_rule(cfg: dict) -> dict:
 
 
 def sweep_capacity(parent: str, sweeps: pd.DataFrame | None = None) -> float:
-    """μ for one sweep parent, over its valid runs, by the rule its configs registered. Raises if the runs disagree."""
+    """μ for one sweep parent, over its valid runs, by the rule its configs registered. Raises if the runs disagree.
+    Under a monotone rule the swept rates are the union of `sweep.rates` saved in every run of the parent, valid or not
+    (a rerun config may list a subset), and a swept rate with no valid run ends the chain (decisions.md 2026-11-05)."""
     sw = sweep_table() if sweeps is None else sweeps
-    rows = sw[(sw.parent == parent) & sw.valid.astype(bool)]
+    mine = sw[sw.parent == parent]
+    rows = mine[mine.valid.astype(bool)]
     if not len(rows):
         return float("nan")
     rules = set(rows.capacity_rule)
     if len(rules) != 1:
         raise ValueError(f"{parent}: runs registered different capacity rules: {sorted(rules)}")
-    return L.capacity(rows, **json.loads(rules.pop()))
+    rule = json.loads(rules.pop())
+    if rule.get("monotone"):
+        if "swept_rates" not in mine:
+            raise ValueError(f"{parent}: a monotone rule needs the swept rates of every run")
+        swept = sorted({x for v in mine.swept_rates for x in json.loads(v)})
+        if not swept:
+            raise ValueError(f"{parent}: no run saved its sweep.rates")
+        return L.capacity(rows, **rule, swept_rates=swept)
+    return L.capacity(rows, **rule)
 
 
 def capacity_table(sweeps: pd.DataFrame | None = None) -> pd.DataFrame:

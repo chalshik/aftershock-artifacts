@@ -1453,3 +1453,21 @@ Summary:
   - Code and a test would follow before any μ is computed.
   - The choice is made knowing only which runs are valid, not any throughput.
 - **Rule that would have caught it:** F. The adversarial review built traces with failing rates, not with missing ones; a review should also feed the rule an invalid row.
+
+## 2026-11-05 · [DECISION] Monotone-rule fix approved and implemented; GPU cooling improved; G1's invalid rates rerun unchanged in two parts
+- **Owner:** "approve fix capcity rule … gpu I have enhanced cooling". The agent reads the cooling change as the owner's choice of option 1: improve the cooling, then rerun the invalid G1 rates unchanged, as REG-7's stopping rule allows (at most twice each).
+- **Fix** (the [CORR] entry above):
+  - `load.capacity(..., monotone=True, swept_rates=...)`: a swept rate with no valid run ends the chain. Two valid runs at one rate, or a rate that was not swept, raise.
+  - `tables.sweep_table` records each run's saved `sweep.rates`. `tables.sweep_capacity` passes their union over every run of the parent, valid or not.
+  - The non-monotone rule, used by every sweep before REG-7, is unchanged.
+  - Tests: four in `tests/test_tables.py`, including the trace "λ = 4 invalid, λ = 5 valid and passing → μ = 3, not 5".
+  - Re-check: `uv run python -m analysis.tables published` reports no difference, and `uv run pytest` gives 190 passed.
+  - The fix was made knowing only which G1 runs are valid; no G1 throughput or μ was computed. That `published` output prints μ only for the three old setups.
+- **Cooling:** the owner improved the GPU cooling (details are not recorded). At idle the GPU reads 37 °C with the fan at 0 %, against 35–36 °C idle this morning (FILE(docs/probe/20261105_vm_checks/after_cooling.txt)), so idle readings cannot show the change. The reruns test it.
+- **Reruns, the first allowed rerun of each rate:**
+  - `configs/sweep_l1_pc_on_rerun1a.yaml`: λ = 4.5 and 5.
+  - `configs/sweep_l1_pc_on_rerun1b.yaml`: λ = 5.5, 6 and 7.
+  - Both extend `sweep_l1_pc_on.yaml` and keep `name: sweep_l1_pc_on`. Every resolved per-run config equals the original apart from the `sweep` list, seed 0 included (checked with `harness.run.expand`).
+  - **Order rule, set before either part runs:** part b starts only if part a's λ = 5 run passes `gpu_steady`. Otherwise the agent stops and the owner decides, because further runs at higher load would most likely fail the same way.
+  - This decides only whether to spend GPU time, from a validity check. No outcome is read.
+- **G2** waits until G1 is complete or the owner decides otherwise.

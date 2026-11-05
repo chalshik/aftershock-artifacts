@@ -14,7 +14,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-05
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: the owner decides how the GPU heat is handled; G2 waits.** G1 is done: 4 of 9 runs are valid (λ = 2–4). λ = 4.5 failed `no_errors` (1 disconnect), and λ = 5–7 failed `gpu_steady` from SW-thermal slowdown (decisions.md [OPS] 2026-11-05). The owner also has to approve the monotone-rule fix (decisions.md [CORR] 2026-11-05). No μ is computed yet. REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`. It is the feasibility gate for setup L1, a 2048-token system prompt at 5 s gaps, and costs ≤ 9 GPU h. Nothing is running.
+**Next action: G1 reruns, part a** (`configs/sweep_l1_pc_on_rerun1a.yaml`, λ = 4.5 and 5, about 32 min) after the owner improved the GPU cooling. Then part b (`..._rerun1b.yaml`, λ = 5.5, 6, 7) only if part a's λ = 5 run passes `gpu_steady`; otherwise ask the owner (decisions.md 2026-11-05 [DECISION]). The monotone-rule fix is approved and implemented. G1's first pass gave 4 of 9 valid runs (λ = 2–4). No μ is computed yet. REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`. It is the feasibility gate for setup L1, and costs ≤ 9 GPU h without reruns.
 
 Steps:
 1. **Read-only VM checks: done 2026-11-05** (decisions.md [OPS], evidence in `docs/probe/20261105_vm_checks/`).
@@ -282,7 +282,7 @@ One entry per term: one text definition, its source, and the code that computes 
 ### μ_warm
 - **Text:** "μ is the highest swept λ whose run is valid, with throughput ≥ 0.95 λ and waiting-queue slope ≤ 0.01 req/s², both over the measured window", with prefix caching on. `docs/decisions.md:61`.
 - **Code:** `load.capacity` (`load.py:243`), on `load.summarize` rows.
-- **Reference for future sweeps (item 42, decisions.md 2026-11-04; code 2026-11-05):** a sweep whose config has a `capacity:` block with `against: planned_rate` is judged against `load.summarize` `planned_rate`, the requests planned in [warm-up, end of arrivals) per second, instead of λ. Read by `tables.capacity_rule` and `tables.sweep_capacity`. Every sweep up to 2026-11-04 has no such block and keeps the 2026-10-30 rule. With `monotone: true`, μ is the highest rate that passes along with every lower swept rate (`load.capacity(monotone=True)`). First used by `configs/l1_base.yaml` (REG-7).
+- **Reference for future sweeps (item 42, decisions.md 2026-11-04; code 2026-11-05):** a sweep whose config has a `capacity:` block with `against: planned_rate` is judged against `load.summarize` `planned_rate`, the requests planned in [warm-up, end of arrivals) per second, instead of λ. Read by `tables.capacity_rule` and `tables.sweep_capacity`. Every sweep up to 2026-11-04 has no such block and keeps the 2026-10-30 rule. With `monotone: true`, μ is the highest rate that passes along with every lower swept rate (`load.capacity(monotone=True)`). First used by `configs/l1_base.yaml` (REG-7). **[2026-11-05]** A swept rate with no valid run, after the reruns REG-7 allows, ends the chain like a failing one. The swept rates are the union of `sweep.rates` saved in the parent's runs (`load.capacity(swept_rates=...)` via `tables.sweep_capacity`; decisions.md 2026-11-05 [CORR] and [DECISION]).
 - **Other text:** "Highest load the server keeps up with when the cache works" (`docs/experiment-plan.md:201`).
 
 ### μ_off
@@ -564,42 +564,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-05 · [OPS] VM back: read-only checks; REG-6 seed 0 copied; why it went offline; where microk8s came from; A10 answered
-- **Scope:** read-only commands over SSH as the user `chalshik`, with no sudo. Each output is saved in `docs/probe/20261105_vm_checks/` and cited below. 0 GPU h. Nothing on the VM changed except the removal of the copied run folder (below).
-- **Why the VM went offline (2026-11-04 14:35 UTC):** an ACPI power-button event, not a crash. The log reads "Power key pressed short", then "System is powering down", at 14:35:45 (FILE(docs/probe/20261105_vm_checks/boots_and_shutdowns.txt:38-39)).
-  - The two earlier mid-run losses end the same way: 2026-10-31 02:53:50 and 2026-11-01 15:41:07 (FILE(docs/probe/20261105_vm_checks/boots_and_shutdowns.txt:32-36)). So do three setup-day boots on 2026-10-23 (`:21-30`).
-  - The VM came back at 2026-11-05 10:55:48 (`:13`).
-  - BELIEF: in a Proxmox VM this event comes from the hypervisor (a "Shutdown" of the VM, or the host shutting down). A shell command in the VM logs no power-key line. Who sent it is not visible from inside the VM; the Proxmox task log would show it (owner).
-  - **On the 2026-11-04 [OPS] entry:** it says the agent's stop command "never reached the VM". The journal shows SSH sessions from the Mac's Tailscale address at 14:32:35, 14:34:23 and 14:35:37, the last ending 7.4 s before the power key (FILE(docs/probe/20261105_vm_checks/shutdown_20261104.txt:3-14)). Which command each ran is not logged, so that statement can be neither confirmed nor refuted. It does not bear on the cause, which is the power-key event.
-- **Repo:** clean (0 lines of `git status --porcelain`) at `4d30f1d` (FILE(docs/probe/20261105_vm_checks/repo_disk.txt:3-5)). The VM's `origin` is the bare repo `~/repos/aftershock-artifacts.git` on the VM itself, which the Mac pushes to as `vm`.
-- **GPU and disk:** RTX 3090, 1 MiB used, 0 %, 420 W limit, no compute process (FILE(docs/probe/20261105_vm_checks/microk8s_now.txt:29-30)); 16 GB free (`repo_disk.txt`).
-- **REG-6 seed 0 (`20261104-134159_long_pc_off_r3_s0`):**
-  - It has no `checks.json`, so it does not count, as expected. Its last writes are at 14:35:44.86, 0.2 s before the power key.
-  - Copied to the Mac with `rsync -a`. The sha256 of all 9 files is identical on both machines (`sha256sum` on the VM, `shasum -a 256` on the Mac, compared with `diff`).
-  - `python3 tools/manifest.py update` appended 9 lines and left the 1053 earlier lines unchanged. Its line in `manifests/pending_copy.txt` is removed.
-  - The VM copy is removed, under the owner's exception (decisions.md 2026-11-04).
-  - `runs/` now holds 105 folders. The new one is the third without checks.
-- **microk8s: where it came from.** It was installed automatically during the VM's very first boot, before anyone logged in.
-  - The journal starts at 2026-10-23 11:48:36 (FILE(docs/probe/20261105_vm_checks/boots_and_shutdowns.txt:4)). The OS was installed just before from the Ubuntu Server 24.04.5 ISO (FILE(docs/probe/20261105_vm_checks/microk8s_install.txt:3), `/` born 11:35:45, `:13`).
-  - snapd started at 11:48:46. At 11:48:48 it logged `Installing snap "microk8s"`, a request through its API (`:26-27`). The snap file landed at 11:49:32 (`:9`). The first login session is at 11:51:28 (`:30`).
-  - So no user session existed when the install was requested. Two of the three earlier explanations are ruled out: the other GPU user, and a manual install by the owner or an agent session.
-  - BELIEF, the remaining explanation: microk8s was ticked on the installer's "featured server snaps" screen, and the installer had it installed on first boot. The decisive file, `/var/log/installer/autoinstall-user-data`, is readable only by root (owner: `sudo grep -n -A4 snaps /var/log/installer/autoinstall-user-data`).
-- **microk8s: what it does.** It is unused.
-  - The `microk8s` group has no members, and no `~/.kube` exists (`microk8s_install.txt:32-34`).
-  - Over all 10 boots, kubelite's journal names only the three default `kube-system` pods (calico-node, calico-kube-controllers, coredns) and never mentions nvidia (`microk8s_now.txt:23-26`). So no GPU addon pod has ever run.
-  - Its CPU use, as `ps` pcpu (CPU time over elapsed time since this boot): kubelite 4.3 %, k8s-dqlite 1.4 %, calico-node 1.3 %, containerd 0.9 % of one core (`microk8s_now.txt:6-9`). DERIVED: about 8 % of one core, unpinned, so it can run on the loadgen and recorder cores 6–7.
-  - It was present for all 104 earlier runs.
-  - It bears on A7 only partly. The kubelite log rules out a GPU pod. It cannot rule out a GPU process outside Kubernetes.
-- **A10, the scheduler limits:**
-  - `analysis/engine_config.py` (`a10_table`, tests in `tests/test_engine_config.py`) reads every run's `server.log`.
-  - The unlogged defaults were read from the installed wheel (FILE(docs/probe/20261105_vm_checks/scheduler_source.txt)).
-  - Answer in open-questions A10.
-- **Not done, needs the owner:**
-  - whether microk8s is stopped during runs;
-  - the root-only installer check;
-  - who sent the three power-key events (Proxmox task log).
-  G1 does not start before the microk8s decision (status.md step 4).
-
 ### 2026-11-05 · [DECISION] VM evidence kept as committed files; `analysis/engine_config.py` added for A10 (agent, within its authority)
 - **VM outputs as files:** journal, snap and `ps` output from the VM fits none of rule B's tags, and a chat transcript is not evidence. So each read-only check's output is saved under `docs/probe/20261105_vm_checks/` and cited as `FILE(path:line)`. Future VM checks follow the same pattern: one dated folder, one file per check, a capture time in the first line, and no secrets.
 - **`analysis/engine_config.py`:**
@@ -652,3 +616,21 @@ Every model used to choose a run or read a result, with its equations, the evide
   - Code and a test would follow before any μ is computed.
   - The choice is made knowing only which runs are valid, not any throughput.
 - **Rule that would have caught it:** F. The adversarial review built traces with failing rates, not with missing ones; a review should also feed the rule an invalid row.
+
+### 2026-11-05 · [DECISION] Monotone-rule fix approved and implemented; GPU cooling improved; G1's invalid rates rerun unchanged in two parts
+- **Owner:** "approve fix capcity rule … gpu I have enhanced cooling". The agent reads the cooling change as the owner's choice of option 1: improve the cooling, then rerun the invalid G1 rates unchanged, as REG-7's stopping rule allows (at most twice each).
+- **Fix** (the [CORR] entry above):
+  - `load.capacity(..., monotone=True, swept_rates=...)`: a swept rate with no valid run ends the chain. Two valid runs at one rate, or a rate that was not swept, raise.
+  - `tables.sweep_table` records each run's saved `sweep.rates`. `tables.sweep_capacity` passes their union over every run of the parent, valid or not.
+  - The non-monotone rule, used by every sweep before REG-7, is unchanged.
+  - Tests: four in `tests/test_tables.py`, including the trace "λ = 4 invalid, λ = 5 valid and passing → μ = 3, not 5".
+  - Re-check: `uv run python -m analysis.tables published` reports no difference, and `uv run pytest` gives 190 passed.
+  - The fix was made knowing only which G1 runs are valid; no G1 throughput or μ was computed. That `published` output prints μ only for the three old setups.
+- **Cooling:** the owner improved the GPU cooling (details are not recorded). At idle the GPU reads 37 °C with the fan at 0 %, against 35–36 °C idle this morning (FILE(docs/probe/20261105_vm_checks/after_cooling.txt)), so idle readings cannot show the change. The reruns test it.
+- **Reruns, the first allowed rerun of each rate:**
+  - `configs/sweep_l1_pc_on_rerun1a.yaml`: λ = 4.5 and 5.
+  - `configs/sweep_l1_pc_on_rerun1b.yaml`: λ = 5.5, 6 and 7.
+  - Both extend `sweep_l1_pc_on.yaml` and keep `name: sweep_l1_pc_on`. Every resolved per-run config equals the original apart from the `sweep` list, seed 0 included (checked with `harness.run.expand`).
+  - **Order rule, set before either part runs:** part b starts only if part a's λ = 5 run passes `gpu_steady`. Otherwise the agent stops and the owner decides, because further runs at higher load would most likely fail the same way.
+  - This decides only whether to spend GPU time, from a validity check. No outcome is read.
+- **G2** waits until G1 is complete or the owner decides otherwise.

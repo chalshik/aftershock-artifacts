@@ -1,0 +1,7 @@
+# REG-7 G1, first rerun of invalid rates, part b (decisions.md 2026-11-05 [DECISION]). Runs only if part a's λ = 5
+# run passes gpu_steady; otherwise the owner decides first. Same settings as sweep_l1_pc_on.yaml; only the rates differ.
+# `name` stays sweep_l1_pc_on so these runs belong to the same sweep (sweep_parent) for the gate.
+extends: sweep_l1_pc_on.yaml
+name: sweep_l1_pc_on
+sweep:
+  rates: [5.5, 6, 7]       # all three failed gpu_steady (SW thermal) in the first pass

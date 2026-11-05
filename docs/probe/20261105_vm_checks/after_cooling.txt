@@ -1,0 +1,31 @@
+# captured 2026-11-05T15:30:45Z after the owner reported enhanced GPU cooling
+## uptime
+ 15:30:45 up  3:37,  1 user,  load average: 0.00, 0.00, 0.00
+## journalctl --list-boots (last 2)
+ -1 4de2f1324c9a4d8cb2fa68d4291b6545 Thu 2026-11-05 10:55:48 UTC Thu 2026-11-05 11:53:24 UTC
+  0 7f7c8f5e66da43a3ad2bf89e633a44c0 Thu 2026-11-05 11:53:45 UTC Thu 2026-11-05 15:30:45 UTC
+## nvidia-smi
+name, temperature.gpu, fan.speed [%], power.draw [W], power.limit [W], utilization.gpu [%], memory.used [MiB], clocks_event_reasons.active
+NVIDIA GeForce RTX 3090, 37, 0 %, 27.46 W, 420.00 W, 0 %, 1 MiB, 0x0000000000000001
+pid, process_name
+## gpu temperature, 10 samples 1 s apart
+ERROR: Option --query-gpu=temperature.gpu,fan.speed,power.draw is not recognized. Please run 'nvidia-smi -h' for help.
+
+37, 0 %, 27.46 W
+37, 0 %, 27.49 W
+37, 0 %, 27.54 W
+37, 0 %, 27.31 W
+37, 0 %, 27.32 W
+## microk8s
+microk8s  v1.35.6  9072  1.35/stable  canonical**  disabled,classic
+0
+## tmux
+no server running on /tmp/tmux-1000/default
+## repo
+fce2d56
+porcelain: 0
+9
+## disk
+/dev/mapper/ubuntu--vg-ubuntu--lv   62G   44G   15G  75% /
+## port 8000
+0

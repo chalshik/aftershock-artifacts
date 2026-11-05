@@ -47,3 +47,51 @@ def test_sweep_capacity_uses_the_registered_rule_and_refuses_a_mix():
     assert sweep_capacity("p", sw) == 2
     with pytest.raises(ValueError):
         sweep_capacity("p", sw.assign(capacity_rule=[rule("rate"), rule("planned_rate")]))
+
+
+def _mono_sweep(valid, throughput, rates=(2, 3, 4, 5), swept=None):
+    import json
+    rule = json.dumps({"against": "planned_rate", "max_q_slope": 0.01, "min_throughput_frac": 0.95, "monotone": True},
+                      sort_keys=True)
+    n = len(rates)
+    swept = json.dumps([float(x) for x in (swept or rates)])
+    return pd.DataFrame({"parent": ["p"] * n, "valid": list(valid), "rate": list(rates), "throughput": list(throughput),
+                         "planned_rate": [float(r) for r in rates], "q_slope_per_s": [0.0] * n,
+                         "capacity_rule": [rule] * n, "swept_rates": [swept] * n})
+
+
+def test_monotone_capacity_stops_at_a_rate_with_no_valid_run():
+    """decisions.md 2026-11-05 [CORR]: an invalid rate ends the chain, so a valid pass above it cannot set mu."""
+    from analysis.tables import sweep_capacity
+    all_pass = [2.0, 3.0, 4.0, 5.0]
+    assert sweep_capacity("p", _mono_sweep([True, True, True, True], all_pass)) == 5
+    assert sweep_capacity("p", _mono_sweep([True, True, False, True], all_pass)) == 3  # was 5 before the fix
+    import math
+    assert math.isnan(sweep_capacity("p", _mono_sweep([False, True, True, True], all_pass)))  # lowest rate unmeasured
+
+
+def test_monotone_capacity_counts_a_valid_rerun_and_sees_rates_from_every_run():
+    import json
+    from analysis.tables import sweep_capacity
+    sw = _mono_sweep([True, True, False, True], [2.0, 3.0, 4.0, 5.0])
+    rerun = sw.iloc[[2]].assign(valid=True, swept_rates=json.dumps([4.0]))  # a rerun config listing only rate 4
+    assert sweep_capacity("p", pd.concat([sw, rerun], ignore_index=True)) == 5
+    # a rate that is swept but has no row at all (e.g. a run without metrics) also ends the chain
+    sw2 = _mono_sweep([True, True, True], [2.0, 3.0, 5.0], rates=(2, 3, 5), swept=(2, 3, 4, 5))
+    assert sweep_capacity("p", sw2) == 3
+
+
+def test_monotone_capacity_refuses_two_valid_runs_at_one_rate():
+    import pytest
+    from analysis.tables import sweep_capacity
+    sw = _mono_sweep([True, True, True, True], [2.0, 3.0, 4.0, 5.0])
+    with pytest.raises(ValueError):
+        sweep_capacity("p", pd.concat([sw, sw.iloc[[1]]], ignore_index=True))
+
+
+def test_swept_rates_is_refused_outside_the_monotone_rule():
+    import pytest
+    from analysis.load import capacity
+    c = pd.DataFrame({"rate": [2], "throughput": [2.0], "planned_rate": [2.0], "q_slope_per_s": [0.0]})
+    with pytest.raises(ValueError):
+        capacity(c, 0.95, 0.01, against="planned_rate", monotone=False, swept_rates=[2])
