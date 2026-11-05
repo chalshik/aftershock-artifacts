@@ -6,7 +6,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-05
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: the owner decides whether microk8s is stopped during runs; then G1 of REG-7 starts.** REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`. It is the feasibility gate for setup L1, a 2048-token system prompt at 5 s gaps, and costs ≤ 9 GPU h. The VM is back since 2026-11-05 10:55 UTC. Nothing is running, and the GPU is idle.
+**Next action: G1 of REG-7** (`configs/sweep_l1_pc_on.yaml`). microk8s was disabled and the VM rebooted on 2026-11-05 (decisions.md [DECISION]); the post-reboot check is clean. REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`. It is the feasibility gate for setup L1, a 2048-token system prompt at 5 s gaps, and costs ≤ 9 GPU h. The VM is back since 2026-11-05 10:55 UTC. Nothing is running, and the GPU is idle.
 
 Steps:
 1. **Read-only VM checks: done 2026-11-05** (decisions.md [OPS], evidence in `docs/probe/20261105_vm_checks/`).
@@ -15,8 +15,8 @@ Steps:
    - microk8s was installed automatically on the VM's first boot, before any login, and is unused: only the three default pods, and never a GPU pod.
 2. **REG-6 seed-0 recovery: done.** The folder is copied with identical checksums, the manifest is updated, and the VM copy is removed.
 3. **A10, the scheduler limits: answered** (open-questions A10). There is a 2048-token step budget, chunked prefill, the full prompt is reserved at admission, and the policy is fcfs.
-4. **Open, the owner's decision:** is microk8s stopped during runs? The agent recommends `sudo snap disable microk8s` before G1, for every later run, recorded in decisions.md (reasons in the session report). It needs root, so the owner does it. Two more checks also need root or Proxmox, and neither blocks G1:
-   - `sudo grep -n -A4 snaps /var/log/installer/autoinstall-user-data`, which confirms that it was chosen in the installer;
+4. **Done 2026-11-05: microk8s is disabled for every later run** (owner; decisions.md [DECISION]). The VM was rebooted to clear the pods left running, and the check after the reboot is clean (`docs/probe/20261105_vm_checks/after_reboot.txt`). Not blocking:
+   - the output of the installer check the owner ran (`sudo grep -n -A4 snaps /var/log/installer/autoinstall-user-data`), which would confirm the microk8s origin;
    - the Proxmox task log, which shows who sent the three power-off events.
 5. **Code on the VM:** the Mac pushes `main` to the `vm` remote, and the VM runs `git pull origin main`. Its `origin` is the bare repo `~/repos/aftershock-artifacts.git`. **Done 2026-11-05:** `ca0e299` was pushed to `origin` and to `vm`, and the VM pulled it with a clean tree. `uv.lock` and `pyproject.toml` are unchanged since `4d30f1d`, and `~/.local/bin/uv sync --frozen --extra server --dry-run` would make no changes. The commit that records this line follows `ca0e299` and is pushed the same way. Before G1, check `git log -1` on the VM against the Mac's `main`.
 6. **Start rule for G1:** G1 starts after step 4 is decided and logged, with the tree clean at the latest `main` and the GPU idle. **Stop and ask the owner first** if a check finds anything unexpected: another GPU process, a dirty tree, low disk, or a power-off during a run.
@@ -29,7 +29,7 @@ Steps:
 
 **Then, the owner's open items:**
 - items 18–21: paper layer, framing, canonical hit rate. Decided 2026-11-05: the C1 metric for future cells, and that the data copies stay on the Mac (decisions.md);
-- whether to stop microk8s on the VM during runs (step 4);
+- the installer-check output (microk8s origin), and the Proxmox task log for the three power-offs;
 
 **Done 2026-11-05 (0 GPU h):**
 - Audit of all runs, code, docs and literature: every published verdict and μ reproduces; why nothing got stuck (the capacity loss is too small at the default pool); design rules for future cells; the owner's choices.
@@ -53,7 +53,7 @@ Steps:
 - **M1 (F + W) is 0 for 3** on tested predictions; do not use it to choose loads until revised.
 - **Single-seed controls** in every cell.
 - **The VM can shut down mid-run** (2026-10-31, 2026-11-01, and REG-6 seed 0 on 2026-11-04). Each time it was an ACPI power-key event, sent from outside the VM (decisions.md [OPS] 2026-11-05); the sender is not known. An interrupted run is kept and rerun; a stopped sweep has no resume.
-- **microk8s runs on the VM**, unrecorded in `env.json`: about 8 % of one core, unpinned, and unused (decisions.md [OPS] 2026-11-04 and 2026-11-05). It was present for all 104 runs before 2026-11-05.
+- **microk8s was active in all 104 runs before 2026-11-05** (about 8 % of one core, unpinned, unused) and is **disabled from 2026-11-05 on** (decisions.md [DECISION] 2026-11-05). REG-6's result must state the difference. `env.json` records neither state (a harness change, the owner's).
 - **Manipulation checks are off** for every past run (thresholds null in `configs/defaults.yaml`). REG-7 registers `burst_min_kv_max: 0.95` for its burst runs (`configs/stage2_l1_base.yaml`).
 - **Open-loop turns protect the cache under slowdown** (decisions.md 2026-11-01, limits): REG-7 measures the overlap share.
 - **Data:** the copies stay on the Mac (owner, 2026-11-05); one machine is still a single point of failure (Watch, below). A backup can now be verified with `python3 tools/manifest.py verify <copy>`.

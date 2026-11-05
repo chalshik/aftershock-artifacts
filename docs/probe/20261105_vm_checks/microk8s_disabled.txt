@@ -1,0 +1,47 @@
+# captured 2026-11-05T11:52:04Z after the owner ran: sudo snap disable microk8s
+## snap list microk8s
+Name      Version  Rev   Tracking     Publisher    Notes
+microk8s  v1.35.6  9072  1.35/stable  canonical**  disabled,classic
+## snap services microk8s
+Service                           Startup   Current   Notes
+microk8s.daemon-apiserver-kicker  disabled  inactive  -
+microk8s.daemon-apiserver-proxy   disabled  inactive  -
+microk8s.daemon-cluster-agent     disabled  inactive  -
+microk8s.daemon-containerd        disabled  inactive  -
+microk8s.daemon-etcd              disabled  inactive  -
+microk8s.daemon-flanneld          disabled  inactive  -
+microk8s.daemon-k8s-dqlite        disabled  inactive  -
+microk8s.daemon-kubelite          disabled  inactive  -
+## k8s-related processes (ps)
+root      0.1    3361 containerd-shim
+65535     0.0    3361 pause
+root      0.0    3359 containerd-shim
+65535     0.0    3359 pause
+65532     0.1    3359 coredns
+root      0.1    3359 containerd-shim
+65535     0.0    3359 pause
+999       0.0    3359 kube-controller
+root      0.0    3358 calico-node
+root      1.3    3358 calico-node
+root      0.0    3358 calico-node
+root      0.0    3358 calico-node
+root      0.0    3358 calico-node
+## journalctl: snapd/systemd lines about the disable, last 30 min
+2026-11-05T11:51:09.189534+00:00 chalshik systemd[1]: Stopped snap.microk8s.daemon-containerd.service - Service for snap application microk8s.daemon-containerd.
+2026-11-05T11:51:09.217141+00:00 chalshik microk8s.daemon-kubelite[1711]: I1105 11:51:09.217096    1711 daemon.go:60] Stopping Kubelet
+2026-11-05T11:51:09.217141+00:00 chalshik microk8s.daemon-kubelite[1711]: Stopping kubelite
+2026-11-05T11:51:09.217130+00:00 chalshik systemd[1]: Stopping snap.microk8s.daemon-kubelite.service - Service for snap application microk8s.daemon-kubelite...
+2026-11-05T11:51:09.285914+00:00 chalshik systemd[1]: Stopped snap.microk8s.daemon-kubelite.service - Service for snap application microk8s.daemon-kubelite.
+2026-11-05T11:51:09.297126+00:00 chalshik systemd[1]: Stopping snap.microk8s.daemon-apiserver-kicker.service - Service for snap application microk8s.daemon-apiserver-kicker...
+2026-11-05T11:51:09.297691+00:00 chalshik systemd[1]: Stopped snap.microk8s.daemon-apiserver-kicker.service - Service for snap application microk8s.daemon-apiserver-kicker.
+2026-11-05T11:51:42.548511+00:00 chalshik sudo[96579]: chalshik : TTY=pts/0 ; PWD=/home/chalshik ; USER=root ; COMMAND=/usr/bin/snap disable microk8s
+## nvidia-smi
+name, memory.used [MiB], utilization.gpu [%], power.limit [W]
+NVIDIA GeForce RTX 3090, 1 MiB, 0 %, 420.00 W
+pid, process_name, used_gpu_memory [MiB]
+## loadavg
+0.07 0.16 0.12 1/376 96722
+## repo
+10d233c
+porcelain: 0
+/dev/mapper/ubuntu--vg-ubuntu--lv   62G   43G   16G  74% /

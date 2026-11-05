@@ -1410,3 +1410,19 @@ Summary:
   - Its async-off pattern covers every disabling message in the installed vLLM 0.32.0, `config/vllm.py:1559-1639`.
 - **Not done:** repointing the Mac's `vm` git remote to the Tailscale address. The permission system refused it, so the remote keeps the home address.
 - **Re-check:** `uv run pytest`: 186 passed. `python3 tools/check_docs.py`: OK.
+
+## 2026-11-05 · [DECISION] microk8s disabled on the VM for every later run (study owner)
+- **Owner's decision:** "I allow you to run it", answering the agent's recommendation to disable microk8s before G1 for every later run, REG-7 and REG-6 alike. The agent could not run it: sudo needs a password (`sudo -n`). So the owner ran `sudo snap disable microk8s` at 11:51:08 and again at 11:51:42 UTC, then the installer grep at 11:51:42 and `reboot` at 11:52:47 (FILE(docs/probe/20261105_vm_checks/sudo_log.txt:4-7)). The services stopped at 11:51:09 (FILE(docs/probe/20261105_vm_checks/microk8s_disabled.txt:30-36)).
+- **Leftovers, found by the agent:** after the disable, all 8 services were disabled and inactive. The pods' processes still ran, though: calico-node, coredns, kube-controllers, 3 containerd-shim and 3 pause (FILE(docs/probe/20261105_vm_checks/microk8s_disabled.txt:16-28)), and calico's network links `vxlan.calico` and two `cali*` were still up. The agent asked for a reboot rather than start G1 in a state no earlier run had and no boot would reproduce. The owner rebooted at 11:52:47 UTC (FILE(docs/probe/20261105_vm_checks/sudo_log.txt:7)).
+- **State after the reboot** (FILE(docs/probe/20261105_vm_checks/after_reboot.txt)):
+  - microk8s is `disabled`, and all its services are disabled and inactive.
+  - There are no k8s, containerd or calico processes and no CNI links. 255 processes in all, against 437 before.
+  - GPU: 1 MiB, 0 %, 36 °C, no compute process. Repo clean at `10d233c`. 16 GB free. Nothing listens on port 8000.
+- **Consequence for comparisons:**
+  - All 104 runs before 2026-11-05 ran with microk8s active, at about 8 % of one core, unpinned (decisions.md [OPS] 2026-11-05).
+  - Every later run has it disabled: REG-7's G1–G3 and REG-6's reruns.
+  - REG-7 measures its own μ, so its internal comparisons are unaffected.
+  - REG-6's `[RESULT]` must state this difference from the 2026-10-30 cache-off sweep it helps to interpret.
+  - `env.json` records neither state. Adding the snap services list to `harness/env_snapshot.py` is a harness change and is left to the owner.
+- **Reversible:** `sudo snap enable microk8s`.
+- **Still open:** the owner ran the installer check (`grep -n -A4 snaps /var/log/installer/autoinstall-user-data`, sudo log 11:51:42), but its output is not yet in the record. So "chosen in the installer" stays BELIEF.

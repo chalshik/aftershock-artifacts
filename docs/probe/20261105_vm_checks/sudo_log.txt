@@ -1,0 +1,7 @@
+# captured 2026-11-05T11:57:17Z
+## journalctl -b -1 (boot 2026-11-05 10:55:48-11:53:24): sudo lines for user chalshik
+2026-11-05T11:49:55.039454+00:00 chalshik sudo[94255]: chalshik : a password is required ; PWD=/home/chalshik ; USER=root ; COMMAND=/usr/bin/true
+2026-11-05T11:51:08.918450+00:00 chalshik sudo[96323]: chalshik : TTY=pts/0 ; PWD=/home/chalshik ; USER=root ; COMMAND=/usr/bin/snap disable microk8s
+2026-11-05T11:51:42.548511+00:00 chalshik sudo[96579]: chalshik : TTY=pts/0 ; PWD=/home/chalshik ; USER=root ; COMMAND=/usr/bin/snap disable microk8s
+2026-11-05T11:51:42.654806+00:00 chalshik sudo[96603]: chalshik : TTY=pts/0 ; PWD=/home/chalshik ; USER=root ; COMMAND=/usr/bin/grep -n -A4 snaps /var/log/installer/autoinstall-user-data
+2026-11-05T11:52:47.860735+00:00 chalshik sudo[96795]: chalshik : TTY=pts/0 ; PWD=/home/chalshik ; USER=root ; COMMAND=/usr/sbin/reboot
