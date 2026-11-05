@@ -1335,3 +1335,22 @@ Summary:
   1. `docs/process.md` §9: the manifest is at `manifests/runs.sha256` (decided 2026-11-04 [OPS]), and the copy location is the owner's decision above.
   2. `PROTOCOL.md` §5.1: item 42's rule and the monotone reading for sweeps with a `capacity:` block, marked **[new 2026-11-05]**. Past μ values stand.
   3. `CLAUDE.md` rule H: "one-sided 95 % Clopper–Pearson upper bound", as in process.md §5.
+
+## 2026-11-05 · [CORR] status.md's next action was not updated when REG-7 was approved, although commit `f4d1110` says it was
+- **What was wrong:**
+  - Commit `f4d1110`'s message says "status.md: next action is running REG-7 when the VM is back; push first".
+  - FILE(docs/status.md:9) still read "Next action: the owner reviews and approves REG-7 … nothing from 2026-11-05 is committed yet".
+  - Only the backup line of status.md changed in that commit (`git show f4d1110 -- docs/status.md`).
+  - The agent also told the owner that status.md held the current plan before checking it.
+- **Since when:** `f4d1110`, 2026-11-05.
+- **Fix:** status.md's next action now holds the full ordered steps:
+  - the read-only VM checks, including microk8s;
+  - REG-6's recovery;
+  - the A10 probe;
+  - the microk8s decision;
+  - `git pull`;
+  - the start rule for G1: start when the checks are clean and the GPU is idle, and ask the owner first on anything unexpected;
+  - REG-7's sequence;
+  - REG-6 after the gate.
+- **Which results it affects:** none. No run started, and REG-7's registration and approval in decisions.md were correct.
+- **Rule that would have caught it:** D (session end): re-read status.md after editing it, before the commit message describes it.

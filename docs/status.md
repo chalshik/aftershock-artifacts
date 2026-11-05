@@ -6,23 +6,33 @@ Living document: update it after every run or decision. Last updated: 2026-11-05
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: the owner reviews and approves REG-7** (decisions.md 2026-11-05: the feasibility gate for setup L1, a 2048-token system prompt at 5 s gaps; ≤ 9 GPU h). Nothing is running, and nothing from 2026-11-05 is committed yet. The VM was offline at the session's start (Tailscale: last seen about 4 h earlier).
-1. **On the Mac, before any run:** the owner reviews and commits the 2026-11-05 changes (REG-7 is committed with its code and configs before it runs); push.
-2. **When the VM is back:**
-   - REG-6's recovery steps: inspect `runs/20261104-134159_long_pc_off_r3_s0` and the journal (`journalctl --list-boots`; the VM was seen online after the 14:35 loss); copy the folder to the Mac (kept, incomplete); `python3 tools/manifest.py update`; delete its line from `manifests/pending_copy.txt`; remove the VM copy only after a checksum-verified copy.
-   - Probe and record the scheduler limits (open-questions A10).
-   - Log the microk8s decision.
-3. **With the owner's go, GPU idle, after `git pull`:**
+**Next action: run REG-7** (approved by the owner 2026-11-05; registered in `d1b360c`, approval in `f4d1110`: the feasibility gate for setup L1, a 2048-token system prompt at 5 s gaps; ≤ 9 GPU h). It waits for the VM, which was offline on 2026-11-05 (Tailscale: last seen about 5 h earlier). Nothing is running. Everything is pushed to `origin` at `e8bbca6`; the push to the `vm` remote failed (VM offline; the remote still uses the home address 192.168.3.249).
+1. **When the VM answers, read-only checks first; log them as an `[OPS]` entry:**
+   - Why it went offline: `journalctl --list-boots` and the last boot's journal. It was seen online after the 14:35 UTC loss on 2026-11-04.
+   - Repo: `git -C ~/aftershock-artifacts status` and `log -1` (expected: clean, at `4d30f1d`).
+   - Data: `ls ~/aftershock-artifacts/runs/` and the size of `runs/20261104-134159_long_pc_off_r3_s0`.
+   - GPU and disk: `nvidia-smi` (no other compute processes) and `df -h` (about 16 GB free expected).
+   - microk8s, which was found on 2026-11-04 and whose purpose is unknown:
+     - `snap changes` / `snap info microk8s`;
+     - `last` and `/var/log/auth.log` around 2026-10-23 11:49 UTC;
+     - `microk8s status` (is the `gpu` addon on?);
+     - `microk8s kubectl get all -A`, `microk8s kubectl describe nodes` (does it allocate `nvidia.com/gpu`?), `microk8s ctr images ls`;
+     - `journalctl -u snap.microk8s.daemon-kubelite` around run times and the outages.
+2. **REG-6's recovery:** copy the seed-0 folder to the Mac (kept, incomplete); `python3 tools/manifest.py update`; delete its line from `manifests/pending_copy.txt`; remove the VM copy only after a checksum-verified copy.
+3. **Probe and record the scheduler limits** (open-questions A10).
+4. **microk8s:** the owner decides whether it is stopped during runs (the agent recommends stopping it), and the decision is logged.
+5. **Code on the VM:** `git pull origin main` (or `git push vm main` from the Mac once the remote works); the VM must be at `e8bbca6` or later.
+6. **Start rule for G1:** REG-7 is approved, so G1 starts when steps 1–5 are done and clean, and the GPU is idle. **Stop and ask the owner first** if a check finds anything unexpected: another GPU process, a microk8s GPU workload, a dirty tree, low disk, or an unexplained reboot pattern.
+7. **REG-7, in order:**
    - G1 `uv run python -m harness.run configs/sweep_l1_pc_on.yaml` (about 3 h);
    - G2 `configs/sweep_l1_pc_off.yaml` (about 2.3 h);
-   - copy back, update the manifest, compute `uv run python -m analysis.gate` **once** (λ_test);
-   - write and commit the two G3 configs exactly as registered, run them (about 1.7 h), compute `gate.gate_verdict` once, and write the `[RESULT]`.
-4. **REG-6** (approved; about 2.2 GPU h) runs after the gate, when the GPU is idle (owner, 2026-11-05).
+   - copy both back, update the manifest, compute `uv run python -m analysis.gate` **once** (λ_test, or no λ_test);
+   - write and commit the two G3 configs exactly as registered in REG-7, run them (about 1.7 h), compute `gate.gate_verdict` once, and write the `[RESULT]`. Its decision table is in the REG-7 entry.
+8. **REG-6** (approved; about 2.2 GPU h) runs after the gate, when the GPU is idle (owner, 2026-11-05).
 
 **Then, the owner's open items:**
-- items 18–22: paper layer, framing, canonical hit rate, backup location. The C1 metric is decided for future cells (decisions.md 2026-11-05); push was done 2026-11-04;
+- items 18–21: paper layer, framing, canonical hit rate. Decided 2026-11-05: the C1 metric for future cells, and that the data copies stay on the Mac (decisions.md);
 - whether to stop microk8s on the VM during runs;
-- for the owner's approval: three doc fixes in process.md, PROTOCOL.md and CLAUDE.md (decisions.md 2026-11-05 [CORR], item 7).
 
 **Done 2026-11-05 (0 GPU h):**
 - Audit of all runs, code, docs and literature: every published verdict and μ reproduces; why nothing got stuck (the capacity loss is too small at the default pool); design rules for future cells; the owner's choices.
@@ -51,7 +61,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-05
 - **Manipulation checks are off** for every past run (thresholds null in `configs/defaults.yaml`). REG-7 registers `burst_min_kv_max: 0.95` for its burst runs (`configs/stage2_l1_base.yaml`).
 - **Scheduler limits unrecorded** (`max_num_batched_tokens`, `--scheduler-reserve-full-isl`; open-questions A10).
 - **Open-loop turns protect the cache under slowdown** (decisions.md 2026-11-01, limits): REG-7 measures the overlap share.
-- **Data:** one copy only (Watch, below). A backup can now be verified with `python3 tools/manifest.py verify <copy>`.
+- **Data:** the copies stay on the Mac (owner, 2026-11-05); one machine is still a single point of failure (Watch, below). A backup can now be verified with `python3 tools/manifest.py verify <copy>`.
 
 ## Stage 2 results
 

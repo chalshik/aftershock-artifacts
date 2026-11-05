@@ -14,23 +14,33 @@ Living document: update it after every run or decision. Last updated: 2026-11-05
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: the owner reviews and approves REG-7** (decisions.md 2026-11-05: the feasibility gate for setup L1, a 2048-token system prompt at 5 s gaps; ≤ 9 GPU h). Nothing is running, and nothing from 2026-11-05 is committed yet. The VM was offline at the session's start (Tailscale: last seen about 4 h earlier).
-1. **On the Mac, before any run:** the owner reviews and commits the 2026-11-05 changes (REG-7 is committed with its code and configs before it runs); push.
-2. **When the VM is back:**
-   - REG-6's recovery steps: inspect `runs/20261104-134159_long_pc_off_r3_s0` and the journal (`journalctl --list-boots`; the VM was seen online after the 14:35 loss); copy the folder to the Mac (kept, incomplete); `python3 tools/manifest.py update`; delete its line from `manifests/pending_copy.txt`; remove the VM copy only after a checksum-verified copy.
-   - Probe and record the scheduler limits (open-questions A10).
-   - Log the microk8s decision.
-3. **With the owner's go, GPU idle, after `git pull`:**
+**Next action: run REG-7** (approved by the owner 2026-11-05; registered in `d1b360c`, approval in `f4d1110`: the feasibility gate for setup L1, a 2048-token system prompt at 5 s gaps; ≤ 9 GPU h). It waits for the VM, which was offline on 2026-11-05 (Tailscale: last seen about 5 h earlier). Nothing is running. Everything is pushed to `origin` at `e8bbca6`; the push to the `vm` remote failed (VM offline; the remote still uses the home address 192.168.3.249).
+1. **When the VM answers, read-only checks first; log them as an `[OPS]` entry:**
+   - Why it went offline: `journalctl --list-boots` and the last boot's journal. It was seen online after the 14:35 UTC loss on 2026-11-04.
+   - Repo: `git -C ~/aftershock-artifacts status` and `log -1` (expected: clean, at `4d30f1d`).
+   - Data: `ls ~/aftershock-artifacts/runs/` and the size of `runs/20261104-134159_long_pc_off_r3_s0`.
+   - GPU and disk: `nvidia-smi` (no other compute processes) and `df -h` (about 16 GB free expected).
+   - microk8s, which was found on 2026-11-04 and whose purpose is unknown:
+     - `snap changes` / `snap info microk8s`;
+     - `last` and `/var/log/auth.log` around 2026-10-23 11:49 UTC;
+     - `microk8s status` (is the `gpu` addon on?);
+     - `microk8s kubectl get all -A`, `microk8s kubectl describe nodes` (does it allocate `nvidia.com/gpu`?), `microk8s ctr images ls`;
+     - `journalctl -u snap.microk8s.daemon-kubelite` around run times and the outages.
+2. **REG-6's recovery:** copy the seed-0 folder to the Mac (kept, incomplete); `python3 tools/manifest.py update`; delete its line from `manifests/pending_copy.txt`; remove the VM copy only after a checksum-verified copy.
+3. **Probe and record the scheduler limits** (open-questions A10).
+4. **microk8s:** the owner decides whether it is stopped during runs (the agent recommends stopping it), and the decision is logged.
+5. **Code on the VM:** `git pull origin main` (or `git push vm main` from the Mac once the remote works); the VM must be at `e8bbca6` or later.
+6. **Start rule for G1:** REG-7 is approved, so G1 starts when steps 1–5 are done and clean, and the GPU is idle. **Stop and ask the owner first** if a check finds anything unexpected: another GPU process, a microk8s GPU workload, a dirty tree, low disk, or an unexplained reboot pattern.
+7. **REG-7, in order:**
    - G1 `uv run python -m harness.run configs/sweep_l1_pc_on.yaml` (about 3 h);
    - G2 `configs/sweep_l1_pc_off.yaml` (about 2.3 h);
-   - copy back, update the manifest, compute `uv run python -m analysis.gate` **once** (λ_test);
-   - write and commit the two G3 configs exactly as registered, run them (about 1.7 h), compute `gate.gate_verdict` once, and write the `[RESULT]`.
-4. **REG-6** (approved; about 2.2 GPU h) runs after the gate, when the GPU is idle (owner, 2026-11-05).
+   - copy both back, update the manifest, compute `uv run python -m analysis.gate` **once** (λ_test, or no λ_test);
+   - write and commit the two G3 configs exactly as registered in REG-7, run them (about 1.7 h), compute `gate.gate_verdict` once, and write the `[RESULT]`. Its decision table is in the REG-7 entry.
+8. **REG-6** (approved; about 2.2 GPU h) runs after the gate, when the GPU is idle (owner, 2026-11-05).
 
 **Then, the owner's open items:**
-- items 18–22: paper layer, framing, canonical hit rate, backup location. The C1 metric is decided for future cells (decisions.md 2026-11-05); push was done 2026-11-04;
+- items 18–21: paper layer, framing, canonical hit rate. Decided 2026-11-05: the C1 metric for future cells, and that the data copies stay on the Mac (decisions.md);
 - whether to stop microk8s on the VM during runs;
-- for the owner's approval: three doc fixes in process.md, PROTOCOL.md and CLAUDE.md (decisions.md 2026-11-05 [CORR], item 7).
 
 **Done 2026-11-05 (0 GPU h):**
 - Audit of all runs, code, docs and literature: every published verdict and μ reproduces; why nothing got stuck (the capacity loss is too small at the default pool); design rules for future cells; the owner's choices.
@@ -59,7 +69,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-05
 - **Manipulation checks are off** for every past run (thresholds null in `configs/defaults.yaml`). REG-7 registers `burst_min_kv_max: 0.95` for its burst runs (`configs/stage2_l1_base.yaml`).
 - **Scheduler limits unrecorded** (`max_num_batched_tokens`, `--scheduler-reserve-full-isl`; open-questions A10).
 - **Open-loop turns protect the cache under slowdown** (decisions.md 2026-11-01, limits): REG-7 measures the overlap share.
-- **Data:** one copy only (Watch, below). A backup can now be verified with `python3 tools/manifest.py verify <copy>`.
+- **Data:** the copies stay on the Mac (owner, 2026-11-05); one machine is still a single point of failure (Watch, below). A backup can now be verified with `python3 tools/manifest.py verify <copy>`.
 
 ## Stage 2 results
 
@@ -559,23 +569,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-05 · [CORR] Doc statements found wrong or inconsistent in the 2026-11-05 audit
-- **What was wrong:**
-  1. FILE(docs/claims.md:26) says "during bursts KV reached 1.00 and hits fell to 0.11–0.35". The hit values are the first 60 s *after* the burst ended, not during it (decisions.md 2026-11-03, the 72k entry). The counter also includes the burst requests, which never hit, so it overstates how cold the sessions' cache was (REG-1's review, decisions.md 2026-11-04). Corrected in claims.md.
-  2. decisions.md 2026-11-02 "Fan on the GPU backplate": "peak KV 0.36" for `20261102-100744_wipe_preempt_r3_s3` holds only for 900–1500 s. The window was not stated. Over the full watch the peak is higher (an audit agent's inline count; the value is not quoted until a committed function gives it). The old entry stays as written, and no verdict uses the peak.
-  3. FILE(docs/open-questions.md:51), A8, says "Open. To be registered". REG-5 (A8) was decided not to be computed (decisions.md 2026-11-04 [DECISION] REG-5). Corrected.
-  4. FILE(docs/model.md:18) says M2 is "Not yet registered or tested". REG-1 tested its assumption A (inconclusive). Corrected.
-  5. FILE(docs/open-questions.md:23), S5, says "the verdict rule as redefined before any verdict". The baseline window was later moved after the λ = 3 burst verdicts (decisions.md 2026-11-02, correction after seeing results). A note is added; the original wording stays visible.
-  6. FILE(docs/status.md:15) lists "push" as an open owner item and as done ("pushed 2026-11-04"). Fixed in status.md.
-  7. **For the owner (process.md, PROTOCOL.md and CLAUDE.md need the owner's approval to change):**
-     - FILE(docs/process.md:121) says the manifest location is "the owner's decision", but it was decided: `manifests/runs.sha256` (decisions.md 2026-11-04 [OPS]).
-     - PROTOCOL §5.1 states only the 2026-10-30 capacity rule, without item 42's rule for future sweeps.
-     - CLAUDE.md rule H says "95 % Clopper–Pearson upper bound" without "one-sided"; process.md §5 makes one-sided the default.
-- **Since when:** each since the date of the statement it corrects.
-- **Which results it affects:** none. No verdict, μ or threshold uses these statements.
-- **Re-check done:** `analysis.tables published`: no difference (previous entry).
-- **Rule that would have caught it:** I (numbers only from committed functions, with their window), plus a docs pass at the end of each session (D).
-
 ### 2026-11-05 · [CORR] `derived.hit_between` gave a number when a counter went down
 - **What was wrong:** FILE(analysis/derived.py:16) tested only `if dq`, so a negative difference (a counter reset) gave a number, while `load._level` gives NaN (REG-4).
 - **Since when:** the function was committed (2026-11-04).
@@ -701,3 +694,22 @@ Every model used to choose a run or read a result, with its equations, the evide
   1. `docs/process.md` §9: the manifest is at `manifests/runs.sha256` (decided 2026-11-04 [OPS]), and the copy location is the owner's decision above.
   2. `PROTOCOL.md` §5.1: item 42's rule and the monotone reading for sweeps with a `capacity:` block, marked **[new 2026-11-05]**. Past μ values stand.
   3. `CLAUDE.md` rule H: "one-sided 95 % Clopper–Pearson upper bound", as in process.md §5.
+
+### 2026-11-05 · [CORR] status.md's next action was not updated when REG-7 was approved, although commit `f4d1110` says it was
+- **What was wrong:**
+  - Commit `f4d1110`'s message says "status.md: next action is running REG-7 when the VM is back; push first".
+  - FILE(docs/status.md:9) still read "Next action: the owner reviews and approves REG-7 … nothing from 2026-11-05 is committed yet".
+  - Only the backup line of status.md changed in that commit (`git show f4d1110 -- docs/status.md`).
+  - The agent also told the owner that status.md held the current plan before checking it.
+- **Since when:** `f4d1110`, 2026-11-05.
+- **Fix:** status.md's next action now holds the full ordered steps:
+  - the read-only VM checks, including microk8s;
+  - REG-6's recovery;
+  - the A10 probe;
+  - the microk8s decision;
+  - `git pull`;
+  - the start rule for G1: start when the checks are clean and the GPU is idle, and ask the owner first on anything unexpected;
+  - REG-7's sequence;
+  - REG-6 after the gate.
+- **Which results it affects:** none. No run started, and REG-7's registration and approval in decisions.md were correct.
+- **Rule that would have caught it:** D (session end): re-read status.md after editing it, before the commit message describes it.
