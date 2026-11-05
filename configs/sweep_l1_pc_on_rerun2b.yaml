@@ -1,0 +1,6 @@
+# REG-7 G1, second (last allowed) rerun, part b: λ = 7, run only if the second rerun of λ = 6 is valid
+# (decisions.md 2026-11-05 [DECISION], second rerun). Same settings as sweep_l1_pc_on.yaml; only the rates differ.
+extends: sweep_l1_pc_on.yaml
+name: sweep_l1_pc_on
+sweep:
+  rates: [7]               # failed gpu_steady twice: SW thermal 0.177, then 0.171 (limit 0.05)

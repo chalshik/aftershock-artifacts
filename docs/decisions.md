@@ -1492,3 +1492,21 @@ Summary:
 - Observed only, not a test of a cause: the cooling change and the end of SW-thermal slowdown at λ = 5 coincide. The first-pass alternatives (memory heat, room temperature) are not separated.
 - **Not computed:** throughput and μ.
 - **The owner on the notebook in `a0284e0`:** "no problem". It stays in git.
+
+## 2026-11-05 · [DECISION] G1 rerun part b: λ = 5.5 valid, λ = 6 and 7 invalid again; second rerun of λ = 6, then λ = 7 only if λ = 6 is valid (agent, within REG-7's stopping rule)
+- **Part b** (`configs/sweep_l1_pc_on_rerun1b.yaml`, from `49a6fa1`, 16:11–17:14 UTC; copied with identical sha256, manifest +30 lines):
+  - `20261105-161123_sweep_l1_pc_on_r5.5`: VALID. Max 77 °C, SW-thermal 0.000.
+  - `20261105-163225_sweep_l1_pc_on_r6`: INVALID, `gpu_steady`. SW-thermal 0.055 against 0.05, max 81 °C. It started right after λ = 5.5.
+  - `20261105-165327_sweep_l1_pc_on_r7`: INVALID, `gpu_steady`. SW-thermal 0.171, max 82 °C.
+  - (FILE(runs/<id>/checks.json) for each.) G1 now has a valid run at every rate from 2 to 5.5.
+- **Why a second rerun can change a decision** (rule A1):
+  - Under the monotone rule as fixed today, μ_warm ≤ 5.5 unless λ = 6 has a valid run.
+  - λ_test ≤ 0.8 μ_warm, rounded down to a multiple of 0.5: 4.0 at μ_warm = 5.5, 4.5 at 6, 5.5 at 7 (DERIVED: 4.4 → 4.0, 4.8 → 4.5, 5.6 → 5.5). So valid runs at λ = 6 and 7 can change λ_test.
+  - λ = 7 matters only if λ = 6 is valid, so λ = 6 runs alone first.
+- **Prediction** (BELIEF): P(λ = 6 valid) ≈ 0.5. It missed by 0.005 after a hot start. P(λ = 7 valid | run) ≈ 0.2, since 0.171 is far above the limit both times.
+- **Plan:**
+  - The second, last allowed rerun of λ = 6 is `configs/sweep_l1_pc_on_rerun2a.yaml`, started after the GPU has cooled to idle (≤ 45 °C), as part a did. The start temperature is an operating condition, not a config setting; the check is unchanged.
+  - Then `configs/sweep_l1_pc_on_rerun2b.yaml` (λ = 7) only if λ = 6 is valid.
+  - A rate still invalid after this ends the monotone chain, and G1 is closed.
+  - Every resolved per-run config equals the original apart from the `sweep` list (checked with `harness.run.expand`).
+- **Cost:** about 0.35 GPU h, plus 0.35 h for λ = 7.

@@ -14,7 +14,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-05
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: G1 rerun part b is running** (`configs/sweep_l1_pc_on_rerun1b.yaml`, λ = 5.5, 6, 7; started 16:11 UTC, ends about 17:10). Part a's reruns are both valid (λ = 4.5 and 5, SW-thermal 0.000 after the owner's cooling change; decisions.md [OPS]). G1 so far: λ = 2–5 valid. Then: any second rerun REG-7 allows, then G2 (`configs/sweep_l1_pc_off.yaml`). No μ is computed yet. REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`. It is the feasibility gate for setup L1, and costs ≤ 9 GPU h without reruns.
+**Next action: the second rerun of λ = 6** (`configs/sweep_l1_pc_on_rerun2a.yaml`), started once the GPU is idle-cool. Then λ = 7 (`..._rerun2b.yaml`) only if λ = 6 is valid. Then G1 is closed and G2 starts (`configs/sweep_l1_pc_off.yaml`). G1 so far: λ = 2–5.5 valid; λ = 6 and 7 are invalid twice by SW-thermal slowdown (decisions.md 2026-11-05 [DECISION]). No μ is computed yet. REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`. It is the feasibility gate for setup L1, and costs ≤ 9 GPU h without reruns.
 
 Steps:
 1. **Read-only VM checks: done 2026-11-05** (decisions.md [OPS], evidence in `docs/probe/20261105_vm_checks/`).
@@ -91,12 +91,12 @@ Steps:
 
 ## Runs on record
 
-116 run folders: 99 VALID, 14 INVALID, 3 without checks. All kept; none counts unless VALID.
+119 run folders: 100 VALID, 16 INVALID, 3 without checks. All kept; none counts unless VALID.
 
 - **No checks:** `20261030-114021_first_real` (failed start, no load sent); `20261031-025032_tau` (VM shut down 140 s in); `20261104-134159_long_pc_off_r3_s0` (REG-6 seed 0, VM powered off at t = 3168 s of 3600, DERIVED: power key 14:35:45.08 − planned load start 13:42:56.74 from `events.jsonl` `load_t0_planned`; copied 2026-11-05).
 - **Invalid, Stage 1:** `20261023-145613_smoke` (`gpu_steady`, before the check was refined); `20261030-145339_sweep_pc_on_r8` (`accounting`); `20261030-175458_sweep_pc_off_r10` (`recorder`).
 - **Invalid, Stage 2:** `20261101-151707_stage2_control_r1.5` (stopped on request); `20261101-182452_stage2_control_cap_r3`, `20261102-045827_wipe_preempt_r3_s1`, `20261102-062040_wipe_preempt_r3_s3`, `20261102-080323_wipe_preempt_r3_s3` (hardware thermal samples, before the backplate fan); `20261102-093229_wipe_preempt_r3_s3` (stopped on request after a thermal sample).
-- **Invalid, REG-7 G1 (2026-11-05):** `20261105-130250_sweep_l1_pc_on_r4.5` (`no_errors`, 1 client disconnect); `20261105-132035_sweep_l1_pc_on_r5`, `20261105-134018_sweep_l1_pc_on_r5.5`, `20261105-140120_sweep_l1_pc_on_r6`, `20261105-142221_sweep_l1_pc_on_r7` (`gpu_steady`, SW-thermal slowdown).
+- **Invalid, REG-7 G1 (2026-11-05):** `20261105-130250_sweep_l1_pc_on_r4.5` (`no_errors`, 1 client disconnect); `20261105-132035_sweep_l1_pc_on_r5`, `20261105-134018_sweep_l1_pc_on_r5.5`, `20261105-140120_sweep_l1_pc_on_r6`, `20261105-142221_sweep_l1_pc_on_r7` (`gpu_steady`, SW-thermal slowdown). Reruns, invalid again: `20261105-163225_sweep_l1_pc_on_r6`, `20261105-165327_sweep_l1_pc_on_r7` (`gpu_steady`).
 
 ## Done when (from the plan)
 
@@ -121,7 +121,7 @@ Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 
 | Software | vLLM 0.32.0, torch 2.13.0 (CUDA 13.0), Python 3.12.13 (uv-managed); `unattended-upgrades` disabled |
 | KV cache | Qwen3-4B: 96,656 tokens by default in load runs; 72,480 tokens when set with `--kv-cache-memory-bytes` |
 | Pinning | vLLM cores 0–5, loadgen 6, recorder 7 |
-| Data | **All 116 runs are on the Mac** in `runs/`, checksum-verified; the VM's copies were removed (2026-11-04, and REG-6 seed 0 on 2026-11-05), except the REG-7 G1 runs, which are also still on the VM. No second backup yet |
+| Data | **All 119 runs are on the Mac** in `runs/`, checksum-verified; the VM's copies were removed (2026-11-04, and REG-6 seed 0 on 2026-11-05), except the REG-7 G1 runs, which are also still on the VM. No second backup yet |
 | Disk | 16 GB free on the VM after cleanup; about 170 MB per 40-minute run |
 | Address | 100.83.53.50 (Tailscale; the name `inference-vm.tail3b0112.ts.net` is not in the Mac's `known_hosts`, so use the IP); 192.168.3.249 at home; key `~/.ssh/id_ed25519_vllm`. The `vm` git remote uses the home address (repointing it was not done: a permission prompt refused it) |
 | Sync | Mac `git push vm main` → VM `git pull origin main` in `~/aftershock-artifacts` (the VM's `origin` is `~/repos/aftershock-artifacts.git`); don't pull during a sweep. Over a non-interactive SSH, `uv` is `~/.local/bin/uv` |
@@ -130,7 +130,7 @@ Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 
 
 Sorted by priority, most urgent first.
 
-- **Backup (top item):** the Mac holds all 116 runs. The owner decided on 2026-11-05 that the copies stay on the Mac (decisions.md). A copy on the same machine guards against deletion, not against losing the Mac; `python3 tools/manifest.py verify <copy>` checks any copy.
+- **Backup (top item):** the Mac holds all 119 runs. The owner decided on 2026-11-05 that the copies stay on the Mac (decisions.md). A copy on the same machine guards against deletion, not against losing the Mac; `python3 tools/manifest.py verify <copy>` checks any copy.
 - **Heat (top item for REG-7):** before the backplate fan, hardware thermal flags at 83–84 °C invalidated 5 runs. With the fan: 0 flags until 2026-11-05, when SW-thermal slowdown invalidated L1's G1 runs at λ = 5–7 at 81–82 °C (decisions.md [OPS]). A flag still invalidates a run; the rule is not loosened.
 
 ---
@@ -564,19 +564,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-05 · [OPS] REG-7 G1 done: 4 of 9 runs valid; λ ≥ 5 invalid from SW-thermal slowdown
-- **Ran:** `configs/sweep_l1_pc_on.yaml`, 11:57:49–14:37 UTC, from `8ef814f` with a clean tree, microk8s disabled and the VM up throughout. All 9 folders were copied to the Mac with identical sha256 (`shasum` against `sha256sum`), and `tools/manifest.py update` appended 90 lines. The VM keeps its copies.
-- **Validity** (FILE(runs/<id>/checks.json), `gpu_steady` and `no_errors` details):
-  - Valid: `20261105-115752_sweep_l1_pc_on_r2`, `20261105-121403_sweep_l1_pc_on_r3`, `20261105-123008_sweep_l1_pc_on_r3.5` and `20261105-124617_sweep_l1_pc_on_r4`. Max 75–77 °C, SW-thermal share ≤ 0.015.
-  - `20261105-130250_sweep_l1_pc_on_r4.5`: INVALID, `no_errors`. One request (id 2580, t_planned 620.6 s) got `ServerDisconnectedError: Server disconnected`; 4027 were ok. `server.log` has no error or warning near that time. The cause is unknown. BELIEF: a client-side connection reset; no earlier run had a client error.
-  - `20261105-132035_sweep_l1_pc_on_r5`, `20261105-134018_sweep_l1_pc_on_r5.5`, `20261105-140120_sweep_l1_pc_on_r6` and `20261105-142221_sweep_l1_pc_on_r7`: INVALID, `gpu_steady`. SW-thermal share 0.098 / 0.165 / 0.103 / 0.177 against the 0.05 limit. Max 81–82 °C, no HW throttle sample.
-- **Observed, not yet from a committed function:** an inline split of `gpu.jsonl` by quarter of [240, 900) showed the SW-thermal flag in every quarter at λ = 5 and 5.5, with the GPU at 78–79 °C by t = 240 s. The numbers are not quoted until a committed function gives them. BELIEF from it: at these loads the slowdown is the steady state, so a cool-down before a rerun is unlikely to help.
-- **Against earlier sweeps:** they peaked at 79–83 °C with SW-thermal share ≤ 0.038 and stayed valid, e.g. `20261103-132357_sweep_gap5_pc_on_r7` at 83 °C and 0.038 (FILE(runs/20261103-132357_sweep_gap5_pc_on_r7/checks.json)). So core temperature alone does not explain the L1 failures.
-  - Alternatives, unchecked: memory (GDDR6X) heat from L1's heavier traffic; a warmer room; sustained draw at the 420 W cap.
-  - The flag rule is not loosened (status.md, Watch).
-- **Not computed:** throughput and μ of any G1 run. REG-7 computes the gate once, after G1 and G2.
-- **Not started:** G2. Its cold floor needs ≥ 2 valid saturated runs, and cache-off L1 is the heavier load, so the same heat failure is likely. The owner decides first how the heat is handled (status.md).
-
 ### 2026-11-05 · [CORR] REG-7's monotone μ_warm rule does not say what an invalid rate means; the code skips it
 - **What was wrong:**
   - REG-7 (decisions.md 2026-11-05 [REG]) defines μ_warm as "the highest rate that passes along with every lower swept rate".
@@ -629,3 +616,21 @@ Every model used to choose a run or read a result, with its equations, the evide
 - Observed only, not a test of a cause: the cooling change and the end of SW-thermal slowdown at λ = 5 coincide. The first-pass alternatives (memory heat, room temperature) are not separated.
 - **Not computed:** throughput and μ.
 - **The owner on the notebook in `a0284e0`:** "no problem". It stays in git.
+
+### 2026-11-05 · [DECISION] G1 rerun part b: λ = 5.5 valid, λ = 6 and 7 invalid again; second rerun of λ = 6, then λ = 7 only if λ = 6 is valid (agent, within REG-7's stopping rule)
+- **Part b** (`configs/sweep_l1_pc_on_rerun1b.yaml`, from `49a6fa1`, 16:11–17:14 UTC; copied with identical sha256, manifest +30 lines):
+  - `20261105-161123_sweep_l1_pc_on_r5.5`: VALID. Max 77 °C, SW-thermal 0.000.
+  - `20261105-163225_sweep_l1_pc_on_r6`: INVALID, `gpu_steady`. SW-thermal 0.055 against 0.05, max 81 °C. It started right after λ = 5.5.
+  - `20261105-165327_sweep_l1_pc_on_r7`: INVALID, `gpu_steady`. SW-thermal 0.171, max 82 °C.
+  - (FILE(runs/<id>/checks.json) for each.) G1 now has a valid run at every rate from 2 to 5.5.
+- **Why a second rerun can change a decision** (rule A1):
+  - Under the monotone rule as fixed today, μ_warm ≤ 5.5 unless λ = 6 has a valid run.
+  - λ_test ≤ 0.8 μ_warm, rounded down to a multiple of 0.5: 4.0 at μ_warm = 5.5, 4.5 at 6, 5.5 at 7 (DERIVED: 4.4 → 4.0, 4.8 → 4.5, 5.6 → 5.5). So valid runs at λ = 6 and 7 can change λ_test.
+  - λ = 7 matters only if λ = 6 is valid, so λ = 6 runs alone first.
+- **Prediction** (BELIEF): P(λ = 6 valid) ≈ 0.5. It missed by 0.005 after a hot start. P(λ = 7 valid | run) ≈ 0.2, since 0.171 is far above the limit both times.
+- **Plan:**
+  - The second, last allowed rerun of λ = 6 is `configs/sweep_l1_pc_on_rerun2a.yaml`, started after the GPU has cooled to idle (≤ 45 °C), as part a did. The start temperature is an operating condition, not a config setting; the check is unchanged.
+  - Then `configs/sweep_l1_pc_on_rerun2b.yaml` (λ = 7) only if λ = 6 is valid.
+  - A rate still invalid after this ends the monotone chain, and G1 is closed.
+  - Every resolved per-run config equals the original apart from the `sweep` list (checked with `harness.run.expand`).
+- **Cost:** about 0.35 GPU h, plus 0.35 h for λ = 7.
