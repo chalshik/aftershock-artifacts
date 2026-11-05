@@ -1,0 +1,49 @@
+# captured 2026-11-05T11:35:32Z
+## installed wheel
+Version: 0.32.0
+## config/scheduler.py defaults (grep -n)
+48:    max_num_batched_tokens: int = Field(default=DEFAULT_MAX_NUM_BATCHED_TOKENS, ge=1)
+55:    max_num_scheduled_tokens: int | None = Field(default=None, ge=1)
+79:    long_prefill_token_threshold: int = Field(default=0, ge=0)
+134:    enable_chunked_prefill: bool = True
+159:    policy: SchedulerPolicy = "fcfs"
+190:    scheduler_reserve_full_isl: bool = True
+196:    watermark: float = Field(default=0.0, ge=0.0, lt=1.0)
+203:    prefill_schedule_interval: int = Field(default=1, ge=1)
+208:    async_scheduling: bool | None = None
+## config/vllm.py performance_mode
+433:    performance_mode: PerformanceMode = "balanced"
+## engine/arg_utils.py get_batch_defaults (sed -n 2943,2952p)
+        else:
+            # TODO(woosuk): Tune the default values for other hardware.
+            default_max_num_batched_tokens = {
+                UsageContext.LLM_CLASS: 8192,
+                UsageContext.OPENAI_API_SERVER: 2048,
+            }
+            default_max_num_seqs = {
+                UsageContext.LLM_CLASS: 256,
+                UsageContext.OPENAI_API_SERVER: 256,
+            }
+## engine/arg_utils.py default and clamp (sed -n 3113,3121p; 3163,3167p)
+            if parallel_config.use_batched_dp_moe:
+                self.max_num_batched_tokens = (
+                    SchedulerConfig.DEFAULT_MAX_NUM_BATCHED_TOKENS_FOR_BATCHED_DP
+                )
+            else:
+                self.max_num_batched_tokens = default_max_num_batched_tokens.get(
+                    usage_context,
+                    SchedulerConfig.DEFAULT_MAX_NUM_BATCHED_TOKENS,
+                )
+
+            # When using default settings,
+            # Ensure max_num_batched_tokens does not exceed model limit.
+            # Some models (e.g., Whisper) have embeddings tied to max length.
+            self.max_num_batched_tokens = min(
+## config/vllm.py async default (sed -n 1585,1587p; 1643,1644p)
+        elif self.scheduler_config.async_scheduling is None:
+            # Enable async scheduling unless there is an incompatible option.
+            if (
+            else:
+                self.scheduler_config.async_scheduling = True
+## entrypoint usage context
+39:    usage_context: UsageContext = UsageContext.OPENAI_API_SERVER,

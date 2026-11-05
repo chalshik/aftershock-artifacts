@@ -1,0 +1,34 @@
+# captured 2026-11-05T11:35:12Z
+## /var/log/installer/media-info
+Ubuntu-Server 24.04.5 LTS "Noble Numbat" - Release amd64 (20260909)
+## TZ=UTC ls -la --time-style=full-iso /var/lib/snapd/snaps/
+total 296848
+drwxr-xr-x  3 root root      4096 2026-10-23 11:49:32.693342145 +0000 .
+drwxr-xr-x 24 root root      4096 2026-11-05 11:00:54.437635091 +0000 ..
+-rw-------  2 root root  77619200 2026-10-23 11:49:09.039644000 +0000 core22_2987.snap
+-rw-------  2 root root 179458048 2026-10-23 11:49:32.663310946 +0000 microk8s_9072.snap
+drwxr-xr-x  2 root root      4096 2026-07-07 08:06:48.000000000 +0000 partial
+-rw-------  2 root root  46882816 2026-10-23 11:48:53.154625096 +0000 snapd_28254.snap
+## stat (birth) of install-time paths
+/ | birth 2026-10-23 11:35:45.000000000 +0000
+/etc/hostname | birth 2026-10-23 11:46:03.038621537 +0000
+/home/chalshik | birth 2026-10-23 11:45:43.256176374 +0000
+/snap/microk8s | birth 2026-10-23 11:49:34.865301079 +0000
+/var/snap/microk8s/common | birth 2026-10-23 11:49:35.330656372 +0000
+## snap list
+Name      Version   Rev    Tracking       Publisher    Notes
+core22    20260909  2987   latest/stable  canonical**  base
+microk8s  v1.35.6   9072   1.35/stable    canonical**  classic
+snapd     2.77.1    28254  latest/stable  canonical**  snapd
+## snap changes
+no changes found
+## journalctl -b -9 (first boot): snapd lines and first logins, until 11:52
+2026-10-23T11:48:46.120037+00:00 chalshik snapd[956]: daemon.go:277: started snapd/2.76.3+ubuntu24.04 (series 16; classic) ubuntu/24.04 (amd64) linux/6.8.0-147-generic.
+2026-10-23T11:48:48.037981+00:00 chalshik snapd[956]: api_snaps.go:522: Installing snap "microk8s" revision unset
+2026-10-23T11:49:01.161280+00:00 chalshik snapd[1327]: daemon.go:277: started snapd/2.77.1 (series 16; classic) ubuntu/24.04 (amd64) linux/6.8.0-147-generic.
+2026-10-23T11:49:35.251564+00:00 chalshik systemd[1]: Mounted snap-microk8s-9072.mount - Mount unit for microk8s, revision 9072.
+2026-10-23T11:51:28.268828+00:00 chalshik systemd-logind[961]: New session 1 of user chalshik.
+## microk8s group members (getent group microk8s)
+microk8s:x:1001:
+## ~/.kube
+ls: cannot access '/home/chalshik/.kube': No such file or directory

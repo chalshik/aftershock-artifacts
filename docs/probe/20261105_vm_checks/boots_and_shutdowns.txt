@@ -1,0 +1,39 @@
+# captured 2026-11-05T11:35:09Z by read-only commands over ssh (user chalshik, no sudo)
+## journalctl --list-boots
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+ -9 3f5c247c7d0249ad9e7451e1526a2115 Fri 2026-10-23 11:48:36 UTC Fri 2026-10-23 12:42:42 UTC
+ -8 d459fc907a374e7f85214b1ddc1ad9e4 Fri 2026-10-23 12:46:05 UTC Fri 2026-10-23 12:49:28 UTC
+ -7 266206ecacc5423387e88960f755f8da Fri 2026-10-23 12:50:00 UTC Fri 2026-10-23 12:52:38 UTC
+ -6 5926754956be4041afcdba15831d193c Fri 2026-10-23 12:53:04 UTC Fri 2026-10-23 12:58:46 UTC
+ -5 8282df6db6784e3d832159db7957419b Fri 2026-10-23 12:59:07 UTC Fri 2026-10-23 14:32:07 UTC
+ -4 730cd9bed3b84686b19d68d5f68c3c46 Fri 2026-10-23 14:32:32 UTC Fri 2026-10-23 16:10:00 UTC
+ -3 97b5724022c9403f8522e77576a2f54f Fri 2026-10-30 11:34:50 UTC Sat 2026-10-31 02:53:54 UTC
+ -2 9eeb8212159e4042bffaf7ed5718b046 Sun 2026-11-01 13:14:00 UTC Sun 2026-11-01 15:41:11 UTC
+ -1 597f47011a264c0daa828484ca78c1dc Sun 2026-11-01 17:47:03 UTC Wed 2026-11-04 14:35:49 UTC
+  0 4de2f1324c9a4d8cb2fa68d4291b6545 Thu 2026-11-05 10:55:48 UTC Thu 2026-11-05 11:35:09 UTC
+
+## per boot: power key / power-down lines (journalctl -b N)
+### boot -9
+2026-10-23T12:42:36.412952+00:00 chalshik systemd-logind[961]: System is rebooting.
+### boot -8
+2026-10-23T12:49:24.450320+00:00 chalshik systemd-logind[927]: System is rebooting.
+### boot -7
+2026-10-23T12:52:34.753984+00:00 chalshik systemd-logind[930]: Power key pressed short.
+2026-10-23T12:52:34.819658+00:00 chalshik systemd-logind[930]: System is powering down.
+### boot -6
+2026-10-23T12:58:42.389670+00:00 chalshik systemd-logind[925]: System is rebooting.
+### boot -5
+2026-10-23T14:32:04.180837+00:00 chalshik systemd-logind[938]: Power key pressed short.
+2026-10-23T14:32:04.207206+00:00 chalshik systemd-logind[938]: System is powering down.
+### boot -4
+2026-10-23T16:09:54.305906+00:00 chalshik systemd-logind[944]: Power key pressed short.
+2026-10-23T16:09:54.325518+00:00 chalshik systemd-logind[944]: System is powering down.
+### boot -3
+2026-10-31T02:53:50.285973+00:00 chalshik systemd-logind[999]: Power key pressed short.
+2026-10-31T02:53:50.305062+00:00 chalshik systemd-logind[999]: System is powering down.
+### boot -2
+2026-11-01T15:41:07.712235+00:00 chalshik systemd-logind[952]: Power key pressed short.
+2026-11-01T15:41:07.731289+00:00 chalshik systemd-logind[952]: System is powering down.
+### boot -1
+2026-11-04T14:35:45.082362+00:00 chalshik systemd-logind[944]: Power key pressed short.
+2026-11-04T14:35:45.091111+00:00 chalshik systemd-logind[944]: System is powering down.

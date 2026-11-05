@@ -1,0 +1,25 @@
+# captured 2026-11-05T11:35:12Z
+## journalctl -b -1, 2026-11-04 14:30:00-14:35:46, sshd/logind lines
+2026-11-04T14:32:35.669428+00:00 chalshik sshd[2547461]: Accepted publickey for chalshik from 100.68.5.40 port 51610 ssh2: ED25519 SHA256:BQTdQBhJPG0HtQW82rp0L0Oj1LEpftNS5FDmrcF4jMw
+2026-11-04T14:32:35.674376+00:00 chalshik systemd-logind[944]: New session 1051 of user chalshik.
+2026-11-04T14:32:36.021789+00:00 chalshik systemd-logind[944]: Session 1051 logged out. Waiting for processes to exit.
+2026-11-04T14:32:36.022439+00:00 chalshik systemd-logind[944]: Removed session 1051.
+2026-11-04T14:34:23.952238+00:00 chalshik sshd[2550373]: Accepted publickey for chalshik from 100.68.5.40 port 51689 ssh2: ED25519 SHA256:BQTdQBhJPG0HtQW82rp0L0Oj1LEpftNS5FDmrcF4jMw
+2026-11-04T14:34:23.956626+00:00 chalshik systemd-logind[944]: New session 1052 of user chalshik.
+2026-11-04T14:34:24.399230+00:00 chalshik systemd-logind[944]: Session 1052 logged out. Waiting for processes to exit.
+2026-11-04T14:34:24.399935+00:00 chalshik systemd-logind[944]: Removed session 1052.
+2026-11-04T14:35:37.688399+00:00 chalshik sshd[2552403]: Accepted publickey for chalshik from 100.68.5.40 port 51744 ssh2: ED25519 SHA256:BQTdQBhJPG0HtQW82rp0L0Oj1LEpftNS5FDmrcF4jMw
+2026-11-04T14:35:37.693650+00:00 chalshik systemd-logind[944]: New session 1054 of user chalshik.
+2026-11-04T14:35:38.225407+00:00 chalshik systemd-logind[944]: Session 1054 logged out. Waiting for processes to exit.
+2026-11-04T14:35:38.226239+00:00 chalshik systemd-logind[944]: Removed session 1054.
+2026-11-04T14:35:45.082362+00:00 chalshik systemd-logind[944]: Power key pressed short.
+2026-11-04T14:35:45.082379+00:00 chalshik systemd-logind[944]: Powering off...
+2026-11-04T14:35:45.091111+00:00 chalshik systemd-logind[944]: System is powering down.
+2026-11-04T14:35:45.218152+00:00 chalshik systemd-logind[944]: Session 974 logged out. Waiting for processes to exit.
+2026-11-04T14:35:45.229287+00:00 chalshik systemd-logind[944]: Removed session 974.
+2026-11-04T14:35:45.233554+00:00 chalshik systemd-logind[944]: Session 1033 logged out. Waiting for processes to exit.
+2026-11-04T14:35:45.865232+00:00 chalshik systemd[1]: Stopping systemd-logind.service - User Login Management...
+2026-11-04T14:35:45.865901+00:00 chalshik systemd-logind[944]: Removed session 1033.
+2026-11-04T14:35:45.884503+00:00 chalshik systemd[1]: systemd-logind.service: Deactivated successfully.
+2026-11-04T14:35:45.884752+00:00 chalshik systemd[1]: Stopped systemd-logind.service - User Login Management.
+2026-11-04T14:35:45.884994+00:00 chalshik systemd[1]: systemd-logind.service: Consumed 1.999s CPU time, 3.4M memory peak, 0B memory swap peak.

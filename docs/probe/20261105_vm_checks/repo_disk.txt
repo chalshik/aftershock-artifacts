@@ -1,0 +1,15 @@
+# captured 2026-11-05T11:35:32Z
+## git status --porcelain | wc -l
+0
+## git log -1
+4d30f1d7f3f645eae3fc67df203736b988016469 [REG] REG-6 (A1): sustained cache-off capacity at lambda 3, approved; configs and analysis code
+## git remote -v
+origin	/home/chalshik/repos/aftershock-artifacts.git (fetch)
+origin	/home/chalshik/repos/aftershock-artifacts.git (push)
+## ls -a runs/
+.
+..
+.gitkeep
+## df -h /
+Filesystem                         Size  Used Avail Use% Mounted on
+/dev/mapper/ubuntu--vg-ubuntu--lv   62G   43G   16G  74% /

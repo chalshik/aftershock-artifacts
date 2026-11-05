@@ -14,33 +14,30 @@ Living document: update it after every run or decision. Last updated: 2026-11-05
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: run REG-7** (approved by the owner 2026-11-05; registered in `d1b360c`, approval in `f4d1110`: the feasibility gate for setup L1, a 2048-token system prompt at 5 s gaps; ≤ 9 GPU h). It waits for the VM, which was offline on 2026-11-05 (Tailscale: last seen about 5 h earlier). Nothing is running. Everything is pushed to `origin` at `e8bbca6`; the push to the `vm` remote failed (VM offline; the remote still uses the home address 192.168.3.249).
-1. **When the VM answers, read-only checks first; log them as an `[OPS]` entry:**
-   - Why it went offline: `journalctl --list-boots` and the last boot's journal. It was seen online after the 14:35 UTC loss on 2026-11-04.
-   - Repo: `git -C ~/aftershock-artifacts status` and `log -1` (expected: clean, at `4d30f1d`).
-   - Data: `ls ~/aftershock-artifacts/runs/` and the size of `runs/20261104-134159_long_pc_off_r3_s0`.
-   - GPU and disk: `nvidia-smi` (no other compute processes) and `df -h` (about 16 GB free expected).
-   - microk8s, which was found on 2026-11-04 and whose purpose is unknown:
-     - `snap changes` / `snap info microk8s`;
-     - `last` and `/var/log/auth.log` around 2026-10-23 11:49 UTC;
-     - `microk8s status` (is the `gpu` addon on?);
-     - `microk8s kubectl get all -A`, `microk8s kubectl describe nodes` (does it allocate `nvidia.com/gpu`?), `microk8s ctr images ls`;
-     - `journalctl -u snap.microk8s.daemon-kubelite` around run times and the outages.
-2. **REG-6's recovery:** copy the seed-0 folder to the Mac (kept, incomplete); `python3 tools/manifest.py update`; delete its line from `manifests/pending_copy.txt`; remove the VM copy only after a checksum-verified copy.
-3. **Probe and record the scheduler limits** (open-questions A10).
-4. **microk8s:** the owner decides whether it is stopped during runs (the agent recommends stopping it), and the decision is logged.
-5. **Code on the VM:** `git pull origin main` (or `git push vm main` from the Mac once the remote works); the VM must be at `e8bbca6` or later.
-6. **Start rule for G1:** REG-7 is approved, so G1 starts when steps 1–5 are done and clean, and the GPU is idle. **Stop and ask the owner first** if a check finds anything unexpected: another GPU process, a microk8s GPU workload, a dirty tree, low disk, or an unexplained reboot pattern.
+**Next action: the owner decides whether microk8s is stopped during runs; then G1 of REG-7 starts.** REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`. It is the feasibility gate for setup L1, a 2048-token system prompt at 5 s gaps, and costs ≤ 9 GPU h. The VM is back since 2026-11-05 10:55 UTC. Nothing is running, and the GPU is idle.
+
+Steps:
+1. **Read-only VM checks: done 2026-11-05** (decisions.md [OPS], evidence in `docs/probe/20261105_vm_checks/`).
+   - The 2026-11-04 loss, like those of 2026-10-31 and 2026-11-01, was an ACPI power-key event, sent from outside the VM.
+   - The repo was clean at `4d30f1d`. The GPU was idle, with no compute process, and 16 GB of disk was free.
+   - microk8s was installed automatically on the VM's first boot, before any login, and is unused: only the three default pods, and never a GPU pod.
+2. **REG-6 seed-0 recovery: done.** The folder is copied with identical checksums, the manifest is updated, and the VM copy is removed.
+3. **A10, the scheduler limits: answered** (open-questions A10). There is a 2048-token step budget, chunked prefill, the full prompt is reserved at admission, and the policy is fcfs.
+4. **Open, the owner's decision:** is microk8s stopped during runs? The agent recommends `sudo snap disable microk8s` before G1, for every later run, recorded in decisions.md (reasons in the session report). It needs root, so the owner does it. Two more checks also need root or Proxmox, and neither blocks G1:
+   - `sudo grep -n -A4 snaps /var/log/installer/autoinstall-user-data`, which confirms that it was chosen in the installer;
+   - the Proxmox task log, which shows who sent the three power-off events.
+5. **Code on the VM:** the Mac pushes `main` to the `vm` remote, and the VM runs `git pull origin main`. Its `origin` is the bare repo `~/repos/aftershock-artifacts.git`. Status at session end: see decisions.md [OPS] 2026-11-05 and the session report. Before G1, check `git log -1` on the VM against the Mac's `main`.
+6. **Start rule for G1:** G1 starts after step 4 is decided and logged, with the tree clean at the latest `main` and the GPU idle. **Stop and ask the owner first** if a check finds anything unexpected: another GPU process, a dirty tree, low disk, or a power-off during a run.
 7. **REG-7, in order:**
-   - G1 `uv run python -m harness.run configs/sweep_l1_pc_on.yaml` (about 3 h);
-   - G2 `configs/sweep_l1_pc_off.yaml` (about 2.3 h);
-   - copy both back, update the manifest, compute `uv run python -m analysis.gate` **once** (λ_test, or no λ_test);
-   - write and commit the two G3 configs exactly as registered in REG-7, run them (about 1.7 h), compute `gate.gate_verdict` once, and write the `[RESULT]`. Its decision table is in the REG-7 entry.
-8. **REG-6** (approved; about 2.2 GPU h) runs after the gate, when the GPU is idle (owner, 2026-11-05).
+   - G1: `uv run python -m harness.run configs/sweep_l1_pc_on.yaml` (about 3 h).
+   - G2: `configs/sweep_l1_pc_off.yaml` (about 2.3 h).
+   - Copy both back and update the manifest. Then compute `uv run python -m analysis.gate` **once**; it gives λ_test, or no λ_test.
+   - Write and commit the two G3 configs exactly as registered in REG-7, and run them (about 1.7 h). Compute `gate.gate_verdict` once, and write the `[RESULT]`. Its decision table is in the REG-7 entry.
+8. **REG-6** (approved; about 2.2 GPU h) runs after the gate, when the GPU is idle (owner, 2026-11-05). Seed 0 must be rerun, unchanged, at a new run id; REG-6's stopping rule allows it.
 
 **Then, the owner's open items:**
 - items 18–21: paper layer, framing, canonical hit rate. Decided 2026-11-05: the C1 metric for future cells, and that the data copies stay on the Mac (decisions.md);
-- whether to stop microk8s on the VM during runs;
+- whether to stop microk8s on the VM during runs (step 4);
 
 **Done 2026-11-05 (0 GPU h):**
 - Audit of all runs, code, docs and literature: every published verdict and μ reproduces; why nothing got stuck (the capacity loss is too small at the default pool); design rules for future cells; the owner's choices.
@@ -63,11 +60,9 @@ Living document: update it after every run or decision. Last updated: 2026-11-05
 - **μ from one arrival pattern:** every sweep used seed 0, whose planned load rises from 0.67–0.97 λ to 1.05–1.34 λ across the measured window; μ_off = 2 may be low (`docs/model.md` M4, open-questions A1).
 - **M1 (F + W) is 0 for 3** on tested predictions; do not use it to choose loads until revised.
 - **Single-seed controls** in every cell.
-- **The VM can shut down mid-run** (2026-10-31, 2026-11-01, and REG-6 seed 0 on 2026-11-04). An interrupted run is kept and rerun; a stopped sweep has no resume.
-- **REG-6 seed 0 exists only on the VM** until copied.
-- **microk8s runs on the VM**, unrecorded in `env.json` (decisions.md [OPS] 2026-11-04).
+- **The VM can shut down mid-run** (2026-10-31, 2026-11-01, and REG-6 seed 0 on 2026-11-04). Each time it was an ACPI power-key event, sent from outside the VM (decisions.md [OPS] 2026-11-05); the sender is not known. An interrupted run is kept and rerun; a stopped sweep has no resume.
+- **microk8s runs on the VM**, unrecorded in `env.json`: about 8 % of one core, unpinned, and unused (decisions.md [OPS] 2026-11-04 and 2026-11-05). It was present for all 104 runs before 2026-11-05.
 - **Manipulation checks are off** for every past run (thresholds null in `configs/defaults.yaml`). REG-7 registers `burst_min_kv_max: 0.95` for its burst runs (`configs/stage2_l1_base.yaml`).
-- **Scheduler limits unrecorded** (`max_num_batched_tokens`, `--scheduler-reserve-full-isl`; open-questions A10).
 - **Open-loop turns protect the cache under slowdown** (decisions.md 2026-11-01, limits): REG-7 measures the overlap share.
 - **Data:** the copies stay on the Mac (owner, 2026-11-05); one machine is still a single point of failure (Watch, below). A backup can now be verified with `python3 tools/manifest.py verify <copy>`.
 
@@ -96,9 +91,9 @@ Living document: update it after every run or decision. Last updated: 2026-11-05
 
 ## Runs on record
 
-104 run folders: 93 VALID, 9 INVALID, 2 without checks. All kept; none counts unless VALID.
+105 run folders: 93 VALID, 9 INVALID, 3 without checks. All kept; none counts unless VALID.
 
-- **No checks:** `20261030-114021_first_real` (failed start, no load sent); `20261031-025032_tau` (VM shut down 140 s in).
+- **No checks:** `20261030-114021_first_real` (failed start, no load sent); `20261031-025032_tau` (VM shut down 140 s in); `20261104-134159_long_pc_off_r3_s0` (REG-6 seed 0, VM powered off at t = 3168 s of 3600, DERIVED: power key 14:35:45.08 − planned load start 13:42:56.74 from `events.jsonl` `load_t0_planned`; copied 2026-11-05).
 - **Invalid, Stage 1:** `20261023-145613_smoke` (`gpu_steady`, before the check was refined); `20261030-145339_sweep_pc_on_r8` (`accounting`); `20261030-175458_sweep_pc_off_r10` (`recorder`).
 - **Invalid, Stage 2:** `20261101-151707_stage2_control_r1.5` (stopped on request); `20261101-182452_stage2_control_cap_r3`, `20261102-045827_wipe_preempt_r3_s1`, `20261102-062040_wipe_preempt_r3_s3`, `20261102-080323_wipe_preempt_r3_s3` (hardware thermal samples, before the backplate fan); `20261102-093229_wipe_preempt_r3_s3` (stopped on request after a thermal sample).
 
@@ -114,7 +109,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-05
 
 ## Open questions
 
-Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 open. Source questions S8–S11 (hit-counter units, eviction order, preempted blocks, self-refill), added 2026-11-04, answered from the v0.32.0 source. See `open-questions.md`. Terms and the code that computes them: `definitions.md`.
+Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 open. Audit items: A3 and A10 answered. Source questions S8–S11 (hit-counter units, eviction order, preempted blocks, self-refill), added 2026-11-04, answered from the v0.32.0 source. See `open-questions.md`. Terms and the code that computes them: `definitions.md`.
 
 ## Environment
 
@@ -125,16 +120,16 @@ Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 
 | Software | vLLM 0.32.0, torch 2.13.0 (CUDA 13.0), Python 3.12.13 (uv-managed); `unattended-upgrades` disabled |
 | KV cache | Qwen3-4B: 96,656 tokens by default in load runs; 72,480 tokens when set with `--kv-cache-memory-bytes` |
 | Pinning | vLLM cores 0–5, loadgen 6, recorder 7 |
-| Data | **All 104 runs (9.4 GB) are only on the Mac** in `runs/`, checksum-verified; the VM's copies were removed 2026-11-04. No second backup yet |
+| Data | **All 105 runs (9.4 GB) are only on the Mac** in `runs/`, checksum-verified; the VM's copies were removed (2026-11-04, and REG-6 seed 0 on 2026-11-05). No second backup yet |
 | Disk | 16 GB free on the VM after cleanup; about 170 MB per 40-minute run |
-| Address | `inference-vm.tail3b0112.ts.net` / 100.83.53.50 (Tailscale); 192.168.3.249 at home; key `~/.ssh/id_ed25519_vllm`. The `vm` git remote still uses the home address |
-| Sync | Mac `git push vm main` → VM `git pull` in `~/aftershock-artifacts`; don't pull during a sweep |
+| Address | 100.83.53.50 (Tailscale; the name `inference-vm.tail3b0112.ts.net` is not in the Mac's `known_hosts`, so use the IP); 192.168.3.249 at home; key `~/.ssh/id_ed25519_vllm`. The `vm` git remote uses the home address (repointing it was not done: a permission prompt refused it) |
+| Sync | Mac `git push vm main` → VM `git pull origin main` in `~/aftershock-artifacts` (the VM's `origin` is `~/repos/aftershock-artifacts.git`); don't pull during a sweep |
 
 ## Watch
 
 Sorted by priority, most urgent first.
 
-- **Backup (top item):** the Mac holds all 104 runs (9.4 GB). The owner decided on 2026-11-05 that the copies stay on the Mac (decisions.md). A copy on the same machine guards against deletion, not against losing the Mac; `python3 tools/manifest.py verify <copy>` checks any copy.
+- **Backup (top item):** the Mac holds all 105 runs (9.4 GB). The owner decided on 2026-11-05 that the copies stay on the Mac (decisions.md). A copy on the same machine guards against deletion, not against losing the Mac; `python3 tools/manifest.py verify <copy>` checks any copy.
 - **Heat:** before the backplate fan, hardware thermal flags at 83–84 °C invalidated 5 runs. With the fan: 0 flags in every run since. A flag still invalidates a run; the rule is not loosened.
 
 ---
@@ -537,7 +532,7 @@ Every model used to choose a run or read a result, with its equations, the evide
 | 8 | 2026-11-03 | sweeps | 5 s gaps: recovery, because prefixes survived overload | Stuck in 0 of 12 | Hit | as row 7 |
 | 9 | 2026-11-04 | M2 (REG-1) | ≤ 2 of 12 default-pool burst spans and 0 of 12 wipe spans qualify; outcome most likely inconclusive (≈ 0.6); qualifying c in 4.3–4.7 | 0 of 24 qualify (wipes never backlogged; burst spans never burst-free); inconclusive | Hit on qualification and outcome; c range not testable | RUN(the 30 REG-1 runs, margin.reg1_table) |
 | 10 | 2026-11-04 | REG-2 (A3) | λ = 4 control: `arrival_driven` ≈ 0.5 (modal); 72k λ = 3.5: `too_few_episodes` ≈ 0.6 (modal), `arrival_driven` ≈ 0.25; `ao_like_cycle` ≤ 0.05 | λ = 4 `arrival_driven` (arrival share exactly at the 2/3 threshold); 72k `arrival_driven` | Hit (λ = 4); miss of the modal prediction (72k) | RUN(20261101-202808_stage2_control_cap_r4, mechanisms.reg2_table), RUN(20261102-225146_stage2_control_kv72k_r3.5, mechanisms.reg2_table) |
-| 11 | 2026-11-05 | M2 (REG-7, setup L1) | μ_sat,off ∈ [1.4, 2.2] (point 1.7, DERIVED from 5.3k prefill tok/s ÷ 3070); μ_warm ∈ [3, 6] (point 4.5); λ_test exists p ≈ 0.7 (point 3.5); given G3: `pass` ≈ 0.3, `drains` ≈ 0.45, `control_not_healthy` ≈ 0.1, `inconclusive` ≈ 0.15 | Not run (awaits the owner's approval) | Untested | — |
+| 11 | 2026-11-05 | M2 (REG-7, setup L1) | μ_sat,off ∈ [1.4, 2.2] (point 1.7, DERIVED from 5.3k prefill tok/s ÷ 3070); μ_warm ∈ [3, 6] (point 4.5); λ_test exists p ≈ 0.7 (point 3.5); given G3: `pass` ≈ 0.3, `drains` ≈ 0.45, `control_not_healthy` ≈ 0.1, `inconclusive` ≈ 0.15 | Not run (approved by the owner 2026-11-05, decisions.md; awaits the VM) | Untested | — |
 
 **Record so far:** M1 is 0 for 3 on tested predictions (rows 1, 3, 4). It should not be used to choose loads again until it is revised and its revision predicts the existing runs it missed.
 
@@ -557,10 +552,9 @@ Every model used to choose a run or read a result, with its equations, the evide
 | A4 | Is the cache-on capacity loss under overload (4.735 → 4.185 req/s) prefix eviction or preemption recompute? | **Open.** An analysis of existing runs was drafted (REG-3) and dropped: its outcome followed from published numbers. The informative test is a logging run exporting vLLM's internal recompute count (GPU, owner) | decisions.md 2026-11-04 [DECISION] REG-3 dropped |
 | A5 | How much of client TTFT is client receive lag? `vllm:time_to_first_token_seconds` is recorded and never compared | **Open** | `metrics.jsonl` of any run |
 | A6 | Does dev mode change speed? μ was measured without it, controls and shocks with it | **Open.** Needs a GPU run (owner) | decisions.md 2026-11-04 (2) |
-| A7 | Was another process using the GPU during any run? Memory and power give no sign, but neither can show a compute-only co-tenant; `env.json` does not list GPU processes | **Open** | `gpu.jsonl` (mem_used 22.9–24.6 GB default pool; power limit 420 W in every sample) |
+| A7 | Was another process using the GPU during any run? Memory and power give no sign, but neither can show a compute-only co-tenant; `env.json` does not list GPU processes | **Open; narrowed 2026-11-05:** microk8s, the one other service on the VM, ran no GPU pod in any of the VM's 10 boots (kubelite journal: only the three default `kube-system` pods, no nvidia line). A GPU process outside Kubernetes is not ruled out | FILE(docs/probe/20261105_vm_checks/microk8s_now.txt:23-26); decisions.md 2026-11-05 [OPS]; `gpu.jsonl` (mem_used 22.9–24.6 GB default pool; power limit 420 W in every sample) |
 | A8 | Cold-state floor under assumption B (`docs/model.md` M2, weaker floor): what is μ_sat,off per setup, and which shock runs lie above it? (the other session's item 38) | **Open for the 72k and 5 s-gap setups; not computed for the default pool** (decisions.md 2026-11-04 [DECISION] REG-5: its outcome was foregone there; the floor is written as a calculation in `docs/model.md` M2). For setup L1 the floor is part of REG-7 (`gate.cold_floor`). Corrected 2026-11-05 [CORR]: this row said "To be registered". Saturation threshold KV ≥ 0.85 and the "at the floor" band were chosen with the default-pool data visible (decisions.md 2026-11-04, owner's decisions on items 38–42), so the default-pool classification is not a blind test | — |
 | A9 | 5 s-gap cache-off capacity beyond λ = 3.5 (the other session's item 40) | **Open, on hold** until the owner chooses the next direction | `20261103-142848_sweep_gap5_pc_off_r3.5` |
-| A10 | What scheduler limits shape the loop in the pinned server: `max_num_batched_tokens` (the compile range suggests 2048), chunked-prefill settings, `--scheduler-reserve-full-isl`, and the scheduling policy? None is recorded in `env.json` or the configs | **Open.** Probe on the VM (engine config at startup, or `vllm serve --help` with the pinned wheel) and record them before REG-7's runs | `docs/probe/20261023_Qwen3-4B/server.log` (compile range); decisions.md 2026-11-05 [DECISION] audit |
 | A11 | What is the completion rate c_b in the cold backlog after the existing bursts (default, 72k and 5 s-gap setups)? BELIEF from the audit's inline reading (every burst backlog drained within minutes): c_b is near the warm peak at the default pool, which would explain every `recovered` | **Open.** Needs its own `[REG]` before it is computed (its outcome is not foregone across the 72k and 5 s-gap bursts); 0 GPU h | decisions.md 2026-11-05 [DECISION] audit; `analysis/gate.py` `burst_backlog` can compute it |
 
 ---
@@ -568,119 +562,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 <!-- source: docs/decisions.md, last 5 entries -->
 
 ## Last decisions
-
-### 2026-11-05 · [CORR] `derived.hit_between` gave a number when a counter went down
-- **What was wrong:** FILE(analysis/derived.py:16) tested only `if dq`, so a negative difference (a counter reset) gave a number, while `load._level` gives NaN (REG-4).
-- **Since when:** the function was committed (2026-11-04).
-- **Fix:** NaN when the query counter does not rise or either counter goes down inside [a, b], as in `_level`. Test: `tests/test_derived.py::test_hit_between_is_nan_on_a_counter_reset_or_no_queries`.
-- **Which results it affects:** none.
-  - Every caller reads valid runs, and the `recorder` check fails any run with a counter decrease (FILE(harness/checks.py:83-93)).
-  - Re-check: `analysis.recompute_published` prints identical output under the old and the new function (109 lines, compared in one process).
-- **Rule that would have caught it:** J (one definition, one computation), with a reset test from the start.
-
-### 2026-11-05 · [DECISION] Item 42's capacity rule implemented, for future sweeps only
-- **The owner approved it on 2026-11-04** (decisions.md, items 38–42): the throughput test compares against the realized planned arrival rate over the measured window, not the configured λ. Past μ values stand as judged.
-- **Code:**
-  - `load.summarize` gains `planned_rate`: requests planned in [warm-up, end of arrivals) per second.
-  - `load.capacity(..., against="rate" | "planned_rate")`; the default is the old rule.
-  - `tables.capacity_rule(cfg)` reads a sweep's own `capacity:` block, else the 2026-10-30 rule.
-  - `tables.sweep_capacity(parent)` refuses a sweep whose runs registered different rules.
-  - Old configs are not edited, so every old sweep keeps the old rule.
-  - Tests: `tests/test_load_more.py::test_capacity_against_the_realized_planned_rate` and two in `tests/test_tables.py`.
-- **Re-check:** `analysis.tables published` reports no difference; every published μ is unchanged.
-
-### 2026-11-05 · [REG] REG-7: feasibility gate for setup L1 (2048-token system prompt, 5 s gaps) before any shock matrix (GPU, ≤ 9 h)
-- **ID:** REG-7. The owner chose the direction on 2026-11-05 (the audit [DECISION] above). **Not approved yet:** no GPU run before the owner approves this entry. Committed together with `analysis/gate.py`, `tests/test_gate.py`, the `capacity` changes in `analysis/load.py` and `analysis/tables.py`, and `configs/l1_base.yaml`, `sweep_l1_pc_on.yaml`, `sweep_l1_pc_off.yaml` and `stage2_l1_base.yaml`.
-- **Question:** is there a setup and load where a stuck state is possible at all? It needs c_b(λ) < λ ≤ c_warm(λ): the cold, backlogged completion rate below λ while the warm server keeps up at λ (`docs/model.md` M2). At the default pool overload costs only 1 − 4.185 / 4.735 = 0.116 of capacity (DERIVED from M2's inputs), and every burst backlog drained.
-- **Claim tested:** M2 (feasibility, `docs/process.md` §4), as the precondition of C1. Not C1 itself: one burst run is not a cell.
-- **Setup L1:** the measured 5 s-gap setup (`configs/gap5_base.yaml`) with one factor changed, `system_tokens` 512 → 2048. Everything else stays: default pool, cap 256 stated, 8 turns, 128 user / 128 reply / 128 output tokens, exponential 5 s gaps, open-loop turns, no retries, gateway off.
-  - Inputs from schedules (`harness.workload.build_schedule`, seed 1, 2400 s; inputs, not outcomes): W/C mean (`derived.working_set` / 96,656) is 0.38 at λ = 3 and 0.53 at λ = 4 (p90 0.52, 0.68), against 0.19–0.29 for the 5 s-gap setup at λ = 3–4.5.
-  - Mean prompt 3070 tokens (1534 at 512). About 498 prompt tokens per request are left to prefill when warm.
-  - Session median prompt 2944 tokens, max 3968.
-- **Design:**
-  - **G1:** `configs/sweep_l1_pc_on.yaml`, λ = 2, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7. 900 s, seed 0, no dev mode (the run shape of every capacity sweep).
-    - μ_warm by the rule in `configs/l1_base.yaml`: throughput ≥ 0.95 × the realized planned rate (item 42), waiting slope ≤ 0.01 req/s, and **monotone**: the highest rate that passes along with every lower swept rate (`load.capacity`, through `tables.sweep_capacity`).
-    - Seed 0's realized rate is 2.4–7.1 % above λ at every L1 rate (the review, from schedules), so this rule asks for throughput ≈ 0.97–1.02 λ. That is item 42's intent.
-  - **G2:** `configs/sweep_l1_pc_off.yaml`, λ = 1, 1.5, 2, 2.5, 3, 3.5, 4, the same shape with caching off. The sweep runs in full.
-  - **Test load**, computed once after G1 and G2 by `gate.reg7_zone`:
-    - μ_sat,off = `gate.cold_floor`. Drop rows with a non-finite value. λ_sat is the lowest λ with measured-window mean KV ≥ 0.85 (owner, decisions.md 2026-11-04). Every row at λ ≥ λ_sat must be saturated (KV ≥ 0.85 and throughput < 0.95 × planned_rate), else the floor is undefined (`not_monotone`). The floor is the mean throughput over ≥ 2 such rows, else `too_few`; with no saturated row it is `unsaturated`.
-    - λ_test = `gate.choose_lambda`. Take the largest multiple of 0.5 that is ≤ 0.8 μ_warm and ≥ 1.3 μ_sat,off (`gate.zone_check`). Then step down by 0.5 until the G1 run at the smallest swept rate ≥ λ_test has pooled percent fast ≥ 0.98 at TTFT ≤ 1.0 s (`load._level` over 240–900 s; `gate.slo_feasible`), staying ≥ 1.3 μ_sat,off. Otherwise there is no λ_test.
-  - **G3**, at λ_test: two runs of 2580 s, seed 1, extending `configs/stage2_l1_base.yaml` (dev mode, SLO 1.0 s, the verdict block of `stage2_cap_base.yaml`, `burst_min_kv_max: 0.95`). Their configs are written with exactly these contents and committed before they run:
-    - `configs/stage2_control_l1_r<λ>.yaml`: `extends: stage2_l1_base.yaml`, `seed: 1`, `workload.rate: <λ_test>`, `verdict.control_t_s: 1080`. It is judged at the burst's end, so both watches end at 2580 s.
-    - `configs/burst_l1_r<λ>_s1.yaml`: `extends: stage2_l1_base.yaml`, `seed: 1`, `workload.rate: <λ_test>`, `trigger: {kind: burst, at_s: 900, duration_s: 180, rate: <λ_test>, prompt_tokens: 2944}`.
-    - Same seed and duration, so the same session schedule: the burst draws from its own generator (FILE(harness/workload.py:24-26)). Burst requests can't be mistaken for session requests: they are turn 0 with 2944 tokens, while a session's turn 0 is 2176 (`margin.check_burst_rule`).
-- **Analysis plan** (`gate.gate_verdict`, settings `gate.REG7`). Spans are [600, 900), [900, 1200) and [1200, 1500) s after the burst's last planned arrival (1080 s).
-  - A span **holds** in the burst run when `margin.post_trigger_margin` finds it qualifies: waiting > 0 at every scrape; no burst request completes in it; the sessions' cached share is ≤ the baseline's minus 0.06, over the 600 s before the burst. And the one-sided 99 % Poisson upper bound of its completions/s must be below **both** λ_test and the span's planned session rate λp.
-  - A span **counts** when it holds and the control at the same absolute span is defined and not backlogged (waiting > 0 at every scrape there; `gate.control_backlog`).
-  - **Labels:**
-    - `inconclusive`: the control or the burst verdict is `unclear`, the burst run is `bad_baseline`, or a span needed for the decision is undefined. The pair is rerun under the stopping rule; this is never read as `drains`.
-    - `control_not_healthy`: the control is defined but not `recovered`.
-    - `pass`: some span counts.
-    - `inconclusive` also when the burst run is `stuck` by `load.verdict` but no span counts. For example, burst requests may still be completing in every span, so none is burst-free. The span test could not confirm, so this is not read as a drain (pre-commit review, 2026-11-05; see the approval entry).
-    - `drains`: otherwise.
-    - The family error over 3 spans is ≤ 0.03 for the Poisson part.
-  - **Readouts, reported:**
-    - `gate.overlap_share` over [1080, 2580): the share of session cache hits served while the previous turn still ran. It decides the closed-loop proposal below.
-    - Never decisive: `gate.secondary_cb` (`floor.sustained_capacity`, REG-6's settings), `derived.cached_share_split`, completions/s and percent fast per 60 s.
-- **Prediction** (BELIEF, from M2 arithmetic; DERIVED: the default cache-off saturation 3.5 req/s × 1525 prompt tokens ≈ 5.3k prefill tokens/s, so c_off,L1 ≈ 5.3k / 3070 ≈ 1.7 req/s):
-  - μ_sat,off ∈ [1.4, 2.2] (point 1.7), status `ok`; μ_off ∈ {1, 1.5, 2}; μ_warm ∈ [3, 6] (point 4.5).
-  - λ_test exists with p ≈ 0.7 (point 3.5).
-  - Given G3: `pass` ≈ 0.3, `drains` ≈ 0.45, `control_not_healthy` ≈ 0.1, `inconclusive` ≈ 0.15.
-  - Overall `pass` ≈ 0.2.
-- **Decision under each outcome:**
-  - **No λ_test:**
-    - With a floor status `ok`: L1 has no load clearly above its cold floor that is healthy when warm, so no shock matrix runs at L1. μ goes into M2, and the owner picks the next factor.
-    - With a floor status `unsaturated`, `not_monotone` or `too_few`: the floor is *unmeasured*, not absent. A new registration extends or repeats G2.
-  - **pass:** the shock matrix at λ_test, registered first: burst seeds 2–5, each with a same-seed, same-duration control. "Most" = ≥ 3 of 5, with the one-sided Clopper–Pearson bound. Then the condition-5/6 confirmation run, the caching-off control and the loop figure for C2.
-  - **drains:**
-    - Record c_b and 1 − c_b / μ_warm in M2.
-    - If `overlap_share` > 0.5: propose closed-loop turns (a change to rule 2) to the owner as the next single factor.
-    - Otherwise: propose writing up the negative with its mechanism.
-  - **control_not_healthy:** one retry pair at λ_test − 0.5 if that is still ≥ 1.3 μ_sat,off; otherwise as "No λ_test" with status `ok`.
-  - **inconclusive:** rerun the pair unchanged.
-- **Alternatives:**
-  1. Longer prompts also cut the warm capacity, by attention cost and fewer requests in the pool. The zone check measures this.
-  2. Overlap protection may keep hits up in the backlog, so `drains` would not refute the loop for closed-loop traffic. The overlap share is measured, and it decides.
-  3. Larger batches in a backlog may make up for the lost cache, as at the default pool. That gives `drains`.
-  4. Dev mode is on in G3 and off in G1 and G2 (A6).
-  5. One seed per G3 run: `pass` is a reason for a matrix, not a result.
-  6. "Cold" follows from any long backlog (reuse gaps exceed eviction time), so `cold` alone does not separate causes. The matched control span does (review).
-- **Stopping rule:**
-  - Each sweep once; an invalid run is rerun unchanged, at most twice.
-  - G3 at most at 2 λ_test values.
-  - An `inconclusive` pair is rerun at most twice.
-- **Cost:** G1 ≈ 3.0 h (9 runs); G2 ≈ 2.3 h (7 runs); G3 ≈ 1.7 h per pair. In total ≤ 9 GPU h without the inconclusive reruns.
-- **Not changed:** every past verdict, μ and threshold. `capacity`'s new options are off by default, and the old sweeps have no `capacity:` block. Re-check: `analysis.tables published` reports no difference after the change.
-
-### Adversarial review (separate subagent; it saw only the first draft, its diff and the code those call; it built schedules, which are inputs, and synthetic traces; it opened no runs). Verbatim:
-
-> **1. Traces on which the verdict is wrong.**
-> **A. False `pass` on a draining server (main defect).** `holds` compares `c_upper < λp(span)` where λp is the *span's own* planned rate, not λ. With the G3 schedule at λ_test=3.0 (seed 1, burst at 900 s), λp over the three spans = **2.737, 3.393, 2.977**; at 3.5: 3.17, **3.847**, 3.66; at 4.0: 3.65, **4.31**, 4.137. Exact `poisson_rate_upper(n,300,0.99)`: span 2 at λ=3.0 holds whenever c ≤ **3.143**. Trace: cold backlogged rate c_b = 3.10 > λ = 3.0 (no stuck state by M2); after the burst, Q ≈ 528+excess drains at ~0.1/s so Q>0 at every scrape; burst requests finish by ~1080+600/3.1 ≈ 1270 s so spans are burst-free; long queue pushes reuse gap past eviction ⇒ cold. Span 2 → holds → label `pass`. `load.verdict` likely says `stuck` too (end window [1980,2580) planned rate (3.393+2.977)/2 ≈ 3.19 > 3.10 ⇒ positive q slope). So the gate cannot distinguish c_b<λ from c_b<λ+~13 % schedule fluctuation; the 0.03 family error covers only Poisson noise on completions, not the choice of λp as target.
-> **B. Control never judged where the burst run is.** Control verdict windows: end [1800,2400), prev [1200,1800). Burst spans: [1680,1980), [1980,2280), [2280,2580); end [1980,2580). Nothing judges the control on [2400,2580) — where the planned rate peaks at 4.017 (λ=3.5) / 4.422 (λ=4.0). A local overload there can make span 3 hold while the control reads `recovered`. `post_trigger_margin` raises on a run with no trigger, so no matched-span check of the control exists.
-> **C. Missing data → `drains`.** Burst run verdict `unclear` (NaN from a scrape gap) or `bad_baseline`, with no span holding (NaN share/NaN baseline/no scrapes all make `holds` False) → `drains`. Neither case is tested; only `slow_drain`→`drains` is. A `drains` label then drives "write up the negative".
-> **D. False `control_not_healthy`.** Control `unclear` for the same NaN reasons → `control_not_healthy` → retry at λ−0.5, which can then fail the 1.3×floor test → "No λ_test", from an instrument fault.
-> **E. Zone check (run on the real functions).** μ_warm from an integer grid: `zone_check` → {2:None, 3:None, 4:3.0, 5:4.0, 6:4.5, 7:5.5} for μ_warm 2–7, μ_sat,off=1.7. **The predicted λ_test=3.5 cannot occur.** True capacity anywhere in [μ, μ+1) ⇒ λ_test at 0.6–0.8 of it. `cold_floor` averages *every* row ≥ λ_sat including unsaturated ones: synthetic sweep rates 1.5–3, KV ≥0.85 from 1.5, throughput 1.5/2.0/2.4/2.4 → μ_sat,off = 2.075, λ_test=3.0 at μ_warm=4; with the true plateau 2.4, 1.3×2.4=3.12 ⇒ no λ_test. Ran a similar trace: {mu_sat_off: 1.9375, lam_sat: 1.5, n: 4}. Non-monotone KV: one noisy row ≥0.85 at a low λ pulls λ_sat down; nothing checks that rows above are saturated. NaN counts as a run: throughput [NaN, 1.8] → n=2, mean 1.8 — `min_runs`=2 passes with one value; NaN `kv_mean` row silently skipped. Grid ceiling: if c_off,L1 ≥ 3, no row saturates → NaN → "No λ_test" (verified), a grid artifact that the decision reads as "L1 infeasible". `capacity` takes the max passing rate: λ=4 fails, λ=5 passes by noise ⇒ μ_warm=5, λ_test=4.0 above the failing rate.
-> **2. Strongest alternative explanation per outcome.** *No λ_test*: G2 grid stops at 3, or the grid is too coarse (μ_warm 4 vs true 4.9), not evidence of no zone. *pass*: slow drain with c_b slightly above λ judged against a local λp up to 13 % above λ (trace A), or local overload in the control's unjudged tail (B). The "cold" criterion does not separate these: any long queue makes the cached share drop because reuse gaps exceed eviction time, so `cold` follows from backlog of any cause. *drains*: the burst did not push the server over (KV≥0.95 proves pressure, not loss of the sessions' cache); or burst-run verdict `unclear` (C); single seed (1/1 has 95 % upper bound near 1). *control_not_healthy*: the SLO, not capacity — G1's throughput rule says nothing about TTFT p98 ≤ 1.0 s with 2–4k-token prompts at 0.6–0.8 of capacity, and dev mode is on only in G3; or instrument NaN (D).
-> **3. Can the run change a decision?** Yes, if "No λ_test" and `drains` are fixed as above: "No λ_test" stops the L1 shock matrix; `pass` starts the matrix at seeds 2–5. As drafted, `pass` is vulnerable to trace A, so it could commit ~8 h GPU on a false positive. The overlap-share > 0.5 branch under `drains` is not computable as written (see 4).
-> **4. Code/config defects.** (1) `holds` vs `lam_p(span)` not λ (trace A); no check that the queue grows across spans. (2) Control/burst verdict windows differ (control at `control_t_s`=900, watch ends 2400; burst watch ends 2580); last 180 s of control unjudged. (3) `unclear`/`bad_baseline` burst verdicts → `drains`; `unclear` control → `control_not_healthy`; untested. (4) Overlap decision has no named function: "overlap share > 0.5 of post-burst cached share" — `cached_share_split` returns two means over the whole measured window [240,2580), not post-burst; no function returns an "overlap share". Choosing this computation after data is a threshold-after-data risk. (5) `cold_floor`: unsaturated rows averaged, NaN rows counted toward n, no monotonicity. (6) Grid: μ_warm integer grid ⇒ λ_test ∈ {3,4,4.5,5.5}; prediction inconsistent; λ_test = 4.5 has no G1 run at that rate. (7) Item-42 `planned_rate` in `summarize` = all requests with `t_planned` in [warmup, duration) / span: for sweeps this is the realized planned rate (warm-up excluded, no bursts in sweeps); it would include burst requests if ever applied to a burst run. With seed 0 the realized rate is **+2.4 % to +7.1 % above λ** at every L1 rate (on: 2.097, 3.124, 4.186, 5.217, 6.159, 7.171; off: 1.05, 1.606, 2.097, 2.638, 3.124), so the rule effectively requires throughput ≥ ~0.99–1.02 λ — near "zero shortfall". G3 uses seed 1, whose baseline at λ=3 is 3.153 — a different realized load from G1. (8) `is_burst_request` is safe: session turn 3 = 2944 tokens, but bursts have turn = 0 and session turn 0 = 2176; `check_burst_rule` holds. Verified turn-3 length set {2944}, burst turns {0}. (9) Burst requests (528–796 × 2944 tok ≈ 1.6–2.3 M prefill tokens) may still be finishing in span 1: at the predicted ~5.3k tok/s cold rate (BELIEF), the last burst completion approaches the span-1 start at 1680 s when c_b ≲ 1.5, so span 1 can fail burst-free; biases against `pass`, not toward it. (10) Errored requests count in λp but not in c → inflates `holds`. (11) `sweep_kv_table` fails on runs with empty metrics (`tables.sweep_table` skips them); duplicate valid runs at one rate double-weight the floor mean. (12) G3 control/burst configs are not in the diff — trigger keys, rate = λ_test, `control_t_s` unreviewed.
-> **5. Recommended changes, most important first.** 1. `holds` must require `c_upper < λ` (configured) AND `< λp`, or a positive Q slope across the three spans jointly; register now. 2. Add a matched-span negative control: compute Q>0 / c_upper / share on the control at the same absolute spans, and require the control not to hold there (Q ≈ 0); judge the control at `control_t_s` = 1080 or extend it to cover [2400,2580). 3. Map burst-run verdict `unclear`/`bad_baseline` and NaN spans to a new `inconclusive` label (rerun under the stopping rule), never `drains`; map control `unclear` to `inconclusive` too. Add tests for each. 4. Fix `cold_floor`: require every row ≥ λ_sat to have KV ≥ 0.85 and throughput < 0.95×planned_rate; use finite rows only; extend G2 to 3.5 and 4, or register that a NaN floor means "unmeasured" rather than "infeasible". 5. Use 0.5-step G1 rates 2–7 (or interpolate μ_warm) and fix the λ_test prediction; make `capacity` monotone (highest λ with all lower rates passing). 6. Pre-register an SLO feasibility check before G3: percent fast ≥ 0.98 at TTFT 1.0 s in the G1 run at the rate ≥ λ_test; otherwise "control_not_healthy" is predictable from data in hand. 7. Write and test a named function for the overlap share over [burst end, duration), and register the 0.5 rule against it. 8. Commit G3 control/burst configs now (parametrized by λ_test) for review. 9. Count errored requests as completions or drop them from λp; make `sweep_kv_table` skip runs without metrics.
-
-**Changed because of it:**
-- **A:** `holds` needs c_upper below both λ_test and λp. A test reproduces trace A (c = 3.10, λ = 3.0, λp = 3.39 → does not hold).
-- **B:** a matched-span negative control (`gate.control_backlog`); the control is judged at `control_t_s: 1080`; `gate_verdict` raises otherwise.
-- **C and D:** a new `inconclusive` label for an `unclear` verdict on either run, a `bad_baseline` burst run, or undefined spans, with a test for each.
-- **E, 4.5:**
-  - `cold_floor` uses finite rows only, requires every row at λ ≥ λ_sat to be saturated, and refuses duplicate rates. Its four statuses are registered, and an undefined floor means "unmeasured".
-  - G2 is extended to λ = 4.
-- **E, 4.6:** G1 now uses 0.5 steps (2, 3, 3.5, …, 6, 7), `capacity` gains `monotone` (on for L1 only), and the prediction is restated.
-- **Recommendation 6:** `gate.slo_feasible` and `gate.choose_lambda`, registered as part of the λ_test rule.
-- **4.4 and recommendation 7:** `gate.overlap_share`, defined and tested, decides the closed-loop branch.
-- **4.7:** item 42's rule stays as the owner approved it; the review's numbers on how strict it is are stated in Design.
-- **Recommendation 8, modified:** the G3 configs' exact contents are registered above, and the files are committed before they run. λ_test is not known until G1 and G2 are done.
-- **4.10, not changed:** an errored request fails `no_errors`, so the run is invalid and `gate_verdict` raises.
-- **4.11:** `sweep_rows` skips runs without metrics, and duplicates raise.
-- **4.9 is accepted as stated:** it biases against `pass`.
-- Full suite after the changes: `uv run pytest`, 183 passed. `analysis.tables published`: no difference.
 
 ### 2026-11-05 · [DECISION] Owner approves REG-7; the data copies stay on the Mac; three wording fixes made
 - **REG-7 approved** by the owner on 2026-11-05 ("I approve reg 7"), before any L1 run exists. Registered in commit `d1b360c`.
@@ -713,3 +594,59 @@ Every model used to choose a run or read a result, with its equations, the evide
   - REG-6 after the gate.
 - **Which results it affects:** none. No run started, and REG-7's registration and approval in decisions.md were correct.
 - **Rule that would have caught it:** D (session end): re-read status.md after editing it, before the commit message describes it.
+
+### 2026-11-05 · [CORR] Two stale statements found at session start: model.md's REG-7 ledger row and status.md's push commit
+- **What was wrong:**
+  1. FILE(docs/model.md:70), ledger row 11 (REG-7), read "Not run (awaits the owner's approval)". The owner approved REG-7 on 2026-11-05 (decisions.md 2026-11-05 [DECISION] "Owner approves REG-7"). The row now reads "Not run (approved by the owner 2026-11-05, decisions.md; awaits the VM)".
+  2. FILE(docs/status.md:9) read "Everything is pushed to `origin` at `e8bbca6`". `git rev-list --left-right --count main...origin/main` gives 0 0 with both at `1da6a73` (checked 2026-11-05, 11:2x UTC, after `git fetch`). Changed to `1da6a73`.
+- **Since when:** (1) `f4d1110`, 2026-11-05, when REG-7 was approved and the ledger was not updated; (2) `1da6a73`, 2026-11-05, which was pushed after status.md named `e8bbca6`.
+- **Which results it affects:** none. Neither statement is used by a verdict, μ, threshold or the order of the next steps.
+- **Re-check done:** `python3 tools/check_docs.py`: OK before the change; rerun at session end.
+- **Own slip, before commit:** this entry was first drafted with the date 2026-11-06; `date -u` gave 2026-11-05. Corrected before commit.
+- **Rule that would have caught it:** D (session end): every doc that names a registration's state is updated with the approval (model.md's ledger as well as status.md), and status.md's push line is written after the last push.
+
+### 2026-11-05 · [OPS] VM back: read-only checks; REG-6 seed 0 copied; why it went offline; where microk8s came from; A10 answered
+- **Scope:** read-only commands over SSH as the user `chalshik`, with no sudo. Each output is saved in `docs/probe/20261105_vm_checks/` and cited below. 0 GPU h. Nothing on the VM changed except the removal of the copied run folder (below).
+- **Why the VM went offline (2026-11-04 14:35 UTC):** an ACPI power-button event, not a crash. The log reads "Power key pressed short", then "System is powering down", at 14:35:45 (FILE(docs/probe/20261105_vm_checks/boots_and_shutdowns.txt:38-39)).
+  - The two earlier mid-run losses end the same way: 2026-10-31 02:53:50 and 2026-11-01 15:41:07 (FILE(docs/probe/20261105_vm_checks/boots_and_shutdowns.txt:32-36)). So do three setup-day boots on 2026-10-23 (`:21-30`).
+  - The VM came back at 2026-11-05 10:55:48 (`:13`).
+  - BELIEF: in a Proxmox VM this event comes from the hypervisor (a "Shutdown" of the VM, or the host shutting down). A shell command in the VM logs no power-key line. Who sent it is not visible from inside the VM; the Proxmox task log would show it (owner).
+  - **On the 2026-11-04 [OPS] entry:** it says the agent's stop command "never reached the VM". The journal shows SSH sessions from the Mac's Tailscale address at 14:32:35, 14:34:23 and 14:35:37, the last ending 7.4 s before the power key (FILE(docs/probe/20261105_vm_checks/shutdown_20261104.txt:3-14)). Which command each ran is not logged, so that statement can be neither confirmed nor refuted. It does not bear on the cause, which is the power-key event.
+- **Repo:** clean (0 lines of `git status --porcelain`) at `4d30f1d` (FILE(docs/probe/20261105_vm_checks/repo_disk.txt:3-5)). The VM's `origin` is the bare repo `~/repos/aftershock-artifacts.git` on the VM itself, which the Mac pushes to as `vm`.
+- **GPU and disk:** RTX 3090, 1 MiB used, 0 %, 420 W limit, no compute process (FILE(docs/probe/20261105_vm_checks/microk8s_now.txt:29-30)); 16 GB free (`repo_disk.txt`).
+- **REG-6 seed 0 (`20261104-134159_long_pc_off_r3_s0`):**
+  - It has no `checks.json`, so it does not count, as expected. Its last writes are at 14:35:44.86, 0.2 s before the power key.
+  - Copied to the Mac with `rsync -a`. The sha256 of all 9 files is identical on both machines (`sha256sum` on the VM, `shasum -a 256` on the Mac, compared with `diff`).
+  - `python3 tools/manifest.py update` appended 9 lines and left the 1053 earlier lines unchanged. Its line in `manifests/pending_copy.txt` is removed.
+  - The VM copy is removed, under the owner's exception (decisions.md 2026-11-04).
+  - `runs/` now holds 105 folders. The new one is the third without checks.
+- **microk8s: where it came from.** It was installed automatically during the VM's very first boot, before anyone logged in.
+  - The journal starts at 2026-10-23 11:48:36 (FILE(docs/probe/20261105_vm_checks/boots_and_shutdowns.txt:4)). The OS was installed just before from the Ubuntu Server 24.04.5 ISO (FILE(docs/probe/20261105_vm_checks/microk8s_install.txt:3), `/` born 11:35:45, `:13`).
+  - snapd started at 11:48:46. At 11:48:48 it logged `Installing snap "microk8s"`, a request through its API (`:26-27`). The snap file landed at 11:49:32 (`:9`). The first login session is at 11:51:28 (`:30`).
+  - So no user session existed when the install was requested. Two of the three earlier explanations are ruled out: the other GPU user, and a manual install by the owner or an agent session.
+  - BELIEF, the remaining explanation: microk8s was ticked on the installer's "featured server snaps" screen, and the installer had it installed on first boot. The decisive file, `/var/log/installer/autoinstall-user-data`, is readable only by root (owner: `sudo grep -n -A4 snaps /var/log/installer/autoinstall-user-data`).
+- **microk8s: what it does.** It is unused.
+  - The `microk8s` group has no members, and no `~/.kube` exists (`microk8s_install.txt:32-34`).
+  - Over all 10 boots, kubelite's journal names only the three default `kube-system` pods (calico-node, calico-kube-controllers, coredns) and never mentions nvidia (`microk8s_now.txt:23-26`). So no GPU addon pod has ever run.
+  - Its CPU use, as `ps` pcpu (CPU time over elapsed time since this boot): kubelite 4.3 %, k8s-dqlite 1.4 %, calico-node 1.3 %, containerd 0.9 % of one core (`microk8s_now.txt:6-9`). DERIVED: about 8 % of one core, unpinned, so it can run on the loadgen and recorder cores 6–7.
+  - It was present for all 104 earlier runs.
+  - It bears on A7 only partly. The kubelite log rules out a GPU pod. It cannot rule out a GPU process outside Kubernetes.
+- **A10, the scheduler limits:**
+  - `analysis/engine_config.py` (`a10_table`, tests in `tests/test_engine_config.py`) reads every run's `server.log`.
+  - The unlogged defaults were read from the installed wheel (FILE(docs/probe/20261105_vm_checks/scheduler_source.txt)).
+  - Answer in open-questions A10.
+- **Not done, needs the owner:**
+  - whether microk8s is stopped during runs;
+  - the root-only installer check;
+  - who sent the three power-key events (Proxmox task log).
+  G1 does not start before the microk8s decision (status.md step 4).
+
+### 2026-11-05 · [DECISION] VM evidence kept as committed files; `analysis/engine_config.py` added for A10 (agent, within its authority)
+- **VM outputs as files:** journal, snap and `ps` output from the VM fits none of rule B's tags, and a chat transcript is not evidence. So each read-only check's output is saved under `docs/probe/20261105_vm_checks/` and cited as `FILE(path:line)`. Future VM checks follow the same pattern: one dated folder, one file per check, a capture time in the first line, and no secrets.
+- **`analysis/engine_config.py`:**
+  - `engine_settings` reads one run's `server.log`: the non-default args, chunked prefill, compile ranges and async-off warnings.
+  - `scan` and `a10_table` apply it to every run folder.
+  - It is descriptive of configuration, not of outcomes, so it needs no `[REG]`. Tests: `tests/test_engine_config.py` (3).
+  - Its async-off pattern covers every disabling message in the installed vLLM 0.32.0, `config/vllm.py:1559-1639`.
+- **Not done:** repointing the Mac's `vm` git remote to the Tailscale address. The permission system refused it, so the remote keeps the home address.
+- **Re-check:** `uv run pytest`: 186 passed. `python3 tools/check_docs.py`: OK.

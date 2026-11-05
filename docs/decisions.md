@@ -1354,3 +1354,59 @@ Summary:
   - REG-6 after the gate.
 - **Which results it affects:** none. No run started, and REG-7's registration and approval in decisions.md were correct.
 - **Rule that would have caught it:** D (session end): re-read status.md after editing it, before the commit message describes it.
+
+## 2026-11-05 · [CORR] Two stale statements found at session start: model.md's REG-7 ledger row and status.md's push commit
+- **What was wrong:**
+  1. FILE(docs/model.md:70), ledger row 11 (REG-7), read "Not run (awaits the owner's approval)". The owner approved REG-7 on 2026-11-05 (decisions.md 2026-11-05 [DECISION] "Owner approves REG-7"). The row now reads "Not run (approved by the owner 2026-11-05, decisions.md; awaits the VM)".
+  2. FILE(docs/status.md:9) read "Everything is pushed to `origin` at `e8bbca6`". `git rev-list --left-right --count main...origin/main` gives 0 0 with both at `1da6a73` (checked 2026-11-05, 11:2x UTC, after `git fetch`). Changed to `1da6a73`.
+- **Since when:** (1) `f4d1110`, 2026-11-05, when REG-7 was approved and the ledger was not updated; (2) `1da6a73`, 2026-11-05, which was pushed after status.md named `e8bbca6`.
+- **Which results it affects:** none. Neither statement is used by a verdict, μ, threshold or the order of the next steps.
+- **Re-check done:** `python3 tools/check_docs.py`: OK before the change; rerun at session end.
+- **Own slip, before commit:** this entry was first drafted with the date 2026-11-06; `date -u` gave 2026-11-05. Corrected before commit.
+- **Rule that would have caught it:** D (session end): every doc that names a registration's state is updated with the approval (model.md's ledger as well as status.md), and status.md's push line is written after the last push.
+
+## 2026-11-05 · [OPS] VM back: read-only checks; REG-6 seed 0 copied; why it went offline; where microk8s came from; A10 answered
+- **Scope:** read-only commands over SSH as the user `chalshik`, with no sudo. Each output is saved in `docs/probe/20261105_vm_checks/` and cited below. 0 GPU h. Nothing on the VM changed except the removal of the copied run folder (below).
+- **Why the VM went offline (2026-11-04 14:35 UTC):** an ACPI power-button event, not a crash. The log reads "Power key pressed short", then "System is powering down", at 14:35:45 (FILE(docs/probe/20261105_vm_checks/boots_and_shutdowns.txt:38-39)).
+  - The two earlier mid-run losses end the same way: 2026-10-31 02:53:50 and 2026-11-01 15:41:07 (FILE(docs/probe/20261105_vm_checks/boots_and_shutdowns.txt:32-36)). So do three setup-day boots on 2026-10-23 (`:21-30`).
+  - The VM came back at 2026-11-05 10:55:48 (`:13`).
+  - BELIEF: in a Proxmox VM this event comes from the hypervisor (a "Shutdown" of the VM, or the host shutting down). A shell command in the VM logs no power-key line. Who sent it is not visible from inside the VM; the Proxmox task log would show it (owner).
+  - **On the 2026-11-04 [OPS] entry:** it says the agent's stop command "never reached the VM". The journal shows SSH sessions from the Mac's Tailscale address at 14:32:35, 14:34:23 and 14:35:37, the last ending 7.4 s before the power key (FILE(docs/probe/20261105_vm_checks/shutdown_20261104.txt:3-14)). Which command each ran is not logged, so that statement can be neither confirmed nor refuted. It does not bear on the cause, which is the power-key event.
+- **Repo:** clean (0 lines of `git status --porcelain`) at `4d30f1d` (FILE(docs/probe/20261105_vm_checks/repo_disk.txt:3-5)). The VM's `origin` is the bare repo `~/repos/aftershock-artifacts.git` on the VM itself, which the Mac pushes to as `vm`.
+- **GPU and disk:** RTX 3090, 1 MiB used, 0 %, 420 W limit, no compute process (FILE(docs/probe/20261105_vm_checks/microk8s_now.txt:29-30)); 16 GB free (`repo_disk.txt`).
+- **REG-6 seed 0 (`20261104-134159_long_pc_off_r3_s0`):**
+  - It has no `checks.json`, so it does not count, as expected. Its last writes are at 14:35:44.86, 0.2 s before the power key.
+  - Copied to the Mac with `rsync -a`. The sha256 of all 9 files is identical on both machines (`sha256sum` on the VM, `shasum -a 256` on the Mac, compared with `diff`).
+  - `python3 tools/manifest.py update` appended 9 lines and left the 1053 earlier lines unchanged. Its line in `manifests/pending_copy.txt` is removed.
+  - The VM copy is removed, under the owner's exception (decisions.md 2026-11-04).
+  - `runs/` now holds 105 folders. The new one is the third without checks.
+- **microk8s: where it came from.** It was installed automatically during the VM's very first boot, before anyone logged in.
+  - The journal starts at 2026-10-23 11:48:36 (FILE(docs/probe/20261105_vm_checks/boots_and_shutdowns.txt:4)). The OS was installed just before from the Ubuntu Server 24.04.5 ISO (FILE(docs/probe/20261105_vm_checks/microk8s_install.txt:3), `/` born 11:35:45, `:13`).
+  - snapd started at 11:48:46. At 11:48:48 it logged `Installing snap "microk8s"`, a request through its API (`:26-27`). The snap file landed at 11:49:32 (`:9`). The first login session is at 11:51:28 (`:30`).
+  - So no user session existed when the install was requested. Two of the three earlier explanations are ruled out: the other GPU user, and a manual install by the owner or an agent session.
+  - BELIEF, the remaining explanation: microk8s was ticked on the installer's "featured server snaps" screen, and the installer had it installed on first boot. The decisive file, `/var/log/installer/autoinstall-user-data`, is readable only by root (owner: `sudo grep -n -A4 snaps /var/log/installer/autoinstall-user-data`).
+- **microk8s: what it does.** It is unused.
+  - The `microk8s` group has no members, and no `~/.kube` exists (`microk8s_install.txt:32-34`).
+  - Over all 10 boots, kubelite's journal names only the three default `kube-system` pods (calico-node, calico-kube-controllers, coredns) and never mentions nvidia (`microk8s_now.txt:23-26`). So no GPU addon pod has ever run.
+  - Its CPU use, as `ps` pcpu (CPU time over elapsed time since this boot): kubelite 4.3 %, k8s-dqlite 1.4 %, calico-node 1.3 %, containerd 0.9 % of one core (`microk8s_now.txt:6-9`). DERIVED: about 8 % of one core, unpinned, so it can run on the loadgen and recorder cores 6–7.
+  - It was present for all 104 earlier runs.
+  - It bears on A7 only partly. The kubelite log rules out a GPU pod. It cannot rule out a GPU process outside Kubernetes.
+- **A10, the scheduler limits:**
+  - `analysis/engine_config.py` (`a10_table`, tests in `tests/test_engine_config.py`) reads every run's `server.log`.
+  - The unlogged defaults were read from the installed wheel (FILE(docs/probe/20261105_vm_checks/scheduler_source.txt)).
+  - Answer in open-questions A10.
+- **Not done, needs the owner:**
+  - whether microk8s is stopped during runs;
+  - the root-only installer check;
+  - who sent the three power-key events (Proxmox task log).
+  G1 does not start before the microk8s decision (status.md step 4).
+
+## 2026-11-05 · [DECISION] VM evidence kept as committed files; `analysis/engine_config.py` added for A10 (agent, within its authority)
+- **VM outputs as files:** journal, snap and `ps` output from the VM fits none of rule B's tags, and a chat transcript is not evidence. So each read-only check's output is saved under `docs/probe/20261105_vm_checks/` and cited as `FILE(path:line)`. Future VM checks follow the same pattern: one dated folder, one file per check, a capture time in the first line, and no secrets.
+- **`analysis/engine_config.py`:**
+  - `engine_settings` reads one run's `server.log`: the non-default args, chunked prefill, compile ranges and async-off warnings.
+  - `scan` and `a10_table` apply it to every run folder.
+  - It is descriptive of configuration, not of outcomes, so it needs no `[REG]`. Tests: `tests/test_engine_config.py` (3).
+  - Its async-off pattern covers every disabling message in the installed vLLM 0.32.0, `config/vllm.py:1559-1639`.
+- **Not done:** repointing the Mac's `vm` git remote to the Tailscale address. The permission system refused it, so the remote keeps the home address.
+- **Re-check:** `uv run pytest`: 186 passed. `python3 tools/check_docs.py`: OK.
