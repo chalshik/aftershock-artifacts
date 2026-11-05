@@ -564,16 +564,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-05 · [DECISION] VM evidence kept as committed files; `analysis/engine_config.py` added for A10 (agent, within its authority)
-- **VM outputs as files:** journal, snap and `ps` output from the VM fits none of rule B's tags, and a chat transcript is not evidence. So each read-only check's output is saved under `docs/probe/20261105_vm_checks/` and cited as `FILE(path:line)`. Future VM checks follow the same pattern: one dated folder, one file per check, a capture time in the first line, and no secrets.
-- **`analysis/engine_config.py`:**
-  - `engine_settings` reads one run's `server.log`: the non-default args, chunked prefill, compile ranges and async-off warnings.
-  - `scan` and `a10_table` apply it to every run folder.
-  - It is descriptive of configuration, not of outcomes, so it needs no `[REG]`. Tests: `tests/test_engine_config.py` (3).
-  - Its async-off pattern covers every disabling message in the installed vLLM 0.32.0, `config/vllm.py:1559-1639`.
-- **Not done:** repointing the Mac's `vm` git remote to the Tailscale address. The permission system refused it, so the remote keeps the home address.
-- **Re-check:** `uv run pytest`: 186 passed. `python3 tools/check_docs.py`: OK.
-
 ### 2026-11-05 · [DECISION] microk8s disabled on the VM for every later run (study owner)
 - **Owner's decision:** "I allow you to run it", answering the agent's recommendation to disable microk8s before G1 for every later run, REG-7 and REG-6 alike. The agent could not run it: sudo needs a password (`sudo -n`). So the owner ran `sudo snap disable microk8s` at 11:51:08 and again at 11:51:42 UTC, then the installer grep at 11:51:42 and `reboot` at 11:52:47 (FILE(docs/probe/20261105_vm_checks/sudo_log.txt:4-7)). The services stopped at 11:51:09 (FILE(docs/probe/20261105_vm_checks/microk8s_disabled.txt:30-36)).
 - **Leftovers, found by the agent:** after the disable, all 8 services were disabled and inactive. The pods' processes still ran, though: calico-node, coredns, kube-controllers, 3 containerd-shim and 3 pause (FILE(docs/probe/20261105_vm_checks/microk8s_disabled.txt:16-28)), and calico's network links `vxlan.calico` and two `cali*` were still up. The agent asked for a reboot rather than start G1 in a state no earlier run had and no boot would reproduce. The owner rebooted at 11:52:47 UTC (FILE(docs/probe/20261105_vm_checks/sudo_log.txt:7)).
@@ -634,3 +624,13 @@ Every model used to choose a run or read a result, with its equations, the evide
   - **Order rule, set before either part runs:** part b starts only if part a's λ = 5 run passes `gpu_steady`. Otherwise the agent stops and the owner decides, because further runs at higher load would most likely fail the same way.
   - This decides only whether to spend GPU time, from a validity check. No outcome is read.
 - **G2** waits until G1 is complete or the owner decides otherwise.
+
+### 2026-11-05 · [CORR] Commit `a0284e0` included `analysis/analysis.ipynb`, which the agent did not change
+- **What was wrong:** the agent staged with `git add -A configs docs analysis tests`. That picked up `analysis/analysis.ipynb`, re-executed outside the agent at 15:28:46 UTC (file mtime; 206 lines added, 163 removed, mostly cell outputs and execution counts). It was committed in `a0284e0` together with the capacity-rule fix.
+- **Since when:** `a0284e0`, 2026-11-05.
+- **Which results it affects:** none.
+  - Notebook output is not provenance (rule I).
+  - Its new outputs contain no 2026-11-05 run id and nothing from setup L1 (checked with `git show a0284e0 -- analysis/analysis.ipynb`), so no G1 outcome was exposed.
+  - Run validity is unaffected: the VM's tree is clean, and the configs are committed.
+- **Not done:** the change is neither reverted nor rewritten out of history (`a0284e0` is pushed). The file holds the owner's working state, so whether it stays is the owner's call.
+- **Rule that would have caught it:** stage files by name, never a whole directory, and read `git status --short` before committing.

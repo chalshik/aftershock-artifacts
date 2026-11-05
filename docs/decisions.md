@@ -1471,3 +1471,13 @@ Summary:
   - **Order rule, set before either part runs:** part b starts only if part a's λ = 5 run passes `gpu_steady`. Otherwise the agent stops and the owner decides, because further runs at higher load would most likely fail the same way.
   - This decides only whether to spend GPU time, from a validity check. No outcome is read.
 - **G2** waits until G1 is complete or the owner decides otherwise.
+
+## 2026-11-05 · [CORR] Commit `a0284e0` included `analysis/analysis.ipynb`, which the agent did not change
+- **What was wrong:** the agent staged with `git add -A configs docs analysis tests`. That picked up `analysis/analysis.ipynb`, re-executed outside the agent at 15:28:46 UTC (file mtime; 206 lines added, 163 removed, mostly cell outputs and execution counts). It was committed in `a0284e0` together with the capacity-rule fix.
+- **Since when:** `a0284e0`, 2026-11-05.
+- **Which results it affects:** none.
+  - Notebook output is not provenance (rule I).
+  - Its new outputs contain no 2026-11-05 run id and nothing from setup L1 (checked with `git show a0284e0 -- analysis/analysis.ipynb`), so no G1 outcome was exposed.
+  - Run validity is unaffected: the VM's tree is clean, and the configs are committed.
+- **Not done:** the change is neither reverted nor rewritten out of history (`a0284e0` is pushed). The file holds the owner's working state, so whether it stays is the owner's call.
+- **Rule that would have caught it:** stage files by name, never a whole directory, and read `git status --short` before committing.
