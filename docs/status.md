@@ -18,7 +18,7 @@ Steps:
 4. **Open, the owner's decision:** is microk8s stopped during runs? The agent recommends `sudo snap disable microk8s` before G1, for every later run, recorded in decisions.md (reasons in the session report). It needs root, so the owner does it. Two more checks also need root or Proxmox, and neither blocks G1:
    - `sudo grep -n -A4 snaps /var/log/installer/autoinstall-user-data`, which confirms that it was chosen in the installer;
    - the Proxmox task log, which shows who sent the three power-off events.
-5. **Code on the VM:** the Mac pushes `main` to the `vm` remote, and the VM runs `git pull origin main`. Its `origin` is the bare repo `~/repos/aftershock-artifacts.git`. Status at session end: see decisions.md [OPS] 2026-11-05 and the session report. Before G1, check `git log -1` on the VM against the Mac's `main`.
+5. **Code on the VM:** the Mac pushes `main` to the `vm` remote, and the VM runs `git pull origin main`. Its `origin` is the bare repo `~/repos/aftershock-artifacts.git`. **Done 2026-11-05:** `ca0e299` was pushed to `origin` and to `vm`, and the VM pulled it with a clean tree. `uv.lock` and `pyproject.toml` are unchanged since `4d30f1d`, and `~/.local/bin/uv sync --frozen --extra server --dry-run` would make no changes. The commit that records this line follows `ca0e299` and is pushed the same way. Before G1, check `git log -1` on the VM against the Mac's `main`.
 6. **Start rule for G1:** G1 starts after step 4 is decided and logged, with the tree clean at the latest `main` and the GPU idle. **Stop and ask the owner first** if a check finds anything unexpected: another GPU process, a dirty tree, low disk, or a power-off during a run.
 7. **REG-7, in order:**
    - G1: `uv run python -m harness.run configs/sweep_l1_pc_on.yaml` (about 3 h).
@@ -115,7 +115,7 @@ Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 
 | Data | **All 105 runs (9.4 GB) are only on the Mac** in `runs/`, checksum-verified; the VM's copies were removed (2026-11-04, and REG-6 seed 0 on 2026-11-05). No second backup yet |
 | Disk | 16 GB free on the VM after cleanup; about 170 MB per 40-minute run |
 | Address | 100.83.53.50 (Tailscale; the name `inference-vm.tail3b0112.ts.net` is not in the Mac's `known_hosts`, so use the IP); 192.168.3.249 at home; key `~/.ssh/id_ed25519_vllm`. The `vm` git remote uses the home address (repointing it was not done: a permission prompt refused it) |
-| Sync | Mac `git push vm main` → VM `git pull origin main` in `~/aftershock-artifacts` (the VM's `origin` is `~/repos/aftershock-artifacts.git`); don't pull during a sweep |
+| Sync | Mac `git push vm main` → VM `git pull origin main` in `~/aftershock-artifacts` (the VM's `origin` is `~/repos/aftershock-artifacts.git`); don't pull during a sweep. Over a non-interactive SSH, `uv` is `~/.local/bin/uv` |
 
 ## Watch
 
