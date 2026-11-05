@@ -1426,3 +1426,30 @@ Summary:
   - `env.json` records neither state. Adding the snap services list to `harness/env_snapshot.py` is a harness change and is left to the owner.
 - **Reversible:** `sudo snap enable microk8s`.
 - **Still open:** the owner ran the installer check (`grep -n -A4 snaps /var/log/installer/autoinstall-user-data`, sudo log 11:51:42), but its output is not yet in the record. So "chosen in the installer" stays BELIEF.
+
+## 2026-11-05 · [OPS] REG-7 G1 done: 4 of 9 runs valid; λ ≥ 5 invalid from SW-thermal slowdown
+- **Ran:** `configs/sweep_l1_pc_on.yaml`, 11:57:49–14:37 UTC, from `8ef814f` with a clean tree, microk8s disabled and the VM up throughout. All 9 folders were copied to the Mac with identical sha256 (`shasum` against `sha256sum`), and `tools/manifest.py update` appended 90 lines. The VM keeps its copies.
+- **Validity** (FILE(runs/<id>/checks.json), `gpu_steady` and `no_errors` details):
+  - Valid: `20261105-115752_sweep_l1_pc_on_r2`, `20261105-121403_sweep_l1_pc_on_r3`, `20261105-123008_sweep_l1_pc_on_r3.5` and `20261105-124617_sweep_l1_pc_on_r4`. Max 75–77 °C, SW-thermal share ≤ 0.015.
+  - `20261105-130250_sweep_l1_pc_on_r4.5`: INVALID, `no_errors`. One request (id 2580, t_planned 620.6 s) got `ServerDisconnectedError: Server disconnected`; 4027 were ok. `server.log` has no error or warning near that time. The cause is unknown. BELIEF: a client-side connection reset; no earlier run had a client error.
+  - `20261105-132035_sweep_l1_pc_on_r5`, `20261105-134018_sweep_l1_pc_on_r5.5`, `20261105-140120_sweep_l1_pc_on_r6` and `20261105-142221_sweep_l1_pc_on_r7`: INVALID, `gpu_steady`. SW-thermal share 0.098 / 0.165 / 0.103 / 0.177 against the 0.05 limit. Max 81–82 °C, no HW throttle sample.
+- **Observed, not yet from a committed function:** an inline split of `gpu.jsonl` by quarter of [240, 900) showed the SW-thermal flag in every quarter at λ = 5 and 5.5, with the GPU at 78–79 °C by t = 240 s. The numbers are not quoted until a committed function gives them. BELIEF from it: at these loads the slowdown is the steady state, so a cool-down before a rerun is unlikely to help.
+- **Against earlier sweeps:** they peaked at 79–83 °C with SW-thermal share ≤ 0.038 and stayed valid, e.g. `20261103-132357_sweep_gap5_pc_on_r7` at 83 °C and 0.038 (FILE(runs/20261103-132357_sweep_gap5_pc_on_r7/checks.json)). So core temperature alone does not explain the L1 failures.
+  - Alternatives, unchecked: memory (GDDR6X) heat from L1's heavier traffic; a warmer room; sustained draw at the 420 W cap.
+  - The flag rule is not loosened (status.md, Watch).
+- **Not computed:** throughput and μ of any G1 run. REG-7 computes the gate once, after G1 and G2.
+- **Not started:** G2. Its cold floor needs ≥ 2 valid saturated runs, and cache-off L1 is the heavier load, so the same heat failure is likely. The owner decides first how the heat is handled (status.md).
+
+## 2026-11-05 · [CORR] REG-7's monotone μ_warm rule does not say what an invalid rate means; the code skips it
+- **What was wrong:**
+  - REG-7 (decisions.md 2026-11-05 [REG]) defines μ_warm as "the highest rate that passes along with every lower swept rate".
+  - The code applies this to valid runs only: `tables.sweep_capacity` keeps `valid` rows (FILE(analysis/tables.py:108)), and `load.capacity(monotone=True)` sees only those.
+  - An invalid rate is therefore dropped, and the chain runs over it. With G1's validity (λ = 4.5–7 invalid), any valid passing rerun above λ = 5.5 could set μ_warm over rates with no valid run.
+  - The registration never stated the case; the agent wrote both the registration and the code.
+- **Since when:** `d1b360c` (REG-7).
+- **Which results it affects:** none yet. No μ for L1 has been computed.
+- **Fix, proposed, needs the owner's approval** (it changes analysis registered in REG-7):
+  - A swept rate with no valid run after the reruns REG-7 allows ends the monotone chain. μ_warm is the highest rate below the first rate that fails or has no valid run.
+  - Code and a test would follow before any μ is computed.
+  - The choice is made knowing only which runs are valid, not any throughput.
+- **Rule that would have caught it:** F. The adversarial review built traces with failing rates, not with missing ones; a review should also feed the rule an invalid row.
