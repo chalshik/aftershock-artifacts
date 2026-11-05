@@ -1481,3 +1481,14 @@ Summary:
   - Run validity is unaffected: the VM's tree is clean, and the configs are committed.
 - **Not done:** the change is neither reverted nor rewritten out of history (`a0284e0` is pushed). The file holds the owner's working state, so whether it stays is the owner's call.
 - **Rule that would have caught it:** stage files by name, never a whole directory, and read `git status --short` before committing.
+
+## 2026-11-05 · [OPS] G1 rerun part a: λ = 4.5 and 5 both valid after the cooling change; part b started
+- **Runs** (from `49a6fa1`, clean; `configs/sweep_l1_pc_on_rerun1a.yaml`, 15:33–16:10 UTC):
+  - `20261105-153307_sweep_l1_pc_on_r4.5`: VALID. Max 79 °C, SW-thermal share 0.000 (FILE(runs/20261105-153307_sweep_l1_pc_on_r4.5/checks.json)).
+  - `20261105-155052_sweep_l1_pc_on_r5`: VALID. Max 78 °C, SW-thermal share 0.000 (FILE(runs/20261105-155052_sweep_l1_pc_on_r5/checks.json)). In the first pass it was 81 °C and 0.098, invalid.
+  - The schedules match the first pass: 4028 and 3443 scheduled requests (`events.jsonl` `schedule_written`; seed 0 unchanged).
+- **Copied** to the Mac with identical sha256. The manifest gained 20 lines.
+- **Order rule applied** (decisions.md 2026-11-05 [DECISION]): λ = 5 passed `gpu_steady`, so part b (`configs/sweep_l1_pc_on_rerun1b.yaml`: λ = 5.5, 6, 7) started at 16:11:23 UTC from `49a6fa1`.
+- Observed only, not a test of a cause: the cooling change and the end of SW-thermal slowdown at λ = 5 coincide. The first-pass alternatives (memory heat, room temperature) are not separated.
+- **Not computed:** throughput and μ.
+- **The owner on the notebook in `a0284e0`:** "no problem". It stays in git.

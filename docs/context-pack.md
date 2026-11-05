@@ -14,7 +14,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-05
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: G1 reruns, part a** (`configs/sweep_l1_pc_on_rerun1a.yaml`, λ = 4.5 and 5, about 32 min) after the owner improved the GPU cooling. Then part b (`..._rerun1b.yaml`, λ = 5.5, 6, 7) only if part a's λ = 5 run passes `gpu_steady`; otherwise ask the owner (decisions.md 2026-11-05 [DECISION]). The monotone-rule fix is approved and implemented. G1's first pass gave 4 of 9 valid runs (λ = 2–4). No μ is computed yet. REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`. It is the feasibility gate for setup L1, and costs ≤ 9 GPU h without reruns.
+**Next action: G1 rerun part b is running** (`configs/sweep_l1_pc_on_rerun1b.yaml`, λ = 5.5, 6, 7; started 16:11 UTC, ends about 17:10). Part a's reruns are both valid (λ = 4.5 and 5, SW-thermal 0.000 after the owner's cooling change; decisions.md [OPS]). G1 so far: λ = 2–5 valid. Then: any second rerun REG-7 allows, then G2 (`configs/sweep_l1_pc_off.yaml`). No μ is computed yet. REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`. It is the feasibility gate for setup L1, and costs ≤ 9 GPU h without reruns.
 
 Steps:
 1. **Read-only VM checks: done 2026-11-05** (decisions.md [OPS], evidence in `docs/probe/20261105_vm_checks/`).
@@ -91,7 +91,7 @@ Steps:
 
 ## Runs on record
 
-114 run folders: 97 VALID, 14 INVALID, 3 without checks. All kept; none counts unless VALID.
+116 run folders: 99 VALID, 14 INVALID, 3 without checks. All kept; none counts unless VALID.
 
 - **No checks:** `20261030-114021_first_real` (failed start, no load sent); `20261031-025032_tau` (VM shut down 140 s in); `20261104-134159_long_pc_off_r3_s0` (REG-6 seed 0, VM powered off at t = 3168 s of 3600, DERIVED: power key 14:35:45.08 − planned load start 13:42:56.74 from `events.jsonl` `load_t0_planned`; copied 2026-11-05).
 - **Invalid, Stage 1:** `20261023-145613_smoke` (`gpu_steady`, before the check was refined); `20261030-145339_sweep_pc_on_r8` (`accounting`); `20261030-175458_sweep_pc_off_r10` (`recorder`).
@@ -121,7 +121,7 @@ Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 
 | Software | vLLM 0.32.0, torch 2.13.0 (CUDA 13.0), Python 3.12.13 (uv-managed); `unattended-upgrades` disabled |
 | KV cache | Qwen3-4B: 96,656 tokens by default in load runs; 72,480 tokens when set with `--kv-cache-memory-bytes` |
 | Pinning | vLLM cores 0–5, loadgen 6, recorder 7 |
-| Data | **All 114 runs are on the Mac** in `runs/`, checksum-verified; the VM's copies were removed (2026-11-04, and REG-6 seed 0 on 2026-11-05), except the 9 REG-7 G1 runs, which are also still on the VM. No second backup yet |
+| Data | **All 116 runs are on the Mac** in `runs/`, checksum-verified; the VM's copies were removed (2026-11-04, and REG-6 seed 0 on 2026-11-05), except the REG-7 G1 runs, which are also still on the VM. No second backup yet |
 | Disk | 16 GB free on the VM after cleanup; about 170 MB per 40-minute run |
 | Address | 100.83.53.50 (Tailscale; the name `inference-vm.tail3b0112.ts.net` is not in the Mac's `known_hosts`, so use the IP); 192.168.3.249 at home; key `~/.ssh/id_ed25519_vllm`. The `vm` git remote uses the home address (repointing it was not done: a permission prompt refused it) |
 | Sync | Mac `git push vm main` → VM `git pull origin main` in `~/aftershock-artifacts` (the VM's `origin` is `~/repos/aftershock-artifacts.git`); don't pull during a sweep. Over a non-interactive SSH, `uv` is `~/.local/bin/uv` |
@@ -130,7 +130,7 @@ Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 
 
 Sorted by priority, most urgent first.
 
-- **Backup (top item):** the Mac holds all 114 runs. The owner decided on 2026-11-05 that the copies stay on the Mac (decisions.md). A copy on the same machine guards against deletion, not against losing the Mac; `python3 tools/manifest.py verify <copy>` checks any copy.
+- **Backup (top item):** the Mac holds all 116 runs. The owner decided on 2026-11-05 that the copies stay on the Mac (decisions.md). A copy on the same machine guards against deletion, not against losing the Mac; `python3 tools/manifest.py verify <copy>` checks any copy.
 - **Heat (top item for REG-7):** before the backplate fan, hardware thermal flags at 83–84 °C invalidated 5 runs. With the fan: 0 flags until 2026-11-05, when SW-thermal slowdown invalidated L1's G1 runs at λ = 5–7 at 81–82 °C (decisions.md [OPS]). A flag still invalidates a run; the rule is not loosened.
 
 ---
@@ -564,22 +564,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-05 · [DECISION] microk8s disabled on the VM for every later run (study owner)
-- **Owner's decision:** "I allow you to run it", answering the agent's recommendation to disable microk8s before G1 for every later run, REG-7 and REG-6 alike. The agent could not run it: sudo needs a password (`sudo -n`). So the owner ran `sudo snap disable microk8s` at 11:51:08 and again at 11:51:42 UTC, then the installer grep at 11:51:42 and `reboot` at 11:52:47 (FILE(docs/probe/20261105_vm_checks/sudo_log.txt:4-7)). The services stopped at 11:51:09 (FILE(docs/probe/20261105_vm_checks/microk8s_disabled.txt:30-36)).
-- **Leftovers, found by the agent:** after the disable, all 8 services were disabled and inactive. The pods' processes still ran, though: calico-node, coredns, kube-controllers, 3 containerd-shim and 3 pause (FILE(docs/probe/20261105_vm_checks/microk8s_disabled.txt:16-28)), and calico's network links `vxlan.calico` and two `cali*` were still up. The agent asked for a reboot rather than start G1 in a state no earlier run had and no boot would reproduce. The owner rebooted at 11:52:47 UTC (FILE(docs/probe/20261105_vm_checks/sudo_log.txt:7)).
-- **State after the reboot** (FILE(docs/probe/20261105_vm_checks/after_reboot.txt)):
-  - microk8s is `disabled`, and all its services are disabled and inactive.
-  - There are no k8s, containerd or calico processes and no CNI links. 255 processes in all, against 437 before.
-  - GPU: 1 MiB, 0 %, 36 °C, no compute process. Repo clean at `10d233c`. 16 GB free. Nothing listens on port 8000.
-- **Consequence for comparisons:**
-  - All 104 runs before 2026-11-05 ran with microk8s active, at about 8 % of one core, unpinned (decisions.md [OPS] 2026-11-05).
-  - Every later run has it disabled: REG-7's G1–G3 and REG-6's reruns.
-  - REG-7 measures its own μ, so its internal comparisons are unaffected.
-  - REG-6's `[RESULT]` must state this difference from the 2026-10-30 cache-off sweep it helps to interpret.
-  - `env.json` records neither state. Adding the snap services list to `harness/env_snapshot.py` is a harness change and is left to the owner.
-- **Reversible:** `sudo snap enable microk8s`.
-- **Still open:** the owner ran the installer check (`grep -n -A4 snaps /var/log/installer/autoinstall-user-data`, sudo log 11:51:42), but its output is not yet in the record. So "chosen in the installer" stays BELIEF.
-
 ### 2026-11-05 · [OPS] REG-7 G1 done: 4 of 9 runs valid; λ ≥ 5 invalid from SW-thermal slowdown
 - **Ran:** `configs/sweep_l1_pc_on.yaml`, 11:57:49–14:37 UTC, from `8ef814f` with a clean tree, microk8s disabled and the VM up throughout. All 9 folders were copied to the Mac with identical sha256 (`shasum` against `sha256sum`), and `tools/manifest.py update` appended 90 lines. The VM keeps its copies.
 - **Validity** (FILE(runs/<id>/checks.json), `gpu_steady` and `no_errors` details):
@@ -634,3 +618,14 @@ Every model used to choose a run or read a result, with its equations, the evide
   - Run validity is unaffected: the VM's tree is clean, and the configs are committed.
 - **Not done:** the change is neither reverted nor rewritten out of history (`a0284e0` is pushed). The file holds the owner's working state, so whether it stays is the owner's call.
 - **Rule that would have caught it:** stage files by name, never a whole directory, and read `git status --short` before committing.
+
+### 2026-11-05 · [OPS] G1 rerun part a: λ = 4.5 and 5 both valid after the cooling change; part b started
+- **Runs** (from `49a6fa1`, clean; `configs/sweep_l1_pc_on_rerun1a.yaml`, 15:33–16:10 UTC):
+  - `20261105-153307_sweep_l1_pc_on_r4.5`: VALID. Max 79 °C, SW-thermal share 0.000 (FILE(runs/20261105-153307_sweep_l1_pc_on_r4.5/checks.json)).
+  - `20261105-155052_sweep_l1_pc_on_r5`: VALID. Max 78 °C, SW-thermal share 0.000 (FILE(runs/20261105-155052_sweep_l1_pc_on_r5/checks.json)). In the first pass it was 81 °C and 0.098, invalid.
+  - The schedules match the first pass: 4028 and 3443 scheduled requests (`events.jsonl` `schedule_written`; seed 0 unchanged).
+- **Copied** to the Mac with identical sha256. The manifest gained 20 lines.
+- **Order rule applied** (decisions.md 2026-11-05 [DECISION]): λ = 5 passed `gpu_steady`, so part b (`configs/sweep_l1_pc_on_rerun1b.yaml`: λ = 5.5, 6, 7) started at 16:11:23 UTC from `49a6fa1`.
+- Observed only, not a test of a cause: the cooling change and the end of SW-thermal slowdown at λ = 5 coincide. The first-pass alternatives (memory heat, room temperature) are not separated.
+- **Not computed:** throughput and μ.
+- **The owner on the notebook in `a0284e0`:** "no problem". It stays in git.
