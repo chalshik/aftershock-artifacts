@@ -49,11 +49,7 @@ Every factual statement carries one: `RUN(run_id, function)` · `SOURCE(vLLM 0.3
 ## Map
 - `harness/`: runs on the GPU VM; `uv run python -m harness.run configs/<x>.yaml` is the only entry point.
 - `configs/`: one YAML per run or sweep; each extends `base.yaml`, directly or through a parent (`stage2_cap_base.yaml` and others).
-- `env/`: VM setup (`setup_vm.sh`) and `probe.py`.
-- `analysis/`: `load.py` (verdict, capacity), `derived.py`, notebook. Reads only from `runs/`.
 - `runs/<run_id>/`: raw output, gitignored; only copy on the Mac (status.md, Watch).
-- `tools/`: `check_docs.py`, `context_pack.py` (stdlib only).
-- `docs/`: `status.md`, `decisions.md`, `open-questions.md`, `definitions.md`, `model.md`, `claims.md`, `process.md`, `context-pack.md` (generated), `experiment-plan.md`.
 - `tests/`: `uv run pytest` on the Mac against `tests/fake_vllm.py`, no GPU.
 
 ## Machines
