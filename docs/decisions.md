@@ -1510,3 +1510,17 @@ Summary:
   - A rate still invalid after this ends the monotone chain, and G1 is closed.
   - Every resolved per-run config equals the original apart from the `sweep` list (checked with `harness.run.expand`).
 - **Cost:** about 0.35 GPU h, plus 0.35 h for λ = 7.
+
+## 2026-11-05 · [OPS] G1 closed: λ = 6's second rerun invalid (SW thermal 0.159); λ = 7 not rerun; G2 waits for the owner
+- **Run:** `20261105-171648_sweep_l1_pc_on_r6` (`configs/sweep_l1_pc_on_rerun2a.yaml`, from `5a5eeb9`, 17:16–17:38 UTC, started with the GPU idle at 38 °C): INVALID, `gpu_steady`. SW-thermal share 0.159, max 81 °C (FILE(runs/20261105-171648_sweep_l1_pc_on_r6/checks.json)). Copied with identical sha256.
+- **Prediction miss:** the [DECISION] entry before this run gave P(valid) ≈ 0.5. λ = 6's three shares are 0.103, 0.055 and 0.159, so the single near-miss did not predict the next run.
+- **Observed, not from a committed function:** an inline count over [240, 900] gave the GPU at 80 °C by t = 240 s despite the cold start. BELIEF from it: a cold start does not help at this load.
+- **G1 closed, by the rules registered beforehand:**
+  - λ = 6 has had both allowed reruns, so by the monotone rule as fixed today the chain ends below it.
+  - λ = 7 is not rerun (its rerun was conditional on λ = 6 being valid).
+  - Valid G1 runs, one per rate:
+    - `20261105-115752_sweep_l1_pc_on_r2`, `20261105-121403_sweep_l1_pc_on_r3`, `20261105-123008_sweep_l1_pc_on_r3.5` and `20261105-124617_sweep_l1_pc_on_r4` (first pass);
+    - `20261105-153307_sweep_l1_pc_on_r4.5` and `20261105-155052_sweep_l1_pc_on_r5` (rerun 1a);
+    - `20261105-161123_sweep_l1_pc_on_r5.5` (rerun 1b).
+- **Consequence, stated before any μ is computed:** μ_warm ≤ 5.5, so λ_test ≤ 4.0. The heat limit is reported as "rates ≥ 6 unmeasured (SW-thermal slowdown)", not as capacity.
+- **G2 not started.** The agent recommends more cooling first. Cache-off runs at and above saturation keep the GPU as busy as cache-on λ = 6–7, which failed 4 of 5 times, and the cold floor needs ≥ 2 valid saturated runs. The owner decides between more cooling, running G2 as is with the allowed reruns, or a power-limit amendment.
