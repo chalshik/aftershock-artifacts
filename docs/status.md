@@ -6,7 +6,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-05
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: retry G2 after the owner's cooling check.** λ = 1 first (`configs/sweep_l1_pc_off_rerun1a.yaml`), at ≥ 18:35 UTC with the GPU idle at ≤ 45 °C. Then λ = 1.5–4 (`..._rerun1b.yaml`) only if λ = 1 passes `gpu_steady`; otherwise ask the owner (decisions.md 2026-11-05 [DECISION] G2 stopped). G1 is closed: valid at λ = 2–5.5, so μ_warm ≤ 5.5. G2's first pass: λ = 1 and 1.5 invalid by heat; λ = 2 was stopped by the owner. No μ is computed yet. REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`.
+**Next action: the owner decides how to get valid cache-off runs.** The G2 retry's λ = 1 is invalid again (SW-thermal 0.097; decisions.md [OPS] 2026-11-05), so part b was not started. The agent's recommendation is a power-limit amendment to REG-7, with G1 rerun at the same limit. G1 is closed: valid at λ = 2–5.5, so μ_warm ≤ 5.5. G2 has no valid run yet. No μ is computed yet. REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`.
 
 Steps:
 1. **Read-only VM checks: done 2026-11-05** (decisions.md [OPS], evidence in `docs/probe/20261105_vm_checks/`).
@@ -83,14 +83,14 @@ Steps:
 
 ## Runs on record
 
-123 run folders: 100 VALID, 19 INVALID, 4 without checks. All kept; none counts unless VALID.
+124 run folders: 100 VALID, 20 INVALID, 4 without checks. All kept; none counts unless VALID.
 
 - **No checks:** `20261030-114021_first_real` (failed start, no load sent); `20261031-025032_tau` (VM shut down 140 s in); `20261104-134159_long_pc_off_r3_s0` (REG-6 seed 0, VM powered off at t = 3168 s of 3600, DERIVED: power key 14:35:45.08 − planned load start 13:42:56.74 from `events.jsonl` `load_t0_planned`; copied 2026-11-05).
 - **No checks, REG-7 G2:** `20261105-181511_sweep_l1_pc_off_r2` (stopped by the owner at t = 247 s).
 - **Invalid, Stage 1:** `20261023-145613_smoke` (`gpu_steady`, before the check was refined); `20261030-145339_sweep_pc_on_r8` (`accounting`); `20261030-175458_sweep_pc_off_r10` (`recorder`).
 - **Invalid, Stage 2:** `20261101-151707_stage2_control_r1.5` (stopped on request); `20261101-182452_stage2_control_cap_r3`, `20261102-045827_wipe_preempt_r3_s1`, `20261102-062040_wipe_preempt_r3_s3`, `20261102-080323_wipe_preempt_r3_s3` (hardware thermal samples, before the backplate fan); `20261102-093229_wipe_preempt_r3_s3` (stopped on request after a thermal sample).
 - **Invalid, REG-7 G1 (2026-11-05):** `20261105-130250_sweep_l1_pc_on_r4.5` (`no_errors`, 1 client disconnect); `20261105-132035_sweep_l1_pc_on_r5`, `20261105-134018_sweep_l1_pc_on_r5.5`, `20261105-140120_sweep_l1_pc_on_r6`, `20261105-142221_sweep_l1_pc_on_r7` (`gpu_steady`, SW-thermal slowdown). Reruns, invalid again: `20261105-163225_sweep_l1_pc_on_r6`, `20261105-165327_sweep_l1_pc_on_r7`, `20261105-171648_sweep_l1_pc_on_r6` (`gpu_steady`).
-- **Invalid, REG-7 G2 (2026-11-05):** `20261105-174215_sweep_l1_pc_off_r1`, `20261105-175822_sweep_l1_pc_off_r1.5` (`gpu_steady`).
+- **Invalid, REG-7 G2 (2026-11-05):** `20261105-174215_sweep_l1_pc_off_r1`, `20261105-175822_sweep_l1_pc_off_r1.5`, `20261105-184607_sweep_l1_pc_off_r1` (`gpu_steady`).
 
 ## Done when (from the plan)
 
@@ -115,7 +115,7 @@ Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 
 | Software | vLLM 0.32.0, torch 2.13.0 (CUDA 13.0), Python 3.12.13 (uv-managed); `unattended-upgrades` disabled |
 | KV cache | Qwen3-4B: 96,656 tokens by default in load runs; 72,480 tokens when set with `--kv-cache-memory-bytes` |
 | Pinning | vLLM cores 0–5, loadgen 6, recorder 7 |
-| Data | **All 123 runs are on the Mac** in `runs/`, checksum-verified; the VM's copies were removed (2026-11-04, and REG-6 seed 0 on 2026-11-05), except the REG-7 G1 runs, which are also still on the VM. No second backup yet |
+| Data | **All 124 runs are on the Mac** in `runs/`, checksum-verified; the VM's copies were removed (2026-11-04, and REG-6 seed 0 on 2026-11-05), except the REG-7 G1 runs, which are also still on the VM. No second backup yet |
 | Disk | 16 GB free on the VM after cleanup; about 170 MB per 40-minute run |
 | Address | 100.83.53.50 (Tailscale; the name `inference-vm.tail3b0112.ts.net` is not in the Mac's `known_hosts`, so use the IP); 192.168.3.249 at home; key `~/.ssh/id_ed25519_vllm`. The `vm` git remote uses the home address (repointing it was not done: a permission prompt refused it) |
 | Sync | Mac `git push vm main` → VM `git pull origin main` in `~/aftershock-artifacts` (the VM's `origin` is `~/repos/aftershock-artifacts.git`); don't pull during a sweep. Over a non-interactive SSH, `uv` is `~/.local/bin/uv` |
@@ -124,5 +124,5 @@ Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 
 
 Sorted by priority, most urgent first.
 
-- **Backup (top item):** the Mac holds all 123 runs. The owner decided on 2026-11-05 that the copies stay on the Mac (decisions.md). A copy on the same machine guards against deletion, not against losing the Mac; `python3 tools/manifest.py verify <copy>` checks any copy.
+- **Backup (top item):** the Mac holds all 124 runs. The owner decided on 2026-11-05 that the copies stay on the Mac (decisions.md). A copy on the same machine guards against deletion, not against losing the Mac; `python3 tools/manifest.py verify <copy>` checks any copy.
 - **Heat (top item for REG-7):** before the backplate fan, hardware thermal flags at 83–84 °C invalidated 5 runs. With the fan: 0 flags until 2026-11-05, when SW-thermal slowdown invalidated L1's G1 runs at λ = 5–7 at 81–82 °C (decisions.md [OPS]). A flag still invalidates a run; the rule is not loosened.

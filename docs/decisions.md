@@ -1553,3 +1553,12 @@ Summary:
 - **Fix, operational:** launches now redirect to a file (`> <log> 2>&1`), with no pipe.
 - **Proposed to the owner, not done:** make the harness's event print tolerant of a closed stdout. That is a harness change.
 - **Rule that would have caught it:** test the stop path of the exact launch command before relying on it.
+
+## 2026-11-05 · [OPS] G2 retry: λ = 1 invalid again (SW thermal 0.097); stopped by the pre-set rule, the owner decides
+- **Run:** `20261105-184607_sweep_l1_pc_off_r1` (`configs/sweep_l1_pc_off_rerun1a.yaml`, from `9b6075f`, 18:46–19:02 UTC). It started after the owner's cooling check, with the GPU idle at 44 °C; it had been 37 °C at 18:22.
+  - INVALID, `gpu_steady`: SW-thermal share 0.097, max 83 °C (FILE(runs/20261105-184607_sweep_l1_pc_off_r1/checks.json)). In the first pass it was 0.062 and 82 °C.
+  - It stopped normally (`events.jsonl` `stopped`): the launch had no `tee`, and no process was left.
+  - Copied with identical sha256; the manifest gained 10 lines.
+- **Rule applied:** part b (`configs/sweep_l1_pc_off_rerun1b.yaml`) is not started, because λ = 1 did not pass `gpu_steady`.
+- **State of G2:** no valid run at any rate. λ = 1 has had 1 of its 2 allowed reruns. λ = 1.5 and 2 have had none (2 was stopped), and 2.5–4 have never run.
+- **Observed** (inline reading of `gpu.jsonl`, not a committed function): mean core temperature in the window was about 72 °C, with peaks of 83 °C. So the slowdown at the lightest cache-off load comes in spikes, not a high steady temperature. BELIEF: a sensor we do not record (memory or hotspot) trips the slowdown. This is not separated from room temperature or airflow.
