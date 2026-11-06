@@ -1570,3 +1570,10 @@ Summary:
 - **Prediction** (BELIEF): P(valid) ≈ 0.2. Earlier shares were 0.062 and 0.097, the GPU idles at 45 °C (35–37 °C yesterday morning), and the cooling has not changed since the last try.
 - **Decision under each outcome:** valid → part b (about 1.7 h). Invalid → no rerun left at λ = 1, and the floor needs the higher rates, which would throttle as well (BELIEF). So the owner decides between the power-limit amendment and stopping L1.
 - **Cost:** about 0.27 GPU h.
+
+## 2026-11-06 · [OPS] G2 λ = 1 last rerun invalid (SW thermal 0.135); no rerun left at λ = 1; part b not started
+- **Run:** `20261106-063534_sweep_l1_pc_off_r1` (`configs/sweep_l1_pc_off_rerun1a.yaml`, from `946c4ac`, 06:35–06:52 UTC, GPU idle at 45 °C at the start). INVALID, `gpu_steady`: SW-thermal share 0.135, max 83 °C (FILE(runs/20261106-063534_sweep_l1_pc_off_r1/checks.json)). It stopped normally, and the copy has identical sha256.
+- **Prediction:** P(valid) ≈ 0.2. The run was invalid, as expected more likely than not.
+- **λ = 1 across 3 runs:** 0.062, 0.097, 0.135. No further rerun is allowed (REG-7 stopping rule).
+- **State of G2:** no valid run at any rate, so the cold floor is unmeasured. λ = 1.5 and 2 each have both reruns left (2 was stopped); 2.5–4 have never run.
+- **Per REG-7's decision table**, an unmeasured floor is "unmeasured, not absent", and "a new registration extends or repeats G2". The agent recommends that registration be the power-limit amendment, with G1 repeated at the same limit. The owner decides.
