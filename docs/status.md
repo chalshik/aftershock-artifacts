@@ -6,7 +6,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-05
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: the owner decides how to get valid cache-off runs.** The G2 retry's λ = 1 is invalid again (SW-thermal 0.097; decisions.md [OPS] 2026-11-05), so part b was not started. The agent's recommendation is a power-limit amendment to REG-7, with G1 rerun at the same limit. G1 is closed: valid at λ = 2–5.5, so μ_warm ≤ 5.5. G2 has no valid run yet. No μ is computed yet. REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`.
+**Next action: the second and last rerun of G2 λ = 1** (owner, 2026-11-06; `configs/sweep_l1_pc_off_rerun1a.yaml`). Then λ = 1.5–4 (`..._rerun1b.yaml`) only if it passes `gpu_steady`; otherwise the owner decides (power-limit amendment, or stop L1). G1 is closed: valid at λ = 2–5.5, so μ_warm ≤ 5.5. G2 has no valid run yet. No μ is computed yet. REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`.
 
 Steps:
 1. **Read-only VM checks: done 2026-11-05** (decisions.md [OPS], evidence in `docs/probe/20261105_vm_checks/`).

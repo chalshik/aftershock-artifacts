@@ -1562,3 +1562,11 @@ Summary:
 - **Rule applied:** part b (`configs/sweep_l1_pc_off_rerun1b.yaml`) is not started, because λ = 1 did not pass `gpu_steady`.
 - **State of G2:** no valid run at any rate. λ = 1 has had 1 of its 2 allowed reruns. λ = 1.5 and 2 have had none (2 was stopped), and 2.5–4 have never run.
 - **Observed** (inline reading of `gpu.jsonl`, not a committed function): mean core temperature in the window was about 72 °C, with peaks of 83 °C. So the slowdown at the lightest cache-off load comes in spikes, not a high steady temperature. BELIEF: a sensor we do not record (memory or hotspot) trips the slowdown. This is not separated from room temperature or airflow.
+
+## 2026-11-06 · [DECISION] G2: the second and last allowed rerun of λ = 1 (owner); λ = 1.5–4 only if it passes
+- **Owner:** "rerun it again", after the agent laid out three options (power-limit amendment, recommended; more cooling and λ = 1's last rerun; stop L1).
+- **Run:** `configs/sweep_l1_pc_off_rerun1a.yaml` again, unchanged (λ = 1). This is the second rerun of λ = 1, the last REG-7 allows. The config is identical to its use at 18:46 UTC; reusing an unchanged config is not an edit.
+- **Rule, as before:** `configs/sweep_l1_pc_off_rerun1b.yaml` (λ = 1.5–4) starts only if this run passes `gpu_steady`. Otherwise stop, and the owner decides.
+- **Prediction** (BELIEF): P(valid) ≈ 0.2. Earlier shares were 0.062 and 0.097, the GPU idles at 45 °C (35–37 °C yesterday morning), and the cooling has not changed since the last try.
+- **Decision under each outcome:** valid → part b (about 1.7 h). Invalid → no rerun left at λ = 1, and the floor needs the higher rates, which would throttle as well (BELIEF). So the owner decides between the power-limit amendment and stopping L1.
+- **Cost:** about 0.27 GPU h.

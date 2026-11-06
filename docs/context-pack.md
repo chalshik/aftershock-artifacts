@@ -14,7 +14,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-05
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: the owner decides how to get valid cache-off runs.** The G2 retry's λ = 1 is invalid again (SW-thermal 0.097; decisions.md [OPS] 2026-11-05), so part b was not started. The agent's recommendation is a power-limit amendment to REG-7, with G1 rerun at the same limit. G1 is closed: valid at λ = 2–5.5, so μ_warm ≤ 5.5. G2 has no valid run yet. No μ is computed yet. REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`.
+**Next action: the second and last rerun of G2 λ = 1** (owner, 2026-11-06; `configs/sweep_l1_pc_off_rerun1a.yaml`). Then λ = 1.5–4 (`..._rerun1b.yaml`) only if it passes `gpu_steady`; otherwise the owner decides (power-limit amendment, or stop L1). G1 is closed: valid at λ = 2–5.5, so μ_warm ≤ 5.5. G2 has no valid run yet. No μ is computed yet. REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`.
 
 Steps:
 1. **Read-only VM checks: done 2026-11-05** (decisions.md [OPS], evidence in `docs/probe/20261105_vm_checks/`).
@@ -566,24 +566,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-05 · [DECISION] G1 rerun part b: λ = 5.5 valid, λ = 6 and 7 invalid again; second rerun of λ = 6, then λ = 7 only if λ = 6 is valid (agent, within REG-7's stopping rule)
-- **Part b** (`configs/sweep_l1_pc_on_rerun1b.yaml`, from `49a6fa1`, 16:11–17:14 UTC; copied with identical sha256, manifest +30 lines):
-  - `20261105-161123_sweep_l1_pc_on_r5.5`: VALID. Max 77 °C, SW-thermal 0.000.
-  - `20261105-163225_sweep_l1_pc_on_r6`: INVALID, `gpu_steady`. SW-thermal 0.055 against 0.05, max 81 °C. It started right after λ = 5.5.
-  - `20261105-165327_sweep_l1_pc_on_r7`: INVALID, `gpu_steady`. SW-thermal 0.171, max 82 °C.
-  - (FILE(runs/<id>/checks.json) for each.) G1 now has a valid run at every rate from 2 to 5.5.
-- **Why a second rerun can change a decision** (rule A1):
-  - Under the monotone rule as fixed today, μ_warm ≤ 5.5 unless λ = 6 has a valid run.
-  - λ_test ≤ 0.8 μ_warm, rounded down to a multiple of 0.5: 4.0 at μ_warm = 5.5, 4.5 at 6, 5.5 at 7 (DERIVED: 4.4 → 4.0, 4.8 → 4.5, 5.6 → 5.5). So valid runs at λ = 6 and 7 can change λ_test.
-  - λ = 7 matters only if λ = 6 is valid, so λ = 6 runs alone first.
-- **Prediction** (BELIEF): P(λ = 6 valid) ≈ 0.5. It missed by 0.005 after a hot start. P(λ = 7 valid | run) ≈ 0.2, since 0.171 is far above the limit both times.
-- **Plan:**
-  - The second, last allowed rerun of λ = 6 is `configs/sweep_l1_pc_on_rerun2a.yaml`, started after the GPU has cooled to idle (≤ 45 °C), as part a did. The start temperature is an operating condition, not a config setting; the check is unchanged.
-  - Then `configs/sweep_l1_pc_on_rerun2b.yaml` (λ = 7) only if λ = 6 is valid.
-  - A rate still invalid after this ends the monotone chain, and G1 is closed.
-  - Every resolved per-run config equals the original apart from the `sweep` list (checked with `harness.run.expand`).
-- **Cost:** about 0.35 GPU h, plus 0.35 h for λ = 7.
-
 ### 2026-11-05 · [OPS] G1 closed: λ = 6's second rerun invalid (SW thermal 0.159); λ = 7 not rerun; G2 waits for the owner
 - **Run:** `20261105-171648_sweep_l1_pc_on_r6` (`configs/sweep_l1_pc_on_rerun2a.yaml`, from `5a5eeb9`, 17:16–17:38 UTC, started with the GPU idle at 38 °C): INVALID, `gpu_steady`. SW-thermal share 0.159, max 81 °C (FILE(runs/20261105-171648_sweep_l1_pc_on_r6/checks.json)). Copied with identical sha256.
 - **Prediction miss:** the [DECISION] entry before this run gave P(valid) ≈ 0.5. λ = 6's three shares are 0.103, 0.055 and 0.159, so the single near-miss did not predict the next run.
@@ -635,3 +617,11 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **Rule applied:** part b (`configs/sweep_l1_pc_off_rerun1b.yaml`) is not started, because λ = 1 did not pass `gpu_steady`.
 - **State of G2:** no valid run at any rate. λ = 1 has had 1 of its 2 allowed reruns. λ = 1.5 and 2 have had none (2 was stopped), and 2.5–4 have never run.
 - **Observed** (inline reading of `gpu.jsonl`, not a committed function): mean core temperature in the window was about 72 °C, with peaks of 83 °C. So the slowdown at the lightest cache-off load comes in spikes, not a high steady temperature. BELIEF: a sensor we do not record (memory or hotspot) trips the slowdown. This is not separated from room temperature or airflow.
+
+### 2026-11-06 · [DECISION] G2: the second and last allowed rerun of λ = 1 (owner); λ = 1.5–4 only if it passes
+- **Owner:** "rerun it again", after the agent laid out three options (power-limit amendment, recommended; more cooling and λ = 1's last rerun; stop L1).
+- **Run:** `configs/sweep_l1_pc_off_rerun1a.yaml` again, unchanged (λ = 1). This is the second rerun of λ = 1, the last REG-7 allows. The config is identical to its use at 18:46 UTC; reusing an unchanged config is not an edit.
+- **Rule, as before:** `configs/sweep_l1_pc_off_rerun1b.yaml` (λ = 1.5–4) starts only if this run passes `gpu_steady`. Otherwise stop, and the owner decides.
+- **Prediction** (BELIEF): P(valid) ≈ 0.2. Earlier shares were 0.062 and 0.097, the GPU idles at 45 °C (35–37 °C yesterday morning), and the cooling has not changed since the last try.
+- **Decision under each outcome:** valid → part b (about 1.7 h). Invalid → no rerun left at λ = 1, and the floor needs the higher rates, which would throttle as well (BELIEF). So the owner decides between the power-limit amendment and stopping L1.
+- **Cost:** about 0.27 GPU h.
