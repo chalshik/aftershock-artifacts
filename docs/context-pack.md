@@ -14,7 +14,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-07
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: G1′ part a (cache on, λ = 2–5, about 2 h), then `gate.reg8_g1b_may_start`.** G2′ is done: 7 of 7 valid at 350 W, cold floor μ_sat,off = 1.681 (`ok`; decisions.md 2026-11-07 [OPS]). REG-7 ended with no valid G2 run (λ = 1 SW-thermal 0.062, 0.097, 0.135; decisions.md [OPS] 2026-11-06), so the floor is unmeasured. The owner chose a power-limit amendment, and REG-8 (decisions.md 2026-11-06 [REG]) repeats REG-7's gate at 350 W: G2′ part a (λ = 1, the heat test) → G2′ part b → G1′ part a → G1′ part b → gate once → G3′, each step with a registered start rule (`gate.reg8_part_a`, `gate.reg8_g1_may_start`, `gate.reg8_g1b_may_start`). Written, reviewed (rule F) and **approved by the owner on 2026-11-07**. The `power_limit` check was approved by the owner on 2026-11-06. REG-7's G1 (420 W, valid at λ = 2–5.5) stays as judged; no μ is computed.
+**Next action: the owner picks the next factor (REG-8 [RESULT], decisions.md 2026-11-07).** REG-8 is done: 13 of 13 runs valid at 350 W; μ_warm 3.0, cold floor 1.681 (`ok`), **no λ_test**, so no shock matrix at L1. The cold state loses 0.585 of capacity (0.116 at the default pool), but the warm side fails TTFT early. The outcome rests on λ = 3.5's queue slope, 0.0145 against 0.01. The GPU stays at 350 W until the owner sets 420 W for REG-6 or anything else. REG-7 ended with no valid G2 run (λ = 1 SW-thermal 0.062, 0.097, 0.135; decisions.md [OPS] 2026-11-06), so the floor is unmeasured. The owner chose a power-limit amendment, and REG-8 (decisions.md 2026-11-06 [REG]) repeats REG-7's gate at 350 W: G2′ part a (λ = 1, the heat test) → G2′ part b → G1′ part a → G1′ part b → gate once → G3′, each step with a registered start rule (`gate.reg8_part_a`, `gate.reg8_g1_may_start`, `gate.reg8_g1b_may_start`). Written, reviewed (rule F) and **approved by the owner on 2026-11-07**. The `power_limit` check was approved by the owner on 2026-11-06. REG-7's G1 (420 W, valid at λ = 2–5.5) stays as judged; no μ is computed.
 
 Steps:
 1. **Read-only VM checks: done 2026-11-05** (decisions.md [OPS], evidence in `docs/probe/20261105_vm_checks/`).
@@ -94,14 +94,14 @@ Steps:
 
 ## Runs on record
 
-132 run folders: 107 VALID, 21 INVALID, 4 without checks. All kept; none counts unless VALID.
+138 run folders: 113 VALID, 21 INVALID, 4 without checks. All kept; none counts unless VALID.
 
 - **No checks:** `20261030-114021_first_real` (failed start, no load sent); `20261031-025032_tau` (VM shut down 140 s in); `20261104-134159_long_pc_off_r3_s0` (REG-6 seed 0, VM powered off at t = 3168 s of 3600, DERIVED: power key 14:35:45.08 − planned load start 13:42:56.74 from `events.jsonl` `load_t0_planned`; copied 2026-11-05).
 - **No checks, REG-7 G2:** `20261105-181511_sweep_l1_pc_off_r2` (stopped by the owner at t = 247 s).
 - **Invalid, Stage 1:** `20261023-145613_smoke` (`gpu_steady`, before the check was refined); `20261030-145339_sweep_pc_on_r8` (`accounting`); `20261030-175458_sweep_pc_off_r10` (`recorder`).
 - **Invalid, Stage 2:** `20261101-151707_stage2_control_r1.5` (stopped on request); `20261101-182452_stage2_control_cap_r3`, `20261102-045827_wipe_preempt_r3_s1`, `20261102-062040_wipe_preempt_r3_s3`, `20261102-080323_wipe_preempt_r3_s3` (hardware thermal samples, before the backplate fan); `20261102-093229_wipe_preempt_r3_s3` (stopped on request after a thermal sample).
 - **Invalid, REG-7 G1 (2026-11-05):** `20261105-130250_sweep_l1_pc_on_r4.5` (`no_errors`, 1 client disconnect); `20261105-132035_sweep_l1_pc_on_r5`, `20261105-134018_sweep_l1_pc_on_r5.5`, `20261105-140120_sweep_l1_pc_on_r6`, `20261105-142221_sweep_l1_pc_on_r7` (`gpu_steady`, SW-thermal slowdown). Reruns, invalid again: `20261105-163225_sweep_l1_pc_on_r6`, `20261105-165327_sweep_l1_pc_on_r7`, `20261105-171648_sweep_l1_pc_on_r6` (`gpu_steady`).
-- **REG-8 (350 W), valid:** G2′, all 7: `20261107-075951_sweep_l1pl350_pc_off_r1` … `20261107-095958_sweep_l1pl350_pc_off_r4`.
+- **REG-8 (350 W), valid:** G2′, all 7: `20261107-075951_sweep_l1pl350_pc_off_r1` … `20261107-095958_sweep_l1pl350_pc_off_r4`; G1′ part a, all 6: `20261107-103010_sweep_l1pl350_pc_on_r2` … `20261107-115311_sweep_l1pl350_pc_on_r5`.
 - **Invalid, REG-7 G2 (2026-11-05):** `20261105-174215_sweep_l1_pc_off_r1`, `20261105-175822_sweep_l1_pc_off_r1.5`, `20261105-184607_sweep_l1_pc_off_r1`, `20261106-063534_sweep_l1_pc_off_r1` (`gpu_steady`).
 
 ## Done when (from the plan)
@@ -127,7 +127,7 @@ Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 
 | Software | vLLM 0.32.0, torch 2.13.0 (CUDA 13.0), Python 3.12.13 (uv-managed); `unattended-upgrades` disabled |
 | KV cache | Qwen3-4B: 96,656 tokens by default in load runs; 72,480 tokens when set with `--kv-cache-memory-bytes` |
 | Pinning | vLLM cores 0–5, loadgen 6, recorder 7 |
-| Data | **All 132 runs are on the Mac** in `runs/`, checksum-verified; the VM's copies were removed (2026-11-04, and REG-6 seed 0 on 2026-11-05), except the REG-7 and REG-8 runs, which are also still on the VM. No second backup yet |
+| Data | **All 138 runs are on the Mac** in `runs/`, checksum-verified; the VM's copies were removed (2026-11-04, and REG-6 seed 0 on 2026-11-05), except the REG-7 and REG-8 runs, which are also still on the VM. No second backup yet |
 | Disk | 16 GB free on the VM after cleanup; about 170 MB per 40-minute run |
 | Address | 100.83.53.50 (Tailscale; the name `inference-vm.tail3b0112.ts.net` is not in the Mac's `known_hosts`, so use the IP); 192.168.3.249 at home; key `~/.ssh/id_ed25519_vllm`. The `vm` git remote uses the home address (repointing it was not done: a permission prompt refused it) |
 | Sync | Mac `git push vm main` → VM `git pull origin main` in `~/aftershock-artifacts` (the VM's `origin` is `~/repos/aftershock-artifacts.git`); don't pull during a sweep. Over a non-interactive SSH, `uv` is `~/.local/bin/uv` |
@@ -511,6 +511,7 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **Per setup:** 72,480-token pool: cache on at λ = 5 completes 4.567 (RUN(20261102-194816_sweep_kv72k_pc_on_r5, load.summarize)), cache off at λ = 4 3.449 (RUN(20261102-214207_sweep_kv72k_pc_off_r4, load.summarize)); no deep-overload run, so c(s*) has no measured floor. 5 s gaps: cache on keeps up to λ = 7 (7.185, RUN(20261103-132357_sweep_gap5_pc_on_r7, load.summarize)) and cache off was not swept past 3.5, so neither bound is measured.
 - **Test of A:** REG-1 (2026-11-04) found no span that was backlogged, cold and burst-free at once, so A is **untested**. Wipes built no backlog; bursts were cold and backlogged only while their own requests still completed. Testing A needs a run that holds a cold backlog for minutes (GPU, owner).
 
+- **Setup L1 at 350 W (REG-8, decisions.md 2026-11-07 [RESULT]):** μ_warm 3.0, μ_off 1.0, cold floor μ_sat,off 1.681 (RUN(the 13 REG-8 runs, gate.reg8_zone)). Best cache-on completion rate 4.047 at λ = 4.5 (RUN(20261107-113511_sweep_l1pl350_pc_on_r4.5, load.summarize)). DERIVED capacity loss of the cold state: 1 − 1.681 / 4.047 = 0.585, against 0.116 at the default pool. No λ_test under REG-7's margins (0.8 μ_warm, 1.3 μ_sat,off); the warm side is limited by TTFT (pooled percent fast 0.990 at λ = 3, 0.716 at 3.5).
 - **Floor at the default pool (decisions.md 2026-11-04, REG-5 not computed):** DERIVED cache-off saturation ≈ 3.50 req/s. The λ = 3 shock runs lie about 14 % below it; the λ = 3.5 runs lie at it. On B (untested in post-shock states) and on the 900 s saturation being sustained (REG-6), the λ = 3 runs could not have stayed stuck, and the setup has no healthy load clearly above its floor. Nothing follows for λ = 3.5, or for the 72k and 5 s-gap setups.
 
 ## M3. Self-refill (why a single wipe may not hold)
@@ -541,7 +542,7 @@ Every model used to choose a run or read a result, with its equations, the evide
 | 9 | 2026-11-04 | M2 (REG-1) | ≤ 2 of 12 default-pool burst spans and 0 of 12 wipe spans qualify; outcome most likely inconclusive (≈ 0.6); qualifying c in 4.3–4.7 | 0 of 24 qualify (wipes never backlogged; burst spans never burst-free); inconclusive | Hit on qualification and outcome; c range not testable | RUN(the 30 REG-1 runs, margin.reg1_table) |
 | 10 | 2026-11-04 | REG-2 (A3) | λ = 4 control: `arrival_driven` ≈ 0.5 (modal); 72k λ = 3.5: `too_few_episodes` ≈ 0.6 (modal), `arrival_driven` ≈ 0.25; `ao_like_cycle` ≤ 0.05 | λ = 4 `arrival_driven` (arrival share exactly at the 2/3 threshold); 72k `arrival_driven` | Hit (λ = 4); miss of the modal prediction (72k) | RUN(20261101-202808_stage2_control_cap_r4, mechanisms.reg2_table), RUN(20261102-225146_stage2_control_kv72k_r3.5, mechanisms.reg2_table) |
 | 11 | 2026-11-05 | M2 (REG-7, setup L1) | μ_sat,off ∈ [1.4, 2.2] (point 1.7, DERIVED from 5.3k prefill tok/s ÷ 3070); μ_warm ∈ [3, 6] (point 4.5); λ_test exists p ≈ 0.7 (point 3.5); given G3: `pass` ≈ 0.3, `drains` ≈ 0.45, `control_not_healthy` ≈ 0.1, `inconclusive` ≈ 0.15 | G1 valid at λ = 2–5.5; G2 no valid run (heat), so the floor is unmeasured and REG-7's gate was not computed; superseded by REG-8 (row 12) | Untested | decisions.md 2026-11-06 [OPS] |
-| 12 | 2026-11-06 | M2 (REG-8, setup L1 at 350 W) | Part a valid p ≈ 0.75, peak ≈ 74 °C; μ_sat,off ∈ [1.3, 2.1] (point 1.6), floor `ok` p ≈ 0.7; μ_warm ∈ [3, 5.5] (point 4.5); λ_test exists p ≈ 0.6 (point 3.5); given G3′ as row 11; overall `pass` ≈ 0.14. **Added to this ledger late** (2026-11-07 [CORR]); the numbers are REG-8's as committed in `3fa9563`, before any 350 W run | Part a valid, peak 74 °C; μ_sat,off = 1.681 (λ_sat 2.0, n = 5, `ok`); the rest not yet run | Hit (part a, floor range, floor status); rest untested | RUN(20261107-075951_sweep_l1pl350_pc_off_r1, checks.json); RUN(the seven 20261107 `sweep_l1pl350_pc_off` runs, gate.reg8_g1_may_start) |
+| 12 | 2026-11-06 | M2 (REG-8, setup L1 at 350 W) | Part a valid p ≈ 0.75, peak ≈ 74 °C; μ_sat,off ∈ [1.3, 2.1] (point 1.6), floor `ok` p ≈ 0.7; μ_warm ∈ [3, 5.5] (point 4.5); λ_test exists p ≈ 0.6 (point 3.5); given G3′ as row 11; overall `pass` ≈ 0.14. **Added to this ledger late** (2026-11-07 [CORR]); the numbers are REG-8's as committed in `3fa9563`, before any 350 W run | Part a valid, peak 74 °C; μ_sat,off = 1.681 (λ_sat 2.0, n = 5, `ok`); μ_warm 3.0; no λ_test (G3′ not run) | Hit: part a, floor range and status, μ_warm range (at its edge). Miss: μ_warm point (4.5), λ_test point (3.5); λ_test absent (p 0.4) | RUN(20261107-075951_sweep_l1pl350_pc_off_r1, checks.json); RUN(the seven 20261107 `sweep_l1pl350_pc_off` runs, gate.reg8_g1_may_start) |
 
 **Record so far:** M1 is 0 for 3 on tested predictions (rows 1, 3, 4). It should not be used to choose loads again until it is revised and its revision predicts the existing runs it missed.
 
@@ -572,12 +573,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 <!-- source: docs/decisions.md, last 5 entries -->
 
 ## Last decisions
-
-### 2026-11-07 · [DECISION] Owner approves REG-8 as written; PROTOCOL.md updated for the 350 W setup
-- **Owner:** "ok / Continue", in reply to the agent's request to approve REG-8 as written (or change the wattage or the one-rerun heat rule), to commit it, and to apply the drafted PROTOCOL.md lines. The agent reads it as yes to all three, with 350 W and the one-rerun heat rule unchanged. No 350 W run exists; approval comes before any run.
-- **PROTOCOL.md:** §4 hardware now reads "power limit 420 W (350 W for setup L1 from REG-8 …)"; §6 gains the row "L1 measured at a 350 W power limit, not 420 W".
-- **Committed by name**, without `.gitignore` (the owner's uncommitted line `docs/potential_gaps.md` stays out).
-- **Next:** push to `vm`; the owner sets 350 W; the agent reads the limit and starts `configs/sweep_l1pl350_pc_off_a.yaml` with the GPU idle at ≤ 45 °C.
 
 ### 2026-11-07 · [OPS] Power limit set to 350 W for REG-8; audit of what the change affects: no run invalid, old configs unguarded
 - **Set:** the owner ran `sudo nvidia-smi -pl 350` on the VM ("set to 350.00 W from 420.00 W"; persistence mode disabled). The agent read 350 W back after that client exited, and again at the launch of G2′ part a, `20261107-075951_sweep_l1pl350_pc_off_r1` (07:59:50 UTC, GPU idle at 43 °C, from `3fa9563`, clean, microk8s inactive). FILE(docs/probe/20261107_power_limit/set_350w.txt).
@@ -625,3 +620,25 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **Which results it affects:** none. The predictions were committed before any 350 W run, in decisions.md. The ledger row copies them unchanged.
 - **Fix:** row 12 added, marked as added late, with part a's and the floor's outcomes; row 11 closed as superseded by REG-8.
 - **Rule that would have caught it:** a registration checklist that includes the ledger row; `tools/check_docs.py` could flag a `[REG]` with no ledger row (proposed, not done).
+
+### 2026-11-07 · [RESULT] REG-8: no λ_test at 350 W (μ_warm 3.0, μ_sat,off 1.681); G1′ part b and G3′ not run; the owner picks the next factor
+- **Registration:** REG-8 (decisions.md 2026-11-06 [REG]; approved 2026-11-07).
+- **Runs, all VALID at 350 W** (FILE(runs/<id>/checks.json); `power_limit` 350 W in every sample, SW thermal ≤ 0.012):
+  - G2′, cache off: `20261107-075951_sweep_l1pl350_pc_off_r1` … `20261107-095958_sweep_l1pl350_pc_off_r4` (7 runs, λ = 1–4).
+  - G1′ part a, cache on: `20261107-103010_sweep_l1pl350_pc_on_r2`, `20261107-104614_sweep_l1pl350_pc_on_r3`, `20261107-110219_sweep_l1pl350_pc_on_r3.5`, `20261107-111833_sweep_l1pl350_pc_on_r4`, `20261107-113511_sweep_l1pl350_pc_on_r4.5`, `20261107-115311_sweep_l1pl350_pc_on_r5` (from `212327f`, clean; 10:30–12:16 UTC; max 64–69 °C). Copied with identical sha256; manifest +60 lines.
+  - No rerun was needed anywhere in REG-8.
+- **G1′ part b:** not run. `gate.reg8_g1b_may_start()` = False, since the monotone μ over λ = 2–5 is 3.0 (`tables.sweep_capacity`).
+- **Gate, computed once:** `uv run python -m analysis.gate reg8` → μ_warm 3.0, μ_off 1.0, μ_sat,off 1.681 (λ_sat 2.0, n = 5, `ok`), λ_test None. RUN(the 13 REG-8 runs above, gate.reg8_zone).
+  - **Cause, as REG-8 requires:** the capacity chain. DERIVED: λ_test ≤ 0.8 × 3.0 = 2.4 → at most 2.0, below 1.3 × 1.681 = 2.185. `slo_feasible` was not reached.
+  - **Where the chain broke** (`tables.sweep_table`, G1′ rows): λ = 3.5 had throughput 3.485 against 0.95 × planned 3.620 = 3.439 (passes), and queue slope 0.0145 against 0.01 req/s (**fails**). RUN(20261107-110219_sweep_l1pl350_pc_on_r3.5, load.summarize). λ = 4 failed both (3.929 against 3.977; slope 0.147).
+  - **Pooled percent fast at TTFT ≤ 1.0 s** over the measured window (`gate.sweep_rows`, `load._level` pf): 1.000, 0.990, 0.716, 0.406, 0.155, 0.000 at λ = 2, 3, 3.5, 4, 4.5, 5. RUN(the six G1′ runs, gate.sweep_rows).
+- **The outcome rests on one marginal failure,** stated so it is not read as clear-cut. Had λ = 3.5 passed its slope test, μ_warm would be 3.5, and λ_test = 2.5 (≤ 2.8 and ≥ 2.185; the G1′ run at 3.0 has pf 0.990 ≥ 0.98, DERIVED). The 0.01 threshold was registered before the runs (rule A5) and is not reopened here.
+- **Prediction** (`docs/model.md` row 12): μ_sat,off ∈ [1.3, 2.1], hit (1.681); μ_warm ∈ [3, 5.5], point 4.5: hit at the bottom edge (3.0); λ_test exists p ≈ 0.6: it does not. As a probability that is not a miss by itself, but the point estimates for μ_warm (4.5) and λ_test (3.5) missed.
+- **Capacity loss** (DERIVED, M2): the best cache-on completion rate in G1′ is 4.047 (λ = 4.5); the cold floor is 1.681; so the cold state completes 1 − 1.681 / 4.047 = 0.585 less, against 0.116 at the default pool (M2). L1 does create the large warm/cold gap it was designed for. What limits it is the warm side: percent fast falls below 0.98 between λ = 3 and 3.5, close to the floor × 1.3 margin.
+- **Alternatives still open:**
+  1. **One arrival pattern:** μ_warm comes from seed 0, whose planned rate runs 3.4 % above λ at 3.5 (3.620) and rises through the window (M4). Another seed could pass at 3.5, or fail at 3. Separable only by other seeds (GPU).
+  2. **The 350 W cap:** the clock ran about 4 % lower than at 420 W (inline `gpu.jsonl`, decisions.md 2026-11-07 [OPS]). The warm side may be slightly lower than at 420 W. Not separable with existing data (A12).
+  3. **The margins are registered choices** (0.8 μ_warm, 1.3 μ_sat,off). DERIVED from the numbers above, the raw M2 condition, a load between 1.681 and the highest warm-healthy rate 3.0, is not empty. Testing a load inside it (e.g. λ = 2.5) is allowed only as a **new** registration, and would be chosen after seeing these data, so it must be labeled exploratory, not confirmatory.
+  4. **Latency, not throughput, limits the warm side:** at λ = 3.5 throughput kept up (3.485 against 3.620 planned) while percent fast was 0.716. With 2–4k-token prompts, TTFT ≤ 1.0 s binds before capacity does.
+- **Decision taken** (REG-7's table, applied by REG-8): no λ_test with floor `ok` → no shock matrix at L1 at 350 W. The μ values go into M2, and **the owner picks the next factor.**
+- **Power limit:** REG-8 is done. The card stays at 350 W until the owner decides; before any run outside a 350 W registration (REG-6 first), the owner sets 420 W again.

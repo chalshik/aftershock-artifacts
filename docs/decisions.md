@@ -1763,3 +1763,25 @@ Summary:
 - **Which results it affects:** none. The predictions were committed before any 350 W run, in decisions.md. The ledger row copies them unchanged.
 - **Fix:** row 12 added, marked as added late, with part a's and the floor's outcomes; row 11 closed as superseded by REG-8.
 - **Rule that would have caught it:** a registration checklist that includes the ledger row; `tools/check_docs.py` could flag a `[REG]` with no ledger row (proposed, not done).
+
+## 2026-11-07 · [RESULT] REG-8: no λ_test at 350 W (μ_warm 3.0, μ_sat,off 1.681); G1′ part b and G3′ not run; the owner picks the next factor
+- **Registration:** REG-8 (decisions.md 2026-11-06 [REG]; approved 2026-11-07).
+- **Runs, all VALID at 350 W** (FILE(runs/<id>/checks.json); `power_limit` 350 W in every sample, SW thermal ≤ 0.012):
+  - G2′, cache off: `20261107-075951_sweep_l1pl350_pc_off_r1` … `20261107-095958_sweep_l1pl350_pc_off_r4` (7 runs, λ = 1–4).
+  - G1′ part a, cache on: `20261107-103010_sweep_l1pl350_pc_on_r2`, `20261107-104614_sweep_l1pl350_pc_on_r3`, `20261107-110219_sweep_l1pl350_pc_on_r3.5`, `20261107-111833_sweep_l1pl350_pc_on_r4`, `20261107-113511_sweep_l1pl350_pc_on_r4.5`, `20261107-115311_sweep_l1pl350_pc_on_r5` (from `212327f`, clean; 10:30–12:16 UTC; max 64–69 °C). Copied with identical sha256; manifest +60 lines.
+  - No rerun was needed anywhere in REG-8.
+- **G1′ part b:** not run. `gate.reg8_g1b_may_start()` = False, since the monotone μ over λ = 2–5 is 3.0 (`tables.sweep_capacity`).
+- **Gate, computed once:** `uv run python -m analysis.gate reg8` → μ_warm 3.0, μ_off 1.0, μ_sat,off 1.681 (λ_sat 2.0, n = 5, `ok`), λ_test None. RUN(the 13 REG-8 runs above, gate.reg8_zone).
+  - **Cause, as REG-8 requires:** the capacity chain. DERIVED: λ_test ≤ 0.8 × 3.0 = 2.4 → at most 2.0, below 1.3 × 1.681 = 2.185. `slo_feasible` was not reached.
+  - **Where the chain broke** (`tables.sweep_table`, G1′ rows): λ = 3.5 had throughput 3.485 against 0.95 × planned 3.620 = 3.439 (passes), and queue slope 0.0145 against 0.01 req/s (**fails**). RUN(20261107-110219_sweep_l1pl350_pc_on_r3.5, load.summarize). λ = 4 failed both (3.929 against 3.977; slope 0.147).
+  - **Pooled percent fast at TTFT ≤ 1.0 s** over the measured window (`gate.sweep_rows`, `load._level` pf): 1.000, 0.990, 0.716, 0.406, 0.155, 0.000 at λ = 2, 3, 3.5, 4, 4.5, 5. RUN(the six G1′ runs, gate.sweep_rows).
+- **The outcome rests on one marginal failure,** stated so it is not read as clear-cut. Had λ = 3.5 passed its slope test, μ_warm would be 3.5, and λ_test = 2.5 (≤ 2.8 and ≥ 2.185; the G1′ run at 3.0 has pf 0.990 ≥ 0.98, DERIVED). The 0.01 threshold was registered before the runs (rule A5) and is not reopened here.
+- **Prediction** (`docs/model.md` row 12): μ_sat,off ∈ [1.3, 2.1], hit (1.681); μ_warm ∈ [3, 5.5], point 4.5: hit at the bottom edge (3.0); λ_test exists p ≈ 0.6: it does not. As a probability that is not a miss by itself, but the point estimates for μ_warm (4.5) and λ_test (3.5) missed.
+- **Capacity loss** (DERIVED, M2): the best cache-on completion rate in G1′ is 4.047 (λ = 4.5); the cold floor is 1.681; so the cold state completes 1 − 1.681 / 4.047 = 0.585 less, against 0.116 at the default pool (M2). L1 does create the large warm/cold gap it was designed for. What limits it is the warm side: percent fast falls below 0.98 between λ = 3 and 3.5, close to the floor × 1.3 margin.
+- **Alternatives still open:**
+  1. **One arrival pattern:** μ_warm comes from seed 0, whose planned rate runs 3.4 % above λ at 3.5 (3.620) and rises through the window (M4). Another seed could pass at 3.5, or fail at 3. Separable only by other seeds (GPU).
+  2. **The 350 W cap:** the clock ran about 4 % lower than at 420 W (inline `gpu.jsonl`, decisions.md 2026-11-07 [OPS]). The warm side may be slightly lower than at 420 W. Not separable with existing data (A12).
+  3. **The margins are registered choices** (0.8 μ_warm, 1.3 μ_sat,off). DERIVED from the numbers above, the raw M2 condition, a load between 1.681 and the highest warm-healthy rate 3.0, is not empty. Testing a load inside it (e.g. λ = 2.5) is allowed only as a **new** registration, and would be chosen after seeing these data, so it must be labeled exploratory, not confirmatory.
+  4. **Latency, not throughput, limits the warm side:** at λ = 3.5 throughput kept up (3.485 against 3.620 planned) while percent fast was 0.716. With 2–4k-token prompts, TTFT ≤ 1.0 s binds before capacity does.
+- **Decision taken** (REG-7's table, applied by REG-8): no λ_test with floor `ok` → no shock matrix at L1 at 350 W. The μ values go into M2, and **the owner picks the next factor.**
+- **Power limit:** REG-8 is done. The card stays at 350 W until the owner decides; before any run outside a 350 W registration (REG-6 first), the owner sets 420 W again.
