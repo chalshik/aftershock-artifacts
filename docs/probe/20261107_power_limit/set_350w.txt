@@ -1,0 +1,24 @@
+# Power limit change for REG-8, 2026-11-07. Outputs copied verbatim from the VM (chalshik@192.168.3.249).
+
+## The owner, in their own SSH session (pasted into the agent's session):
+chalshik@chalshik:~$ sudo nvidia-smi -pl 350
+[sudo] password for chalshik:
+Power limit for GPU 00000000:01:00.0 was set to 350.00 W from 420.00 W.
+
+Warning: persistence mode is disabled on device 00000000:01:00.0. See the Known Issues section of the nvidia-smi(1) man page for more information. Run with [--help | -h] switch to get more information on how to enable persistence mode.
+All done.
+
+## The agent, a new SSH session after the owner's nvidia-smi had exited (no vLLM running):
+$ nvidia-smi --query-gpu=power.limit,persistence_mode,temperature.gpu,utilization.gpu --format=csv
+power.limit [W], persistence_mode, temperature.gpu, utilization.gpu [%]
+350.00 W, Disabled, 43, 0 %
+$ systemctl is-active nvidia-persistenced
+active
+$ pgrep -a nvidia-persist
+1100 /usr/bin/nvidia-persistenced --user nvidia-persistenced --no-persistence-mode --verbose
+
+## The agent, at the launch of 20261107-075951_sweep_l1pl350_pc_off_r1 (2026-11-07T07:59:50Z):
+350.00 W, 43, 0 %, 1 MiB          (power.limit, temperature.gpu, utilization.gpu, memory.used)
+
+## The agent, during that run (08:04:06Z, t ≈ 197 s):
+350.00 W, 348.01 W, 60, 100 %, 0x0000000000000004   (power.limit, power.draw, temperature.gpu, utilization.gpu, clocks_event_reasons.active)

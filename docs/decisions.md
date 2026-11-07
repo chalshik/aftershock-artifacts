@@ -1716,3 +1716,27 @@ Summary:
 - **PROTOCOL.md:** §4 hardware now reads "power limit 420 W (350 W for setup L1 from REG-8 …)"; §6 gains the row "L1 measured at a 350 W power limit, not 420 W".
 - **Committed by name**, without `.gitignore` (the owner's uncommitted line `docs/potential_gaps.md` stays out).
 - **Next:** push to `vm`; the owner sets 350 W; the agent reads the limit and starts `configs/sweep_l1pl350_pc_off_a.yaml` with the GPU idle at ≤ 45 °C.
+
+## 2026-11-07 · [OPS] Power limit set to 350 W for REG-8; audit of what the change affects: no run invalid, old configs unguarded
+- **Set:** the owner ran `sudo nvidia-smi -pl 350` on the VM ("set to 350.00 W from 420.00 W"; persistence mode disabled). The agent read 350 W back after that client exited, and again at the launch of G2′ part a, `20261107-075951_sweep_l1pl350_pc_off_r1` (07:59:50 UTC, GPU idle at 43 °C, from `3fa9563`, clean, microk8s inactive). FILE(docs/probe/20261107_power_limit/set_350w.txt).
+- **Audit, asked by the owner ("Which runs, configs, files now invalid after we changed power cap"):**
+  - **Runs: none invalid.** All 125 run folders before REG-8 ran at 420 W. 121 have `power_limit_w` = 420.0 in every `gpu.jsonl` sample. The other 4 have no `gpu.jsonl` (`20261030-114021_first_real`, a failed start; the three `recorder_off` runs), and their `env.json` `nvidia_smi` reads "420.00 W" at the start. (Inline scan of every run folder, read-only; no committed function, so it supports this audit only.) Every past verdict, μ and validity stands.
+  - **Configs: none edited, none invalid, but none guarded.** Every config except `l1_pl350_base.yaml` and `stage2_l1pl350_base.yaml` has no `power_limit` check, so it would run silently at 350 W while the card is set so. That matters for:
+    - REG-6 (`configs/long_pc_off_r3_s0.yaml`, `long_pc_off_r3_s1.yaml`), registered at 420 W;
+    - REG-7's unused rerun configs (`sweep_l1_pc_off_rerun1b.yaml`, `sweep_l1_pc_on_rerun2b.yaml`). REG-8 supersedes REG-7, so they are not to be run; a 350 W run under REG-7's sweep names would mix limits in one parent;
+    - every other earlier setup.
+    - **Rule, operational, from now on:** while the card is at 350 W, only REG-8 configs are launched, and the agent reads `power.limit` before every launch. Before any other run, the owner sets 420 W again.
+    - **Proposed to the owner, not done:** a harness pre-launch guard that refuses to start when the live limit differs from the config's `checks.expected_power_limit_w`. For configs without the key it can only warn, since 420 W cannot become a default without editing `defaults.yaml` (rule 5).
+  - **Docs updated (stale "420 W" as current):** `docs/status.md` (Environment, GPU row; a new open risk), `docs/open-questions.md` S3 (partly answered), `docs/model.md` M2 (its inputs are at 420 W and do not carry over to L1 at 350 W). `PROTOCOL.md` §4 and §6 were updated with REG-8's approval.
+  - **Not affected:** the analysis code (it reads the limit nowhere except the new check), the verdict rules and thresholds, `docs/definitions.md`, `docs/claims.md`.
+
+## 2026-11-07 · [OPS] REG-8 G2′ part a VALID at 350 W (SW thermal 0.012, max 74 °C); part b starts
+- **Run:** `20261107-075951_sweep_l1pl350_pc_off_r1` (`configs/sweep_l1pl350_pc_off_a.yaml`, from `3fa9563`, clean; 07:59:51–08:16:01 UTC; launched with the GPU idle at 43 °C and the limit read at 350 W). It stopped normally (`events.jsonl` `stopped`), and no process was left.
+- **Checks:** VALID, every check passed (FILE(runs/20261107-075951_sweep_l1pl350_pc_off_r1/checks.json)):
+  - `gpu_steady`: SW-thermal share 0.012, max 74 °C, busy SM-clock CV 0.015, no HW throttle sample.
+  - `power_limit`: 350 W in all 914 samples (max deviation 0.0 W).
+  - `gate.reg8_part_a` gives `valid`, so part b starts (REG-8 decision table).
+- **Prediction:** part a valid p ≈ 0.75, peak ≈ 74 °C. Observed: valid, peak 74 °C. At 420 W the same config gave SW-thermal 0.062, 0.097 and 0.135, with peaks of 82–83 °C (decisions.md 2026-11-05/06 [OPS]).
+  - **Not a test of cause** (REG-8 alternative 2): one run per limit, and room conditions are not measured. The nearest 420 W run, `20261106-063534_sweep_l1_pc_off_r1`, started at a similar hour (06:35 UTC) with the GPU idle at 45 °C, against 43 °C here.
+- **Copied** to the Mac with identical sha256 for all 10 files (`sha256sum` on the VM against `shasum -a 256`); `tools/manifest.py update` appended 10 lines. The VM keeps its copy.
+- **Not computed:** throughput, KV and the floor. The gate is computed once, after G1′ and G2′; `gate.reg8_g1_may_start` is computed after part b.

@@ -14,7 +14,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-07
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: the owner sets the GPU to 350 W (`sudo nvidia-smi -pl 350` on the VM); then G2′ part a.** REG-7 ended with no valid G2 run (λ = 1 SW-thermal 0.062, 0.097, 0.135; decisions.md [OPS] 2026-11-06), so the floor is unmeasured. The owner chose a power-limit amendment, and REG-8 (decisions.md 2026-11-06 [REG]) repeats REG-7's gate at 350 W: G2′ part a (λ = 1, the heat test) → G2′ part b → G1′ part a → G1′ part b → gate once → G3′, each step with a registered start rule (`gate.reg8_part_a`, `gate.reg8_g1_may_start`, `gate.reg8_g1b_may_start`). Written, reviewed (rule F) and **approved by the owner on 2026-11-07**. The `power_limit` check was approved by the owner on 2026-11-06. REG-7's G1 (420 W, valid at λ = 2–5.5) stays as judged; no μ is computed.
+**Next action: G2′ part b (λ = 1.5–4, about 1.6 h), then `gate.reg8_g1_may_start`.** G2′ part a was VALID at 350 W (SW thermal 0.012, max 74 °C; decisions.md 2026-11-07 [OPS]). REG-7 ended with no valid G2 run (λ = 1 SW-thermal 0.062, 0.097, 0.135; decisions.md [OPS] 2026-11-06), so the floor is unmeasured. The owner chose a power-limit amendment, and REG-8 (decisions.md 2026-11-06 [REG]) repeats REG-7's gate at 350 W: G2′ part a (λ = 1, the heat test) → G2′ part b → G1′ part a → G1′ part b → gate once → G3′, each step with a registered start rule (`gate.reg8_part_a`, `gate.reg8_g1_may_start`, `gate.reg8_g1b_may_start`). Written, reviewed (rule F) and **approved by the owner on 2026-11-07**. The `power_limit` check was approved by the owner on 2026-11-06. REG-7's G1 (420 W, valid at λ = 2–5.5) stays as judged; no μ is computed.
 
 Steps:
 1. **Read-only VM checks: done 2026-11-05** (decisions.md [OPS], evidence in `docs/probe/20261105_vm_checks/`).
@@ -65,6 +65,7 @@ Steps:
 - **microk8s was active in all 104 runs before 2026-11-05** (about 8 % of one core, unpinned, unused) and is **disabled from 2026-11-05 on** (decisions.md [DECISION] 2026-11-05). REG-6's result must state the difference. `env.json` records neither state (a harness change, the owner's).
 - **Manipulation checks are off** for every past run (thresholds null in `configs/defaults.yaml`). REG-7 registers `burst_min_kv_max: 0.95` for its burst runs (`configs/stage2_l1_base.yaml`).
 - **Open-loop turns protect the cache under slowdown** (decisions.md 2026-11-01, limits): REG-7 measures the overlap share.
+- **Old configs have no power check:** every config except the two `*pl350*` bases would run silently at whatever limit the card has. While the GPU is at 350 W, only REG-8 configs are launched; the agent reads `power.limit` before every launch (decisions.md 2026-11-07 [OPS]).
 - **Power limit on a shared GPU (REG-8):** the limit applies to the whole card and can be reset by the other user or a reboot. 350 W runs fail `power_limit` if any sample differs; REG-6 has no such check, so its 420 W is checked by hand before launch and in its result.
 - **Data:** the copies stay on the Mac (owner, 2026-11-05); one machine is still a single point of failure (Watch, below). A backup can now be verified with `python3 tools/manifest.py verify <copy>`.
 
@@ -93,13 +94,14 @@ Steps:
 
 ## Runs on record
 
-125 run folders: 100 VALID, 21 INVALID, 4 without checks. All kept; none counts unless VALID.
+126 run folders: 101 VALID, 21 INVALID, 4 without checks. All kept; none counts unless VALID.
 
 - **No checks:** `20261030-114021_first_real` (failed start, no load sent); `20261031-025032_tau` (VM shut down 140 s in); `20261104-134159_long_pc_off_r3_s0` (REG-6 seed 0, VM powered off at t = 3168 s of 3600, DERIVED: power key 14:35:45.08 − planned load start 13:42:56.74 from `events.jsonl` `load_t0_planned`; copied 2026-11-05).
 - **No checks, REG-7 G2:** `20261105-181511_sweep_l1_pc_off_r2` (stopped by the owner at t = 247 s).
 - **Invalid, Stage 1:** `20261023-145613_smoke` (`gpu_steady`, before the check was refined); `20261030-145339_sweep_pc_on_r8` (`accounting`); `20261030-175458_sweep_pc_off_r10` (`recorder`).
 - **Invalid, Stage 2:** `20261101-151707_stage2_control_r1.5` (stopped on request); `20261101-182452_stage2_control_cap_r3`, `20261102-045827_wipe_preempt_r3_s1`, `20261102-062040_wipe_preempt_r3_s3`, `20261102-080323_wipe_preempt_r3_s3` (hardware thermal samples, before the backplate fan); `20261102-093229_wipe_preempt_r3_s3` (stopped on request after a thermal sample).
 - **Invalid, REG-7 G1 (2026-11-05):** `20261105-130250_sweep_l1_pc_on_r4.5` (`no_errors`, 1 client disconnect); `20261105-132035_sweep_l1_pc_on_r5`, `20261105-134018_sweep_l1_pc_on_r5.5`, `20261105-140120_sweep_l1_pc_on_r6`, `20261105-142221_sweep_l1_pc_on_r7` (`gpu_steady`, SW-thermal slowdown). Reruns, invalid again: `20261105-163225_sweep_l1_pc_on_r6`, `20261105-165327_sweep_l1_pc_on_r7`, `20261105-171648_sweep_l1_pc_on_r6` (`gpu_steady`).
+- **REG-8 (350 W), valid:** `20261107-075951_sweep_l1pl350_pc_off_r1` (G2′ part a).
 - **Invalid, REG-7 G2 (2026-11-05):** `20261105-174215_sweep_l1_pc_off_r1`, `20261105-175822_sweep_l1_pc_off_r1.5`, `20261105-184607_sweep_l1_pc_off_r1`, `20261106-063534_sweep_l1_pc_off_r1` (`gpu_steady`).
 
 ## Done when (from the plan)
@@ -121,11 +123,11 @@ Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 
 | Item | Value |
 |---|---|
 | VM | Ubuntu 24.04, 8 cores, 31 GB RAM, Proxmox; GPU shared with another user, so the VM can be shut down from outside |
-| GPU | RTX 3090 (Gigabyte AORUS Xtreme), 24 GB, driver 595.99.02, power limit 420 W; fan on the backplate since 2026-11-02 |
+| GPU | RTX 3090 (Gigabyte AORUS Xtreme), 24 GB, driver 595.99.02, fan on the backplate since 2026-11-02. **Power limit:** 420 W in every run up to 2026-11-06 (all 125); **set to 350 W on 2026-11-07 for REG-8** (`docs/probe/20261107_power_limit/set_350w.txt`). Any run outside REG-8 needs 420 W again first (decisions.md 2026-11-07 [OPS]) |
 | Software | vLLM 0.32.0, torch 2.13.0 (CUDA 13.0), Python 3.12.13 (uv-managed); `unattended-upgrades` disabled |
 | KV cache | Qwen3-4B: 96,656 tokens by default in load runs; 72,480 tokens when set with `--kv-cache-memory-bytes` |
 | Pinning | vLLM cores 0–5, loadgen 6, recorder 7 |
-| Data | **All 125 runs are on the Mac** in `runs/`, checksum-verified; the VM's copies were removed (2026-11-04, and REG-6 seed 0 on 2026-11-05), except the REG-7 G1 runs, which are also still on the VM. No second backup yet |
+| Data | **All 126 runs are on the Mac** in `runs/`, checksum-verified; the VM's copies were removed (2026-11-04, and REG-6 seed 0 on 2026-11-05), except the REG-7 and REG-8 runs, which are also still on the VM. No second backup yet |
 | Disk | 16 GB free on the VM after cleanup; about 170 MB per 40-minute run |
 | Address | 100.83.53.50 (Tailscale; the name `inference-vm.tail3b0112.ts.net` is not in the Mac's `known_hosts`, so use the IP); 192.168.3.249 at home; key `~/.ssh/id_ed25519_vllm`. The `vm` git remote uses the home address (repointing it was not done: a permission prompt refused it) |
 | Sync | Mac `git push vm main` → VM `git pull origin main` in `~/aftershock-artifacts` (the VM's `origin` is `~/repos/aftershock-artifacts.git`); don't pull during a sweep. Over a non-interactive SSH, `uv` is `~/.local/bin/uv` |
@@ -493,7 +495,7 @@ Every model used to choose a run or read a result, with its equations, the evide
 - The warm state must keep up at the same λ: c_warm(λ) ≥ λ, shown by a `recovered` no-trigger control.
 - **Two states at λ need** c(s*) < λ ≤ c_warm. As a capacity loss: s* must complete at least a share 1 − λ / c_max less than the best the server can do.
 
-**Inputs, default pool, 20 s gaps** (all `load.summarize` `throughput`, completions/s in the measured window):
+**Inputs, default pool, 20 s gaps** (all `load.summarize` `throughput`, completions/s in the measured window; every input below was measured at a 420 W power limit, so none carries over to setup L1 at 350 W, REG-8):
 
 | State | λ | c (req/s) | Evidence |
 |---|---|---|---|
@@ -550,7 +552,7 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 | # | Question | Answer | Evidence |
 |---|---|---|---|
-| S3 | Can the power limit be changed while vLLM runs, and how fast does it take effect? | **Open.** `nvidia-smi -pl` needs root, and `sudo` asks for a password on the VM, so trigger 3 needs the owner's help. Range is 100–450 W | `sudo -n nvidia-smi -pl 420` on the VM; `nvidia-smi -q -d POWER` |
+| S3 | Can the power limit be changed while vLLM runs, and how fast does it take effect? | **Open.** `nvidia-smi -pl` needs root, and `sudo` asks for a password on the VM, so trigger 3 needs the owner's help. Range is 100–450 W. **Partly answered 2026-11-07:** with no vLLM running, the owner's `sudo nvidia-smi -pl 350` set it (420 → 350 W). It still read 350 W after that client exited, with persistence mode disabled (the daemon runs with `--no-persistence-mode`), and held under load (draw 348 W). Changing it **while vLLM runs**, and how fast that takes effect, is still untested | `sudo -n nvidia-smi -pl 420` on the VM; `nvidia-smi -q -d POWER`; FILE(docs/probe/20261107_power_limit/set_350w.txt) |
 | S4 | Can cached prefixes be protected from eviction, for the protected-prefixes control? | **Open, not investigated.** Not needed so far: no stuck run exists to break | — |
 | S6 | Does turn spacing matter? (try at least two turn gaps) | **Partly answered.** At 5 s gaps the cache is worth far more (μ_warm 6 vs 4; hit 0.79 vs 0.53 at λ = 4, which mixes two hit computations; like for like 0.79 vs 0.49 or 0.80 vs 0.53, see decisions.md 2026-11-04 (4)) but is much harder to crowd out, and every shock recovered (0 of 12). At 20 s, also no stuck run (0 of 18). Longer gaps (about 60 s) are untested | decisions.md 2026-11-03 and 2026-11-04 |
 | A1 | What is the sustainable completion rate with caching off at λ = 3, default pool, 20 s gaps? μ_off = 2 rests on one 900 s run whose last 150 s carried 3.52 req/s of planned load, above the cache-off saturation of about 3.5 | **Open.** Cheapest test: other seeds or a longer cache-off run (GPU, owner) | `20261030-161749_sweep_pc_off_r3` `schedule.parquet`; `docs/model.md` M4 |
@@ -569,21 +571,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 <!-- source: docs/decisions.md, last 5 entries -->
 
 ## Last decisions
-
-### 2026-11-06 · [OPS] G2 λ = 1 last rerun invalid (SW thermal 0.135); no rerun left at λ = 1; part b not started
-- **Run:** `20261106-063534_sweep_l1_pc_off_r1` (`configs/sweep_l1_pc_off_rerun1a.yaml`, from `946c4ac`, 06:35–06:52 UTC, GPU idle at 45 °C at the start). INVALID, `gpu_steady`: SW-thermal share 0.135, max 83 °C (FILE(runs/20261106-063534_sweep_l1_pc_off_r1/checks.json)). It stopped normally, and the copy has identical sha256.
-- **Prediction:** P(valid) ≈ 0.2. The run was invalid, as expected more likely than not.
-- **λ = 1 across 3 runs:** 0.062, 0.097, 0.135. No further rerun is allowed (REG-7 stopping rule).
-- **State of G2:** no valid run at any rate, so the cold floor is unmeasured. λ = 1.5 and 2 each have both reruns left (2 was stopped); 2.5–4 have never run.
-- **Per REG-7's decision table**, an unmeasured floor is "unmeasured, not absent", and "a new registration extends or repeats G2". The agent recommends that registration be the power-limit amendment, with G1 repeated at the same limit. The owner decides.
-
-### 2026-11-06 · [DECISION] Owner chooses a power-limit amendment for L1 (350 W); `power_limit` check approved; a knob added after `defaults.yaml` lives only in the configs that use it
-- **Owner:** "Alright lets try to power cap", after the agent laid out three options (cap with G1 and G2 repeated; more cooling at 420 W and G2 continued; stop L1) and recommended the cap. The agent proposed 350 W; the value is part of REG-8 (next entry), which the owner approves or changes.
-- **Rule conflict found and reported before going on** (CLAUDE.md D): `harness/CLAUDE.md` said new knobs go in `configs/defaults.yaml`, and `defaults.yaml` says it is never edited once used (rule 5). It has been used by every run since 2026-11-04 (one commit, `677559d`).
-- **Owner:** "option 1, power limit check approved".
-  - Option 1: the new keys (`expected_power_limit_w`, `power_limit_tol_w`) live only in the configs that use them, and `harness/checks.py` reads them with `.get`, so a missing key means "not checked". Every earlier run and config is unaffected. `harness/CLAUDE.md` now says so.
-  - The `power_limit` check (`harness/checks.py`, 7c): every `gpu.jsonl` sample must show the expected enforced limit within the tolerance; no samples fail it. Tests: `tests/test_checks.py::test_power_limit`, `::test_power_limit_is_skipped_without_the_key`.
-- **Not the agent's change, left alone:** `.gitignore` gained the line `docs/potential_gaps.md` at 19:35 today, outside the agent. It is neither committed nor reverted by the agent.
 
 ### 2026-11-06 · [CORR] `gate.sweep_rows` crashed on a sweep with no valid run (REG-7 code)
 - **What was wrong:** `sweep_rows` built its table from a list of rows without column types. With no rows, the numeric columns were `object`, and `gate.cold_floor` raised a `TypeError` in `np.isfinite` instead of returning an unmeasured floor. Found by a smoke call of `gate.reg8_g1_may_start` before any 350 W run exists.
@@ -715,3 +702,27 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **PROTOCOL.md:** §4 hardware now reads "power limit 420 W (350 W for setup L1 from REG-8 …)"; §6 gains the row "L1 measured at a 350 W power limit, not 420 W".
 - **Committed by name**, without `.gitignore` (the owner's uncommitted line `docs/potential_gaps.md` stays out).
 - **Next:** push to `vm`; the owner sets 350 W; the agent reads the limit and starts `configs/sweep_l1pl350_pc_off_a.yaml` with the GPU idle at ≤ 45 °C.
+
+### 2026-11-07 · [OPS] Power limit set to 350 W for REG-8; audit of what the change affects: no run invalid, old configs unguarded
+- **Set:** the owner ran `sudo nvidia-smi -pl 350` on the VM ("set to 350.00 W from 420.00 W"; persistence mode disabled). The agent read 350 W back after that client exited, and again at the launch of G2′ part a, `20261107-075951_sweep_l1pl350_pc_off_r1` (07:59:50 UTC, GPU idle at 43 °C, from `3fa9563`, clean, microk8s inactive). FILE(docs/probe/20261107_power_limit/set_350w.txt).
+- **Audit, asked by the owner ("Which runs, configs, files now invalid after we changed power cap"):**
+  - **Runs: none invalid.** All 125 run folders before REG-8 ran at 420 W. 121 have `power_limit_w` = 420.0 in every `gpu.jsonl` sample. The other 4 have no `gpu.jsonl` (`20261030-114021_first_real`, a failed start; the three `recorder_off` runs), and their `env.json` `nvidia_smi` reads "420.00 W" at the start. (Inline scan of every run folder, read-only; no committed function, so it supports this audit only.) Every past verdict, μ and validity stands.
+  - **Configs: none edited, none invalid, but none guarded.** Every config except `l1_pl350_base.yaml` and `stage2_l1pl350_base.yaml` has no `power_limit` check, so it would run silently at 350 W while the card is set so. That matters for:
+    - REG-6 (`configs/long_pc_off_r3_s0.yaml`, `long_pc_off_r3_s1.yaml`), registered at 420 W;
+    - REG-7's unused rerun configs (`sweep_l1_pc_off_rerun1b.yaml`, `sweep_l1_pc_on_rerun2b.yaml`). REG-8 supersedes REG-7, so they are not to be run; a 350 W run under REG-7's sweep names would mix limits in one parent;
+    - every other earlier setup.
+    - **Rule, operational, from now on:** while the card is at 350 W, only REG-8 configs are launched, and the agent reads `power.limit` before every launch. Before any other run, the owner sets 420 W again.
+    - **Proposed to the owner, not done:** a harness pre-launch guard that refuses to start when the live limit differs from the config's `checks.expected_power_limit_w`. For configs without the key it can only warn, since 420 W cannot become a default without editing `defaults.yaml` (rule 5).
+  - **Docs updated (stale "420 W" as current):** `docs/status.md` (Environment, GPU row; a new open risk), `docs/open-questions.md` S3 (partly answered), `docs/model.md` M2 (its inputs are at 420 W and do not carry over to L1 at 350 W). `PROTOCOL.md` §4 and §6 were updated with REG-8's approval.
+  - **Not affected:** the analysis code (it reads the limit nowhere except the new check), the verdict rules and thresholds, `docs/definitions.md`, `docs/claims.md`.
+
+### 2026-11-07 · [OPS] REG-8 G2′ part a VALID at 350 W (SW thermal 0.012, max 74 °C); part b starts
+- **Run:** `20261107-075951_sweep_l1pl350_pc_off_r1` (`configs/sweep_l1pl350_pc_off_a.yaml`, from `3fa9563`, clean; 07:59:51–08:16:01 UTC; launched with the GPU idle at 43 °C and the limit read at 350 W). It stopped normally (`events.jsonl` `stopped`), and no process was left.
+- **Checks:** VALID, every check passed (FILE(runs/20261107-075951_sweep_l1pl350_pc_off_r1/checks.json)):
+  - `gpu_steady`: SW-thermal share 0.012, max 74 °C, busy SM-clock CV 0.015, no HW throttle sample.
+  - `power_limit`: 350 W in all 914 samples (max deviation 0.0 W).
+  - `gate.reg8_part_a` gives `valid`, so part b starts (REG-8 decision table).
+- **Prediction:** part a valid p ≈ 0.75, peak ≈ 74 °C. Observed: valid, peak 74 °C. At 420 W the same config gave SW-thermal 0.062, 0.097 and 0.135, with peaks of 82–83 °C (decisions.md 2026-11-05/06 [OPS]).
+  - **Not a test of cause** (REG-8 alternative 2): one run per limit, and room conditions are not measured. The nearest 420 W run, `20261106-063534_sweep_l1_pc_off_r1`, started at a similar hour (06:35 UTC) with the GPU idle at 45 °C, against 43 °C here.
+- **Copied** to the Mac with identical sha256 for all 10 files (`sha256sum` on the VM against `shasum -a 256`); `tools/manifest.py update` appended 10 lines. The VM keeps its copy.
+- **Not computed:** throughput, KV and the floor. The gate is computed once, after G1′ and G2′; `gate.reg8_g1_may_start` is computed after part b.

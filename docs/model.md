@@ -22,7 +22,7 @@ Every model used to choose a run or read a result, with its equations, the evide
 - The warm state must keep up at the same λ: c_warm(λ) ≥ λ, shown by a `recovered` no-trigger control.
 - **Two states at λ need** c(s*) < λ ≤ c_warm. As a capacity loss: s* must complete at least a share 1 − λ / c_max less than the best the server can do.
 
-**Inputs, default pool, 20 s gaps** (all `load.summarize` `throughput`, completions/s in the measured window):
+**Inputs, default pool, 20 s gaps** (all `load.summarize` `throughput`, completions/s in the measured window; every input below was measured at a 420 W power limit, so none carries over to setup L1 at 350 W, REG-8):
 
 | State | λ | c (req/s) | Evidence |
 |---|---|---|---|
