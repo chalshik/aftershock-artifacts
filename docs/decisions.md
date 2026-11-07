@@ -1740,3 +1740,26 @@ Summary:
   - **Not a test of cause** (REG-8 alternative 2): one run per limit, and room conditions are not measured. The nearest 420 W run, `20261106-063534_sweep_l1_pc_off_r1`, started at a similar hour (06:35 UTC) with the GPU idle at 45 °C, against 43 °C here.
 - **Copied** to the Mac with identical sha256 for all 10 files (`sha256sum` on the VM against `shasum -a 256`); `tools/manifest.py update` appended 10 lines. The VM keeps its copy.
 - **Not computed:** throughput, KV and the floor. The gate is computed once, after G1′ and G2′; `gate.reg8_g1_may_start` is computed after part b.
+
+## 2026-11-07 · [OPS] REG-8 G2′ done: 7 of 7 runs valid at 350 W; cold floor μ_sat,off = 1.681 (`ok`); G1′ part a starts
+- **Runs** (`configs/sweep_l1pl350_pc_off_b.yaml`, from `abc42ea`, clean; 08:20:35–10:20:59 UTC; launched with the GPU idle at 40 °C and the limit read at 350 W). Every one VALID, with 350 W in every `gpu.jsonl` sample (FILE(runs/<id>/checks.json), `gpu_steady` and `power_limit`):
+  - `20261107-082035_sweep_l1pl350_pc_off_r1.5`: SW thermal 0.005, max 75 °C.
+  - `20261107-083730_sweep_l1pl350_pc_off_r2`: 0.000, 73 °C.
+  - `20261107-085650_sweep_l1pl350_pc_off_r2.5`: 0.000, 74 °C.
+  - `20261107-091752_sweep_l1pl350_pc_off_r3`: 0.000, 74 °C.
+  - `20261107-093854_sweep_l1pl350_pc_off_r3.5`: 0.000, 72 °C.
+  - `20261107-095958_sweep_l1pl350_pc_off_r4`: 0.000, 73 °C.
+  - With part a (`20261107-075951_sweep_l1pl350_pc_off_r1`), G2′ has a valid run at every rate, and needed no rerun.
+- **Copied** to the Mac with identical sha256 for every file; the manifest gained 60 lines.
+- **G1′ start rule** (REG-8), computed once: `gate.reg8_g1_may_start()` = μ_sat,off 1.681 req/s, λ_sat 2.0, n = 5, status `ok`. RUN(the seven 20261107 `sweep_l1pl350_pc_off` runs, gate.reg8_g1_may_start). So G1′ part a (`configs/sweep_l1pl350_pc_on_a.yaml`, λ = 2–5) starts.
+  - **Prediction** (REG-8): μ_sat,off ∈ [1.3, 2.1], point 1.6; status `ok` p ≈ 0.7. **Hit.**
+  - DERIVED from REG-7's zone rule, before any G1′ run: λ_test ≥ 1.3 × 1.681 = 2.185, so λ_test ≥ 2.5 if it exists; that needs 0.8 μ_warm ≥ 2.5, so μ_warm ≥ 3.5 on the swept grid.
+  - Nothing else from G2′ is computed. μ_off and λ_test come from the gate, once, after G1′.
+- **Observed, inline (`gpu.jsonl`, not a committed function; instrument data, not a gate input):** the busy median SM clock was 1830–1890 MHz at 350 W, against 1920–1965 MHz in the heat-invalid 420 W runs at λ = 1 and 1.5 (about 4 % lower). Reported to the owner, who asked whether the cap made the server slower; throughput and TTFT were not computed.
+
+## 2026-11-07 · [CORR] REG-8's prediction was not entered in the model.md ledger before its first run
+- **What was wrong:** `docs/model.md` says "A model that predicts is updated here before the run". REG-8's predictions were committed in its registration (`3fa9563`) but not as a ledger row, and its first run started at 07:59 UTC without one. REG-7's row 11 also still read "Not run".
+- **Since when:** `3fa9563`.
+- **Which results it affects:** none. The predictions were committed before any 350 W run, in decisions.md. The ledger row copies them unchanged.
+- **Fix:** row 12 added, marked as added late, with part a's and the floor's outcomes; row 11 closed as superseded by REG-8.
+- **Rule that would have caught it:** a registration checklist that includes the ledger row; `tools/check_docs.py` could flag a `[REG]` with no ledger row (proposed, not done).
