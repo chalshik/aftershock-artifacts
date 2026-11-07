@@ -1,0 +1,6 @@
+# Read by the agent after the owner set 420 W (read-only)
+2026-11-07T14:30:48+00:00
+power.limit [W], power.default_limit [W], power.max_limit [W], temperature.gpu, utilization.gpu [%], clocks_event_reasons.active
+420.00 W, 420.00 W, 450.00 W, 43, 0 %, 0x0000000000000001
+# compute apps:
+pid, process_name, used_gpu_memory [MiB]

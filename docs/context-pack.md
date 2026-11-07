@@ -14,7 +14,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-07
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: the owner picks the next factor (REG-8 [RESULT], decisions.md 2026-11-07).** REG-8 is done: 13 of 13 runs valid at 350 W; μ_warm 3.0, cold floor 1.681 (`ok`), **no λ_test**, so no shock matrix at L1. The cold state loses 0.585 of capacity (0.116 at the default pool), but the warm side fails TTFT early. The outcome rests on λ = 3.5's queue slope, 0.0145 against 0.01. The GPU stays at 350 W until the owner sets 420 W for REG-6 or anything else. REG-7 ended with no valid G2 run (λ = 1 SW-thermal 0.062, 0.097, 0.135; decisions.md [OPS] 2026-11-06), so the floor is unmeasured. The owner chose a power-limit amendment, and REG-8 (decisions.md 2026-11-06 [REG]) repeats REG-7's gate at 350 W: G2′ part a (λ = 1, the heat test) → G2′ part b → G1′ part a → G1′ part b → gate once → G3′, each step with a registered start rule (`gate.reg8_part_a`, `gate.reg8_g1_may_start`, `gate.reg8_g1b_may_start`). Written, reviewed (rule F) and **approved by the owner on 2026-11-07**. The `power_limit` check was approved by the owner on 2026-11-06. REG-7's G1 (420 W, valid at λ = 2–5.5) stays as judged; no μ is computed.
+**Next action: the owner picks the next factor (REG-8 [RESULT], decisions.md 2026-11-07).** REG-8 is done: 13 of 13 runs valid at 350 W; μ_warm 3.0, cold floor 1.681 (`ok`), **no λ_test**, so no shock matrix at L1. The cold state loses 0.585 of capacity (0.116 at the default pool), but the warm side fails TTFT early. The outcome rests on λ = 3.5's queue slope, 0.0145 against 0.01. The owner set the GPU back to 420 W on 2026-11-07 (read 14:30 UTC, `docs/probe/20261107_power_limit/read_420w.txt`); a further L1 run at 350 W needs the owner to set 350 W again. REG-7 ended with no valid G2 run (λ = 1 SW-thermal 0.062, 0.097, 0.135; decisions.md [OPS] 2026-11-06), so the floor is unmeasured. The owner chose a power-limit amendment, and REG-8 (decisions.md 2026-11-06 [REG]) repeats REG-7's gate at 350 W: G2′ part a (λ = 1, the heat test) → G2′ part b → G1′ part a → G1′ part b → gate once → G3′, each step with a registered start rule (`gate.reg8_part_a`, `gate.reg8_g1_may_start`, `gate.reg8_g1b_may_start`). Written, reviewed (rule F) and **approved by the owner on 2026-11-07**. The `power_limit` check was approved by the owner on 2026-11-06. REG-7's G1 (420 W, valid at λ = 2–5.5) stays as judged; no μ is computed.
 
 Steps:
 1. **Read-only VM checks: done 2026-11-05** (decisions.md [OPS], evidence in `docs/probe/20261105_vm_checks/`).
@@ -65,7 +65,7 @@ Steps:
 - **microk8s was active in all 104 runs before 2026-11-05** (about 8 % of one core, unpinned, unused) and is **disabled from 2026-11-05 on** (decisions.md [DECISION] 2026-11-05). REG-6's result must state the difference. `env.json` records neither state (a harness change, the owner's).
 - **Manipulation checks are off** for every past run (thresholds null in `configs/defaults.yaml`). REG-7 registers `burst_min_kv_max: 0.95` for its burst runs (`configs/stage2_l1_base.yaml`).
 - **Open-loop turns protect the cache under slowdown** (decisions.md 2026-11-01, limits): REG-7 measures the overlap share.
-- **Old configs have no power check:** every config except the two `*pl350*` bases would run silently at whatever limit the card has. While the GPU is at 350 W, only REG-8 configs are launched; the agent reads `power.limit` before every launch (decisions.md 2026-11-07 [OPS]).
+- **Old configs have no power check:** every config except the two `*pl350*` bases would run silently at whatever limit the card has. The agent reads `power.limit` before every launch; at 420 W (since 2026-11-07, 14:30 UTC) a `*pl350*` config would fail its `power_limit` check, and an old config is guarded only by that read (decisions.md 2026-11-07 [OPS]).
 - **Power limit on a shared GPU (REG-8):** the limit applies to the whole card and can be reset by the other user or a reboot. 350 W runs fail `power_limit` if any sample differs; REG-6 has no such check, so its 420 W is checked by hand before launch and in its result.
 - **Data:** the copies stay on the Mac (owner, 2026-11-05); one machine is still a single point of failure (Watch, below). A backup can now be verified with `python3 tools/manifest.py verify <copy>`.
 
@@ -123,7 +123,7 @@ Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 
 | Item | Value |
 |---|---|
 | VM | Ubuntu 24.04, 8 cores, 31 GB RAM, Proxmox; GPU shared with another user, so the VM can be shut down from outside |
-| GPU | RTX 3090 (Gigabyte AORUS Xtreme), 24 GB, driver 595.99.02, fan on the backplate since 2026-11-02. **Power limit:** 420 W in every run up to 2026-11-06 (all 125); **set to 350 W on 2026-11-07 for REG-8** (`docs/probe/20261107_power_limit/set_350w.txt`). Any run outside REG-8 needs 420 W again first (decisions.md 2026-11-07 [OPS]) |
+| GPU | RTX 3090 (Gigabyte AORUS Xtreme), 24 GB, driver 595.99.02, fan on the backplate since 2026-11-02. **Power limit:** 420 W in every run up to 2026-11-06 (all 125); **set to 350 W on 2026-11-07 for REG-8** (`docs/probe/20261107_power_limit/set_350w.txt`), **back to 420 W the same day** after REG-8 (`docs/probe/20261107_power_limit/read_420w.txt`). Any run outside REG-8 needs 420 W (decisions.md 2026-11-07 [OPS]) |
 | Software | vLLM 0.32.0, torch 2.13.0 (CUDA 13.0), Python 3.12.13 (uv-managed); `unattended-upgrades` disabled |
 | KV cache | Qwen3-4B: 96,656 tokens by default in load runs; 72,480 tokens when set with `--kv-cache-memory-bytes` |
 | Pinning | vLLM cores 0–5, loadgen 6, recorder 7 |
@@ -574,19 +574,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-07 · [OPS] Power limit set to 350 W for REG-8; audit of what the change affects: no run invalid, old configs unguarded
-- **Set:** the owner ran `sudo nvidia-smi -pl 350` on the VM ("set to 350.00 W from 420.00 W"; persistence mode disabled). The agent read 350 W back after that client exited, and again at the launch of G2′ part a, `20261107-075951_sweep_l1pl350_pc_off_r1` (07:59:50 UTC, GPU idle at 43 °C, from `3fa9563`, clean, microk8s inactive). FILE(docs/probe/20261107_power_limit/set_350w.txt).
-- **Audit, asked by the owner ("Which runs, configs, files now invalid after we changed power cap"):**
-  - **Runs: none invalid.** All 125 run folders before REG-8 ran at 420 W. 121 have `power_limit_w` = 420.0 in every `gpu.jsonl` sample. The other 4 have no `gpu.jsonl` (`20261030-114021_first_real`, a failed start; the three `recorder_off` runs), and their `env.json` `nvidia_smi` reads "420.00 W" at the start. (Inline scan of every run folder, read-only; no committed function, so it supports this audit only.) Every past verdict, μ and validity stands.
-  - **Configs: none edited, none invalid, but none guarded.** Every config except `l1_pl350_base.yaml` and `stage2_l1pl350_base.yaml` has no `power_limit` check, so it would run silently at 350 W while the card is set so. That matters for:
-    - REG-6 (`configs/long_pc_off_r3_s0.yaml`, `long_pc_off_r3_s1.yaml`), registered at 420 W;
-    - REG-7's unused rerun configs (`sweep_l1_pc_off_rerun1b.yaml`, `sweep_l1_pc_on_rerun2b.yaml`). REG-8 supersedes REG-7, so they are not to be run; a 350 W run under REG-7's sweep names would mix limits in one parent;
-    - every other earlier setup.
-    - **Rule, operational, from now on:** while the card is at 350 W, only REG-8 configs are launched, and the agent reads `power.limit` before every launch. Before any other run, the owner sets 420 W again.
-    - **Proposed to the owner, not done:** a harness pre-launch guard that refuses to start when the live limit differs from the config's `checks.expected_power_limit_w`. For configs without the key it can only warn, since 420 W cannot become a default without editing `defaults.yaml` (rule 5).
-  - **Docs updated (stale "420 W" as current):** `docs/status.md` (Environment, GPU row; a new open risk), `docs/open-questions.md` S3 (partly answered), `docs/model.md` M2 (its inputs are at 420 W and do not carry over to L1 at 350 W). `PROTOCOL.md` §4 and §6 were updated with REG-8's approval.
-  - **Not affected:** the analysis code (it reads the limit nowhere except the new check), the verdict rules and thresholds, `docs/definitions.md`, `docs/claims.md`.
-
 ### 2026-11-07 · [OPS] REG-8 G2′ part a VALID at 350 W (SW thermal 0.012, max 74 °C); part b starts
 - **Run:** `20261107-075951_sweep_l1pl350_pc_off_r1` (`configs/sweep_l1pl350_pc_off_a.yaml`, from `3fa9563`, clean; 07:59:51–08:16:01 UTC; launched with the GPU idle at 43 °C and the limit read at 350 W). It stopped normally (`events.jsonl` `stopped`), and no process was left.
 - **Checks:** VALID, every check passed (FILE(runs/20261107-075951_sweep_l1pl350_pc_off_r1/checks.json)):
@@ -642,3 +629,9 @@ Every model used to choose a run or read a result, with its equations, the evide
   4. **Latency, not throughput, limits the warm side:** at λ = 3.5 throughput kept up (3.485 against 3.620 planned) while percent fast was 0.716. With 2–4k-token prompts, TTFT ≤ 1.0 s binds before capacity does.
 - **Decision taken** (REG-7's table, applied by REG-8): no λ_test with floor `ok` → no shock matrix at L1 at 350 W. The μ values go into M2, and **the owner picks the next factor.**
 - **Power limit:** REG-8 is done. The card stays at 350 W until the owner decides; before any run outside a 350 W registration (REG-6 first), the owner sets 420 W again.
+
+### 2026-11-07 · [OPS] Power limit back to 420 W after REG-8
+- **What:** the owner set the RTX 3090's power limit back to 420 W. The agent read it at 14:30 UTC: limit 420 W (default 420, max 450), 43 °C, 0 % utilization, no compute process, no tmux session. PROBE(docs/probe/20261107_power_limit/read_420w.txt).
+- **Why:** REG-8 is done; REG-6 and every setup before REG-8 are registered and measured at 420 W.
+- **Effect:** no run was in progress; no run is affected. A `*pl350*` config launched now would fail its `power_limit` check. A further L1 run at 350 W needs the owner to set 350 W first.
+- **VM tree:** at `212327f`, behind the Mac's `main`; it pulls before the next launch.

@@ -1785,3 +1785,9 @@ Summary:
   4. **Latency, not throughput, limits the warm side:** at λ = 3.5 throughput kept up (3.485 against 3.620 planned) while percent fast was 0.716. With 2–4k-token prompts, TTFT ≤ 1.0 s binds before capacity does.
 - **Decision taken** (REG-7's table, applied by REG-8): no λ_test with floor `ok` → no shock matrix at L1 at 350 W. The μ values go into M2, and **the owner picks the next factor.**
 - **Power limit:** REG-8 is done. The card stays at 350 W until the owner decides; before any run outside a 350 W registration (REG-6 first), the owner sets 420 W again.
+
+## 2026-11-07 · [OPS] Power limit back to 420 W after REG-8
+- **What:** the owner set the RTX 3090's power limit back to 420 W. The agent read it at 14:30 UTC: limit 420 W (default 420, max 450), 43 °C, 0 % utilization, no compute process, no tmux session. PROBE(docs/probe/20261107_power_limit/read_420w.txt).
+- **Why:** REG-8 is done; REG-6 and every setup before REG-8 are registered and measured at 420 W.
+- **Effect:** no run was in progress; no run is affected. A `*pl350*` config launched now would fail its `power_limit` check. A further L1 run at 350 W needs the owner to set 350 W first.
+- **VM tree:** at `212327f`, behind the Mac's `main`; it pulls before the next launch.
