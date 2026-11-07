@@ -1,12 +1,12 @@
 # Study status
 
-Living document: update it after every run or decision. Last updated: 2026-11-05.
+Living document: update it after every run or decision. Last updated: 2026-11-07.
 
 **Stage 1 is complete; Stage 2 is in progress (started 2026-10-31).** Stage 1 inputs: μ_warm = 4 req/s, μ_off = 2 req/s (Stage 1 grid 1, 2, 3, …), λ = 3 healthy for 2 h, SLO TTFT ≤ 1.0 s, τ = 300 s (`20261101-131823_tau`), so the watch window is 1500 s.
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: the owner decides how to measure L1's cold floor.** G2 λ = 1 is invalid in all three allowed runs (SW-thermal 0.062, 0.097, 0.135; decisions.md [OPS] 2026-11-06). G2 has no valid run, so the floor is unmeasured. REG-7 then says a new registration extends or repeats G2. The agent recommends a power-limit amendment, with G1 repeated at the same limit. G1 (420 W) is closed: valid at λ = 2–5.5. No μ is computed yet. REG-7 was approved by the owner on 2026-11-05: it was registered in `d1b360c` and approved in `f4d1110`.
+**Next action: the owner sets the GPU to 350 W (`sudo nvidia-smi -pl 350` on the VM); then G2′ part a.** REG-7 ended with no valid G2 run (λ = 1 SW-thermal 0.062, 0.097, 0.135; decisions.md [OPS] 2026-11-06), so the floor is unmeasured. The owner chose a power-limit amendment, and REG-8 (decisions.md 2026-11-06 [REG]) repeats REG-7's gate at 350 W: G2′ part a (λ = 1, the heat test) → G2′ part b → G1′ part a → G1′ part b → gate once → G3′, each step with a registered start rule (`gate.reg8_part_a`, `gate.reg8_g1_may_start`, `gate.reg8_g1b_may_start`). Written, reviewed (rule F) and **approved by the owner on 2026-11-07**. The `power_limit` check was approved by the owner on 2026-11-06. REG-7's G1 (420 W, valid at λ = 2–5.5) stays as judged; no μ is computed.
 
 Steps:
 1. **Read-only VM checks: done 2026-11-05** (decisions.md [OPS], evidence in `docs/probe/20261105_vm_checks/`).
@@ -25,7 +25,8 @@ Steps:
    - G2: `configs/sweep_l1_pc_off.yaml` (about 2.3 h).
    - Copy both back and update the manifest. Then compute `uv run python -m analysis.gate` **once**; it gives λ_test, or no λ_test.
    - Write and commit the two G3 configs exactly as registered in REG-7, and run them (about 1.7 h). Compute `gate.gate_verdict` once, and write the `[RESULT]`. Its decision table is in the REG-7 entry.
-8. **REG-6** (approved; about 2.2 GPU h) runs after the gate, when the GPU is idle (owner, 2026-11-05). Seed 0 must be rerun, unchanged, at a new run id; REG-6's stopping rule allows it.
+8. **REG-6** (approved; about 2.2 GPU h) runs after the gate, when the GPU is idle (owner, 2026-11-05). Seed 0 must be rerun, unchanged, at a new run id; REG-6's stopping rule allows it. **At 420 W:** after REG-8 the limit goes back to 420 W; the agent reads it before launch, and REG-6's result must show 420 W in every `gpu.jsonl` sample (REG-8, Operations).
+9. **REG-8, once approved:** commit; push to `vm`; the owner runs `sudo nvidia-smi -pl 350`; the agent reads `nvidia-smi --query-gpu=power.limit --format=csv` and starts `configs/sweep_l1pl350_pc_off_a.yaml` with the GPU idle at ≤ 45 °C, recording idle temperature and wall-clock time in the `[OPS]` entry.
 
 **Then, the owner's open items:**
 - items 18–21: paper layer, framing, canonical hit rate. Decided 2026-11-05: the C1 metric for future cells, and that the data copies stay on the Mac (decisions.md);
@@ -56,6 +57,7 @@ Steps:
 - **microk8s was active in all 104 runs before 2026-11-05** (about 8 % of one core, unpinned, unused) and is **disabled from 2026-11-05 on** (decisions.md [DECISION] 2026-11-05). REG-6's result must state the difference. `env.json` records neither state (a harness change, the owner's).
 - **Manipulation checks are off** for every past run (thresholds null in `configs/defaults.yaml`). REG-7 registers `burst_min_kv_max: 0.95` for its burst runs (`configs/stage2_l1_base.yaml`).
 - **Open-loop turns protect the cache under slowdown** (decisions.md 2026-11-01, limits): REG-7 measures the overlap share.
+- **Power limit on a shared GPU (REG-8):** the limit applies to the whole card and can be reset by the other user or a reboot. 350 W runs fail `power_limit` if any sample differs; REG-6 has no such check, so its 420 W is checked by hand before launch and in its result.
 - **Data:** the copies stay on the Mac (owner, 2026-11-05); one machine is still a single point of failure (Watch, below). A backup can now be verified with `python3 tools/manifest.py verify <copy>`.
 
 ## Stage 2 results
@@ -125,4 +127,4 @@ Stage 1: all 7 answered. Stage 2: S1, S2, S5, S7 answered; S6 partly; S3 and S4 
 Sorted by priority, most urgent first.
 
 - **Backup (top item):** the Mac holds all 125 runs. The owner decided on 2026-11-05 that the copies stay on the Mac (decisions.md). A copy on the same machine guards against deletion, not against losing the Mac; `python3 tools/manifest.py verify <copy>` checks any copy.
-- **Heat (top item for REG-7):** before the backplate fan, hardware thermal flags at 83–84 °C invalidated 5 runs. With the fan: 0 flags until 2026-11-05, when SW-thermal slowdown invalidated L1's G1 runs at λ = 5–7 at 81–82 °C (decisions.md [OPS]). A flag still invalidates a run; the rule is not loosened.
+- **Heat (top item for REG-8):** before the backplate fan, hardware thermal flags at 83–84 °C invalidated 5 runs. With the fan: 0 flags until 2026-11-05, when SW-thermal slowdown invalidated L1's G1 runs at λ = 5–7 at 81–82 °C and every G2 run (decisions.md [OPS]). A flag still invalidates a run; the rule is not loosened. REG-8 lowers the power limit to 350 W instead; a second heat failure of its first run stops L1.

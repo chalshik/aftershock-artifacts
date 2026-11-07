@@ -1,0 +1,6 @@
+# REG-8 G2' part a: lambda = 1 alone, the heat test. Part b starts only if this run is valid (gate.reg8_part_a).
+# Same settings as sweep_l1pl350_pc_off.yaml; only the list of rates differs. `name` keeps the sweep_parent.
+extends: sweep_l1pl350_pc_off.yaml
+name: sweep_l1pl350_pc_off
+sweep:
+  rates: [1]

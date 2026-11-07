@@ -46,7 +46,7 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
 
 | Item | Value |
 |---|---|
-| Hardware | One RTX 3090, 24 GB (Gigabyte AORUS Xtreme, backplate fan since 2026-11-02), power limit 420 W; Proxmox VM, Ubuntu 24.04, 8 cores, 31 GB RAM; GPU shared with another user |
+| Hardware | One RTX 3090, 24 GB (Gigabyte AORUS Xtreme, backplate fan since 2026-11-02), power limit 420 W (350 W for setup L1 from REG-8, decisions.md 2026-11-06); Proxmox VM, Ubuntu 24.04, 8 cores, 31 GB RAM; GPU shared with another user |
 | Software | vLLM 0.32.0, torch 2.13.0 (CUDA 13.0), driver 595.99.02, Python 3.12.13, all pinned in `pyproject.toml` and `uv.lock` |
 | Model | Qwen/Qwen3-4B, bf16; 147,456 bytes of KV per token |
 | Server | Single replica, served directly. Flags: `--enable-prefix-caching`, `--kv-cache-metrics`, `--enable-prompt-tokens-details`, `--seed 0`, `--max-num-seqs 256`. Everything else at vLLM defaults. Dev mode (`VLLM_SERVER_DEV_MODE=1`) in every shock run (wipes, bursts), every no-trigger control, both wipe tests and both ramps: 49 runs. **Not** in the capacity sweeps (Stage 1 and both Stage 2 setups: 72,480-token pool, 5 s gaps), the τ runs, the recorder-off runs or the other Stage 1 runs: 55 runs. So each setup's μ was measured without dev mode and its controls and shocks with it. **[corrected 2026-11-04; previously "in all Stage 2 runs"]** |
@@ -98,6 +98,7 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
 | `base.yaml` edited after the first smoke run used it | `gpu_steady` refined during harness debugging; the run stays invalid | 2026-10-23 |
 | One no-trigger control per load, seed 1 only | Cost; shock seeds 2–3 have no same-schedule control | 2026-11-01 |
 | No ramp at the 72,480-token pool or with 5 s gaps | Not registered; so neither setup is negative by §3 | 2026-11-04 (audit) |
+| L1 measured at a 350 W power limit, not 420 W | SW-thermal slowdown invalidated every cache-off L1 run at 420 W | 2026-11-06 (REG-8) |
 
 ## 7. Current result (details in `docs/status.md`)
 

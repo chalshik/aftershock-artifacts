@@ -1,0 +1,10 @@
+# REG-8 G2': capacity of setup L1 at 350 W with prefix caching off (mu_off, and the cold floor mu_sat,off).
+# Not run directly: it runs in two parts (_a, then _b only if _a is valid). See decisions.md 2026-11-06 [REG] REG-8.
+extends: l1_pl350_base.yaml
+name: sweep_l1pl350_pc_off
+server:
+  args:
+    --enable-prefix-caching: null
+    --no-enable-prefix-caching: true
+sweep:
+  rates: [1, 1.5, 2, 2.5, 3, 3.5, 4]          # as REG-7 G2

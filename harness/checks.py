@@ -131,6 +131,18 @@ def run_checks(run_dir: Path) -> dict:
         kv = int(m.group(1).replace(",", "")) if m else None
         out.append(check("kv_capacity", kv == c["expected_kv_tokens"], {"logged": kv, "expected": c["expected_kv_tokens"]}))
 
+    # 7c. The GPU power limit stayed at the value the config expects, in every GPU sample of the run (only if the config
+    #     states it). The GPU is shared, so the limit can change under a run. Read with .get: configs/defaults.yaml was
+    #     used by runs and can't gain the key, so a missing key means "not checked" (REG-8, decisions.md 2026-11-06).
+    if c.get("expected_power_limit_w") is not None:
+        lim = gpu.power_limit_w if "power_limit_w" in gpu else pd.Series(dtype=float)
+        # No samples, or a sample without a value, cannot show that the limit held (REG-8 review, T10).
+        dev = float((lim - c["expected_power_limit_w"]).abs().max()) if len(lim) and not lim.isna().any() else math.inf
+        out.append(check("power_limit", dev <= c["power_limit_tol_w"],
+                         {"expected_w": c["expected_power_limit_w"], "max_dev_w": dev, "samples": len(lim),
+                          "min_w": float(lim.min()) if len(lim) else None,
+                          "max_w": float(lim.max()) if len(lim) else None}))
+
     # 8. Only with a trigger. Burst: every burst request in the schedule was sent.
     #    Cache wipe: the cache was wiped exactly once, while arrivals were still running.
     trig = cfg.get("trigger")

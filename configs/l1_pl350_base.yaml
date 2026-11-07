@@ -1,0 +1,8 @@
+# Setup L1 at a 350 W GPU power limit (REG-8, docs/decisions.md 2026-11-06). Same as l1_base.yaml in every setting;
+# only the power limit differs, which the owner sets on the VM before each sweep (`nvidia-smi -pl 350`, root).
+# Why: at 420 W every L1 run drew 415-418 W, and the SW-thermal slowdown invalidated every G2 run (REG-7).
+extends: l1_base.yaml
+name: l1_pl350_base
+checks:
+  expected_power_limit_w: 350    # every gpu.jsonl sample must show this enforced limit (harness/checks.py, power_limit)
+  power_limit_tol_w: 1.0         # NVML reports the limit in mW; 1 W allows rounding, not another setting

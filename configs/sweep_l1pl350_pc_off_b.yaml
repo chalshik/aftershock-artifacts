@@ -1,0 +1,5 @@
+# REG-8 G2' part b: the other rates, run only after part a is valid (gate.reg8_part_a).
+extends: sweep_l1pl350_pc_off.yaml
+name: sweep_l1pl350_pc_off
+sweep:
+  rates: [1.5, 2, 2.5, 3, 3.5, 4]

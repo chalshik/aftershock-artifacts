@@ -1,0 +1,6 @@
+# REG-8 G1' part a: lambda = 2-5, ascending. Starts only if G2' gives a cold floor with status ok (gate.reg8_g1_may_start).
+# Same settings as sweep_l1pl350_pc_on.yaml; only the list of rates differs. `name` keeps the sweep_parent.
+extends: sweep_l1pl350_pc_on.yaml
+name: sweep_l1pl350_pc_on
+sweep:
+  rates: [2, 3, 3.5, 4, 4.5, 5]

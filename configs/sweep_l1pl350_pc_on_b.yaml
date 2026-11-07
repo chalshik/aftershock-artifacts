@@ -1,0 +1,5 @@
+# REG-8 G1' part b: lambda = 5.5, 6, 7. Starts only if every part-a rate has a valid, passing run (gate.reg8_g1b_may_start).
+extends: sweep_l1pl350_pc_on.yaml
+name: sweep_l1pl350_pc_on
+sweep:
+  rates: [5.5, 6, 7]

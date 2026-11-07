@@ -170,3 +170,45 @@ def test_overlap_share_counts_hits_served_while_the_previous_turn_ran():
     run = {"requests": reqs, "cfg": {"workload": {"warmup_s": 0, "duration_s": 1000}}}
     assert G.overlap_share(run, 300, 400) == pytest.approx(2000 / 3000)
     assert math.isnan(G.overlap_share(run, 500, 600))
+
+
+def test_reg8_is_reg7_with_the_350w_sweeps_only():
+    diff = {k for k in G.REG7.keys() | G.REG8.keys() if G.REG7.get(k) != G.REG8.get(k)}
+    assert diff == {"sweep_on", "sweep_off", "power_limit_w", "g1a_top"}   # the last two are new keys, not REG-7 values
+    assert (G.REG8["sweep_on"], G.REG8["sweep_off"]) == ("sweep_l1pl350_pc_on", "sweep_l1pl350_pc_off")
+
+
+def _part_a_run(tmp_path, valid, power_ok, gpu_ok, sw_frac, bits):
+    import json
+    (tmp_path / "gpu.jsonl").write_text("".join(json.dumps({"t": float(t), "throttle_reasons": bits}) + "\n"
+                                                for t in range(0, 900, 10)))
+    checks = [{"name": "power_limit", "passed": power_ok, "detail": {}},
+              {"name": "gpu_steady", "passed": gpu_ok, "detail": {"sw_thermal_frac": sw_frac}}]
+    return {"dir": tmp_path, "checks": {"valid": valid, "checks": checks},
+            "cfg": {"checks": {"max_sw_thermal_frac": 0.05}, "workload": {"warmup_s": 240, "duration_s": 900}}}
+
+
+def test_reg8_part_a_separates_heat_from_other_failures(tmp_path):
+    assert G.reg8_part_a(_part_a_run(tmp_path, True, True, True, 0.0, 4)) == "valid"
+    assert G.reg8_part_a(_part_a_run(tmp_path, False, True, False, 0.08, 4)) == "heat"       # SW thermal over limit
+    assert G.reg8_part_a(_part_a_run(tmp_path, False, True, False, 0.0, 0x40)) == "heat"     # HW thermal bit
+    assert G.reg8_part_a(_part_a_run(tmp_path, False, True, False, 0.0, 0x80)) == "rerun"    # HW power brake, or CV
+    assert G.reg8_part_a(_part_a_run(tmp_path, False, False, False, 0.08, 4)) == "rerun"     # limit not held (T1)
+    assert G.reg8_part_a(_part_a_run(tmp_path, False, False, True, 0.0, 4)) == "rerun"       # limit not held (T2)
+    assert G.reg8_part_a({"checks": None}) == "rerun"                                        # stopped run
+
+
+def test_reg8_gate_verdict_refuses_mismatched_or_420w_pairs(tmp_path):
+    def run(rate, limit):
+        return {"dir": tmp_path, "cfg": {"checks": {"expected_power_limit_w": limit}, "workload": {"rate": rate}}}
+    with pytest.raises(ValueError, match="350 W"):
+        G.reg8_gate_verdict(run(3.5, None), run(3.5, 350))
+    with pytest.raises(ValueError, match="same λ"):
+        G.reg8_gate_verdict(run(3.5, 350), run(3.0, 350))
+
+
+def test_sweep_rows_of_an_empty_sweep_gives_an_unmeasured_floor():
+    rows = G.sweep_rows("no_such_sweep")
+    assert len(rows) == 0
+    f = G.cold_floor(rows, 0.85, 2, 0.95)
+    assert f["status"] != "ok" and math.isnan(f["mu_sat_off"])

@@ -202,18 +202,85 @@ def sweep_rows(parent: str, slo_ttft_s: float | None = None) -> pd.DataFrame:
             pf = _level(r, wl["warmup_s"], wl["duration_s"])["pf"]
         rows.append({"run": r["dir"].name, "rate": wl["rate"], "throughput": s["throughput"], "planned_rate": s["planned_rate"],
                      "kv_mean": float(m.kv_cache_usage_perc.mean()), "pf": pf})
-    return pd.DataFrame(rows, columns=["run", "rate", "throughput", "planned_rate", "kv_mean", "pf"])
+    num = {k: float for k in ("rate", "throughput", "planned_rate", "kv_mean", "pf")}   # typed even with no rows
+    return pd.DataFrame(rows, columns=["run", *num]).astype(num)
+
+
+# REG-8 (docs/decisions.md 2026-11-06): REG-7 repeated at a 350 W power limit. Every value is REG-7's; only the sweeps
+# differ. Not to be changed after approval.
+REG8 = {**REG7, "sweep_on": "sweep_l1pl350_pc_on", "sweep_off": "sweep_l1pl350_pc_off",
+        "power_limit_w": 350, "g1a_top": 5.0}   # the cap, and the top rate of G1' part a
+
+
+def zone(reg: dict) -> dict:
+    """Parts 1-2 on one pair of sweeps: μ_warm (the rule in their configs), μ_sat,off, λ_test (with the SLO check)."""
+    from analysis.tables import sweep_capacity
+    on = sweep_rows(reg["sweep_on"], reg["slo_ttft_s"])
+    mu_warm = sweep_capacity(reg["sweep_on"])
+    floor = cold_floor(sweep_rows(reg["sweep_off"]), reg["floor_min_kv"], reg["floor_min_runs"], reg["sat_frac"])
+    return {"mu_warm": mu_warm, "mu_off": sweep_capacity(reg["sweep_off"]), **floor,
+            "lam_test": choose_lambda(mu_warm, floor["mu_sat_off"], on, reg)}
 
 
 def reg7_zone() -> dict:
-    """Parts 1-2 on the L1 sweeps: μ_warm (the rule in their configs), μ_sat,off, λ_test (with the SLO check)."""
+    """REG-7's gate, parts 1-2, on the 420 W L1 sweeps."""
+    return zone(REG7)
+
+
+def reg8_zone() -> dict:
+    """REG-8's gate, parts 1-2, on the 350 W L1 sweeps."""
+    return zone(REG8)
+
+
+# REG-8's stopping rules, as functions (after its adversarial review). They read validity, GPU throttle bits, the cold
+# floor (G2' only) and the capacity chain, never a verdict or a burst outcome.
+HW_THERMAL_BIT = 0x40     # NVML HW thermal slowdown
+
+
+def reg8_part_a(run: dict) -> str:
+    """Outcome of G2' part a (λ = 1, the heat test): `valid`; `heat` (the limit held, and the SW-thermal share is over
+    the run's own limit or a sample carries the HW-thermal bit); `rerun` (any other failure, including `power_limit`:
+    a run whose limit did not hold says nothing about heat at 350 W)."""
+    ch = run["checks"]
+    if ch is None:
+        return "rerun"
+    if ch["valid"]:
+        return "valid"
+    by = {c["name"]: c for c in ch["checks"]}
+    if "power_limit" not in by or not by["power_limit"]["passed"]:
+        return "rerun"
+    g, c, wl = by.get("gpu_steady"), run["cfg"]["checks"], run["cfg"]["workload"]
+    if g is None or g["passed"] or not isinstance(g["detail"], dict):
+        return "rerun"
+    gpu = pd.read_json(run["dir"] / "gpu.jsonl", lines=True)
+    w = gpu[(gpu.t >= wl["warmup_s"]) & (gpu.t <= wl["duration_s"])]
+    hw_thermal = bool(((w.throttle_reasons.astype(int) & HW_THERMAL_BIT) != 0).any())
+    return "heat" if g["detail"]["sw_thermal_frac"] > c["max_sw_thermal_frac"] or hw_thermal else "rerun"
+
+
+def reg8_g1_may_start() -> dict:
+    """G1' starts only if G2' gives a cold floor with status `ok`; otherwise no λ_test is possible whatever G1' shows."""
+    r = REG8
+    return cold_floor(sweep_rows(r["sweep_off"]), r["floor_min_kv"], r["floor_min_runs"], r["sat_frac"])
+
+
+def reg8_g1b_may_start() -> bool:
+    """G1' part b (λ = 5.5, 6, 7) starts only if every part-a rate (2-5) has a valid run that passes the capacity rule,
+    i.e. the monotone μ_warm over the rates swept so far is 5. Otherwise the chain has ended and b cannot change μ."""
     from analysis.tables import sweep_capacity
-    on = sweep_rows(REG7["sweep_on"], REG7["slo_ttft_s"])
-    mu_warm = sweep_capacity(REG7["sweep_on"])
-    floor = cold_floor(sweep_rows(REG7["sweep_off"]), REG7["floor_min_kv"], REG7["floor_min_runs"], REG7["sat_frac"])
-    return {"mu_warm": mu_warm, "mu_off": sweep_capacity(REG7["sweep_off"]), **floor,
-            "lam_test": choose_lambda(mu_warm, floor["mu_sat_off"], on, REG7)}
+    return sweep_capacity(REG8["sweep_on"]) == REG8["g1a_top"]
+
+
+def reg8_gate_verdict(control: dict, burst: dict) -> dict:
+    """`gate_verdict` with REG-8's settings, after checking that both runs are 350 W L1 runs at the same λ."""
+    for run in (control, burst):
+        if run["cfg"]["checks"].get("expected_power_limit_w") != REG8["power_limit_w"]:
+            raise ValueError(f"{run['dir'].name} is not a {REG8['power_limit_w']} W run")
+    if control["cfg"]["workload"]["rate"] != burst["cfg"]["workload"]["rate"]:
+        raise ValueError("control and burst run must have the same λ")
+    return gate_verdict(control, burst, REG8["spans"], REG8["baseline_s"], REG8["cold_hit_drop"], REG8["conf"])
 
 
 if __name__ == "__main__":
-    print(reg7_zone())
+    import sys
+    print({"reg7": reg7_zone, "reg8": reg8_zone}[sys.argv[1]]())   # no default: say which registration is computed

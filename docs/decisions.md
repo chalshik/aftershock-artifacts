@@ -1577,3 +1577,142 @@ Summary:
 - **λ = 1 across 3 runs:** 0.062, 0.097, 0.135. No further rerun is allowed (REG-7 stopping rule).
 - **State of G2:** no valid run at any rate, so the cold floor is unmeasured. λ = 1.5 and 2 each have both reruns left (2 was stopped); 2.5–4 have never run.
 - **Per REG-7's decision table**, an unmeasured floor is "unmeasured, not absent", and "a new registration extends or repeats G2". The agent recommends that registration be the power-limit amendment, with G1 repeated at the same limit. The owner decides.
+
+## 2026-11-06 · [DECISION] Owner chooses a power-limit amendment for L1 (350 W); `power_limit` check approved; a knob added after `defaults.yaml` lives only in the configs that use it
+- **Owner:** "Alright lets try to power cap", after the agent laid out three options (cap with G1 and G2 repeated; more cooling at 420 W and G2 continued; stop L1) and recommended the cap. The agent proposed 350 W; the value is part of REG-8 (next entry), which the owner approves or changes.
+- **Rule conflict found and reported before going on** (CLAUDE.md D): `harness/CLAUDE.md` said new knobs go in `configs/defaults.yaml`, and `defaults.yaml` says it is never edited once used (rule 5). It has been used by every run since 2026-11-04 (one commit, `677559d`).
+- **Owner:** "option 1, power limit check approved".
+  - Option 1: the new keys (`expected_power_limit_w`, `power_limit_tol_w`) live only in the configs that use them, and `harness/checks.py` reads them with `.get`, so a missing key means "not checked". Every earlier run and config is unaffected. `harness/CLAUDE.md` now says so.
+  - The `power_limit` check (`harness/checks.py`, 7c): every `gpu.jsonl` sample must show the expected enforced limit within the tolerance; no samples fail it. Tests: `tests/test_checks.py::test_power_limit`, `::test_power_limit_is_skipped_without_the_key`.
+- **Not the agent's change, left alone:** `.gitignore` gained the line `docs/potential_gaps.md` at 19:35 today, outside the agent. It is neither committed nor reverted by the agent.
+
+## 2026-11-06 · [CORR] `gate.sweep_rows` crashed on a sweep with no valid run (REG-7 code)
+- **What was wrong:** `sweep_rows` built its table from a list of rows without column types. With no rows, the numeric columns were `object`, and `gate.cold_floor` raised a `TypeError` in `np.isfinite` instead of returning an unmeasured floor. Found by a smoke call of `gate.reg8_g1_may_start` before any 350 W run exists.
+- **Since when:** `d1b360c` (REG-7). The agent wrote the code.
+- **Which results it affects:** none. No gate has been computed, and REG-7's computation with rows is unchanged.
+- **Fix:** the numeric columns are typed `float` even with no rows. Test: `tests/test_gate.py::test_sweep_rows_of_an_empty_sweep_gives_an_unmeasured_floor`.
+- **Rule that would have caught it:** test each function on an empty input, as REG-4 did for windows.
+
+## 2026-11-06 · [REG] REG-8: REG-7's feasibility gate for setup L1, repeated at a 350 W GPU power limit (GPU, ≤ 8.3 h without reruns)
+- **ID:** REG-8. **Not approved yet:** no GPU run before the owner approves this entry.
+- **Why:** REG-7 ended with no valid G2 run. λ = 1 was invalid in all three allowed runs, from SW-thermal slowdown (shares 0.062, 0.097, 0.135 against 0.05; decisions.md [OPS] 2026-11-06). By REG-7's decision table, an unmeasured floor means "a new registration extends or repeats G2". The owner chose a power-limit amendment (decisions.md 2026-11-06 [DECISION]).
+  - Observed, from an inline reading of `gpu.jsonl` over [240, 900) s (not a committed function, so not quoted as a result): in all 19 L1 runs, the median busy power draw was 415–418 W against the 420 W limit. The power-cap throttle flag (0x4, which `gpu_steady` ignores) was set in 0.79–1.00 of samples. Busy SM-clock CV was 0.007–0.019. So the GPU sat at its limit at every rate, cache on or off.
+- **Question:** the same as REG-7's: is there a load in setup L1 with c_b(λ) < λ ≤ c_warm(λ) (`docs/model.md` M2)? Here, at a 350 W power limit.
+- **Claim tested:** M2 (feasibility), as the precondition of C1. Not C1 itself. A `pass` supports "a stuck state is possible at 350 W" only.
+- **Setup L1 at 350 W:** every setting of REG-7's L1 configs, unchanged, plus a power limit of 350 W set by the owner on the VM (`sudo nvidia-smi -pl 350`; root is needed, open-questions S3).
+  - The configs differ from REG-7's only by two check settings, `checks.expected_power_limit_w: 350` and `checks.power_limit_tol_w: 1.0`, in `configs/l1_pl350_base.yaml` and `configs/stage2_l1pl350_base.yaml`. Checked with `harness.run.expand` and `with_defaults`: every resolved per-run config equals its REG-7 counterpart apart from `name`, `sweep_parent`, `sweep` and these two keys; seed 0 unchanged. The review confirmed it independently.
+  - Check `power_limit` (`harness/checks.py`, 7c; owner-approved 2026-11-06): every `gpu.jsonl` sample must show an enforced limit within 1 W of 350. No samples, or a sample without a value, fail it. GPU samples are written on every recorder tick, and the existing `recorder` check fails a run with a gap over 2 s, so coverage is checked there.
+  - The GPU is shared, and the limit applies to the whole card. The check makes a changed limit an invalid run, not a silent confound. It cannot see a co-tenant compute process (open-questions A7).
+- **Design** (new sweep names, so no 420 W run can enter a 350 W computation):
+  - **G2′ part a:** `configs/sweep_l1pl350_pc_off_a.yaml`, λ = 1 alone. 900 s, seed 0, cache off, no dev mode. The heat test.
+  - **G2′ part b:** `configs/sweep_l1pl350_pc_off_b.yaml`, λ = 1.5, 2, 2.5, 3, 3.5, 4. Starts only if part a is valid.
+  - **G1′ part a:** `configs/sweep_l1pl350_pc_on_a.yaml`, λ = 2, 3, 3.5, 4, 4.5, 5, cache on. Starts only if `gate.reg8_g1_may_start()` (`gate.cold_floor` on G2′ alone) has status `ok`. Otherwise no λ_test is possible whatever G1′ shows. This reads only G2′, which G1′ does not judge.
+  - **G1′ part b:** `configs/sweep_l1pl350_pc_on_b.yaml`, λ = 5.5, 6, 7. Starts only if `gate.reg8_g1b_may_start()` is true: every part-a rate has a valid run passing the capacity rule (monotone μ over the rates swept so far = 5). Otherwise the chain has ended, and higher rates cannot change μ_warm or λ_test. Computed after part a's reruns.
+  - **Gate:** computed once, after G1′ and G2′ are copied back: `uv run python -m analysis.gate reg8` (`gate.reg8_zone` = `gate.zone(gate.REG8)`). `REG8` equals `REG7` in every REG-7 value except the two sweep names; it adds `power_limit_w` and `g1a_top` (`tests/test_gate.py::test_reg8_is_reg7_with_the_350w_sweeps_only`). `reg7_zone` = `zone(REG7)`, the same computation as before.
+  - **G3′** at λ_test: REG-7's G3 (two 2580 s runs, seed 1; the control sets `verdict.control_t_s: 1080`, the burst `trigger: {kind: burst, at_s: 900, duration_s: 180, rate: <λ_test>, prompt_tokens: 2944}`), except they extend `configs/stage2_l1pl350_base.yaml` and are named `stage2_control_l1pl350_r<λ>.yaml` and `burst_l1pl350_r<λ>_s1.yaml`. Judged by `gate.reg8_gate_verdict`, which refuses a pair unless both runs are 350 W runs at the same λ, then calls `gate.gate_verdict` with REG-7's settings. **The two G3′ configs get their own separate review against this entry before they run.**
+- **Analysis plan:** REG-7's, unchanged: μ_warm and μ_off by the capacity rule in `configs/l1_base.yaml` (item 42, monotone; a swept rate with no valid run ends the chain); `gate.cold_floor`, `gate.choose_lambda`, `gate.gate_verdict`, `gate.overlap_share`; REG-7's secondary readouts. The "no λ_test" outcome is reported with its cause: the floor status, the capacity chain's end, or `slo_feasible`.
+  - **Dropped after the review:** the readout μ_warm(350) against μ_warm(420). At 420 W, rates ≥ 5 had heat-invalid runs, so μ_warm(420) is censored by heat and the ratio would be biased (review T7). The cap's effect on the warm/cold balance stays open (open-questions A12).
+- **Prediction** (BELIEF):
+  - Part a `valid`, p ≈ 0.75. Peak temperature ≈ 74 °C (DERIVED, assuming a 25 °C room, which is not measured, and a temperature rise proportional to power: (83 − 25) × 350/415 + 25 ≈ 74). Valid L1 runs peaked at 75–79 °C, invalid ones at 81–83 °C.
+  - Clock ≈ 5 % lower than at 420 W (DERIVED from clock ∝ power^(1/3) near the top of the curve, an approximation: (350/415)^(1/3) ≈ 0.945).
+  - μ_sat,off ∈ [1.3, 2.1] (point 1.6, REG-7's 1.7 × 0.945), floor status `ok` p ≈ 0.7; μ_warm ∈ [3, 5.5] (point 4.5); λ_test exists p ≈ 0.6 (point 3.5).
+  - Given G3′: as REG-7: `pass` ≈ 0.3, `drains` ≈ 0.45, `control_not_healthy` ≈ 0.1, `inconclusive` ≈ 0.15. Overall `pass` ≈ 0.75 × 0.6 × 0.3 ≈ 0.14.
+- **Decision under each outcome:**
+  - **Part a, by `gate.reg8_part_a`:**
+    - `heat` (the limit held, and the SW-thermal share > 0.05 or a HW-thermal sample): one rerun after the GPU is idle at ≤ 45 °C. A second `heat` stops L1: "gate not completed: GPU heat at 420 and 350 W". No lower cap is registered here; the owner decides between a new registration and stopping L1.
+      - Why one rerun, not two: at 420 W, λ = 1 spread 0.062–0.135 between runs, so one run near the limit is not conclusive. But the cap is predicted to clear the limit by a margin (≈ 74 °C against 81–83 °C), so two failures are enough.
+    - `rerun` (any other failure: `power_limit`, clock CV, a HW power-brake sample, `no_errors`, …): rerun unchanged, at most twice, like every other invalid run. Its heat result is ignored.
+    - `valid`: part b starts.
+  - **G2′ floor not `ok` after part b's reruns:** stop before G1′. The floor is unmeasured at 350 W (status named). The owner decides.
+  - **Otherwise:** REG-7's decision table, unchanged, applied to the 350 W gate (No λ_test with floor `ok`; `pass`; `drains`; `control_not_healthy`; `inconclusive`). A `pass` registers the shock matrix at 350 W.
+- **Alternatives:**
+  1. The cap may change the warm/cold balance. Cold requests spend more time in prefill, which is compute-bound and slows with the clock; warm ones less (BELIEF). So a lower cap may widen the capacity loss and make a stuck state easier. A `pass` supports "possible at 350 W" only; a claim at 420 W needs a replication there once the heat is solved (A12).
+  2. A valid part a does not show that the cap fixed the heat. A cooler room or an idle co-tenant gives the same (review §2). For the gate only validity matters. To help tell them apart later, the `[OPS]` entries record the idle temperature and wall-clock time at each launch.
+  3. The heat may come from a sensor that board power limits only partly (memory or hotspot, not recorded). Part a tests it.
+  4. A lower clock lengthens TTFT, so `gate.slo_feasible` may lower or remove λ_test. "No λ_test" would then partly reflect the cap; it is reported with its cause (Analysis plan).
+  5. `drains` may reflect a narrower window, not a missing mechanism: a lower μ_warm lowers λ_test, and the backlog clears at the lower load. The margin λ_test − μ_sat,off and `gate.secondary_cb` are reported with it.
+  6. A co-tenant compute process on the shared GPU is not ruled out by `power_limit` (A7). `gpu_processes` is captured at the start and the end of each run only; sampling it through the run is a harness change, proposed, not done.
+  7. REG-7's alternatives 1–6 stand.
+- **Stopping rule:** REG-7's (each invalid run rerun unchanged, at most twice; G3′ at most at 2 λ_test values; an `inconclusive` pair rerun at most twice), with part a's rule and the two G1′ start rules above. A run invalid on `power_limit` counts toward its reruns. **After any heat-invalid run in G2′ part b or G1′, the agent asks the owner before spending its rerun.**
+- **Operations:**
+  - Before each part: the owner sets the limit; the agent reads `nvidia-smi --query-gpu=power.limit --format=csv` on the VM and launches only at 350 W, with the GPU idle at ≤ 45 °C. A VM reboot or driver reload may reset the limit (BELIEF); the check catches it.
+  - Launch with a redirect, no pipe (decisions.md 2026-11-05 [CORR]).
+  - After REG-8: the limit goes back to 420 W before REG-6, which is registered at 420 W. REG-6's configs carry no `power_limit` check and its seed-0 rerun must be unchanged, so the agent reads the limit before launch, and REG-6's result must show 420 W in every `gpu.jsonl` sample (review T11).
+- **Cost:** part a 0.27 h; part b ≈ 1.6 h (6 runs); G1′ ≈ 3.0 h (9 runs); G3′ ≈ 1.7 h per pair. **≤ 8.3 GPU h without reruns. Worst case with every allowed rerun ≈ 25 h** (DERIVED: G2′ 7 runs × 3 × 0.27 ≈ 5.7, G1′ 9 × 3 × 0.33 ≈ 8.9, G3′ 2 λ × 3 pairs × 1.7 ≈ 10.2). The pause rule above keeps the heat reruns with the owner. If part a ends on `heat`: ≤ 0.55 h.
+- **To change in PROTOCOL.md after approval (owner):** §4 hardware: "power limit 420 W; 350 W for setup L1 from REG-8". §6: a deviation row "L1 measured at a 350 W limit; SW-thermal slowdown at 420 W (decisions.md 2026-11-06)".
+- **Not changed:** every past verdict, μ, threshold and config. REG-7's runs stay as judged; REG-7's gate is not computed.
+
+### Adversarial review (separate subagent; it saw only the first draft, its diff and the code and configs those call; it opened no runs and no docs). Verbatim:
+
+> **Adversarial review of REG-8.** This review read only the draft, the diff and the code/configs it calls. It used no runs/ and no docs. Checked: `uv run pytest tests/test_checks.py tests/test_gate.py` gives 58 passed. Resolved per-run configs, via `load_config`, `expand` and `with_defaults`, differ from REG-7's only in `checks.expected_power_limit_w`, `checks.power_limit_tol_w`, `name` and `sweep_parent`. So the registration's equivalence claim holds.
+>
+> **1. Traces on which the verdict comes out wrong or misleading**
+> - **T1. Part a fails `gpu_steady` and `power_limit` together.** gpu.jsonl has `power_limit_w` = 350 for t < 300 and 420 for t ≥ 300 (the co-tenant reset it), and the SW-thermal share is 0.08. `failed = [gpu_steady, power_limit]`. The rule "Part a invalid on `gpu_steady`: stop" applies, and L1 is reported as "heat at 420 and 350 W", although for 2/3 of the run the heat test ran at 420 W. Nothing gives `power_limit` precedence.
+> - **T2. Part a fails `power_limit` but passes `gpu_steady`.** Example: limit 300 W in every sample (co-tenant lowered it) and SW-thermal share 0. Part a is invalid. "Part b starts only if part a passes `gpu_steady`" says part b starts. "Invalid on another check → rerun" says rerun part a. The two rules conflict, and the configs' comments say "_b only if _a passes gpu_steady". Part b could start without a valid heat test at 350 W.
+> - **T3. Part a fails `gpu_steady` for a reason other than heat.** Example: busy SM-clock CV 0.06, or one sample with HW power brake (0x80), with SW-thermal share 0.00. The rule stops L1 and labels it "GPU heat", though nothing thermal failed. `gpu_steady` mixes CV, HW-bit and SW-thermal failures (harness/checks.py:110-112).
+> - **T4. One run decides L1.** At 420 W, λ = 1 gave SW-thermal shares of 0.062, 0.097 and 0.135: a spread of 0.07 between runs of one config. A single 350 W run at 0.051 ends L1 with no rerun, while every other invalid run gets two. The design itself predicts a 0.25 chance of this.
+> - **T5. G1′ starts when it cannot change the decision.** G2′ valid runs: λ = 1, 1.5, 2 with kv_mean 0.4, 0.6, 0.8, and 2.5–4 heat-invalid three times each. Valid count is 3 ≥ 2, so G1′ starts (about 3.0 GPU h). `cold_floor` returns `unsaturated`, so `mu_sat_off` = NaN and `zone_check` returns None whatever μ_warm is. The same happens for `not_monotone` and for `too_few` with ≥ 2 valid runs: e.g. valid runs at 1, 1.5 and 4, only 4 saturated, gives n = 1. Floor status depends only on G2′ rows. Reading it before G1′ is not reading anything G1′ judges, so the "validity only" blinding buys nothing.
+> - **T6. G1′ above a broken chain.** Under the monotone rule (`tables.sweep_capacity`), if λ = 4 fails capacity, or has no valid run after its reruns, μ_warm ≤ 3.5. λ_test ≤ 0.8 × μ_warm, and `slo_feasible` only reads the smallest swept rate ≥ λ_test, which is ≤ μ_warm. So runs at 4.5–7 (≈ 1.7 h, plus up to 2 reruns each) cannot change μ_warm or λ_test. These are also the hottest runs.
+> - **T7. The readout compares with a heat-censored number.** At 420 W, `sweep_l1_pc_on` λ = 5, 5.5, 6 and 7 were heat-invalid (config comments: sweep_l1_pc_on_rerun2a.yaml:5 and rerun2b.yaml:5 say 6 and 7 each failed twice; the 6/7 rerun configs are the last allowed reruns). The monotone chain therefore ends at or below 5.5 whatever the true capacity. "μ_warm(350) ≥ 0.9 × μ_warm(420)" is biased toward passing. A 350 W μ_warm of 6 would read as "the cap gained capacity". It decides nothing, but its stated purpose is the write-up's wording.
+> - **T8. G3′ can pair mismatched runs.** Control `stage2_control_l1pl350_r3.5` (λ 3.5) with burst `burst_l1pl350_r3_s1` (λ 3): same seed 1, same duration 2580, valid, `control_t_s` 1080. `gate_verdict` accepts the pair. It checks seed, duration and control_t_s only, not rate and not power limit. A control from the 420 W `stage2_l1_base` with `control_t_s` 1080 would also pass the guards. This predates REG-8, but REG-8 uses it.
+> - **T9. The cost cap is not a bound.** Title "≤ 9 h". Without reruns: 0.27 + 1.6 + 3.0 + 2 × 1.7 = 8.27 h. The registered stopping rule allows 2 reruns for each of 16 sweep runs (≈ +9.7 h), and for G3′, 2 λ_test values × up to 3 pairs (≈ +6.8 h beyond the first pairs). That is about 25 GPU h worst case.
+> - **T10. Gaps in `power_limit` samples.** Rows with `power_limit_w` null or missing are skipped by `.max()`. `[350, null, missing]` gives dev 0 and passes (checked). The recorder always writes the field, so this is latent. The check also proves only that the limit was set, not that draw stayed at or below 350 W or that the cap was binding.
+> - **T11. REG-6 after REG-8 is unchecked.** REG-6 configs carry no `expected_power_limit_w`. If the limit is not restored to 420 W, REG-6 runs silently at 350 W: the 350/420 mixing the sweep names prevent inside REG-8, moved into REG-6. env.json records `power.limit` (harness/env_snapshot.py:33), but no check reads it.
+>
+> **2. Strongest alternative explanation for each expected outcome**
+> - **Part a valid:** the cap did not cause it; ambient conditions did. The draft's own numbers show that board power does not set temperature: runs at the same 415–418 W peaked at 75–79 °C (valid) and 81–83 °C (invalid). A cooler room, time of day, an idle co-tenant or a cooler preceding run would also give a pass. Separate them by logging an ambient proxy (idle temperature at launch, time of day, co-tenant processes during the run, not only at start) and comparing with the 420 W invalid runs.
+> - **Part a invalid:** an uncontrolled ambient or co-tenant heat load, or a CV or HW-bit failure (T3), not "the cap does not help". Separate them by the failing sub-condition (sw_frac vs CV vs HW bits) and the same ambient log.
+> - **pass:** a 350 W artefact (draft alternative 1: a lower clock slows compute-bound cold prefill more than warm work), or a co-tenant compute process during the burst run only. `gpu_processes` is captured at start only, and the power check cannot see a co-tenant. Separate them by capturing co-tenant processes through the run and, if C1 is pursued, by a replication at 420 W once the heat problem is solved.
+> - **drains:** the cap may narrow the window rather than show the mechanism absent. With μ_warm lower, λ_test is lower, and the backlog clears at the lower load. Separate them by the margin λ_test − μ_sat,off at 350 vs 420 W, and the secondary `secondary_cb`.
+> - **No λ_test:** (a) the floor is unmeasured (`unsaturated`/`not_monotone`/`too_few`), not absent; (b) the heat-censored monotone chain lowers μ_warm, as in T6/T7; (c) the cap raises TTFT, so `slo_feasible` fails (draft alternative 4). `zone()` returns `status`, `lam_sat` and `n`, but the decision text must name which of (a), (b) or (c) applied.
+> - **control_not_healthy:** the control at λ_test is itself near saturation, because μ_warm is measured with seed 0 and 900 s runs and the control uses seed 1 and 2580 s. Or a co-tenant or heat transient in a 2580 s run that `gpu_steady`'s 0.05 share tolerates (up to 129 s of SW thermal). Separate them by the control's `gpu_steady` detail and its queue trace.
+>
+> **3. Can the run change any decision?**
+> Yes:
+> - Part a decides whether L1 continues or is reported as "gate not completed: heat".
+> - G2′ + G1′ decide whether λ_test exists, so whether G3′ runs.
+> - G3′ decides between registering a shock matrix at 350 W (`pass`), the closed-loop proposal or dropping L1 (`drains`), and a new registration.
+>
+> The scope is narrower than the decision table implies. A `pass` supports "stuck state possible at 350 W" only. G1′ cannot change anything when the G2′ floor is not `ok` (T5), and the G1′ rates above the first failed or chain-ending rate cannot change anything (T6).
+>
+> **4. Code and config defects**
+> - harness/checks.py:139: NaN or missing `power_limit_w` samples are skipped by `.abs().max()` (T10). There is no coverage requirement, such as a sample count against duration/interval_s.
+> - harness/checks.py:110-112 (existing, used by REG-8's stop rule): `gpu_steady` gives one boolean for three causes. The part-a stop rule needs the sub-cause (T3). The `sw_frac` denominator is all window samples, while the CV uses busy samples only.
+> - analysis/gate.py `gate_verdict` (existing): no rate-equality or power-limit-equality guard between control and burst (T8).
+> - analysis/gate.py `zone()`: G1′'s start condition is not a function of the code. Nothing computes "G2′ ≥ 2 valid runs", let alone floor status.
+> - configs/stage2_l1pl350_base.yaml: resolves to `verdict.control_t_s` 900 (inherited from stage2_base.yaml:11) and `trigger` None. The G3′ control and burst configs are not in the diff, so they could not be reviewed. "Contents as registered in REG-7" points to text, not files, and no `stage2_control_l1_*`/`burst_l1_*` configs exist. `gate_verdict` raises on a wrong `control_t_s`, which is safe but would waste a run pair.
+> - configs/sweep_l1pl350_pc_off_a.yaml:1 and _b.yaml:1: the comments say "only if _a passes gpu_steady", which conflicts with "invalid on another check → rerun" (T2).
+> - tests/test_checks.py `test_power_limit`: no case for a mixed limit with `gpu_steady` failing (T1), and no NaN case.
+>
+> **5. Recommended changes (most important first)**
+> 1. **Part a's rule:** part b starts only if part a is **valid**. If `power_limit` fails, the run is a rerun whatever `gpu_steady` says, and its heat result is ignored. "Stop: heat" only if `sw_thermal_frac` > 0.05 or HW-thermal bits are set, with the limit held. A CV or HW-power-brake failure is rerun like any other.
+> 2. **Gate G1′ on floor status:** register now that G1′ starts only if `cold_floor(sweep_rows("sweep_l1pl350_pc_off"), …)` has `status == "ok"`. Otherwise stop: "floor unmeasured at 350 W". This saves ≈ 3 h on the outcomes where G1′ cannot change anything, and reads nothing G1′ judges.
+> 3. **G1′ early stop:** run in ascending order and stop when the monotone chain ends (a rate fails capacity, or has no valid run after its reruns). Higher rates cannot change μ_warm or λ_test.
+> 4. **Part a reruns:** either allow part a REG-7's two reruns on a heat failure, or state plainly that one run decides L1, and why that is acceptable given 0.062–0.135 between runs at 420 W.
+> 5. **Guards in `gate_verdict`, or a REG-8 wrapper:** require equal `workload.rate`, and `checks.expected_power_limit_w` == 350 in both runs. Commit and review the G3′ configs before G1′ starts, or register that G3′ gets its own review.
+> 6. **Readout:** label μ_warm(420) as a heat-censored lower bound and do not compute a ratio from it. Or compare throughput only at rates valid at both limits.
+> 7. **Restore 420 W after REG-8:** add `expected_power_limit_w: 420` to REG-6's not-yet-used configs (new files), or make the restore a pre-launch check. Otherwise REG-6 can run silently at 350 W.
+> 8. **Coverage check:** `power_limit` should fail on any NaN sample and require ≥ 0.95 × duration/interval_s samples. Add NaN and mixed-limit tests.
+> 9. **Cost:** state the worst case with reruns (≈ 25 GPU h) or cap it explicitly. The owner pauses on any SW-thermal failure in part b or G1′ rather than spending the automatic reruns.
+> 10. **Ambient logging:** record idle temperature at launch, wall-clock time, and co-tenant processes sampled through the run (not only at start), so that "the cap fixed heat" can be told apart from "the room was cooler".
+
+**Changed because of it:**
+- **T1–T3, recommendation 1:** `gate.reg8_part_a` returns `valid`, `heat` or `rerun`. `heat` needs the limit held and the SW-thermal share over the limit or a HW-thermal sample; every other failure is `rerun`. Part b starts only if part a is valid. Config comments fixed. Test: `tests/test_gate.py::test_reg8_part_a_separates_heat_from_other_failures` (T1, T2, T3 cases).
+- **T4, recommendation 4:** part a gets one rerun on `heat`; the reason is stated in the decision table.
+- **T5, recommendation 2:** G1′ starts only if `gate.reg8_g1_may_start()` has status `ok`.
+- **T6, recommendation 3:** G1′ runs in two parts; part b only if `gate.reg8_g1b_may_start()`. A finer split (per rate) was not adopted: it saves at most the part-a rates above a break, ≤ 1.3 h, against six more configs.
+- **T7, recommendation 6:** the 420 W readout is dropped; open-questions A12 added.
+- **T8, recommendation 5:** `gate.reg8_gate_verdict` refuses a pair unless both are 350 W runs at the same λ (test `::test_reg8_gate_verdict_refuses_mismatched_or_420w_pairs`). The G3′ configs get their own separate review before they run. `gate_verdict` itself is unchanged (REG-7).
+- **T9, recommendation 9:** the worst case (≈ 25 h) is stated; heat reruns in part b and G1′ wait for the owner.
+- **T10, recommendation 8:** a sample without a value fails `power_limit` (test case added). No sample-count rule: GPU samples are written on the recorder's tick, whose gaps the `recorder` check already fails (> 2 s, FILE(harness/recorder.py:111-114)). The cap being binding is not required; the check states the limit only.
+- **T11, recommendation 7:** a pre-launch read of 420 W before REG-6, and REG-6's result must show 420 W in every sample. No REG-6 config is added: its seed-0 rerun must be unchanged.
+- **Recommendation 10:** idle temperature and wall-clock time at each launch go into the `[OPS]` entries. Sampling GPU processes through the run is a harness change, proposed to the owner, not done.
+- **Not adopted:** `gpu_steady`'s denominators (sw_frac over all window samples, CV over busy ones) stay; changing them would change a used check.
+- **Also found while making the changes:** `gate.sweep_rows` crashed on a sweep with no valid run ([CORR] above).
+- Tests after the changes: `uv run pytest`, 195 passed; the one failure was `test_check_docs::test_the_repo_passes` on a stale context pack, regenerated with `tools/context_pack.py`, after which `tools/check_docs.py` is OK.
+
+## 2026-11-07 · [DECISION] Owner approves REG-8 as written; PROTOCOL.md updated for the 350 W setup
+- **Owner:** "ok / Continue", in reply to the agent's request to approve REG-8 as written (or change the wattage or the one-rerun heat rule), to commit it, and to apply the drafted PROTOCOL.md lines. The agent reads it as yes to all three, with 350 W and the one-rerun heat rule unchanged. No 350 W run exists; approval comes before any run.
+- **PROTOCOL.md:** §4 hardware now reads "power limit 420 W (350 W for setup L1 from REG-8 …)"; §6 gains the row "L1 measured at a 350 W power limit, not 420 W".
+- **Committed by name**, without `.gitignore` (the owner's uncommitted line `docs/potential_gaps.md` stays out).
+- **Next:** push to `vm`; the owner sets 350 W; the agent reads the limit and starts `configs/sweep_l1pl350_pc_off_a.yaml` with the GPU idle at ≤ 45 °C.

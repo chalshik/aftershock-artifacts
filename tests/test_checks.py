@@ -220,6 +220,32 @@ def test_kv_capacity(tmp_path):
     assert "kv_capacity" in failed(d)
 
 
+def write_gpu(d, limits):
+    with open(d / "gpu.jsonl", "w") as f:
+        for i, lim in enumerate(limits):
+            f.write(json.dumps({"t": float(i), "power_w": 300.0, "power_limit_w": lim, "sm_clock_mhz": 1800,
+                                "temp_c": 60, "util_pct": 90, "throttle_reasons": 4}) + "\n")
+    return d
+
+
+def test_power_limit_is_skipped_without_the_key(tmp_path):
+    d = write_gpu(make_run(tmp_path), [420.0] * 5)
+    assert "power_limit" not in names(d)  # old configs and defaults.yaml have no key (REG-8, option 1)
+
+
+def test_power_limit(tmp_path):
+    d = set_checks(write_gpu(make_run(tmp_path), [350.0] * 5), expected_power_limit_w=350, power_limit_tol_w=1.0)
+    assert "power_limit" in names(d) and "power_limit" not in failed(d)
+    write_gpu(d, [350.0, 350.0, 420.0, 350.0])  # one sample at another limit, e.g. reset by the other GPU user
+    assert "power_limit" in failed(d)
+    write_gpu(d, [350.4] * 3)                   # within the tolerance
+    assert "power_limit" not in failed(d)
+    write_gpu(d, [350.0, None, 350.0])          # a sample without a value (REG-8 review, T10)
+    assert "power_limit" in failed(d)
+    write_gpu(d, [])                            # no GPU samples: cannot show the limit held
+    assert "power_limit" in failed(d)
+
+
 def test_trigger_first_attempt_must_start_on_time(tmp_path):
     d = with_trigger(make_run(tmp_path), [{"success": True, "t_start": 12.5, "t_end": 12.6}])  # at_s = 10
     assert "trigger" in failed(d)

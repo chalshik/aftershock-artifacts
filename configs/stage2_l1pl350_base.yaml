@@ -1,0 +1,7 @@
+# REG-8 G3': Stage 2 run shape for setup L1 at 350 W. Same as stage2_l1_base.yaml plus the power-limit check.
+# The control and the burst at lambda_test extend this file, with the contents REG-7 registered for G3.
+extends: stage2_l1_base.yaml
+name: stage2_l1pl350_base
+checks:
+  expected_power_limit_w: 350
+  power_limit_tol_w: 1.0

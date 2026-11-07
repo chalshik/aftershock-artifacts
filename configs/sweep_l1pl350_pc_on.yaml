@@ -1,0 +1,6 @@
+# REG-8 G1': capacity of setup L1 at 350 W with prefix caching on (mu_warm). Rates as REG-7 G1. Not run directly: parts _a, _b.
+# See docs/decisions.md 2026-11-06 [REG] REG-8.
+extends: l1_pl350_base.yaml
+name: sweep_l1pl350_pc_on
+sweep:
+  rates: [2, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7]
