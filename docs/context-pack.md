@@ -577,10 +577,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-08 · [DECISION] Owner approves REG-10 as written (λ = 2.4)
-- **Owner's answer:** "ok", to the question whether REG-10 is approved as written: one exploratory control and burst pair at L1, 350 W, λ = 2.4, ≈ 1.6 GPU h, after REG-9. λ = 2.4 was the owner's choice over 2.25 earlier the same day (REG-10 entry).
-- **Order:** REG-9 finishes first (seed 0 rerun 1 running; seed 1 only by `floor.reg9_seed1_may_start()`); then REG-10's control, then its burst run, by REG-10's Operations.
-
 ### 2026-11-08 · [OPS] REG-9 seed 0 rerun 1 INVALID on `no_errors` again (1 client error in 10,711); heat and power limit clean
 - **Run:** `20261108-164842_long_pl350_pc_off_r3_s0`, ended about 17:53 UTC. Copied with identical sha256 for all 10 files; manifest +10 lines; removed from `manifests/pending_copy.txt`; VM copy kept.
 - **Checks** (FILE(runs/20261108-164842_long_pl350_pc_off_r3_s0/checks.json)): `no_errors` failed, 10,710 ok and 1 `client_error`. All others passed: `gpu_steady` SW thermal 0.0009, 0 HW samples, CV 0.015, max 75 °C; `power_limit` 350 W in all 3608 samples; `accounting` 10,711 recorded, 10,710 ok, equal to vLLM's success delta.
@@ -662,3 +658,10 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **Pre-launch read** (2026-11-08 19:09:04 UTC on the VM clock; the entry date is the owner's local date, PROBE(docs/probe/20261108_reg9/prelaunch_fc_s0.txt)): 350 W, 45 °C, 0 %, 1 MiB, no compute process; tree clean at `933d2cf` after `git pull`; 13 GB free; no tmux session.
 - **Launched:** `20261108-190906_long_pl350fc_pc_off_r3_s0` from `933d2cf`, `configs/long_pl350fc_pc_off_r3_s0.yaml`, in tmux with a redirect to `~/long_pl350fc_pc_off_r3_s0.log`. Expected end about 20:13 UTC. Listed in `manifests/pending_copy.txt` until copied.
 - **Next, by the owner's approval of all registered runs:** if valid, `floor.reg9_seed1_may_start()`; seed 1 if true; then REG-10's control and burst run.
+
+### 2026-11-09 · [DECISION] Standing instructions while the owner is away (REG-9 and REG-10)
+- **Owner's answers** (2026-11-09):
+  - "Yes, rerun once after cooling": a heat-invalid REG-9 or REG-10 run is rerun unchanged once the GPU is idle at ≤ 45 °C, within the registered rerun limit, without asking first. A second heat failure stops the queue until the owner is back.
+  - "Write up + draft next REG": when REG-10 is done, compute it once, log the `[RESULT]`, and draft and review the next registration (REG-11 on `pass`; otherwise the change the readouts point to). No new registration runs before the owner approves it.
+- **Unchanged, so they still stop the queue:** a `client_error` under `loadgen_force_close` (amendment); `stuck_unconfirmed`; a burst run that does not fill the pool; a power limit other than 350 W (setting it needs root); any unexpected pre-launch check.
+- **The run order is as approved:** REG-9 seed 0 (running), seed 1 only if `floor.reg9_seed1_may_start()`, then REG-10's control and burst run.

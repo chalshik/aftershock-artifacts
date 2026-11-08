@@ -2099,3 +2099,10 @@ Summary:
 - **Pre-launch read** (2026-11-08 19:09:04 UTC on the VM clock; the entry date is the owner's local date, PROBE(docs/probe/20261108_reg9/prelaunch_fc_s0.txt)): 350 W, 45 °C, 0 %, 1 MiB, no compute process; tree clean at `933d2cf` after `git pull`; 13 GB free; no tmux session.
 - **Launched:** `20261108-190906_long_pl350fc_pc_off_r3_s0` from `933d2cf`, `configs/long_pl350fc_pc_off_r3_s0.yaml`, in tmux with a redirect to `~/long_pl350fc_pc_off_r3_s0.log`. Expected end about 20:13 UTC. Listed in `manifests/pending_copy.txt` until copied.
 - **Next, by the owner's approval of all registered runs:** if valid, `floor.reg9_seed1_may_start()`; seed 1 if true; then REG-10's control and burst run.
+
+## 2026-11-09 · [DECISION] Standing instructions while the owner is away (REG-9 and REG-10)
+- **Owner's answers** (2026-11-09):
+  - "Yes, rerun once after cooling": a heat-invalid REG-9 or REG-10 run is rerun unchanged once the GPU is idle at ≤ 45 °C, within the registered rerun limit, without asking first. A second heat failure stops the queue until the owner is back.
+  - "Write up + draft next REG": when REG-10 is done, compute it once, log the `[RESULT]`, and draft and review the next registration (REG-11 on `pass`; otherwise the change the readouts point to). No new registration runs before the owner approves it.
+- **Unchanged, so they still stop the queue:** a `client_error` under `loadgen_force_close` (amendment); `stuck_unconfirmed`; a burst run that does not fill the pool; a power limit other than 350 W (setting it needs root); any unexpected pre-launch check.
+- **The run order is as approved:** REG-9 seed 0 (running), seed 1 only if `floor.reg9_seed1_may_start()`, then REG-10's control and burst run.
