@@ -577,110 +577,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-08 · [REG] REG-10 (exploratory): one G3′ burst/control pair at L1, 350 W, λ = 2.4 (GPU, ≈ 1.6 h)
-- **ID:** REG-10. **Exploratory, not confirmatory:** λ is chosen after REG-8's data. **Not approved yet:** no GPU run before the owner approves this entry.
-- **Why:** REG-8 found no λ_test (decisions.md 2026-11-07 [RESULT]): μ_warm 3.0, μ_sat,off 1.681, so REG-7's zone rule (largest multiple of 0.5 that is ≤ 0.8 μ_warm = 2.4 and ≥ 1.3 μ_sat,off = 2.185) has no grid value. The raw M2 condition, a load between 1.681 and the highest warm-healthy rate 3.0, is not empty (REG-8 [RESULT], alternative 3). No stuck attempt has run since 2026-11-04; this is the first in the only setup where M2 allows one.
-- **Choice of λ = 2.4 (owner, 2026-11-08, after seeing REG-8's data):** REG-8's warm margin itself, 0.8 × 3.0, with the 0.5 grid dropped; it is ≥ 1.3 × 1.681 = 2.185, so both registered margins hold (DERIVED; `tests/test_gate.py::test_reg10_lambda_is_reg8s_warm_margin_and_above_its_floor_margin`). `slo_feasible` at 2.4: the smallest swept cache-on rate ≥ 2.4 is 3.0, pooled percent fast 0.990 ≥ 0.98 (RUN(20261107-104614_sweep_l1pl350_pc_on_r3, gate.sweep_rows), REG-8 [RESULT]). Dropping the grid is a registered choice changed after the data (rule A5), so the entry is exploratory.
-  - The first draft used 2.25 (a 0.25 step). The review showed the step is a free parameter (every step of 0.05–0.3 except 0.25 gives 2.4), and that 2.4 widens the band the gate can detect (below). Put to the owner, who chose 2.4.
-- **Question:** after a 180 s burst at λ = 2.4, does the L1 server at 350 W hold a cold backlog (a counting span) while a same-seed control without the burst is healthy?
-- **Claim tested:** none confirmatory. A `pass` is a reason to register a confirmatory matrix (C1), not evidence for C1 by itself.
-- **Setup:** REG-8's G3′, unchanged except λ:
-  - `configs/stage2_control_l1pl350_r2.4.yaml`: `extends: stage2_l1pl350_base.yaml`, `seed: 1`, `workload.rate: 2.4`, `verdict.control_t_s: 1080`.
-  - `configs/burst_l1pl350_r2.4_s1.yaml`: `extends: stage2_l1pl350_base.yaml`, `seed: 1`, `workload.rate: 2.4`, `trigger: {kind: burst, at_s: 900, duration_s: 180, rate: 2.4, prompt_tokens: 2944}`.
-  - Both 2580 s, cache on, dev mode, 350 W `power_limit` check, `burst_min_kv_max: 0.95` (the burst must fill the pool, `configs/stage2_l1_base.yaml`).
-  - **Schedule** (DERIVED, `harness.workload.build_schedule` on the resolved burst config; inputs, not results): 422 burst requests (2.34 req/s, 6902 prompt tok/s), the last at 1079.5 s. Session rate 2.548 in the baseline [480, 1080), 2.722 during the burst [900, 1080), so ≈ 5.1 req/s in all during the burst, and 2.359 over the watch [1080, 2580).
-- **Detectable band** (DERIVED from the schedule and `stats.poisson_rate_upper(n, 300, 0.99)`): a span holds only if c_upper < min(λ, λp). λp in the three spans is 2.150, 2.677, 2.353, so a span can hold only if its completion rate c ≤ 1.953, 2.190, 2.147. The cold floor 1.681 is inside all three. A stuck state completing between about 2.0–2.2 and 2.4 req/s cannot give `pass`; it gives `drains` or `stuck_unconfirmed`.
-- **Analysis, computed once after both runs are valid and copied:** `uv run python -m analysis.gate reg10` (`gate.reg10_gate`). It takes the latest valid control and burst run at λ = 2.4 (`gate.reg10_pick`; a rerun is launched only after an invalid run or an `inconclusive` pair) and calls `gate.reg8_gate_verdict` (350 W and equal λ checked; then `gate.gate_verdict` with REG-7's spans, baseline, cold-hit drop and confidence). Outcome, REG-7's labels with `inconclusive` split:
-  - `stuck_unconfirmed`: `inconclusive` with the burst verdict `stuck` and the control `recovered` (the span test could not confirm);
-  - `inconclusive`: every other `inconclusive` (an instrument gap);
-  - `control_not_healthy`, `pass`, `drains`: as REG-7.
-  - **Readouts:** `gate.overlap_share` over [1080, 2580) (decisive only under `drains`); never decisive: `gate.secondary_cb`, `gate.queued_miss_share` (per span, the share of cold later turns whose previous turn had no first token yet at their planned arrival: misses from open-loop queueing, not eviction), `gate.span_clock` (median busy SM clock in the baseline and each span).
-- **Prediction** (BELIEF):
-  - The burst run fills the pool (`burst_min_kv_max` passes) p ≈ 0.85: at 350 W the cache-off sweep was saturated (KV ≥ 0.85) from λ = 2, and the burst brings ≈ 5.1 req/s with 2.34 of them cold.
-  - Given a valid pair: `pass` ≈ 0.25, `drains` ≈ 0.45, `control_not_healthy` ≈ 0.1 (seed-1 baseline load 2.548, against percent fast 0.990 at 3.0 on seed 0), `stuck_unconfirmed` ≈ 0.1, `inconclusive` ≈ 0.1. Overall `pass` ≈ 0.2.
-  - Against the band: a stuck span should complete near the cold floor (1.681, plus a few hits), inside the band. A stuck state above the band is less likely (BELIEF); it would be counted as `drains` or `stuck_unconfirmed`, and ≈ 0.05 of the `drains` share is that case.
-- **Decision under each outcome:**
-  - **`pass`:** register REG-11, the confirmatory matrix at λ = 2.4 as REG-7 specified for a pass: burst seeds 2–5, each with a same-seed, same-duration control; "most" = ≥ 3 of 5 with the one-sided Clopper–Pearson bound. REG-10's pair is not counted in it.
-  - **`drains`:** record c_b (`secondary_cb`) and 1 − c_b / μ_warm in M2. If `overlap_share` > 0.5: propose closed-loop turns to the owner (REG-7's rule). Otherwise the owner chooses the next factor. **A `drains` here does not by itself license writing up L1 as negative**: the band above leaves stuck states the gate cannot see. Any follow-up at λ = 2.5 is a second after-data deviation, and breaks the warm margin.
-  - **`stuck_unconfirmed`:** not rerun (the same schedule would likely repeat it). Reported as "stuck by the verdict, not confirmed by a span", with the readouts; the owner decides.
-  - **`control_not_healthy`:** no retry. REG-7's retry at λ − 0.5 = 1.9 is below 1.3 μ_sat,off = 2.185; the owner decides.
-  - **`inconclusive`:** rerun the pair unchanged, at most twice.
-  - **Burst run invalid on `burst_min_kv_max`:** not rerun. Reported as "one run at 2.4 did not fill the pool" (the server's timing varies between runs, so it is one run, not the schedule); the owner decides.
-- **Alternatives:**
-  1. **Open-loop queueing, not eviction:** with a backlog longer than the 5 s turn gap, a turn arrives before its previous turn's prefix is computed, and misses with any cache size. `queued_miss_share` measures it.
-  2. **The detectable band** (above).
-  3. **Seed:** μ_warm 3.0 and the floor come from seed 0 (660 s windows, no dev mode); the pair runs 2580 s on seed 1. `gate_verdict` checks c_upper against both λ and the span's λp (REG-7 review A).
-  4. **Batched completions** make the Poisson bound optimistic (`stats.poisson_rate_upper`), so a span can hold that should not. A `pass` goes to REG-11 for seeds, not to a claim.
-  5. **Dev mode** is on here and off in the sweeps (A6).
-  6. **Overlap protection:** `overlap_share` decides under `drains`.
-  7. **Heat or clock drift at 350 W:** `span_clock` against the baseline.
-  8. **350 W:** a `pass` holds at 350 W only (A12). **One seed:** a reason for the matrix, not a result.
-- **Stopping rule:** each run once; an invalid run (other than `burst_min_kv_max`) is rerun unchanged, at most twice; after a heat-invalid run the agent asks the owner first; a rerun decision reads only `checks.json`. An `inconclusive` pair is rerun at most twice.
-- **Operations:** REG-9's: the limit read at 350 W, clean tree at the Mac's `main`, no GPU compute process, idle ≤ 45 °C, tmux with a redirect. Control first, then the burst run. Starts after REG-9 has finished.
-- **Cost:** 2 × 2580 s plus start-up ≈ 1.6 GPU h; ≈ 4.8 h with every rerun of single runs; ≈ 14 h with two `inconclusive` reruns of the pair at their worst.
-- **Code and files:** `analysis/gate.py` (`REG10`, `reg10_pick`, `reg10_gate`, `queued_miss_share`, `span_clock`, `python -m analysis.gate reg10`); `tests/test_gate.py` (3 new tests); the two configs above.
-- **Not changed:** REG-8's result and settings; `REG8["step"]` stays 0.5; no published verdict.
-
-### Adversarial review (separate subagent; it saw only the first draft at λ = 2.25, its diff and the code and configs those call; it opened no runs and no docs). Verbatim:
-
-> **Adversarial review of REG-10 (rule F).** I read only the draft, the diff, the analysis/harness code it calls and the config chain. `uv run pytest tests/test_gate.py`: 30 passed. Schedules were built with `harness/workload.py` from the resolved configs (seed 1, 2580 s). They are inputs, not results.
->
-> **1. Traces where the verdict is wrong or misleading**
->
-> A. **Code bug: the rerun path breaks `reg10_gate`.** After an `inconclusive` pair, the draft says to rerun the pair unchanged. Both reruns are valid and match the same globs, so `find_runs` returns 2 runs of each kind and `reg10_gate` raises (FILE(analysis/gate.py:295-297)). Nothing in the code or the draft says which pair counts. The new test does not cover this case.
->
-> B. **The gate can only detect part of the band M2 allows.** `burst_backlog` requires c_upper < min(λ, λp). On the seed-1 schedule (DERIVED, `planned_session_rate` logic on the built schedule), λp in the three spans is 2.023, 2.507 and 2.070. So the thresholds are 2.023, 2.25 and 2.070. With `poisson_rate_upper(n, 300, 0.99)`, a span holds only if c ≤ 1.83, 2.05 or 1.88 respectively.
-> - Consequence: a real stuck state with c_b in (2.05, 2.25) cannot pass. The burst verdict would be `stuck`, which gives `inconclusive`. The stopping rule then reruns the same deterministic schedule twice, which is likely to repeat the result at about 3.2 GPU h each time.
-> - At λ = 2.4 the same computation gives max passing c of 1.95, 2.19 and 2.14 (seed 1, its own schedule).
->
-> C. **False `pass`: the Poisson bound may be too tight.** The docstring of `stats.poisson_rate_upper` says batched completions make the bound optimistic. In that case c_upper is too low and a span can hold that should not.
->
-> D. **The draft's load figures are off.** The burst has 395 requests (2.19/s, 6460 prompt tok/s). Session load in [900, 1080) is 2.72/s, not 2.25, so the total during the burst is ≈ 4.9 req/s. Planned session rate over the watch [1080, 2580) is 2.19, below λ.
->
-> **2. Strongest alternative explanation for each outcome**
-> - **`pass`:**
->   - Open-loop queueing, not eviction. With a backlog longer than the 5 s turn gap, turn k+1 is scheduled before turn k's prefix is computed, so it misses even with an infinite cache. This is the opposite of the "overlap protection" in alternative 4.
->   - Separate it by the share of cold later turns whose previous turn had no first token yet.
->   - Also possible: late-run clock drift at 350 W. Separate by comparing SM clock in the spans with the baseline.
-> - **`drains`:** 2.25 sits below the self-sustaining load (alternative 1). Or a stuck state with c_b > 2.05 that did not reach `stuck` by the verdict, e.g. a pf climb between [1380, 1980) and [1980, 2580). Neither is separable in one pair.
-> - **`control_not_healthy`:** μ_warm 3.0 comes from 660 s seed-0 sweep windows, without dev mode. The control runs 2580 s on seed 1, with local load 2.445 in its baseline window [480, 1080). Drift or heat over a long run is not excluded by the sweep.
-> - **`inconclusive`:** an instrument gap, or trace B (stuck but not confirmed). The response should differ between the two, and the draft treats them the same.
-> - **Burst does not fill the pool:** the kv gauge is sampled at 1 s and may miss a peak. Or a scheduler token budget limits how much is admitted, so the pool does not fill. One run cannot tell these apart from "2.25 cannot fill".
->
-> **3. Can the run change a decision? Is λ = 2.25 defensible?**
-> - It can change a decision. `pass` leads to REG-11 (≈ 6.4 GPU h, DERIVED 8 × 0.8 h). `drains` and `control_not_healthy` hand the choice to the owner. But `drains` at 2.25 cannot support "L1 negative" because of trace B, and the draft does not say so.
-> - The draft's numbers check out:
->   - 0.8 × 3.0 = 2.4; floor(2.4 / 0.25) × 0.25 = 2.25; 1.3 × 1.681 = 2.185.
->   - 2.25 − 1.681 = 0.569; 2.5 − 1.681 = 0.819.
->   - Cost: 1.43 h + start-up ≈ 1.6 h; worst cases 4.8 h and ≈ 14.4 h.
->   - `pass` ≈ 0.8 × 0.25 = 0.2.
-> - **λ = 2.25 vs 2.5:** 2.5 breaks the registered 0.8 μ_warm margin, so 2.25 is the better of those two.
-> - **The step is a free parameter.** Every step of 0.05, 0.1, 0.15, 0.2 or 0.3 gives 2.4; only 0.25 gives 2.25, and no sweep used a 0.25 grid. 2.4 respects both margins and widens the detectable band (trace B), at the cost of tighter control health (seed-1 baseline load 2.52).
-> - So 2.25 is defensible as exploratory only if the reason for 0.25 is stated, e.g. control-health margin. Otherwise 2.4 is the more informative choice. This is the owner's call and should be recorded.
->
-> **4. Recommendations**
-> 1. **(Blocking)** Define which pair counts after an `inconclusive` rerun, e.g. the pair named in an [OPS] entry or the latest valid pair. Make `reg10_gate` select it and add a test for it.
-> 2. **(Blocking)** Split `inconclusive`:
->    - an instrument gap is rerun as planned;
->    - `burst_verdict == stuck` with no span counting is not rerun unchanged. Report it as "stuck, not confirmed" and the owner decides.
-> 3. **(Blocking)** Put the detectable band into the entry (c ≤ 1.83 / 2.05 / 1.88 against floor 1.681). Revise the `pass` 0.25 / `drains` 0.5 predictions, or justify them against that band.
-> 4. **(Blocking)** Pre-commit that a `drains` at 2.25 does not by itself license writing up L1 as negative. Label any λ = 2.5 follow-up as a second after-data deviation that breaks the warm margin.
-> 5. **(Owner decision, before approval)** Choose between 2.25 and 2.4 with a stated reason for the step. Record that the step was picked after seeing the data.
-> 6. **(Recommended, register before data)** Add a non-decisive readout: the share of cold session turns in the spans whose previous turn had no first token yet when they arrived (open-loop queueing misses).
-> 7. **(Recommended)** Correct the load description: 395 burst requests, 2.19/s, 6460 tok/s; session load 2.72/s during the burst; watch λp 2.19.
-> 8. **(Minor)** Report a failed `burst_min_kv_max` as "one run did not fill the pool", since the server's timing varies between runs even though the schedule is fixed.
-> 9. **(Minor)** Add the burst run's SM clock in the spans vs its baseline as a reported readout, to address heat.
-
-**Changed because of it:**
-- Recommendation 5: put to the owner, who chose λ = 2.4 (the warm margin itself, no step), recorded above as an after-data choice.
-- Recommendation 1: `gate.reg10_pick` takes the latest valid run of each kind; tested with a rerun.
-- Recommendation 2: `stuck_unconfirmed` split from `inconclusive` in `gate.reg10_gate`, not rerun; tested.
-- Recommendation 3: the band, recomputed for λ = 2.4 (1.953, 2.190, 2.147), is in the entry; the predictions are restated against it.
-- Recommendation 4: written into the `drains` row.
-- Recommendations 6 and 9: `gate.queued_miss_share` and `gate.span_clock`, never decisive; `queued_miss_share` tested.
-- Recommendation 7: the load figures are recomputed for λ = 2.4 from the schedule (the review's figures were for 2.25).
-- Recommendation 8: written into the `burst_min_kv_max` row.
-
 ### 2026-11-08 · [DECISION] Owner approves REG-10 as written (λ = 2.4)
 - **Owner's answer:** "ok", to the question whether REG-10 is approved as written: one exploratory control and burst pair at L1, 350 W, λ = 2.4, ≈ 1.6 GPU h, after REG-9. λ = 2.4 was the owner's choice over 2.25 earlier the same day (REG-10 entry).
 - **Order:** REG-9 finishes first (seed 0 rerun 1 running; seed 1 only by `floor.reg9_seed1_may_start()`); then REG-10's control, then its burst run, by REG-10's Operations.
@@ -761,3 +657,8 @@ Every model used to choose a run or read a result, with its equations, the evide
 > 7. The REG-10 config headers still say "Contents as REG-7/REG-8 registered". Add a note that they were amended.
 
 **Changed because of it:** recommendations 1–4 (guards with tests; the stop rule on a recurring error and the budget; the two-difference carry and why `first_edge` still counts; the record that nothing of the invalid runs was computed), 5 (`t_connected`, tested against the fake server), 6 (SOURCE tags for both timeouts; the race itself marked BELIEF; the concurrency check not done) and 7 (config headers). The open uvicorn question is listed above.
+
+### 2026-11-09 · [OPS] REG-9 (amended) seed 0 launched with a new connection per request
+- **Pre-launch read** (2026-11-08 19:09:04 UTC on the VM clock; the entry date is the owner's local date, PROBE(docs/probe/20261108_reg9/prelaunch_fc_s0.txt)): 350 W, 45 °C, 0 %, 1 MiB, no compute process; tree clean at `933d2cf` after `git pull`; 13 GB free; no tmux session.
+- **Launched:** `20261108-190906_long_pl350fc_pc_off_r3_s0` from `933d2cf`, `configs/long_pl350fc_pc_off_r3_s0.yaml`, in tmux with a redirect to `~/long_pl350fc_pc_off_r3_s0.log`. Expected end about 20:13 UTC. Listed in `manifests/pending_copy.txt` until copied.
+- **Next, by the owner's approval of all registered runs:** if valid, `floor.reg9_seed1_may_start()`; seed 1 if true; then REG-10's control and burst run.

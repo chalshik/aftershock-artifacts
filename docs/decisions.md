@@ -2094,3 +2094,8 @@ Summary:
 > 7. The REG-10 config headers still say "Contents as REG-7/REG-8 registered". Add a note that they were amended.
 
 **Changed because of it:** recommendations 1–4 (guards with tests; the stop rule on a recurring error and the budget; the two-difference carry and why `first_edge` still counts; the record that nothing of the invalid runs was computed), 5 (`t_connected`, tested against the fake server), 6 (SOURCE tags for both timeouts; the race itself marked BELIEF; the concurrency check not done) and 7 (config headers). The open uvicorn question is listed above.
+
+## 2026-11-09 · [OPS] REG-9 (amended) seed 0 launched with a new connection per request
+- **Pre-launch read** (2026-11-08 19:09:04 UTC on the VM clock; the entry date is the owner's local date, PROBE(docs/probe/20261108_reg9/prelaunch_fc_s0.txt)): 350 W, 45 °C, 0 %, 1 MiB, no compute process; tree clean at `933d2cf` after `git pull`; 13 GB free; no tmux session.
+- **Launched:** `20261108-190906_long_pl350fc_pc_off_r3_s0` from `933d2cf`, `configs/long_pl350fc_pc_off_r3_s0.yaml`, in tmux with a redirect to `~/long_pl350fc_pc_off_r3_s0.log`. Expected end about 20:13 UTC. Listed in `manifests/pending_copy.txt` until copied.
+- **Next, by the owner's approval of all registered runs:** if valid, `floor.reg9_seed1_may_start()`; seed 1 if true; then REG-10's control and burst run.
