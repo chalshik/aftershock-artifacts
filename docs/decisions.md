@@ -2137,3 +2137,8 @@ Summary:
   3. **Shorter backlogs give lower c_b** (REG-6 alternative 2: smaller batches at a short queue): seed 1's backlog is less than half of seed 0's and its c_b is lower. Two points; not a test.
   4. **The 350 W clock and force_close** both lower measured capacity, if anything (P and the amendment's carry); they bias toward `no_change`, not away from it. Their size is not measured (A12).
 - **What follows:** none of REG-9's outcomes changes the next experiment. REG-10 starts now by the owner's approval (decisions.md 2026-11-09 [DECISION]). The power limit stays at 350 W.
+
+## 2026-11-09 · [OPS] REG-10 control launched
+- **Pre-launch read** (2026-11-08 21:16:44 UTC, VM clock; PROBE(docs/probe/20261108_reg9/prelaunch_reg10_control.txt)): 350 W, 39 °C, 0 %, 1 MiB, no compute process; tree clean at `dc62f76` (the Mac's `main`) after `git pull`; 13 GB free; no tmux session.
+- **Launched:** `20261108-211646_stage2_control_l1pl350_r2.4`, `configs/stage2_control_l1pl350_r2.4.yaml` (force_close), in tmux with a redirect to `~/stage2_control_l1pl350_r2.4.log`. 2580 s; expected end about 22:00 UTC. Listed in `manifests/pending_copy.txt` until copied.
+- **Next:** if valid, the burst run `configs/burst_l1pl350_r2.4_s1.yaml`; then `gate.reg10_gate` once.

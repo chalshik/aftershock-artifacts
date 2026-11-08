@@ -578,11 +578,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-09 · [OPS] REG-9 (amended) seed 0 launched with a new connection per request
-- **Pre-launch read** (2026-11-08 19:09:04 UTC on the VM clock; the entry date is the owner's local date, PROBE(docs/probe/20261108_reg9/prelaunch_fc_s0.txt)): 350 W, 45 °C, 0 %, 1 MiB, no compute process; tree clean at `933d2cf` after `git pull`; 13 GB free; no tmux session.
-- **Launched:** `20261108-190906_long_pl350fc_pc_off_r3_s0` from `933d2cf`, `configs/long_pl350fc_pc_off_r3_s0.yaml`, in tmux with a redirect to `~/long_pl350fc_pc_off_r3_s0.log`. Expected end about 20:13 UTC. Listed in `manifests/pending_copy.txt` until copied.
-- **Next, by the owner's approval of all registered runs:** if valid, `floor.reg9_seed1_may_start()`; seed 1 if true; then REG-10's control and burst run.
-
 ### 2026-11-09 · [DECISION] Standing instructions while the owner is away (REG-9 and REG-10)
 - **Owner's answers** (2026-11-09):
   - "Yes, rerun once after cooling": a heat-invalid REG-9 or REG-10 run is rerun unchanged once the GPU is idle at ≤ 45 °C, within the registered rerun limit, without asking first. A second heat failure stops the queue until the owner is back.
@@ -620,3 +615,8 @@ Every model used to choose a run or read a result, with its equations, the evide
   3. **Shorter backlogs give lower c_b** (REG-6 alternative 2: smaller batches at a short queue): seed 1's backlog is less than half of seed 0's and its c_b is lower. Two points; not a test.
   4. **The 350 W clock and force_close** both lower measured capacity, if anything (P and the amendment's carry); they bias toward `no_change`, not away from it. Their size is not measured (A12).
 - **What follows:** none of REG-9's outcomes changes the next experiment. REG-10 starts now by the owner's approval (decisions.md 2026-11-09 [DECISION]). The power limit stays at 350 W.
+
+### 2026-11-09 · [OPS] REG-10 control launched
+- **Pre-launch read** (2026-11-08 21:16:44 UTC, VM clock; PROBE(docs/probe/20261108_reg9/prelaunch_reg10_control.txt)): 350 W, 39 °C, 0 %, 1 MiB, no compute process; tree clean at `dc62f76` (the Mac's `main`) after `git pull`; 13 GB free; no tmux session.
+- **Launched:** `20261108-211646_stage2_control_l1pl350_r2.4`, `configs/stage2_control_l1pl350_r2.4.yaml` (force_close), in tmux with a redirect to `~/stage2_control_l1pl350_r2.4.log`. 2580 s; expected end about 22:00 UTC. Listed in `manifests/pending_copy.txt` until copied.
+- **Next:** if valid, the burst run `configs/burst_l1pl350_r2.4_s1.yaml`; then `gate.reg10_gate` once.
