@@ -2178,3 +2178,108 @@ Summary:
   3. **λ = 2.4 has too much headroom:** M2 needs c(s*) < λ. The measured post-burst completion rate 3.397 is 1.4× λp (DERIVED: 3.397 / 2.359), so this state cannot be stuck at 2.4, whatever caused it. This is what `drains` says. It does not separate alternative 1 from 2.
   4. **One seed, 350 W, dev mode:** as registered (alternatives 3, 5, 8); none of them points toward a hidden stuck state.
 - **Decision (registered):** record c_b in M2 (done, docs/model.md M2). `overlap_share` > 0.5, so **closed-loop turns are proposed to the owner** as the next single factor. This changes research rule 2 (open-loop arrivals) and the harness, so only the owner can decide. A draft registration follows (REG-11), written and reviewed by the standing instruction; **it does not run before the owner approves it.** L1 is not written up as negative: REG-10 is one exploratory pair, and the readout points to a mechanism that open-loop traffic cannot test.
+
+## 2026-11-09 · [REG] REG-11 (exploratory, draft): REG-10's pair with closed-loop turns, L1, 350 W, λ = 2.4 (GPU, ≈ 1.6 h)
+- **ID:** REG-11. **Exploratory.** **Not approved:** no GPU run, and no merge of its code into `main`, before the owner approves this entry. The code is on branch `reg11-closed-loop` (commit `78c1106`); `main` and the VM do not have it.
+- **Why:** REG-10 gave `drains` with `overlap_share` 0.608 > 0.5 (decisions.md 2026-11-09 [RESULT]). REG-7's rule for that case: propose closed-loop turns to the owner as the next single factor (decisions.md 2026-11-05 [REG] REG-7, "If `overlap_share` > 0.5"). With open-loop turns, a session's next turn often arrives while its previous turn still runs, so the prefix it needs is pinned in use and cannot be evicted (REG-10 [RESULT], alternative 1). The post-burst backlog completed at 3.397 req/s, 2.0× the cache-off floor (RUN(20261108-220248_burst_l1pl350_r2.4_s1, gate.secondary_cb)). Closed-loop turns remove the overlap by construction and test whether it is what kept the cache warm.
+- **Owner decisions this needs (C. Authority):**
+  1. **Research rule 2** ("open-loop arrivals") changes for this registration's runs only: **session starts and burst requests stay open loop**; a session's later turn is released at the previous turn's end (or failure time) plus the schedule's own gap between the two turns. Rule 2's other parts stay: no client retries or timeouts, unlimited connections, no gateway.
+  2. **Checks**, changed only when `workload.sessions.closed_loop` is true:
+     - `client_lag` measures `t_sent − t_released`;
+     - `arrival_rate` counts only the open-loop arrivals (turn 0: session starts at λ / turns, plus burst requests), because later turns follow the server, and counting them would fail a stuck run for being stuck;
+     - **new check `release_chain`** (review T2): every later turn never sent must have been blocked by its own session (its previous turn never ended, or ended so late that end + planned gap is past the drain deadline, 1 s slack). A chain that stops releasing turns fails the run instead of looking like a slow server. A chain task that raises writes its unsent turns as `client_error`, so `no_errors` fails too.
+  3. **Definition of TTFT and e2e latency** (`analysis/load.py:load_run`, docs/definitions.md on the branch): measured from `t_released` when it is set, otherwise from `t_planned` as before. **Percent fast stays binned by `t_planned`** (review T3): a turn released late, or never, counts as fast or not in the window of its planned time. This keeps the verdict windows on the schedule's clock, as in every earlier run; its cost is that never-released turns near the end count as misses in their planned window, which pushes a burst run toward `stuck`, never toward `recovered`. `unreleased` reports their number per span. A false `pass` cannot come from this alone, since `pass` also needs a span that holds (review). Under closed loop, the time a session waited for its own previous turn is the system's queueing, not this request's latency. `t_planned` stays the schedule's time, so `gate.planned_session_rate` (λp) is still the planned rate, not a rate that follows completions (see "Why λp stays static").
+- **Question:** with closed-loop turns and everything else as in REG-10, does a 180 s burst at λ = 2.4 leave the L1 server at 350 W holding a cold backlog (a counting span) while the same-seed control is healthy?
+- **Claim tested:** none confirmatory. A `pass` is a reason for a confirmatory matrix, not evidence for C1.
+- **Setup:** REG-10's two configs, extended, with one key added:
+  - `configs/stage2_control_l1pl350cl_r2.4.yaml`: `extends: stage2_control_l1pl350_r2.4.yaml`, `workload.sessions.closed_loop: true`.
+  - `configs/burst_l1pl350cl_r2.4_s1.yaml`: `extends: burst_l1pl350_r2.4_s1.yaml`, the same key.
+  - Resolved (`load_config`, `with_defaults`, `harness.run.expand`): each differs from its REG-10 config only by `name` and `workload.sessions.closed_loop` (checked). Seed 1, λ = 2.4, 2580 s, burst at 900 s for 180 s at 2.4 req/s with 2944-token prompts, cache on, dev mode, 350 W check, `burst_min_kv_max` 0.95, force_close. The schedule file is the same as REG-10's (the key is read only by loadgen).
+- **Harness change** (`harness/loadgen.py`): with `closed_loop`, each session runs as one task (`session_chain`): turn 0 at its planned time, turn k at `t_end(k−1) + t_planned(k) − t_planned(k−1)`. Burst requests are sent open loop as before. Each record gains `t_released` (None in open loop). A turn not yet released at the drain deadline is written as `unfinished` (a miss) from a placeholder, so `accounting` still sees every scheduled request. After a failed turn (`http_error`, `client_error`), the next turn is released at the failure time plus the gap (review T1: `send` returned None on `http_error`; fixed, tested); any such failure already invalidates the run (`no_errors`).
+- **Why λp stays static:** under closed loop, releases follow completions: in a stuck state the release rate is about the completion rate times 7/8 (non-final turns) plus the session-start rate 0.3 (DERIVED: 2.4 / 8). A span test against the *realized* rate could then never hold, since c_upper would sit above it. Against the planned rate λp and λ, the test asks the question M2 asks: does the server complete less than the offered load? Sessions keep arriving at λ / 8 and each brings 8 turns, so the long-run demand is λ in either loop mode (BELIEF; true if sessions are not cut off by the run's end).
+- **Analysis, computed once after both runs are valid and copied:** `uv run python -m analysis.gate reg11` (`gate.reg11_gate` = `gate.reg10_gate(REG11)`, `REG11 = {**REG10, "closed_loop": True}` with the `cl` patterns). It refuses a run whose `closed_loop` is not true (and `reg10_gate` now refuses a closed-loop run). Labels and outcomes are REG-10's: `pass`, `drains`, `control_not_healthy`, `stuck_unconfirmed`, `inconclusive`. Readouts, never decisive except as stated under `drains`:
+  - REG-10's. `overlap_share` is 0 by construction (a harness check). `queued_miss_share` now tests the previous turn's first token against the release time (review T4: against the static `t_planned` it would be large exactly when sessions fall behind); open-loop runs are unchanged.
+  - `gate.release_delay` per span, and `release_delay_baseline` over the 600 s before the burst (review 6): how far sessions fell behind their schedule, against a healthy closed loop's own drift.
+  - **`gate.shock_size`** (review 1): session requests due by the burst's end and not ended by then (`outstanding`), and post-burst backlogged time (`backlog_s`, `secondary_cb`'s stretches). Reference: REG-10's burst run, `gate.reg11_reference()`. **`shock_comparable`** = both values ≥ 0.5 × REG-10's (`REG11["comparable_frac"]`, fixed in code before the reference was computed). The reference, computed after that: outstanding 267, backlog_s 393.0 (RUN(20261108-220248_burst_l1pl350_r2.4_s1, gate.reg11_reference)); so comparable means ≥ 134 outstanding and ≥ 196.5 s backlogged (DERIVED).
+  - `gate.turn0_share` per span (review 7): share of first turns among session completions; `gate.unreleased` per span (review 4).
+- **Prediction** (BELIEF):
+  - Both runs valid p ≈ 0.85; the burst fills the pool p ≈ 0.9 (the same burst filled it to 0.9998 in REG-10).
+  - Control `recovered` p ≈ 0.85. Without overlap, warm hits rest on freed blocks still cached; at KV 0.16–0.24 in REG-10's spans little is evicted.
+  - Given a valid pair: `pass` ≈ 0.15, `drains` ≈ 0.55, `control_not_healthy` ≈ 0.1, `stuck_unconfirmed` ≈ 0.1, `inconclusive` ≈ 0.1.
+  - Post-burst `secondary_cb` lower than REG-10's 3.397, point ≈ 2.8.
+  - `shock_comparable` p ≈ 0.35. The review's estimate (DERIVED there, with a BELIEF session lifetime): closed loop bounds the session backlog by the active sessions, ≈ 100 against ≈ 378 turns queued in open loop, so the shock is likely smaller.
+- **Decision under each outcome:**
+  - **`pass`:** report `turn0_share` against REG-10's spans (the queue-mix alternative, review). Draft REG-12, the confirmatory matrix with closed-loop turns at λ = 2.4: burst seeds 2–5, each with a same-seed control; ≥ 3 of 5 with the one-sided Clopper–Pearson bound. REG-11's pair is not counted.
+  - **`drains` with `shock_comparable`:** record `secondary_cb` in M2 next to REG-10's. Open-loop overlap is then not what kept L1 out of a stuck state at λ = 2.4 (REG-10's alternative 1 is out; 2 and 3 remain). The owner picks the next factor (a larger burst, a higher λ, a different setup) or writes L1 at λ = 2.4 up as negative in both loop modes, with REG-10's detectable-band caveat.
+  - **`drains` without `shock_comparable`:** reported as "closed loop weakened the shock"; nothing is ruled out (review). The next step, for the owner: a larger trigger under closed loop (a longer or denser burst), sized from `shock_size`.
+  - **`control_not_healthy`:** closed-loop traffic changes the warm side; no stuck attempt in closed loop before a closed-loop cache-on sweep measures μ_warm. The owner decides.
+  - **`stuck_unconfirmed`:** not rerun; reported with the readouts; the owner decides.
+  - **`inconclusive`:** rerun the pair unchanged, at most twice.
+  - **Burst run invalid on `burst_min_kv_max`:** not rerun; the owner decides.
+- **Alternatives:**
+  1. **Closed loop changes more than the overlap:** it bounds the post-burst session backlog by the number of active sessions and delays later turns when the server is slow (self-throttling). So the same burst is a smaller shock (review). `shock_size` against REG-10, with the comparability rule above, decides whether a `drains` can be read.
+  5. **Queue mix** (review): in a closed-loop backlog, first turns (no session prefix) may make up more of the completions, lowering the cold capacity for a reason other than eviction. `turn0_share`.
+  2. **μ_warm and the floor come from open-loop sweeps;** λ = 2.4 is 0.8 of an open-loop μ_warm. Closed-loop warm capacity may differ (alternative 3 of the prediction).
+  3. **End-of-run truncation:** sessions fall behind their schedule in a backlog, so turns near 2580 s can be cut off by the drain deadline; they count as misses. The spans end 1500 s after the burst, at the run's last planned arrival; `release_delay` shows how late releases run there.
+  4. REG-10's alternatives 2–8 stand (band, seed, batched completions, dev mode, heat, 350 W, one seed).
+- **Stopping rule:** REG-10's. Each run once; an invalid run (other than `burst_min_kv_max`) is rerun unchanged, at most twice; a heat-invalid run is rerun once after cooling (owner's standing instruction, 2026-11-09), a second heat failure stops; a `client_error` stops; a rerun decision reads only `checks.json`.
+- **Operations:** merge `reg11-closed-loop` into `main` after approval; push to `origin` and `vm`; then REG-10's operations (350 W read, clean tree at the Mac's `main`, no compute process, idle ≤ 45 °C, tmux with a redirect). Control first.
+- **Cost:** ≈ 1.6 GPU h; ≈ 4.8 h with every single-run rerun.
+- **Code and files** (branch `reg11-closed-loop`): `harness/loadgen.py` (`new_rec`, `session_chain`, `t_released`); `harness/checks.py` (`client_lag`, `arrival_rate` in closed loop); `analysis/load.py` (latency from `t_released`); `harness/checks.py` (`release_chain`); `analysis/gate.py` (`release_delay`, `release_delay_baseline`, `shock_size`, `turn0_share`, `unreleased`, `closed_loop`, `reg10_gate(spec)`, `REG11`, `reg11_reference`, `reg11_shock_comparable`, `reg11_gate`; `python -m analysis.gate reg11` and `reg11_reference`; `queued_miss_share` against the release time); `docs/definitions.md` (percent fast, closed-loop latency); the two configs; tests: `tests/test_e2e_fake.py` (4 new: closed-loop timing, checks and latency; open loop unchanged; a chain after an error, at the deadline and when it raises), `tests/test_gate.py` (3 new). Full suite: 213 passed on the branch.
+- **Not changed:** every open-loop run, config and check result: absent `closed_loop`, loadgen, checks and latency are as before (tested). REG-10's result and its readouts (`queued_miss_share` gives the same values on open-loop runs: `t_released` is absent or None).
+
+### Adversarial review (separate subagent; it saw only the first draft, its diff and the code and configs those call; it opened no runs and no docs). Verbatim:
+
+> ## Adversarial review (rule F), REG-11 draft. Sources read: the draft, `reg11.diff`, harness/loadgen.py, harness/checks.py, harness/workload.py, analysis/gate.py, load.py, margin.py, derived.py, configs base/stage2_base/stage2_cap_base. `uv run pytest -q tests/test_gate.py`: 33 passed.
+>
+> ### 1. Traces on which the verdict or the harness is wrong
+>
+> **T1: harness bug after an `http_error` (FILE(harness/loadgen.py:59, :104, :98)).** On a non-200 response, `send` runs a bare `return` inside `try`, so it returns `None` instead of `rec`. In `session_chain`, `prev = None`. On the next turn `if prev is not None` is false, so `release` keeps the failed turn's release time, and turn k+1 goes out at once with a stale `t_released`. The chain then carries on from that stale base. `no_errors` would already invalidate the run (checks.py:68), so this cannot produce a wrong verdict on a valid run. But it breaks the release formula the draft states, and the tests never cover it. Fix: `return rec` on that path.
+>
+> **T2: a silent chain death becomes "stuck"-looking misses.** `session_chain` writes placeholders for every turn first (loadgen.py:93-94). If the chain task raises anything outside `send`'s handler, `gather(..., return_exceptions=True)` swallows the exception (loadgen.py:167). The placeholders are then written as `unfinished`. Every check still passes:
+> - `accounting` passes: recorded = scheduled (checks.py:78).
+> - `no_errors` passes: it ignores `unfinished` (checks.py:68).
+> - `arrival_rate` passes: it now counts turn 0 only (checks.py:121).
+>
+> Those turns count as pf misses in `_level` (load.py:164). In closed loop, nothing checks that later turns were released at all. I found no current code path that raises, so this is a monitoring gap, not a known bug.
+>
+> **T3: `percent fast` is binned by planned time while latency is measured from release (load.py:163-164 vs load.py:23-25).** Suppose a stuck burst run where sessions have fallen behind by D. A turn planned in the verdict's end window [1980, 2580) is released at t_planned + D. If that release is after the drain deadline (t_planned.max + 300 s, loadgen.py:134), the server never sees the turn, yet it counts as a miss in the window of its *planned* time. This works against `recovered` and toward `stuck`. It is harmless in the control (D is small). But pf no longer measures the server state during the window. The span test is not affected, because it counts completions by `t_end` (margin.py:67). The registration should say which binning it uses, and why.
+>
+> **T4: the draft's claim that `queued_miss_share` is "0 or NaN by construction" is false.** It tests `prev_first > t_planned` against the *static* `t_planned` (gate.py:299). Under closed loop, any delayed session satisfies that. The readout will be large exactly when sessions fall behind. `overlap_share` (gate.py:167) is 0 by construction, as claimed.
+>
+> **Span test (DERIVED).** `holds` needs waiting > 0 at every scrape and c_upper < min(λ, λp) (gate.py:101). With a non-empty queue the server is capacity-limited, so c is its capacity whatever the loop mode. Releases then follow c (≈ 0.3 + 7c/8), but λp and λ stay the demand. So "server completes less than offered load" still holds. I found no false-pass trace: a healthy server has c ≈ λ and no persistent queue. The static λp is sound.
+>
+> **`client_lag` and `arrival_rate`.** I found no failure trace. A gap shorter than the time to write the record and build the prompt is rare: P(gap < 5 ms) ≈ 2.5e-4 with mean gap 20 s (DERIVED: 1 − e^(−0.005/20)). The burst rows are turn 0 and are counted, and `expected` adds them (checks.py:121-124). The cost: `arrival_rate` no longer tests later turns at all (see T2).
+>
+> ### 2. Strongest alternative explanation per outcome
+>
+> **`drains` (the likely outcome): closed loop shrinks the shock, not just the overlap.**
+> - In open loop, the session turns planned during the 180 s burst all join the queue: ≈ 2.4 × 7/8 × 180 ≈ 378 (DERIVED).
+> - In closed loop, each session holds at most one queued turn. The queue is bounded by the active sessions: ≈ 0.3 × (7 × 20 s + Σe2e) + 0.3 × 180 ≈ 42 + 54 ≈ 100 (DERIVED; the session lifetime is a BELIEF).
+> - So the post-burst session backlog is about 4× smaller, and the cache has less time to go cold.
+>
+> A `drains` therefore does not separate "overlap was not what kept the cache warm" from "the trigger got weaker". The decision text "REG-10's alternative 1 is out" overreaches. The draft's own alternative 1 (self-throttling) is the same concern, and `release_delay` alone does not size it.
+>
+> **`pass`:** T3 could make the burst verdict `stuck` from unreleased-turn misses. But `pass` also needs a span that holds, which needs a capacity-limited span with c_upper < λ. So T3 alone cannot create a pass. The remaining alternative is a different queue mix (many turn-0 prompts with no prefix, 640 tokens): a lower cold capacity because the closed loop changes the mix, not because of eviction. Separate the two by the share of turn-0 requests among the span's completions, compared with REG-10.
+>
+> **`control_not_healthy`:** closed-loop warm capacity differs from the open-loop μ_warm (the draft's alternative 2), or latency measured from release interacts with the baseline pf.
+>
+> ### 3. Can it change a decision? Are the prediction and table coherent?
+>
+> Yes: `pass` leads to the confirmatory matrix, and the other outcomes go to the owner. The table is not fully coherent, though. `drains` (p ≈ 0.55) is mapped to a conclusion, "the overlap is ruled out", that the run cannot support without a shock-size readout. Without that readout, `drains` changes only "what to try next", which the owner picks anyway.
+>
+> ### 4. Recommendations
+> 1. **(Blocking)** Register a shock-size readout before the run, with a pre-stated reading, so `drains` can be read:
+>    - the session requests waiting or running at the burst's end;
+>    - the length of the post-burst backlogged stretch (waiting > 0);
+>    - both compared with REG-10's run.
+>
+>    Reword the `drains` decision: overlap is ruled out only if the backlog is comparable (a threshold fixed now). Otherwise the result is "closed loop weakened the shock".
+> 2. **(Blocking)** Fix T1: return `rec` from the `http_error` path (loadgen.py:59). Add a fake-server test for a closed-loop chain after an error and after cancellation at the deadline.
+> 3. **(Blocking)** Add a closed-loop check, or a `checks.json` detail that the stopping rule reads, for T2. Every `unfinished` turn with `t_sent` None must have a predecessor that is unfinished or whose end plus gap is past the deadline. Also log any chain-task exception.
+> 4. (Not blocking) State in the registration that pf stays binned by `t_planned` (T3), and report the count of never-released turns in each verdict window.
+> 5. (Not blocking) Correct the `queued_miss_share` claim (T4). Either drop it for closed loop or compute it against `t_released`.
+> 6. (Not blocking) Report `release_delay` for the pre-burst baseline too. A healthy closed loop drifts by Σe2e, so the post-burst values need a reference.
+> 7. (Not blocking) Under `pass`, report the share of turn-0 requests among the span's completions against REG-10 (the queue-mix alternative).
+
+**Changed because of it:** all seven recommendations. 1: `shock_size`, `reg11_reference` and `shock_comparable` (0.5 × REG-10's, fixed in code before REG-10's reference was computed), and the `drains` decision split in two. 2: `send` returns its record on `http_error`; fake tests for a chain after an error, at the deadline and when it raises. 3: the `release_chain` check, and a chain that raises writes its unsent turns as `client_error`. 4: the binning stated under owner decision 3; `unreleased` per span. 5: `queued_miss_share` against the release time. 6: `release_delay_baseline`. 7: `turn0_share`, read under `pass`. The review's line numbers refer to the first draft; the fixes moved them. **Not changed:** the static λp (the review found it sound).
