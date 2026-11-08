@@ -148,12 +148,30 @@ def shock_heat_table(runs: list[str] = SHOCK_RUNS_R3) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def connect_overhead(run: dict) -> dict:
+    """Connect time inside TTFT (REG-9/REG-10 amendment): t_connected - t_sent per request, over requests whose
+    t_connected is set (a new connection was opened). None for a reused pool connection or a run before 2026-11-09."""
+    q = run["requests"]
+    d = (q.t_connected - q.t_sent).dropna() if "t_connected" in q else pd.Series(dtype=float)
+    return {"run": run["dir"].name, "n": len(q), "n_connected": len(d),
+            "median_ms": float(d.median() * 1e3) if len(d) else np.nan,
+            "p99_ms": float(d.quantile(0.99) * 1e3) if len(d) else np.nan,
+            "max_ms": float(d.max() * 1e3) if len(d) else np.nan}
+
+
+def reg9_connect_table() -> pd.DataFrame:
+    from analysis.load import find_runs
+    return pd.DataFrame([connect_overhead(r) for r in find_runs(REG9["runs_pattern"])])
+
+
 if __name__ == "__main__":
     import sys
     pd.set_option("display.width", 250, "display.max_columns", 30)
     which = sys.argv[1] if len(sys.argv) > 1 else "reg6"
     if which == "reg9_shock_heat":
         print(shock_heat_table().round(4).to_string(index=False))
+    elif which == "reg9_connect":
+        print(reg9_connect_table().round(3).to_string(index=False))
     else:
         t = {"reg6": reg6_table, "reg9": reg9_table}[which]()
         print(t.round(4).to_string(index=False))

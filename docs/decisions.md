@@ -2117,3 +2117,23 @@ Summary:
 ## 2026-11-09 · [OPS] REG-9 seed 1 launched
 - **Pre-launch read** (PROBE(docs/probe/20261108_reg9/prelaunch_fc_s1.txt)): 350 W, 38 °C, 0 %, 1 MiB, no compute process; tree clean at the Mac's `main` after `git pull`; no tmux session.
 - **Launched:** `20261108-201227_long_pl350fc_pc_off_r3_s1`, `configs/long_pl350fc_pc_off_r3_s1.yaml`, at 20:12:27 UTC, in tmux with a redirect to `~/long_pl350fc_pc_off_r3_s1.log`. Expected end about 21:16 UTC. Listed in `manifests/pending_copy.txt` until copied.
+
+## 2026-11-09 · [RESULT] REG-9: outcome `no_change`; seed 0 `sustainable`, seed 1 `unclear` (c_b 3.115 against 3.184); REG-6's first edge is not applied
+- **Runs, both valid** at 350 W in all samples, 0 client errors with `loadgen_force_close`: `20261108-190906_long_pl350fc_pc_off_r3_s0` (SW thermal 0.001, 75 °C) and `20261108-201227_long_pl350fc_pc_off_r3_s1` (FILE(runs/20261108-201227_long_pl350fc_pc_off_r3_s1/checks.json): 10,575 ok, SW thermal 0.000, 0 HW samples, CV 0.015, max 75 °C, 350 W in 3608 of 3608 samples). Seed 1 copied with identical sha256 for 10 files; manifest +10; removed from `manifests/pending_copy.txt`.
+- **Computed once:** `uv run python -m analysis.floor reg9` (`floor.reg9_table`, `floor.reg9_outcome`). RUN(20261108-190906_long_pl350fc_pc_off_r3_s0, floor.reg9_table), RUN(20261108-201227_long_pl350fc_pc_off_r3_s1, floor.reg9_table):
+
+  | seed | label | λp | c_b | 1.05 λp | backlog_s | stretches | n_done |
+  |---|---|---|---|---|---|---|---|
+  | 0 | `sustainable` | 3.0487 | 3.2712 | 3.2011 | 1036 | 7 | 3389 |
+  | 1 | `unclear` | 3.0323 | 3.1153 | 3.1840 | 451 | 7 | 1405 |
+
+  1.05 λp DERIVED. Seed 1: c_b / λp = 3.1153 / 3.0323 = 1.027 (DERIVED), above λp but under the 5 % margin.
+- **Outcome `no_change`** (registered precedence): seed 1 is neither sustainable label, and no seed is `not_sustainable`. **No statement changes.** REG-6's first edge is not applied: the 6 default-pool λ = 3 shock runs are not reclassified as non-tests of C1, and μ_off = 2 is not recorded as an underestimate by this route. A1 stays open.
+- **Connect overhead** (amendment; reported, not a decision input): `uv run python -m analysis.floor reg9_connect` (`floor.connect_overhead`, added with this entry, `tests/test_floor.py::test_connect_overhead_counts_only_requests_with_a_new_connection`). Every request opened a new connection. t_connected − t_sent median 0.547 / 0.560 ms, p99 1.24 / 1.31 ms, max 38 / 49 ms (seed 0 / seed 1). RUN(20261108-190906_long_pl350fc_pc_off_r3_s0, floor.connect_overhead), RUN(20261108-201227_long_pl350fc_pc_off_r3_s1, floor.connect_overhead). About 0.1 % of the 1 s SLO at the p99 (DERIVED).
+- **Prediction** (model.md row 13): validity p ≈ 0.8 each, both valid (after the client-error fix); seed 0 `sustainable` ≈ 0.5: hit; seed 1 `sustainable_no_backlog` ≈ 0.55 (modal): miss. Seed 1 had 451 s of backlog, over the 300 s minimum, so its schedule did hold a queue. `first_edge` ≈ 0.4: did not occur.
+- **Alternatives** (rule A2):
+  1. **c_b noise** (REG-9 alternative 6): both seeds sit within about 2–3 % of their thresholds (seed 0 +2.2 %, seed 1 −2.2 %, DERIVED from the table). Seed 1's c_b rests on 1405 completions over 451 s. A true capacity of about 3.2 for both seeds fits both labels. Separating it needs more backlogged time per seed (longer runs, or more seeds), not this pair.
+  2. **The capacity is near λ = 3 at 350 W:** c_b 3.12–3.27 against λp ≈ 3.03–3.05 means cache-off at the default pool is only 3–8 % above the load. With P, 420 W is at least this, so λ = 3 is near, not clearly below, the cache-off capacity. Not separable from 1 with these data.
+  3. **Shorter backlogs give lower c_b** (REG-6 alternative 2: smaller batches at a short queue): seed 1's backlog is less than half of seed 0's and its c_b is lower. Two points; not a test.
+  4. **The 350 W clock and force_close** both lower measured capacity, if anything (P and the amendment's carry); they bias toward `no_change`, not away from it. Their size is not measured (A12).
+- **What follows:** none of REG-9's outcomes changes the next experiment. REG-10 starts now by the owner's approval (decisions.md 2026-11-09 [DECISION]). The power limit stays at 350 W.

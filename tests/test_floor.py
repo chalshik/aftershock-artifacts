@@ -130,3 +130,16 @@ def test_window_heat_reads_only_the_verdict_window(monkeypatch):
     assert (h["a"], h["b"]) == (300, 2400) and h["sw_thermal_frac"] == 0 and h["hw_samples"] == 0
     g.loc[g.t == 1000, "throttle_reasons"] = 0x8
     assert window_heat({"cfg": cfg, "gpu": g, "trigger": pd.DataFrame(), "metrics": None, "requests": None})["hw_samples"] == 1
+
+
+def test_connect_overhead_counts_only_requests_with_a_new_connection():
+    import math
+    from pathlib import Path
+    import pandas as pd
+    from analysis.floor import connect_overhead
+    q = pd.DataFrame({"t_sent": [1.0, 2.0, 3.0], "t_connected": [1.001, None, 3.003]})
+    r = connect_overhead({"dir": Path("x"), "requests": q})
+    assert r["n"] == 3 and r["n_connected"] == 2
+    assert abs(r["median_ms"] - 2.0) < 1e-6 and abs(r["max_ms"] - 3.0) < 1e-6
+    old = connect_overhead({"dir": Path("y"), "requests": pd.DataFrame({"t_sent": [1.0]})})
+    assert old["n_connected"] == 0 and math.isnan(old["median_ms"])
