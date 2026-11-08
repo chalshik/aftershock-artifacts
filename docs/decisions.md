@@ -1904,3 +1904,8 @@ Summary:
 - **Heat:** the 350 W cap held over the full hour, at 74 °C peak against 82 °C and SW thermal 0.296 at 420 W in REG-6's attempt (decisions.md 2026-11-07 [DECISION]).
 - **Precedent:** one earlier client error, `20261105-130250_sweep_l1_pc_on_r4.5` (`ServerDisconnectedError`, cause unknown; decisions.md 2026-11-05 [OPS]); rerun unchanged.
 - **By REG-9's stopping rule:** not a heat failure, so the rule gives a rerun of `configs/long_pl350_pc_off_r3_s0.yaml`, unchanged (1 of 2). Put to the owner before launch, as every GPU run is.
+
+## 2026-11-08 · [OPS] REG-9 seed 0 rerun 1 of 2 launched (owner: "ok")
+- **Owner's answer:** "ok", to the agent's recommendation to rerun seed 0 unchanged. Taken as approval of the rerun only; the two error rows of the invalid run were not read.
+- **Pre-launch read** (16:48:32 UTC, PROBE(docs/probe/20261108_reg9/prelaunch_s0_rerun1.txt)): 350 W, 36 °C, 0 %, 1 MiB, no compute process; tree clean at `5fbafa1` after `git pull`; 14 GB free.
+- **Launched:** `20261108-164842_long_pl350_pc_off_r3_s0` from `5fbafa1`, `configs/long_pl350_pc_off_r3_s0.yaml` unchanged, at 16:48:42 UTC, in tmux with a redirect to `~/reg9_s0_rerun1.log`. Expected end about 17:52 UTC. Listed in `manifests/pending_copy.txt` until copied.

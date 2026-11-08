@@ -1,0 +1,10 @@
+# REG-9 pre-launch read (agent, read-only)
+2026-11-08T13:41:11+00:00
+power.limit [W], temperature.gpu, utilization.gpu [%], memory.used [MiB], clocks_event_reasons.active
+350.00 W, 36, 0 %, 1 MiB, 0x0000000000000001
+# compute apps:
+# tree:
+1a12624 [OPS] REG-9 coverage check: 6 of 6 shock runs covered (SW thermal 0.005-0.046 in window); REG-9 proceeds
+0
+/dev/mapper/ubuntu--vg-ubuntu--lv   62G   45G   14G  78% /
+error connecting to /tmp/tmux-1000/default (No such file or directory)

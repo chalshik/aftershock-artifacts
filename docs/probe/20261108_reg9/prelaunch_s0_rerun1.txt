@@ -1,0 +1,10 @@
+# REG-9 seed 0 rerun 1 pre-launch read (agent, read-only)
+2026-11-08T16:48:32+00:00
+power.limit [W], temperature.gpu, utilization.gpu [%], memory.used [MiB]
+350.00 W, 36, 0 %, 1 MiB
+# compute apps:
+# tree:
+5fbafa1 [OPS] REG-9 seed 0 invalid on no_errors (2 client errors); heat clean at 350 W (74 C); rerun put to the owner
+0
+/dev/mapper/ubuntu--vg-ubuntu--lv   62G   45G   14G  78% /
+no server running on /tmp/tmux-1000/default
