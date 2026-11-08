@@ -18,9 +18,11 @@ def load_run(run_dir: Path | str) -> dict:
     cfg = yaml.safe_load((d / "config.yaml").read_text())
     reqs = pd.DataFrame(_jsonl(d / "requests.jsonl"))
     if len(reqs):
-        # Open loop: latency is measured from the *planned* arrival, so client lag cannot hide delay.
-        reqs["ttft"] = reqs.t_first_token - reqs.t_planned
-        reqs["e2e"] = reqs.t_end - reqs.t_planned
+        # Open loop: latency is measured from the *planned* arrival, so client lag cannot hide delay. Closed-loop
+        # turns (REG-11 draft): from the release time t_released, the planned gap after the previous turn's end.
+        due = reqs.t_released.fillna(reqs.t_planned).astype(float) if "t_released" in reqs else reqs.t_planned
+        reqs["ttft"] = reqs.t_first_token - due
+        reqs["e2e"] = reqs.t_end - due
     return {
         "dir": d, "cfg": cfg,
         "checks": json.loads((d / "checks.json").read_text()) if (d / "checks.json").exists() else None,

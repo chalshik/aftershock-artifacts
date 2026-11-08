@@ -55,9 +55,12 @@ def run_checks(run_dir: Path) -> dict:
     gpu = pd.DataFrame(_jsonl(run_dir / "gpu.jsonl"))
     out = []
 
-    # 1. Client lag: arrivals were really open-loop.
+    # 1. Client lag: every request was sent when it was due: at its planned time, or (closed-loop turns, REG-11 draft)
+    #    at its release time t_released.
+    closed = bool((wl.get("sessions") or {}).get("closed_loop"))  # .get: defaults.yaml was used and can't gain the key
     sent_df = reqs.dropna(subset=["t_sent"]) if len(reqs) else reqs
-    lag99 = float(np.percentile(sent_df.t_sent - sent_df.t_planned, 99)) if len(sent_df) else math.inf
+    due = sent_df.t_released.fillna(sent_df.t_planned).astype(float) if "t_released" in sent_df else sent_df.t_planned
+    lag99 = float(np.percentile(sent_df.t_sent - due, 99)) if len(sent_df) else math.inf
     out.append(check("client_lag", lag99 <= c["max_client_lag_p99_s"], {"p99_s": lag99}))
 
     # 2. No timeouts, retries or connection errors.
@@ -111,13 +114,34 @@ def run_checks(run_dir: Path) -> dict:
                          {"busy_sm_clock_cv": cv, "busy_samples": len(busy), "hw_throttle_samples": hw,
                           "sw_thermal_frac": sw_frac, "max_temp_c": float(w.temp_c.max()) if len(w) else None}))
 
-    # 6. Measured arrival rate matches lambda (Poisson-aware tolerance).
+    # 6. Measured arrival rate matches lambda (Poisson-aware tolerance). With closed-loop turns only the open-loop
+    #    arrivals are the generator's: session starts (turn 0, at lambda / turns) and burst requests. Later turns follow
+    #    the server, so counting them would fail a run for being slow (REG-11 draft).
     t_lo, t_hi = wl["warmup_s"], wl["duration_s"]
-    n = int(((sent_df.t_sent >= t_lo) & (sent_df.t_sent < t_hi)).sum()) if len(sent_df) else 0
-    expected = expected_requests(wl, t_lo, t_hi) + burst_requests(cfg.get("trigger"), t_lo, t_hi)
+    arr = sent_df[sent_df.turn == 0] if closed and len(sent_df) else sent_df
+    n = int(((arr.t_sent >= t_lo) & (arr.t_sent < t_hi)).sum()) if len(arr) else 0
+    per = 1 / wl["sessions"]["turns"] if closed else 1.0
+    expected = expected_requests(wl, t_lo, t_hi) * per + burst_requests(cfg.get("trigger"), t_lo, t_hi)
     tol = max(c["rate_rel_tolerance"] * expected, c["rate_sigma"] * math.sqrt(expected))
     out.append(check("arrival_rate", abs(n - expected) <= tol,
-                     {"measured": n / (t_hi - t_lo), "configured": wl["rate"], "count": n, "expected": expected}))
+                     {"measured": n / (t_hi - t_lo), "configured": wl["rate"] * per, "count": n, "expected": expected,
+                      "closed_loop": closed}))
+
+    # 6b. Closed-loop turns only (REG-11 review, T2): every later turn never sent was blocked by its own session, i.e.
+    #     its previous turn never ended, or ended so late that end + planned gap is past the drain deadline (1 s slack).
+    #     Anything else means a chain stopped releasing turns, which would look like a slow server.
+    if closed and len(reqs):
+        q = reqs.sort_values(["session_id", "turn"])
+        q = q[~q.request_id.isin(sched.request_id[sched.burst])] if "burst" in sched else q
+        g = q.groupby("session_id")
+        prev_end, prev_planned = g.t_end.shift(), g.t_planned.shift()
+        deadline = float(sched.t_planned.max()) + cfg["drain_s"]
+        unsent = q.t_sent.isna() & (q.turn > 0)
+        blocked = prev_end.isna() | (prev_end + q.t_planned - prev_planned > deadline - 1.0)
+        bad = q[unsent & ~blocked]
+        out.append(check("release_chain", len(bad) == 0,
+                         {"unsent_later_turns": int(unsent.sum()), "unexplained": int(len(bad)),
+                          "examples": bad.request_id.head(5).tolist()}))
 
     # 7. Code state is recorded exactly.
     out.append(check("clean_git", not (c["require_clean_git"] and env.get("git_dirty")),

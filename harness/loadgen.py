@@ -1,4 +1,7 @@
-"""Open-loop load generator: sends every request at its planned time, never waits for earlier ones.
+"""Load generator. Open loop (default): sends every request at its planned time, never waits for earlier ones.
+Closed-loop turns (`workload.sessions.closed_loop: true`, REG-11 draft): session starts and burst requests stay open
+loop; a session's later turn is released only after its previous turn has ended, plus the schedule's own gap between
+the two turns. `t_planned` stays the schedule's time; `t_released` records when the turn became due (None in open loop).
 
 Usage (started by run.py): python -m harness.loadgen <run_dir> <t0_monotonic>
 Writes one line per request to requests.jsonl. No timeouts, no retries.
@@ -31,11 +34,15 @@ class Gateway:
             self.sem.release()
 
 
-async def send(session, url, model, row, prompt, gateway, t0, out, inflight):
-    rec = dict(request_id=int(row.request_id), session_id=int(row.session_id), turn=int(row.turn),
-               t_planned=float(row.t_planned), prompt_tokens_planned=int(row.prompt_len),
+def new_rec(row, t_released=None) -> dict:
+    return dict(request_id=int(row.request_id), session_id=int(row.session_id), turn=int(row.turn),
+               t_planned=float(row.t_planned), t_released=t_released, prompt_tokens_planned=int(row.prompt_len),
                output_tokens_planned=int(row.output_len), t_sent=None, t_connected=None, t_first_token=None, t_end=None,
                prompt_tokens=None, output_tokens=None, cached_tokens=None, status="unfinished", error=None)
+
+
+async def send(session, url, model, row, prompt, gateway, t0, out, inflight, t_released=None) -> dict:
+    rec = new_rec(row, t_released)
     inflight[rec["request_id"]] = rec
     body = {"model": model, "prompt": prompt, "stream": True,
             "max_tokens": rec["output_tokens_planned"], "min_tokens": rec["output_tokens_planned"],
@@ -49,7 +56,7 @@ async def send(session, url, model, row, prompt, gateway, t0, out, inflight):
             async with session.post(url, json=body, trace_request_ctx={"rec": rec, "t0": t0}) as resp:
                 if resp.status != 200:
                     rec["status"], rec["error"] = "http_error", f"{resp.status}: {(await resp.text())[:300]}"
-                    return
+                    return rec  # session_chain needs the record (REG-11 review, T1)
                 async for raw in resp.content:
                     line = raw.decode().strip()
                     if not line.startswith("data:"):
@@ -76,6 +83,36 @@ async def send(session, url, model, row, prompt, gateway, t0, out, inflight):
             out.write(json.dumps(rec) + "\n")
             out.flush()
             inflight.pop(rec["request_id"], None)
+    return rec
+
+
+async def session_chain(rows, prompts, session, url, model, gateway, t0, out, inflight):
+    """Closed-loop turns of one session. Turn 0 is released at its planned time; turn k at the end of turn k-1 (or the
+    time it failed) plus the planned gap t_planned[k] - t_planned[k-1]. Turns not yet sent stay in `inflight` as
+    unfinished placeholders, so a turn never released before the drain deadline is still recorded (as a miss)."""
+    for row in rows:
+        inflight[int(row.request_id)] = new_rec(row)
+    try:
+        release, prev = float(rows[0].t_planned), None
+        for row in rows:
+            prompt = prompt_tokens(prompts, int(row.session_id), int(row.prompt_len))
+            if prev is not None:
+                done = prev["t_end"] if prev["t_end"] is not None else time.monotonic() - t0
+                release = done + float(row.t_planned) - prev["t_planned"]
+            delay = t0 + release - time.monotonic()
+            if delay > 0:
+                await asyncio.sleep(delay)
+            prev = await send(session, url, model, row, prompt, gateway, t0, out, inflight, t_released=release)
+    except asyncio.CancelledError:
+        raise  # the drain deadline: unsent turns stay unfinished placeholders
+    except Exception as e:  # a chain that dies must fail no_errors, not look like a slow server (REG-11 review, T2)
+        for row in rows:
+            rec = inflight.get(int(row.request_id))
+            if rec is not None and rec["t_sent"] is None:
+                rec["status"], rec["error"] = "client_error", f"session_chain: {type(e).__name__}: {e}"[:300]
+                out.write(json.dumps(rec) + "\n")
+                inflight.pop(int(row.request_id), None)
+        out.flush()
 
 
 async def _connected(session, ctx, params):
@@ -107,12 +144,26 @@ async def main(run_dir: Path, t0: float):
     gateway = Gateway(cfg["gateway"])
     deadline = t0 + (float(sched.t_planned.max()) if len(sched) else 0.0) + cfg["drain_s"]
     inflight, tasks = {}, []
+    closed = bool((cfg["workload"].get("sessions") or {}).get("closed_loop"))  # absent = open loop (older configs)
+    chains = {}
+    if closed:
+        for row in sched[~sched.burst].sort_values(["session_id", "turn"]).itertuples(index=False):
+            chains.setdefault(int(row.session_id), []).append(row)
 
     connector = make_connector(cfg)
     timeout = aiohttp.ClientTimeout(total=None, sock_read=None, sock_connect=None)
     with open(run_dir / "requests.jsonl", "a") as out:
         async with aiohttp.ClientSession(connector=connector, timeout=timeout, trace_configs=[make_trace()]) as session:
             for row in sched.itertuples(index=False):
+                if closed and not row.burst:
+                    if int(row.turn) == 0:  # the session starts open loop; its chain releases the later turns
+                        delay = t0 + row.t_planned - time.monotonic()
+                        if delay > 0:
+                            await asyncio.sleep(delay)
+                        tasks.append(asyncio.create_task(session_chain(
+                            chains[int(row.session_id)], prompts, session, url, cfg["model"], gateway, t0, out,
+                            inflight)))
+                    continue
                 prompt = prompt_tokens(prompts, int(row.session_id), int(row.prompt_len))  # built before the wait
                 delay = t0 + row.t_planned - time.monotonic()
                 if delay > 0:
