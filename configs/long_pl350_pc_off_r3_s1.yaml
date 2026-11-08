@@ -1,0 +1,9 @@
+# REG-9: REG-6 (A1, sustained cache-off capacity at lambda = 3, default pool) repeated at a 350 W GPU power limit,
+# seed 1. Same as long_pc_off_r3_s1.yaml in every setting; only the power limit differs, which the owner sets on the VM
+# (`nvidia-smi -pl 350`, root). Why: REG-6 seed 0 at 420 W ran in SW-thermal slowdown (docs/decisions.md 2026-11-07).
+# Needs the owner's approval to run.
+extends: long_pc_off_r3_s1.yaml
+name: long_pl350_pc_off_r3_s1
+checks:
+  expected_power_limit_w: 350    # every gpu.jsonl sample must show this enforced limit (harness/checks.py, power_limit)
+  power_limit_tol_w: 1.0         # NVML reports the limit in mW; 1 W allows rounding, not another setting

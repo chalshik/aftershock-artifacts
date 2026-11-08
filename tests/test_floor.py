@@ -54,3 +54,74 @@ def test_nan_or_gap_gives_unclear_data():
     r = run(lambda t: 0.0, lambda t: 3.0)
     r["metrics"] = r["metrics"][(r["metrics"].t < 2000) | (r["metrics"].t > 2010)]
     assert sustained_capacity(r, 600, 3600, **ARGS)["label"] == "unclear_data"
+
+
+def test_reg9_is_reg6_with_the_350w_runs_only():
+    from fnmatch import fnmatch
+    from analysis.floor import REG6, REG9
+    assert {k for k in REG9 if REG9.get(k) != REG6.get(k)} == {"runs_pattern", "power_limit_w"}
+    names = ["20261104-134159_long_pc_off_r3_s0", "20261108-000000_long_pl350_pc_off_r3_s1",
+             "20261108-000000_long_pl350_pc_off_r3_s10"]
+    assert [fnmatch(n, REG6["runs_pattern"]) for n in names] == [True, False, False]
+    assert [fnmatch(n, REG9["runs_pattern"]) for n in names] == [False, True, False]
+
+
+def test_reg9_table_refuses_a_run_without_a_passed_350w_check(monkeypatch, tmp_path):
+    import pytest
+    import analysis.load
+    from analysis.floor import reg9_table
+    base = run(lambda t: 0.0, lambda t: 3.0)
+
+    def fake(checks, expected):
+        r = {**base, "dir": tmp_path / "x_long_pl350_pc_off_r3_s0", "checks": {"valid": True, "checks": checks},
+             "cfg": {"seed": 0, "checks": {"max_scrape_gap_s": 2.0, "expected_power_limit_w": expected}}}
+        monkeypatch.setattr(analysis.load, "find_runs", lambda pattern: [r])
+
+    fake([{"name": "power_limit", "passed": True}], 350)
+    assert reg9_table().label.tolist() == ["sustainable_no_backlog"]
+    r = analysis.load.find_runs("")[0]  # two valid runs for one seed: the registration counts one, so refuse
+    monkeypatch.setattr(analysis.load, "find_runs", lambda pattern: [r, {**r, "dir": tmp_path / "y"}])
+    with pytest.raises(ValueError, match="more than one"):
+        reg9_table()
+    for checks, expected in [([], 350), ([{"name": "power_limit", "passed": None}], 350),
+                             ([{"name": "power_limit", "passed": True}], 420)]:
+        fake(checks, expected)
+        with pytest.raises(ValueError):
+            reg9_table()
+
+
+def test_reg9_seed1_starts_only_after_a_sustainable_seed0(monkeypatch):
+    import analysis.floor as f
+    for rows, expected in [([], False), ([(0, "sustainable")], True), ([(0, "sustainable_no_backlog")], True),
+                           ([(0, "unclear")], False), ([(0, "not_sustainable")], False), ([(0, "unclear_data")], False),
+                           ([(1, "sustainable")], False)]:
+        monkeypatch.setattr(f, "reg9_table", lambda rows=rows: pd.DataFrame(rows, columns=["seed", "label"]))
+        assert f.reg9_seed1_may_start() is expected
+
+
+def test_reg9_outcome_precedence():
+    from analysis.floor import reg9_outcome
+    t = lambda *labels: pd.DataFrame({"seed": list(range(len(labels))), "label": list(labels)})
+    assert reg9_outcome(t("sustainable", "sustainable_no_backlog")) == "first_edge"
+    assert reg9_outcome(t("sustainable_no_backlog", "sustainable")) == "first_edge"
+    assert reg9_outcome(t("sustainable", "not_sustainable")) == "not_decided_at_420W"  # a split with not_sustainable
+    assert reg9_outcome(t("not_sustainable")) == "not_decided_at_420W"  # seed 1 not started
+    assert reg9_outcome(t("sustainable")) == "no_change"  # seed 1 missing: first_edge needs both
+    assert reg9_outcome(t("sustainable", "unclear")) == "no_change"
+    assert reg9_outcome(t("unclear_data", "sustainable")) == "no_change"
+    assert reg9_outcome(pd.DataFrame(columns=["seed", "label"])) == "no_change"
+
+
+def test_window_heat_reads_only_the_verdict_window(monkeypatch):
+    import analysis.load
+    from analysis.floor import window_heat
+    monkeypatch.setattr(analysis.load, "verdict", lambda run: {"t_start": 900.0, "t_wipe": 900.0})  # a control at 900 s
+    g = pd.DataFrame({"t": np.arange(0.0, 3000), "power_limit_w": 420.0,
+                      "throttle_reasons": [0x20 if t < 200 or 2500 <= t < 2560 else (0x40 if t == 2900 else 0)
+                                           for t in range(3000)]})
+    cfg = {"verdict": {"baseline_s": 600, "watch_s": 1500, "control_t_s": 900}}
+    h = window_heat({"cfg": cfg, "gpu": g, "trigger": pd.DataFrame(), "metrics": None, "requests": None})
+    # control at 900 s: window [300, 2400]; SW thermal before 300 and the HW sample at 2900 lie outside it
+    assert (h["a"], h["b"]) == (300, 2400) and h["sw_thermal_frac"] == 0 and h["hw_samples"] == 0
+    g.loc[g.t == 1000, "throttle_reasons"] = 0x8
+    assert window_heat({"cfg": cfg, "gpu": g, "trigger": pd.DataFrame(), "metrics": None, "requests": None})["hw_samples"] == 1
