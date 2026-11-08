@@ -578,21 +578,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-09 · [OPS] The client errors are a keep-alive race between client and server (diagnosis; owner-approved deviation from REG-9's rerun rule)
-- **Deviation, approved by the owner** ("Read the error text first"): REG-9's stopping rule allows only `checks.json` before a rerun decision. The owner allowed reading the error rows of the 4 failed requests and the server logs. Nothing about capacity was computed: no c_b, backlog or label.
-- **The 4 errors** (FILE(runs/<id>/requests.jsonl), `status == client_error`):
-  - `20261105-130250_sweep_l1_pc_on_r4.5`: request 2580, `ServerDisconnectedError: Server disconnected`;
-  - `20261108-134121_long_pl350_pc_off_r3_s0`: request 3264, `ClientOSError: [Errno 104] Connection reset by peer`; request 8029, `ServerDisconnectedError`;
-  - `20261108-164842_long_pl350_pc_off_r3_s0`: request 4550, `ServerDisconnectedError`.
-  - In each, t_sent is within 0.05 s of t_planned and there is no first token: the connection failed as the request was sent.
-- **Server side:** no line matching error, exception or traceback in any of the three `server.log` files.
-- **Settings:**
-  - vLLM closes an idle HTTP connection after 5 s: SOURCE(vLLM 0.32.0 `vllm/envs.py`:VLLM_HTTP_TIMEOUT_KEEP_ALIVE, default 5; passed as `timeout_keep_alive` in `vllm/entrypoints/launchers/api_server/entry.py`).
-  - The client's pool keeps an idle connection for 15 s: `aiohttp.TCPConnector(limit=0)` (FILE(harness/loadgen.py:89)), whose `keepalive_timeout` default is 15.0 in aiohttp 3.14.5 (`aiohttp/connector.py`), on the Mac and the VM.
-- **Diagnosis (BELIEF, consistent with all of the above):** a request reuses a pooled connection that has been idle about 5 s, just as the server closes it. The server sees no request, so it logs nothing; the client gets a disconnect or reset. It is a property of the client, not of the server under test. It cannot bias a valid run, which has no errored request.
-- **Test of the diagnosis:** with a client that does not reuse idle connections past the server's limit, the rate (about 1 per 6400 requests) should drop to 0. REG-9's last rerun would show it.
-- **Proposed fix (harness change, for the owner):** below, in the next entry if approved. Nothing changed yet.
-
 ### 2026-11-09 · [REG] Amendment to REG-9 and REG-10 (approved): a new client connection per request (`loadgen_force_close`)
 - **Approved by the owner:** the fix ("New connection per request"), then the amendment and every registered run of REG-9 and REG-10 ("Alright, plan it, run all all planed ones", 2026-11-09). The registrations' own owner checkpoints stand (a heat rerun, `stuck_unconfirmed`, a burst that does not fill the pool).
 - **Why:** 4 requests in 25,450 failed at send time with `ServerDisconnectedError` or `Connection reset by peer`, invalidating REG-9 seed 0 twice (decisions.md 2026-11-08 [OPS], 2026-11-09 [OPS]). The diagnosis (decisions.md 2026-11-09 [OPS]): vLLM closes idle connections after 5 s (SOURCE(vLLM 0.32.0 vllm/envs.py:VLLM_HTTP_TIMEOUT_KEEP_ALIVE)), the client pool keeps them 15 s and reuses the oldest first (SOURCE(aiohttp 3.14.5 connector.py:BaseConnector._get, `popleft`), per the review), and a reused connection races the close (BELIEF). The server logged no error.
@@ -666,3 +651,7 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **Start rule, computed once** (`floor.reg9_seed1_may_start()`, through `floor.reg9_table`): seed 0 `sustainable`, c_b 3.2712 req/s against 1.05 × λp = 1.05 × 3.0487 = 3.2011 (DERIVED); 7 backlogged stretches totalling 1036.0 s; 3389 completions behind c_b. RUN(20261108-190906_long_pl350fc_pc_off_r3_s0, floor.reg9_table). So seed 1 starts.
   - It clears the threshold by 0.070 req/s, about 2 % (DERIVED: 3.2712 / 3.2011 − 1 = 0.022): within the c_b noise the review named (relative SD about 2–3 %, alternative 6). Stated now, before seed 1.
   - Prediction (model.md row 13): seed 0 c_b ≈ 3.2–3.45 and `sustainable` ≈ 0.5: hit.
+
+### 2026-11-09 · [OPS] REG-9 seed 1 launched
+- **Pre-launch read** (PROBE(docs/probe/20261108_reg9/prelaunch_fc_s1.txt)): 350 W, 38 °C, 0 %, 1 MiB, no compute process; tree clean at the Mac's `main` after `git pull`; no tmux session.
+- **Launched:** `20261108-201227_long_pl350fc_pc_off_r3_s1`, `configs/long_pl350fc_pc_off_r3_s1.yaml`, at 20:12:27 UTC, in tmux with a redirect to `~/long_pl350fc_pc_off_r3_s1.log`. Expected end about 21:16 UTC. Listed in `manifests/pending_copy.txt` until copied.

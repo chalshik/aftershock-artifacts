@@ -2113,3 +2113,7 @@ Summary:
 - **Start rule, computed once** (`floor.reg9_seed1_may_start()`, through `floor.reg9_table`): seed 0 `sustainable`, c_b 3.2712 req/s against 1.05 × λp = 1.05 × 3.0487 = 3.2011 (DERIVED); 7 backlogged stretches totalling 1036.0 s; 3389 completions behind c_b. RUN(20261108-190906_long_pl350fc_pc_off_r3_s0, floor.reg9_table). So seed 1 starts.
   - It clears the threshold by 0.070 req/s, about 2 % (DERIVED: 3.2712 / 3.2011 − 1 = 0.022): within the c_b noise the review named (relative SD about 2–3 %, alternative 6). Stated now, before seed 1.
   - Prediction (model.md row 13): seed 0 c_b ≈ 3.2–3.45 and `sustainable` ≈ 0.5: hit.
+
+## 2026-11-09 · [OPS] REG-9 seed 1 launched
+- **Pre-launch read** (PROBE(docs/probe/20261108_reg9/prelaunch_fc_s1.txt)): 350 W, 38 °C, 0 %, 1 MiB, no compute process; tree clean at the Mac's `main` after `git pull`; no tmux session.
+- **Launched:** `20261108-201227_long_pl350fc_pc_off_r3_s1`, `configs/long_pl350fc_pc_off_r3_s1.yaml`, at 20:12:27 UTC, in tmux with a redirect to `~/long_pl350fc_pc_off_r3_s1.log`. Expected end about 21:16 UTC. Listed in `manifests/pending_copy.txt` until copied.
