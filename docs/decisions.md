@@ -2017,3 +2017,10 @@ Summary:
 ## 2026-11-08 · [DECISION] Owner approves REG-10 as written (λ = 2.4)
 - **Owner's answer:** "ok", to the question whether REG-10 is approved as written: one exploratory control and burst pair at L1, 350 W, λ = 2.4, ≈ 1.6 GPU h, after REG-9. λ = 2.4 was the owner's choice over 2.25 earlier the same day (REG-10 entry).
 - **Order:** REG-9 finishes first (seed 0 rerun 1 running; seed 1 only by `floor.reg9_seed1_may_start()`); then REG-10's control, then its burst run, by REG-10's Operations.
+
+## 2026-11-08 · [OPS] REG-9 seed 0 rerun 1 INVALID on `no_errors` again (1 client error in 10,711); heat and power limit clean
+- **Run:** `20261108-164842_long_pl350_pc_off_r3_s0`, ended about 17:53 UTC. Copied with identical sha256 for all 10 files; manifest +10 lines; removed from `manifests/pending_copy.txt`; VM copy kept.
+- **Checks** (FILE(runs/20261108-164842_long_pl350_pc_off_r3_s0/checks.json)): `no_errors` failed, 10,710 ok and 1 `client_error`. All others passed: `gpu_steady` SW thermal 0.0009, 0 HW samples, CV 0.015, max 75 °C; `power_limit` 350 W in all 3608 samples; `accounting` 10,711 recorded, 10,710 ok, equal to vLLM's success delta.
+- **What was read:** only `checks.json`, by REG-9's stopping rule.
+- **Pattern** (DERIVED from the three `checks.json` files with `client_error`): 1 in `20261105-130250_sweep_l1_pc_on_r4.5` (4028 requests), 2 in `20261108-134121_long_pl350_pc_off_r3_s0`, 1 in this run; 4 errors in 25,450 requests of these three runs, about 1 per 6400. If errors are independent at that rate, the last allowed rerun has P(no error) ≈ exp(−10,711 / 6400) ≈ 0.19 (BELIEF on independence). The same risk applies to REG-10's runs (about 3000 requests each: ≈ 0.6 each).
+- **Not done:** the last allowed rerun (2 of 2). Put to the owner with the alternative of first reading the error text of the 4 errored requests (a logged deviation from REG-9's rule, not capacity data).
