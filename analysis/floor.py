@@ -59,6 +59,9 @@ REG6 = {"runs_pattern": "*_long_pc_off_r3_s*", "window": (600, 3600), "min_waiti
 # REG-9 (decisions.md 2026-11-07): REG-6 repeated at a 350 W power limit. Only the runs differ; the pattern matches no
 # 420 W run, and every run it reads must carry a passed 350 W power_limit check.
 REG9 = {**REG6, "runs_pattern": "*_long_pl350_pc_off_r3_s[01]", "power_limit_w": 350}
+# REG-9 amended (decisions.md 2026-11-09): the runs with a new connection per request. No run of the first configs was
+# valid, so the amendment changes which runs are read and nothing else.
+REG9 = {**REG9, "runs_pattern": "*_long_pl350fc_pc_off_r3_s[01]", "force_close": True}
 # The 6 default-pool λ = 3 shock runs REG-6's first edge is about (420 W; docs/model.md ledger row 1). REG-9 carries its
 # 350 W result only to those that were heat-clean inside their own verdict window (shock_heat_table).
 SHOCK_RUNS_R3 = ["20261102-072216_wipe_preempt_r3_s1", "20261102-053935_wipe_preempt_r3_s2",
@@ -74,6 +77,8 @@ def reg_table(reg: dict) -> pd.DataFrame:
             pl = {c["name"]: c for c in r["checks"]["checks"]}.get("power_limit", {})
             if pl.get("passed") is not True or r["cfg"]["checks"].get("expected_power_limit_w") != reg["power_limit_w"]:
                 raise ValueError(f"{r['dir'].name}: not a passed {reg['power_limit_w']} W run")
+        if reg.get("force_close") and r["cfg"].get("loadgen_force_close") is not True:  # amendment review, trace B
+            raise ValueError(f"{r['dir'].name}: not a run with a new connection per request")
         res = sustained_capacity(r, *reg["window"], reg["min_waiting"], reg["min_stretch_s"], reg["min_backlog_s"],
                                  reg["margin"], r["cfg"]["checks"]["max_scrape_gap_s"])
         rows.append({"run": r["dir"].name, "seed": r["cfg"]["seed"], **res})

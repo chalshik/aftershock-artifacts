@@ -121,3 +121,25 @@ def test_l1_setup_runs_end_to_end_with_its_prompt_lengths(tmp_path):
     cfg = yaml.safe_load((run_dir / "config.yaml").read_text())
     assert cfg["capacity"]["against"] == "planned_rate"
     assert json.loads((run_dir / "checks.json").read_text())["valid"]
+
+
+def test_force_close_opens_a_connection_per_request_and_is_off_when_absent(tmp_path):
+    """decisions.md 2026-11-09: loadgen_force_close stops connection reuse; old configs (no key) keep the pool."""
+    import asyncio
+    from harness.loadgen import make_connector
+
+    async def flags():
+        out = []
+        for cfg in ({}, {"loadgen_force_close": False}, {"loadgen_force_close": True}):
+            c = make_connector(cfg)
+            out.append((c.force_close, c.limit))
+            await c.close()
+        return out
+
+    assert asyncio.run(flags()) == [(False, 0), (False, 0), (True, 0)]
+    run_dir = run_fake(tmp_path, loadgen_force_close=True)
+    assert json.loads((run_dir / "checks.json").read_text())["valid"]
+    assert yaml.safe_load((run_dir / "config.yaml").read_text())["loadgen_force_close"] is True
+    reqs = pd.read_json(run_dir / "requests.jsonl", lines=True)
+    ok = reqs[reqs.status == "ok"]  # every request opened its own connection, after it was sent and before its first token
+    assert ok.t_connected.notna().all() and (ok.t_connected >= ok.t_sent).all() and (ok.t_connected <= ok.t_first_token).all()

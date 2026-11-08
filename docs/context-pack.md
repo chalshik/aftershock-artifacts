@@ -14,7 +14,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-07
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: REG-9 (decisions.md 2026-11-07 [REG]; REG-6 at 350 W; approved 2026-11-08): shock runs all covered; seed 0's first run invalid on `no_errors` (2 client errors), rerun 1 also invalid on `no_errors` (1 client error); the last rerun, or first reading the error text, is put to the owner. **REG-10** (decisions.md 2026-11-08 [REG]; exploratory stuck attempt at L1, 350 W, λ = 2.4, ≈ 1.6 GPU h) is written, reviewed and **approved by the owner on 2026-11-08**; it runs after REG-9. Then the owner picks the next factor for L1 (REG-8 [RESULT]).** REG-8 is done: 13 of 13 runs valid at 350 W; μ_warm 3.0, cold floor 1.681 (`ok`), **no λ_test**, so no shock matrix at L1. The cold state loses 0.585 of capacity (0.116 at the default pool), but the warm side fails TTFT early. The outcome rests on λ = 3.5's queue slope, 0.0145 against 0.01. The owner set the GPU back to 420 W on 2026-11-07 (read 14:30 UTC, `docs/probe/20261107_power_limit/read_420w.txt`); a further L1 run at 350 W needs the owner to set 350 W again. REG-7 ended with no valid G2 run (λ = 1 SW-thermal 0.062, 0.097, 0.135; decisions.md [OPS] 2026-11-06), so the floor is unmeasured. The owner chose a power-limit amendment, and REG-8 (decisions.md 2026-11-06 [REG]) repeats REG-7's gate at 350 W: G2′ part a (λ = 1, the heat test) → G2′ part b → G1′ part a → G1′ part b → gate once → G3′, each step with a registered start rule (`gate.reg8_part_a`, `gate.reg8_g1_may_start`, `gate.reg8_g1b_may_start`). Written, reviewed (rule F) and **approved by the owner on 2026-11-07**. The `power_limit` check was approved by the owner on 2026-11-06. REG-7's G1 (420 W, valid at λ = 2–5.5) stays as judged; no μ is computed.
+**Next action: REG-9 (decisions.md 2026-11-07 [REG]; REG-6 at 350 W; approved 2026-11-08): shock runs all covered; seed 0's first run invalid on `no_errors` (2 client errors), rerun 1 also invalid on `no_errors` (1 client error). The errors were a client keep-alive race (decisions.md 2026-11-09 [OPS]); fixed by `loadgen_force_close` (amendment, approved 2026-11-09). REG-9 restarts with `configs/long_pl350fc_pc_off_r3_s0.yaml`; the owner approved running every registered REG-9 and REG-10 run in order. **REG-10** (decisions.md 2026-11-08 [REG]; exploratory stuck attempt at L1, 350 W, λ = 2.4, ≈ 1.6 GPU h) is written, reviewed and **approved by the owner on 2026-11-08**; it runs after REG-9. Then the owner picks the next factor for L1 (REG-8 [RESULT]).** REG-8 is done: 13 of 13 runs valid at 350 W; μ_warm 3.0, cold floor 1.681 (`ok`), **no λ_test**, so no shock matrix at L1. The cold state loses 0.585 of capacity (0.116 at the default pool), but the warm side fails TTFT early. The outcome rests on λ = 3.5's queue slope, 0.0145 against 0.01. The owner set the GPU back to 420 W on 2026-11-07 (read 14:30 UTC, `docs/probe/20261107_power_limit/read_420w.txt`); a further L1 run at 350 W needs the owner to set 350 W again. REG-7 ended with no valid G2 run (λ = 1 SW-thermal 0.062, 0.097, 0.135; decisions.md [OPS] 2026-11-06), so the floor is unmeasured. The owner chose a power-limit amendment, and REG-8 (decisions.md 2026-11-06 [REG]) repeats REG-7's gate at 350 W: G2′ part a (λ = 1, the heat test) → G2′ part b → G1′ part a → G1′ part b → gate once → G3′, each step with a registered start rule (`gate.reg8_part_a`, `gate.reg8_g1_may_start`, `gate.reg8_g1b_may_start`). Written, reviewed (rule F) and **approved by the owner on 2026-11-07**. The `power_limit` check was approved by the owner on 2026-11-06. REG-7's G1 (420 W, valid at λ = 2–5.5) stays as judged; no μ is computed.
 
 Steps:
 1. **Read-only VM checks: done 2026-11-05** (decisions.md [OPS], evidence in `docs/probe/20261105_vm_checks/`).
@@ -577,23 +577,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-08 · [OPS] REG-9 seed 0 INVALID on `no_errors` (2 client errors in 10,711); heat and power limit clean
-- **Run:** `20261108-134121_long_pl350_pc_off_r3_s0`, ended about 14:45 UTC. Copied to the Mac with identical sha256 for all 10 files; the manifest gained 10 lines; removed from `manifests/pending_copy.txt`. The VM copy is kept.
-- **Checks** (FILE(runs/20261108-134121_long_pl350_pc_off_r3_s0/checks.json)): `no_errors` failed with 10,709 ok and 2 `client_error`. Every other check passed:
-  - `gpu_steady`: SW thermal 0.0006, 0 HW samples, clock CV 0.016, max 74 °C;
-  - `power_limit`: 350 W in all 3608 samples;
-  - `accounting`: 10,711 scheduled and recorded, 10,709 ok, equal to vLLM's success delta;
-  - `arrival_rate`, `recorder`, `client_lag`, `clean_git`, `kv_capacity`.
-- **What was read:** only `checks.json`, by REG-9's stopping rule. Not c_b, the backlog, any label, nor the two error rows of `requests.jsonl`.
-- **Heat:** the 350 W cap held over the full hour, at 74 °C peak against 82 °C and SW thermal 0.296 at 420 W in REG-6's attempt (decisions.md 2026-11-07 [DECISION]).
-- **Precedent:** one earlier client error, `20261105-130250_sweep_l1_pc_on_r4.5` (`ServerDisconnectedError`, cause unknown; decisions.md 2026-11-05 [OPS]); rerun unchanged.
-- **By REG-9's stopping rule:** not a heat failure, so the rule gives a rerun of `configs/long_pl350_pc_off_r3_s0.yaml`, unchanged (1 of 2). Put to the owner before launch, as every GPU run is.
-
-### 2026-11-08 · [OPS] REG-9 seed 0 rerun 1 of 2 launched (owner: "ok")
-- **Owner's answer:** "ok", to the agent's recommendation to rerun seed 0 unchanged. Taken as approval of the rerun only; the two error rows of the invalid run were not read.
-- **Pre-launch read** (16:48:32 UTC, PROBE(docs/probe/20261108_reg9/prelaunch_s0_rerun1.txt)): 350 W, 36 °C, 0 %, 1 MiB, no compute process; tree clean at `5fbafa1` after `git pull`; 14 GB free.
-- **Launched:** `20261108-164842_long_pl350_pc_off_r3_s0` from `5fbafa1`, `configs/long_pl350_pc_off_r3_s0.yaml` unchanged, at 16:48:42 UTC, in tmux with a redirect to `~/reg9_s0_rerun1.log`. Expected end about 17:52 UTC. Listed in `manifests/pending_copy.txt` until copied.
-
 ### 2026-11-08 · [REG] REG-10 (exploratory): one G3′ burst/control pair at L1, 350 W, λ = 2.4 (GPU, ≈ 1.6 h)
 - **ID:** REG-10. **Exploratory, not confirmatory:** λ is chosen after REG-8's data. **Not approved yet:** no GPU run before the owner approves this entry.
 - **Why:** REG-8 found no λ_test (decisions.md 2026-11-07 [RESULT]): μ_warm 3.0, μ_sat,off 1.681, so REG-7's zone rule (largest multiple of 0.5 that is ≤ 0.8 μ_warm = 2.4 and ≥ 1.3 μ_sat,off = 2.185) has no grid value. The raw M2 condition, a load between 1.681 and the highest warm-healthy rate 3.0, is not empty (REG-8 [RESULT], alternative 3). No stuck attempt has run since 2026-11-04; this is the first in the only setup where M2 allows one.
@@ -708,3 +691,73 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **What was read:** only `checks.json`, by REG-9's stopping rule.
 - **Pattern** (DERIVED from the three `checks.json` files with `client_error`): 1 in `20261105-130250_sweep_l1_pc_on_r4.5` (4028 requests), 2 in `20261108-134121_long_pl350_pc_off_r3_s0`, 1 in this run; 4 errors in 25,450 requests of these three runs, about 1 per 6400. If errors are independent at that rate, the last allowed rerun has P(no error) ≈ exp(−10,711 / 6400) ≈ 0.19 (BELIEF on independence). The same risk applies to REG-10's runs (about 3000 requests each: ≈ 0.6 each).
 - **Not done:** the last allowed rerun (2 of 2). Put to the owner with the alternative of first reading the error text of the 4 errored requests (a logged deviation from REG-9's rule, not capacity data).
+
+### 2026-11-09 · [OPS] The client errors are a keep-alive race between client and server (diagnosis; owner-approved deviation from REG-9's rerun rule)
+- **Deviation, approved by the owner** ("Read the error text first"): REG-9's stopping rule allows only `checks.json` before a rerun decision. The owner allowed reading the error rows of the 4 failed requests and the server logs. Nothing about capacity was computed: no c_b, backlog or label.
+- **The 4 errors** (FILE(runs/<id>/requests.jsonl), `status == client_error`):
+  - `20261105-130250_sweep_l1_pc_on_r4.5`: request 2580, `ServerDisconnectedError: Server disconnected`;
+  - `20261108-134121_long_pl350_pc_off_r3_s0`: request 3264, `ClientOSError: [Errno 104] Connection reset by peer`; request 8029, `ServerDisconnectedError`;
+  - `20261108-164842_long_pl350_pc_off_r3_s0`: request 4550, `ServerDisconnectedError`.
+  - In each, t_sent is within 0.05 s of t_planned and there is no first token: the connection failed as the request was sent.
+- **Server side:** no line matching error, exception or traceback in any of the three `server.log` files.
+- **Settings:**
+  - vLLM closes an idle HTTP connection after 5 s: SOURCE(vLLM 0.32.0 `vllm/envs.py`:VLLM_HTTP_TIMEOUT_KEEP_ALIVE, default 5; passed as `timeout_keep_alive` in `vllm/entrypoints/launchers/api_server/entry.py`).
+  - The client's pool keeps an idle connection for 15 s: `aiohttp.TCPConnector(limit=0)` (FILE(harness/loadgen.py:89)), whose `keepalive_timeout` default is 15.0 in aiohttp 3.14.5 (`aiohttp/connector.py`), on the Mac and the VM.
+- **Diagnosis (BELIEF, consistent with all of the above):** a request reuses a pooled connection that has been idle about 5 s, just as the server closes it. The server sees no request, so it logs nothing; the client gets a disconnect or reset. It is a property of the client, not of the server under test. It cannot bias a valid run, which has no errored request.
+- **Test of the diagnosis:** with a client that does not reuse idle connections past the server's limit, the rate (about 1 per 6400 requests) should drop to 0. REG-9's last rerun would show it.
+- **Proposed fix (harness change, for the owner):** below, in the next entry if approved. Nothing changed yet.
+
+### 2026-11-09 · [REG] Amendment to REG-9 and REG-10 (approved): a new client connection per request (`loadgen_force_close`)
+- **Approved by the owner:** the fix ("New connection per request"), then the amendment and every registered run of REG-9 and REG-10 ("Alright, plan it, run all all planed ones", 2026-11-09). The registrations' own owner checkpoints stand (a heat rerun, `stuck_unconfirmed`, a burst that does not fill the pool).
+- **Why:** 4 requests in 25,450 failed at send time with `ServerDisconnectedError` or `Connection reset by peer`, invalidating REG-9 seed 0 twice (decisions.md 2026-11-08 [OPS], 2026-11-09 [OPS]). The diagnosis (decisions.md 2026-11-09 [OPS]): vLLM closes idle connections after 5 s (SOURCE(vLLM 0.32.0 vllm/envs.py:VLLM_HTTP_TIMEOUT_KEEP_ALIVE)), the client pool keeps them 15 s and reuses the oldest first (SOURCE(aiohttp 3.14.5 connector.py:BaseConnector._get, `popleft`), per the review), and a reused connection races the close (BELIEF). The server logged no error.
+- **Harness change:** `harness/loadgen.py` `make_connector(cfg)`: `aiohttp.TCPConnector(limit=0, force_close=bool(cfg.get("loadgen_force_close")))`. Absent or false = the previous pool, so every earlier config and re-check is unchanged. Still unlimited, still no retries or timeouts (rule 2). Each request also records `t_connected`, when its new connection was open (aiohttp `TraceConfig.on_connection_create_end`; None for a reused one), so the connect time inside TTFT is measured (review recommendation 5).
+- **REG-9:** its configs were used, so new ones: `configs/long_pl350fc_pc_off_r3_s0.yaml` and `_s1.yaml` extend them and add only `loadgen_force_close: true` (resolved: each differs from REG-6's config only by the two power keys, this key and `name`). `floor.REG9["runs_pattern"]` becomes `*_long_pl350fc_pc_off_r3_s[01]`, and `reg_table` refuses a run without `loadgen_force_close: true` (review trace B). No run of the first configs was valid. Everything else in REG-9 is unchanged.
+  - **Reruns:** the count starts again for the new configs (each seed once, an invalid run rerun at most twice), because the cause of both failures is fixed. The two invalid runs stay on record. Budget per seed: the 2 invalid runs plus at most 3 new ones; for seed 0 that is ≤ 3.3 more GPU h.
+  - **Not seen before the reset (review recommendation 4):** no c_b, backlog or label of the two invalid runs was computed or looked at; `reg9_table` reads valid runs only and was never run on them. Only their `checks.json` and the 4 error rows were read.
+  - **If any `client_error` recurs under `loadgen_force_close`** (REG-9 or REG-10): the diagnosis is wrong or incomplete. Stop, report to the owner; no further rerun under the reset count.
+  - **The carry to 420 W now crosses two differences** (review trace 3): power limit and connection mode (the 6 shock runs used the pool). Opening a connection per request adds work on the client and on vLLM's API event loop, so if anything it lowers the capacity measured here (BELIEF). Then a `sustainable` λ = 3 with that overhead is still sustainable without it: the same direction as assumption P, so a `first_edge` still changes the decision. `t_connected − t_sent` per request is reported with the result, to size the overhead.
+- **REG-10:** its two configs had not been used; `loadgen_force_close: true` is added to both, with a note in their headers. `gate.reg10_gate` refuses a run without the key (review trace A). Nothing else changes.
+- **Effect on measurement (BELIEF):** each request opens a loopback TCP connection: well under 1 ms against a 1 s TTFT SLO and a planned-arrival clock (latency is measured from t_planned, so it is counted, not hidden). The server's HTTP layer handles more connections; at ≤ 5.1 req/s this is small. Not separable from other run-to-run variation; comparisons with older runs (pool) carry this difference, stated in each result.
+- **Prediction:** 0 client errors in the next runs. Weak as a test (review): under the old pool P(0 errors) ≈ e^−1.7 ≈ 0.18 for one REG-9 run and ≈ 0.03 for two (DERIVED from 4 / 25,450 × about 10,800 requests).
+- **Tests:** `tests/test_e2e_fake.py::test_force_close_opens_a_connection_per_request_and_is_off_when_absent` (also checks `t_connected`); `tests/test_floor.py::test_reg9_is_reg6_with_the_350w_runs_only` and `test_reg9_table_refuses_a_run_without_a_passed_350w_check` (pooled run refused); `tests/test_gate.py::test_reg10_gate_takes_the_latest_valid_pair_and_splits_inconclusive` (pooled run refused).
+- **Open (review):** whether vLLM's uvicorn starts a keep-alive timer on a new connection; not checked (BELIEF that it cannot matter with `Connection: close`).
+
+### Adversarial review (separate subagent; it saw only the first draft, its diff, the code it touches and the installed aiohttp source; it opened no runs and no docs). Verbatim:
+
+> **Adversarial review (rule F): amendment adding `loadgen_force_close` to REG-9 and REG-10**
+>
+> **1. Does it remove the race?**
+> Yes, for the race that was diagnosed. In aiohttp 3.14.5:
+> - With `force_close=True`, `keepalive_timeout` is set to None. SOURCE(aiohttp 3.14.5 connector.py:BaseConnector.__init__)
+> - On release, every connection is closed and never goes back into `_conns`. SOURCE(connector.py:BaseConnector._release, line 828)
+> - Each request is sent with `Connection: close`. SOURCE(client_reqrep.py:1693)
+>
+> So no request is ever written to a connection that was already used. Old behaviour, for comparison: the pool reuses the *oldest* idle connection first (`conns.popleft()`, connector.py:744). After a spike in concurrency, that means picking connections idle for up to 15 s, against vLLM's 5 s close. This is consistent with the diagnosis but does not prove it.
+>
+> What is left:
+> - The server could still reset a fresh connection before reading the request (accept backlog full, worker overloaded). Any connect error is still counted as `client_error` and fails `no_errors` (FILE(harness/checks.py:63-66)).
+> - I could not check whether vLLM's uvicorn/h11 starts a keep-alive timer on a new connection. Neither vLLM nor uvicorn is installed on the Mac. BELIEF; add it to open-questions.
+> - Port / TIME_WAIT exhaustion is not a risk. About 5.1 req/s × 60 s TIME_WAIT ≈ 306 sockets, against roughly 28k ephemeral ports on loopback. DERIVED. Host is the IP 127.0.0.1, so no DNS (FILE(configs/base.yaml:9)).
+> - Tests: 20 of 20 pass for `uv run pytest tests/test_e2e_fake.py tests/test_floor.py`.
+>
+> **2. Bias**
+> - `t_sent` is stamped before `session.post` (FILE(harness/loadgen.py:46-47)). So the time to open a connection lands in TTFT and is invisible to `client_lag`. Arrivals stay open-loop: the connect happens inside each send task.
+> - Under a stuck state, vLLM's single API event loop may accept connections late. That would look like server latency, which could confound "stuck" with "slow to accept". Today "small" is only a BELIEF.
+> - **Confound for the carry:** REG-9's carry to the 420 W shock runs (SHOCK_RUNS_R3, which used the pool) now crosses two differences, power limit and connection mode. The draft states this only after the fact ("stated in each result"). It needs to be in the registration now.
+>
+> **3. Resetting the rerun count, and wrong-verdict traces**
+> - Resetting is defensible only if the invalidation could not depend on the outcome, and if no one saw the floor labels of the two invalid runs. Errors may also cluster with load state (connection churn in overload), so this needs to be stated, not assumed.
+> - **Trace A (REG-10):** `reg10_pick` takes the latest valid run whose name matches. Config names are unchanged, so a run launched from a commit before the amendment (no force_close) would match and be judged. Nothing checks the key.
+> - **Trace B (REG-9):** the pattern is the only guard. Unlike `power_limit_w`, `reg_table` never checks the key.
+> - **Weak prediction:** under the old pool, P(0 errors in one REG-9 run) = e^-1.7 ≈ 0.18, and ≈ 0.03 for two runs. DERIVED from 4/25,450 × ~10,800 requests per run. A single clean run says little about whether the diagnosis is right.
+>
+> **4. Recommendations**
+> 1. **(Blocking)** Add `cfg.get("loadgen_force_close") is True` to `reg_table` for REG9 (next to the power-limit check) and to `reg10_gate`, so both traces raise an error. Add a test for each.
+> 2. **(Blocking)** Register now what happens if any `client_error` recurs under force_close: the diagnosis is wrong, stop and go to the owner, and no further rerun under the reset count. Also state the total rerun budget per seed (2 invalid + up to 3 new) and the cost in GPU hours.
+> 3. **(Blocking)** State in the `[REG]` that REG-9's carry to the pooled 420 W runs now crosses power plus connection mode. Say whether a `first_edge` outcome still changes the decision under that confound.
+> 4. **(Blocking)** Confirm and record that the floor labels of REG-9's invalid runs were not computed or looked at before the reset.
+> 5. Before running, log when each connection opens: aiohttp `TraceConfig.on_connection_create_end`, written as `t_connected` in requests.jsonl. This turns the overhead BELIEF into a measurement, and it cannot be added after the runs. Recommended; blocking only if the owner treats the TTFT confound as material.
+> 6. Tag the diagnosis "vLLM closes idle connections after 5 s" with SOURCE/PROBE, or mark it BELIEF. A cheap check: the failed requests should come after a drop in concurrency.
+> 7. The REG-10 config headers still say "Contents as REG-7/REG-8 registered". Add a note that they were amended.
+
+**Changed because of it:** recommendations 1–4 (guards with tests; the stop rule on a recurring error and the budget; the two-difference carry and why `first_edge` still counts; the record that nothing of the invalid runs was computed), 5 (`t_connected`, tested against the fake server), 6 (SOURCE tags for both timeouts; the race itself marked BELIEF; the concurrency check not done) and 7 (config headers). The open uvicorn question is listed above.

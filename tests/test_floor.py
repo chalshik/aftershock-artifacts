@@ -59,11 +59,12 @@ def test_nan_or_gap_gives_unclear_data():
 def test_reg9_is_reg6_with_the_350w_runs_only():
     from fnmatch import fnmatch
     from analysis.floor import REG6, REG9
-    assert {k for k in REG9 if REG9.get(k) != REG6.get(k)} == {"runs_pattern", "power_limit_w"}
+    assert {k for k in REG9 if REG9.get(k) != REG6.get(k)} == {"runs_pattern", "power_limit_w", "force_close"}
     names = ["20261104-134159_long_pc_off_r3_s0", "20261108-000000_long_pl350_pc_off_r3_s1",
-             "20261108-000000_long_pl350_pc_off_r3_s10"]
-    assert [fnmatch(n, REG6["runs_pattern"]) for n in names] == [True, False, False]
-    assert [fnmatch(n, REG9["runs_pattern"]) for n in names] == [False, True, False]
+             "20261109-000000_long_pl350fc_pc_off_r3_s1", "20261109-000000_long_pl350fc_pc_off_r3_s10"]
+    assert [fnmatch(n, REG6["runs_pattern"]) for n in names] == [True, False, False, False]
+    # amended 2026-11-09: only the runs with a new connection per request
+    assert [fnmatch(n, REG9["runs_pattern"]) for n in names] == [False, False, True, False]
 
 
 def test_reg9_table_refuses_a_run_without_a_passed_350w_check(monkeypatch, tmp_path):
@@ -72,9 +73,10 @@ def test_reg9_table_refuses_a_run_without_a_passed_350w_check(monkeypatch, tmp_p
     from analysis.floor import reg9_table
     base = run(lambda t: 0.0, lambda t: 3.0)
 
-    def fake(checks, expected):
+    def fake(checks, expected, force_close=True):
         r = {**base, "dir": tmp_path / "x_long_pl350_pc_off_r3_s0", "checks": {"valid": True, "checks": checks},
-             "cfg": {"seed": 0, "checks": {"max_scrape_gap_s": 2.0, "expected_power_limit_w": expected}}}
+             "cfg": {"seed": 0, "loadgen_force_close": force_close,
+                     "checks": {"max_scrape_gap_s": 2.0, "expected_power_limit_w": expected}}}
         monkeypatch.setattr(analysis.load, "find_runs", lambda pattern: [r])
 
     fake([{"name": "power_limit", "passed": True}], 350)
@@ -88,6 +90,9 @@ def test_reg9_table_refuses_a_run_without_a_passed_350w_check(monkeypatch, tmp_p
         fake(checks, expected)
         with pytest.raises(ValueError):
             reg9_table()
+    fake([{"name": "power_limit", "passed": True}], 350, force_close=None)  # amendment: pooled-connection run refused
+    with pytest.raises(ValueError, match="new connection"):
+        reg9_table()
 
 
 def test_reg9_seed1_starts_only_after_a_sustainable_seed0(monkeypatch):

@@ -283,7 +283,7 @@ def reg8_gate_verdict(control: dict, burst: dict) -> dict:
 
 # REG-10 (decisions.md 2026-11-08): an exploratory G3′ pair at L1, 350 W, chosen after REG-8's data. Judged as REG-8's
 # G3′. λ = 2.4 = REG-8's 0.8 μ_warm margin itself, with no grid step (owner's choice, 2026-11-08); it is ≥ 1.3 μ_sat,off.
-REG10 = {"lam": 2.4}
+REG10 = {"lam": 2.4, "force_close": True}   # force_close: amendment, decisions.md 2026-11-09
 REG10["control"] = f"*_stage2_control_l1pl350_r{REG10['lam']:g}"
 REG10["burst"] = f"*_burst_l1pl350_r{REG10['lam']:g}_s1"
 
@@ -330,6 +330,8 @@ def reg10_gate() -> dict:
         r = reg10_pick(runs)
         if r["cfg"]["workload"]["rate"] != REG10["lam"]:
             raise ValueError(f"{r['dir'].name} is not at λ = {REG10['lam']}")
+        if r["cfg"].get("loadgen_force_close") is not REG10["force_close"]:  # amendment review, trace A
+            raise ValueError(f"{r['dir'].name} is not a run with a new connection per request")
         pair.append(r)
     control, burst = pair
     res = reg8_gate_verdict(control, burst)

@@ -1,0 +1,6 @@
+# REG-9, amended 2026-11-09: long_pl350_pc_off_r3_s1.yaml (used, so not edited) plus a new connection per request.
+# Reusing idle connections raced vLLM's 5 s keep-alive and failed requests at send time (docs/decisions.md 2026-11-09).
+# Needs the owner's approval to run.
+extends: long_pl350_pc_off_r3_s1.yaml
+name: long_pl350fc_pc_off_r3_s1
+loadgen_force_close: true

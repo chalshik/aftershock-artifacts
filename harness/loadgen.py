@@ -34,7 +34,7 @@ class Gateway:
 async def send(session, url, model, row, prompt, gateway, t0, out, inflight):
     rec = dict(request_id=int(row.request_id), session_id=int(row.session_id), turn=int(row.turn),
                t_planned=float(row.t_planned), prompt_tokens_planned=int(row.prompt_len),
-               output_tokens_planned=int(row.output_len), t_sent=None, t_first_token=None, t_end=None,
+               output_tokens_planned=int(row.output_len), t_sent=None, t_connected=None, t_first_token=None, t_end=None,
                prompt_tokens=None, output_tokens=None, cached_tokens=None, status="unfinished", error=None)
     inflight[rec["request_id"]] = rec
     body = {"model": model, "prompt": prompt, "stream": True,
@@ -44,7 +44,9 @@ async def send(session, url, model, row, prompt, gateway, t0, out, inflight):
     try:
         async with gateway:
             rec["t_sent"] = time.monotonic() - t0
-            async with session.post(url, json=body) as resp:
+            # t_connected: when a new connection for this request was open (None if a pooled one was reused), so the
+            # connect time inside TTFT is measured (decisions.md 2026-11-09, amendment review).
+            async with session.post(url, json=body, trace_request_ctx={"rec": rec, "t0": t0}) as resp:
                 if resp.status != 200:
                     rec["status"], rec["error"] = "http_error", f"{resp.status}: {(await resp.text())[:300]}"
                     return
@@ -76,6 +78,26 @@ async def send(session, url, model, row, prompt, gateway, t0, out, inflight):
             inflight.pop(rec["request_id"], None)
 
 
+async def _connected(session, ctx, params):
+    req = ctx.trace_request_ctx or {}
+    if "rec" in req:
+        req["rec"]["t_connected"] = time.monotonic() - req["t0"]
+
+
+def make_trace() -> aiohttp.TraceConfig:
+    tc = aiohttp.TraceConfig()
+    tc.on_connection_create_end.append(_connected)
+    return tc
+
+
+def make_connector(cfg: dict) -> aiohttp.TCPConnector:
+    """Unlimited pool: the client must not cap concurrency. With `loadgen_force_close` (added after defaults.yaml, so
+    read with .get; absent = the earlier behaviour) every request opens its own connection and none is reused. Reusing
+    an idle one raced vLLM's 5 s keep-alive close against aiohttp's 15 s pool timeout, and failed 4 requests in 25,450
+    at send time (decisions.md 2026-11-09). No retry either way (rule 2)."""
+    return aiohttp.TCPConnector(limit=0, force_close=bool(cfg.get("loadgen_force_close")))
+
+
 async def main(run_dir: Path, t0: float):
     cfg = yaml.safe_load((run_dir / "config.yaml").read_text())
     sched = pd.read_parquet(run_dir / "schedule.parquet")
@@ -86,10 +108,10 @@ async def main(run_dir: Path, t0: float):
     deadline = t0 + (float(sched.t_planned.max()) if len(sched) else 0.0) + cfg["drain_s"]
     inflight, tasks = {}, []
 
-    connector = aiohttp.TCPConnector(limit=0)  # unlimited pool: the client must not cap concurrency
+    connector = make_connector(cfg)
     timeout = aiohttp.ClientTimeout(total=None, sock_read=None, sock_connect=None)
     with open(run_dir / "requests.jsonl", "a") as out:
-        async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+        async with aiohttp.ClientSession(connector=connector, timeout=timeout, trace_configs=[make_trace()]) as session:
             for row in sched.itertuples(index=False):
                 prompt = prompt_tokens(prompts, int(row.session_id), int(row.prompt_len))  # built before the wait
                 delay = t0 + row.t_planned - time.monotonic()

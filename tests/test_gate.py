@@ -219,8 +219,9 @@ def test_reg10_gate_takes_the_latest_valid_pair_and_splits_inconclusive(monkeypa
     import analysis.gate as g
     import analysis.load
     lam = g.REG10["lam"]
-    mk = lambda name, rate=lam: {"dir": tmp_path / name, "cfg": {"workload": {"rate": rate, "duration_s": 2580},
-                                                                  "checks": {"max_scrape_gap_s": 2.0}}}
+    mk = lambda name, rate=lam, fc=True: {"dir": tmp_path / name,
+                                          "cfg": {"workload": {"rate": rate, "duration_s": 2580}, "loadgen_force_close": fc,
+                                                  "checks": {"max_scrape_gap_s": 2.0}}}
     verdict = {"label": "drains", "burst_verdict": "slow_drain", "control_verdict": "recovered"}
     monkeypatch.setattr(g, "reg8_gate_verdict", lambda c, b: {**verdict, "pair": (c["dir"].name, b["dir"].name)})
     monkeypatch.setattr(g, "burst_end", lambda run: 1080.0)
@@ -241,7 +242,7 @@ def test_reg10_gate_takes_the_latest_valid_pair_and_splits_inconclusive(monkeypa
                         ("stuck", "unclear", "inconclusive")]:
         verdict.update(label="inconclusive", burst_verdict=bv, control_verdict=cv)
         assert g.reg10_gate()["outcome"] == out
-    for control, burst in [([], [mk("b")]), ([mk("c")], [mk("b", 9.0)])]:
+    for control, burst in [([], [mk("b")]), ([mk("c")], [mk("b", 9.0)]), ([mk("c", fc=None)], [mk("b")])]:
         runs(control, burst)
         with pytest.raises(ValueError):
             g.reg10_gate()
