@@ -1880,3 +1880,11 @@ Summary:
 - **Owner's answer:** "Approve as written", to the question whether REG-9 is approved for at most 2.2 GPU h, given that its only decision-changing outcome (`first_edge`, prior ≈ 0.4) changes the write-up of the default-pool negative. This also confirms the review's point that the write-up change is worth the cost.
 - **VM at approval** (read-only, 12:32 UTC): rebooted about 1 min earlier; power limit 420 W (the reboot or the owner's 2026-11-07 setting; either way not 350 W); 36 °C, 0 %, 1 MiB, no compute process, no tmux session; 14 GB free; tree clean at `212327f`.
 - **Next, in order:** commit and push; `floor.shock_heat_table()` once; the owner sets 350 W; the VM pulls; launch seed 0 by REG-9's Operations.
+
+## 2026-11-08 · [OPS] REG-9 coverage check: all 6 default-pool λ = 3 shock runs are covered; REG-9 proceeds
+- **Computed once,** by REG-9's start rule: `uv run python -m analysis.floor reg9_shock_heat` (`floor.shock_heat_table`). RUN(20261102-072216_wipe_preempt_r3_s1, floor.shock_heat_table), RUN(20261102-053935_wipe_preempt_r3_s2, floor.shock_heat_table), RUN(20261102-100744_wipe_preempt_r3_s3, floor.shock_heat_table), RUN(20261102-131353_burst_r3_s1, floor.shock_heat_table), RUN(20261102-135701_burst_r3_s2, floor.shock_heat_table), RUN(20261102-144008_burst_r3_s3, floor.shock_heat_table).
+- **Inside each verdict window** (baseline start to watch end; 2100 samples for the wipes, 2220 for the bursts), all at 420 W, no HW-slowdown sample. SW-thermal share:
+  - wipes s1, s2, s3: 0.0457, 0.0267, 0.0100;
+  - bursts s1, s2, s3: 0.0095, 0.0086, 0.0050.
+- **All 6 `covered`** (≤ 0.05, the registered pass condition). The closest, `20261102-072216_wipe_preempt_r3_s1` at 0.0457, passes by a small margin; that is stated with any `first_edge` result.
+- **Next:** the owner sets 350 W; the VM pulls `d59efff`; seed 0 by REG-9's Operations.
