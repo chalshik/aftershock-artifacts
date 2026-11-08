@@ -2142,3 +2142,7 @@ Summary:
 - **Pre-launch read** (2026-11-08 21:16:44 UTC, VM clock; PROBE(docs/probe/20261108_reg9/prelaunch_reg10_control.txt)): 350 W, 39 °C, 0 %, 1 MiB, no compute process; tree clean at `dc62f76` (the Mac's `main`) after `git pull`; 13 GB free; no tmux session.
 - **Launched:** `20261108-211646_stage2_control_l1pl350_r2.4`, `configs/stage2_control_l1pl350_r2.4.yaml` (force_close), in tmux with a redirect to `~/stage2_control_l1pl350_r2.4.log`. 2580 s; expected end about 22:00 UTC. Listed in `manifests/pending_copy.txt` until copied.
 - **Next:** if valid, the burst run `configs/burst_l1pl350_r2.4_s1.yaml`; then `gate.reg10_gate` once.
+
+## 2026-11-09 · [OPS] REG-10 control VALID; burst run starts
+- **Run:** `20261108-211646_stage2_control_l1pl350_r2.4`. Copied with identical sha256 for 10 files; manifest +10; removed from `manifests/pending_copy.txt`.
+- **Checks** (FILE(runs/20261108-211646_stage2_control_l1pl350_r2.4/checks.json)): VALID. 6168 ok, 0 client errors; SW thermal 0.001, 0 HW samples, CV 0.015, max 75 °C; 350 W in 2586 of 2586 samples; arrival rate 2.420 against 2.4. Only `checks.json` was read; no verdict or label computed (REG-10: computed once after both runs).

@@ -578,13 +578,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-09 · [DECISION] Standing instructions while the owner is away (REG-9 and REG-10)
-- **Owner's answers** (2026-11-09):
-  - "Yes, rerun once after cooling": a heat-invalid REG-9 or REG-10 run is rerun unchanged once the GPU is idle at ≤ 45 °C, within the registered rerun limit, without asking first. A second heat failure stops the queue until the owner is back.
-  - "Write up + draft next REG": when REG-10 is done, compute it once, log the `[RESULT]`, and draft and review the next registration (REG-11 on `pass`; otherwise the change the readouts point to). No new registration runs before the owner approves it.
-- **Unchanged, so they still stop the queue:** a `client_error` under `loadgen_force_close` (amendment); `stuck_unconfirmed`; a burst run that does not fill the pool; a power limit other than 350 W (setting it needs root); any unexpected pre-launch check.
-- **The run order is as approved:** REG-9 seed 0 (running), seed 1 only if `floor.reg9_seed1_may_start()`, then REG-10's control and burst run.
-
 ### 2026-11-09 · [OPS] REG-9 seed 0 VALID (0 client errors with force_close); `sustainable`; seed 1 starts
 - **Run:** `20261108-190906_long_pl350fc_pc_off_r3_s0`, ended about 20:13 UTC. Copied with identical sha256 for all 10 files; manifest +10 lines; removed from `manifests/pending_copy.txt`.
 - **Checks** (FILE(runs/20261108-190906_long_pl350fc_pc_off_r3_s0/checks.json)): VALID. `no_errors` 10,711 ok, **0 client errors** (amendment's prediction: hit; weak as a test, P ≈ 0.18 under the old pool). `gpu_steady` SW thermal 0.001, 0 HW samples, CV 0.016, max 75 °C; `power_limit` 350 W in all 3608 samples.
@@ -620,3 +613,7 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **Pre-launch read** (2026-11-08 21:16:44 UTC, VM clock; PROBE(docs/probe/20261108_reg9/prelaunch_reg10_control.txt)): 350 W, 39 °C, 0 %, 1 MiB, no compute process; tree clean at `dc62f76` (the Mac's `main`) after `git pull`; 13 GB free; no tmux session.
 - **Launched:** `20261108-211646_stage2_control_l1pl350_r2.4`, `configs/stage2_control_l1pl350_r2.4.yaml` (force_close), in tmux with a redirect to `~/stage2_control_l1pl350_r2.4.log`. 2580 s; expected end about 22:00 UTC. Listed in `manifests/pending_copy.txt` until copied.
 - **Next:** if valid, the burst run `configs/burst_l1pl350_r2.4_s1.yaml`; then `gate.reg10_gate` once.
+
+### 2026-11-09 · [OPS] REG-10 control VALID; burst run starts
+- **Run:** `20261108-211646_stage2_control_l1pl350_r2.4`. Copied with identical sha256 for 10 files; manifest +10; removed from `manifests/pending_copy.txt`.
+- **Checks** (FILE(runs/20261108-211646_stage2_control_l1pl350_r2.4/checks.json)): VALID. 6168 ok, 0 client errors; SW thermal 0.001, 0 HW samples, CV 0.015, max 75 °C; 350 W in 2586 of 2586 samples; arrival rate 2.420 against 2.4. Only `checks.json` was read; no verdict or label computed (REG-10: computed once after both runs).
