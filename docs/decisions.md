@@ -1888,3 +1888,19 @@ Summary:
   - bursts s1, s2, s3: 0.0095, 0.0086, 0.0050.
 - **All 6 `covered`** (≤ 0.05, the registered pass condition). The closest, `20261102-072216_wipe_preempt_r3_s1` at 0.0457, passes by a small margin; that is stated with any `first_edge` result.
 - **Next:** the owner sets 350 W; the VM pulls `d59efff`; seed 0 by REG-9's Operations.
+
+## 2026-11-08 · [OPS] REG-9 seed 0 launched at 350 W
+- **Pre-launch read** (13:41:11 UTC, PROBE(docs/probe/20261108_reg9/prelaunch_s0.txt)): power limit 350 W, set by the owner; 36 °C idle, 0 %, 1 MiB, no compute process; tree clean at `1a12624`; 14 GB free; no tmux session.
+- **Launched:** `20261108-134121_long_pl350_pc_off_r3_s0` from `1a12624`, at 13:41:21 UTC, in tmux with a redirect to `~/reg9_s0.log`, no pipe. Schedule: 10,711 requests, 1365 sessions. Expected end about 14:45 UTC. Listed in `manifests/pending_copy.txt` until copied.
+
+## 2026-11-08 · [OPS] REG-9 seed 0 INVALID on `no_errors` (2 client errors in 10,711); heat and power limit clean
+- **Run:** `20261108-134121_long_pl350_pc_off_r3_s0`, ended about 14:45 UTC. Copied to the Mac with identical sha256 for all 10 files; the manifest gained 10 lines; removed from `manifests/pending_copy.txt`. The VM copy is kept.
+- **Checks** (FILE(runs/20261108-134121_long_pl350_pc_off_r3_s0/checks.json)): `no_errors` failed with 10,709 ok and 2 `client_error`. Every other check passed:
+  - `gpu_steady`: SW thermal 0.0006, 0 HW samples, clock CV 0.016, max 74 °C;
+  - `power_limit`: 350 W in all 3608 samples;
+  - `accounting`: 10,711 scheduled and recorded, 10,709 ok, equal to vLLM's success delta;
+  - `arrival_rate`, `recorder`, `client_lag`, `clean_git`, `kv_capacity`.
+- **What was read:** only `checks.json`, by REG-9's stopping rule. Not c_b, the backlog, any label, nor the two error rows of `requests.jsonl`.
+- **Heat:** the 350 W cap held over the full hour, at 74 °C peak against 82 °C and SW thermal 0.296 at 420 W in REG-6's attempt (decisions.md 2026-11-07 [DECISION]).
+- **Precedent:** one earlier client error, `20261105-130250_sweep_l1_pc_on_r4.5` (`ServerDisconnectedError`, cause unknown; decisions.md 2026-11-05 [OPS]); rerun unchanged.
+- **By REG-9's stopping rule:** not a heat failure, so the rule gives a rerun of `configs/long_pl350_pc_off_r3_s0.yaml`, unchanged (1 of 2). Put to the owner before launch, as every GPU run is.

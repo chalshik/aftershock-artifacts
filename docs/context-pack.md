@@ -14,7 +14,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-07
 
 **Headline so far: no stuck run.** Stuck in 0 of 3 in each of 10 cells (one-sided 95 % bound 0.63 per cell); no gap in the ramp at the default pool. Only the default pool with 20 s gaps is negative by the PROTOCOL rule; the other two setups had no ramp. Whether the test loads could get stuck at all is untested (`docs/model.md` M2, M4). Claims and their status: `docs/claims.md`.
 
-**Next action: REG-9 (decisions.md 2026-11-07 [REG]; REG-6 at 350 W; approved 2026-11-08): shock-run heat check, then seed 0 at 350 W. Then the owner picks the next factor for L1 (REG-8 [RESULT]).** REG-8 is done: 13 of 13 runs valid at 350 W; μ_warm 3.0, cold floor 1.681 (`ok`), **no λ_test**, so no shock matrix at L1. The cold state loses 0.585 of capacity (0.116 at the default pool), but the warm side fails TTFT early. The outcome rests on λ = 3.5's queue slope, 0.0145 against 0.01. The owner set the GPU back to 420 W on 2026-11-07 (read 14:30 UTC, `docs/probe/20261107_power_limit/read_420w.txt`); a further L1 run at 350 W needs the owner to set 350 W again. REG-7 ended with no valid G2 run (λ = 1 SW-thermal 0.062, 0.097, 0.135; decisions.md [OPS] 2026-11-06), so the floor is unmeasured. The owner chose a power-limit amendment, and REG-8 (decisions.md 2026-11-06 [REG]) repeats REG-7's gate at 350 W: G2′ part a (λ = 1, the heat test) → G2′ part b → G1′ part a → G1′ part b → gate once → G3′, each step with a registered start rule (`gate.reg8_part_a`, `gate.reg8_g1_may_start`, `gate.reg8_g1b_may_start`). Written, reviewed (rule F) and **approved by the owner on 2026-11-07**. The `power_limit` check was approved by the owner on 2026-11-06. REG-7's G1 (420 W, valid at λ = 2–5.5) stays as judged; no μ is computed.
+**Next action: REG-9 (decisions.md 2026-11-07 [REG]; REG-6 at 350 W; approved 2026-11-08): shock runs all covered; seed 0's first run invalid on `no_errors` (2 client errors), rerun 1 of 2 put to the owner. Then the owner picks the next factor for L1 (REG-8 [RESULT]).** REG-8 is done: 13 of 13 runs valid at 350 W; μ_warm 3.0, cold floor 1.681 (`ok`), **no λ_test**, so no shock matrix at L1. The cold state loses 0.585 of capacity (0.116 at the default pool), but the warm side fails TTFT early. The outcome rests on λ = 3.5's queue slope, 0.0145 against 0.01. The owner set the GPU back to 420 W on 2026-11-07 (read 14:30 UTC, `docs/probe/20261107_power_limit/read_420w.txt`); a further L1 run at 350 W needs the owner to set 350 W again. REG-7 ended with no valid G2 run (λ = 1 SW-thermal 0.062, 0.097, 0.135; decisions.md [OPS] 2026-11-06), so the floor is unmeasured. The owner chose a power-limit amendment, and REG-8 (decisions.md 2026-11-06 [REG]) repeats REG-7's gate at 350 W: G2′ part a (λ = 1, the heat test) → G2′ part b → G1′ part a → G1′ part b → gate once → G3′, each step with a registered start rule (`gate.reg8_part_a`, `gate.reg8_g1_may_start`, `gate.reg8_g1b_may_start`). Written, reviewed (rule F) and **approved by the owner on 2026-11-07**. The `power_limit` check was approved by the owner on 2026-11-06. REG-7's G1 (420 W, valid at λ = 2–5.5) stays as judged; no μ is computed.
 
 Steps:
 1. **Read-only VM checks: done 2026-11-05** (decisions.md [OPS], evidence in `docs/probe/20261105_vm_checks/`).
@@ -94,7 +94,7 @@ Steps:
 
 ## Runs on record
 
-138 run folders: 113 VALID, 21 INVALID, 4 without checks. All kept; none counts unless VALID.
+139 run folders: 113 VALID, 22 INVALID, 4 without checks. All kept; none counts unless VALID.
 
 - **No checks:** `20261030-114021_first_real` (failed start, no load sent); `20261031-025032_tau` (VM shut down 140 s in); `20261104-134159_long_pc_off_r3_s0` (REG-6 seed 0, VM powered off at t = 3168 s of 3600, DERIVED: power key 14:35:45.08 − planned load start 13:42:56.74 from `events.jsonl` `load_t0_planned`; copied 2026-11-05).
 - **No checks, REG-7 G2:** `20261105-181511_sweep_l1_pc_off_r2` (stopped by the owner at t = 247 s).
@@ -103,6 +103,7 @@ Steps:
 - **Invalid, REG-7 G1 (2026-11-05):** `20261105-130250_sweep_l1_pc_on_r4.5` (`no_errors`, 1 client disconnect); `20261105-132035_sweep_l1_pc_on_r5`, `20261105-134018_sweep_l1_pc_on_r5.5`, `20261105-140120_sweep_l1_pc_on_r6`, `20261105-142221_sweep_l1_pc_on_r7` (`gpu_steady`, SW-thermal slowdown). Reruns, invalid again: `20261105-163225_sweep_l1_pc_on_r6`, `20261105-165327_sweep_l1_pc_on_r7`, `20261105-171648_sweep_l1_pc_on_r6` (`gpu_steady`).
 - **REG-8 (350 W), valid:** G2′, all 7: `20261107-075951_sweep_l1pl350_pc_off_r1` … `20261107-095958_sweep_l1pl350_pc_off_r4`; G1′ part a, all 6: `20261107-103010_sweep_l1pl350_pc_on_r2` … `20261107-115311_sweep_l1pl350_pc_on_r5`.
 - **Invalid, REG-7 G2 (2026-11-05):** `20261105-174215_sweep_l1_pc_off_r1`, `20261105-175822_sweep_l1_pc_off_r1.5`, `20261105-184607_sweep_l1_pc_off_r1`, `20261106-063534_sweep_l1_pc_off_r1` (`gpu_steady`).
+- **Invalid, REG-9 (350 W):** `20261108-134121_long_pl350_pc_off_r3_s0` (`no_errors`, 2 client errors in 10,711; heat and power limit clean).
 
 ## Done when (from the plan)
 
@@ -575,18 +576,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-07 · [OPS] Power limit back to 420 W after REG-8
-- **What:** the owner set the RTX 3090's power limit back to 420 W. The agent read it at 14:30 UTC: limit 420 W (default 420, max 450), 43 °C, 0 % utilization, no compute process, no tmux session. PROBE(docs/probe/20261107_power_limit/read_420w.txt).
-- **Why:** REG-8 is done; REG-6 and every setup before REG-8 are registered and measured at 420 W.
-- **Effect:** no run was in progress; no run is affected. A `*pl350*` config launched now would fail its `power_limit` check. A further L1 run at 350 W needs the owner to set 350 W first.
-- **VM tree:** at `212327f`, behind the Mac's `main`; it pulls before the next launch.
-
-### 2026-11-07 · [DECISION] REG-6 is not run at 420 W; the owner chooses to repeat it at 350 W (REG-9, to be registered)
-- **Found before launch:** REG-6's only attempt at 420 W, `20261104-134159_long_pc_off_r3_s0` (interrupted, no `checks.json`), ran in SW-thermal slowdown for 0.296 of its `gpu.jsonl` samples in [600, 3168] s, against the 0.05 `gpu_steady` allows, with 2 HW-slowdown samples and a peak of 82 °C; every 600 s slice was 0.15–0.33. Inline reading with `gpu_steady`'s masks, not a committed function. With every L1 cache-off run at 420 W also heat-invalid (decisions.md [OPS] 2026-11-06), a 420 W rerun would most likely be invalid and could spend REG-6's two reruns (about 3.3 GPU h) with no valid run.
-- **Options put to the owner:** run REG-6 at 420 W anyway; re-register it at 350 W; drop it.
-- **Owner's choice:** "lets do option 2": a new registration (REG-9) at 350 W, read in one direction only: a sustainable λ = 3 at 350 W carries to 420 W, a non-sustainable one does not.
-- **Not launched:** no run started. The VM was unavailable when the owner asked to prepare the files only; the GPU limit was 420 W at its last reading (decisions.md [OPS] 2026-11-07).
-
 ### 2026-11-07 · [REG] REG-9 (A1): REG-6's sustained cache-off capacity at λ = 3, default pool, repeated at a 350 W power limit (GPU, ≤ 2.2 h without reruns)
 - **ID:** REG-9, open item A1. Replaces REG-6, which is not run at 420 W. **Not approved yet:** no GPU run before the owner approves this entry.
 - **Why not REG-6 at 420 W:** REG-6's only attempt, `20261104-134159_long_pc_off_r3_s0` (420 W, interrupted at t ≈ 3168 s, no `checks.json`), ran in SW-thermal slowdown for 0.296 of its samples in [600, 3168] s, against the 0.05 that `gpu_steady` allows, with 2 HW-slowdown samples and a peak of 82 °C. Every 600 s slice was 0.15–0.33. Inline reading of `gpu.jsonl` with `gpu_steady`'s masks (0x20; 0x8 | 0x40 | 0x80), not a committed function, so not quoted as a result. It matches every L1 cache-off run at 420 W (decisions.md [OPS] 2026-11-06). At 350 W all 13 REG-8 runs were valid (SW thermal ≤ 0.012, peak 64–75 °C; decisions.md 2026-11-07 [RESULT]). The owner chose this amendment (decisions.md 2026-11-07 [DECISION]).
@@ -677,3 +666,19 @@ Every model used to choose a run or read a result, with its equations, the evide
   - bursts s1, s2, s3: 0.0095, 0.0086, 0.0050.
 - **All 6 `covered`** (≤ 0.05, the registered pass condition). The closest, `20261102-072216_wipe_preempt_r3_s1` at 0.0457, passes by a small margin; that is stated with any `first_edge` result.
 - **Next:** the owner sets 350 W; the VM pulls `d59efff`; seed 0 by REG-9's Operations.
+
+### 2026-11-08 · [OPS] REG-9 seed 0 launched at 350 W
+- **Pre-launch read** (13:41:11 UTC, PROBE(docs/probe/20261108_reg9/prelaunch_s0.txt)): power limit 350 W, set by the owner; 36 °C idle, 0 %, 1 MiB, no compute process; tree clean at `1a12624`; 14 GB free; no tmux session.
+- **Launched:** `20261108-134121_long_pl350_pc_off_r3_s0` from `1a12624`, at 13:41:21 UTC, in tmux with a redirect to `~/reg9_s0.log`, no pipe. Schedule: 10,711 requests, 1365 sessions. Expected end about 14:45 UTC. Listed in `manifests/pending_copy.txt` until copied.
+
+### 2026-11-08 · [OPS] REG-9 seed 0 INVALID on `no_errors` (2 client errors in 10,711); heat and power limit clean
+- **Run:** `20261108-134121_long_pl350_pc_off_r3_s0`, ended about 14:45 UTC. Copied to the Mac with identical sha256 for all 10 files; the manifest gained 10 lines; removed from `manifests/pending_copy.txt`. The VM copy is kept.
+- **Checks** (FILE(runs/20261108-134121_long_pl350_pc_off_r3_s0/checks.json)): `no_errors` failed with 10,709 ok and 2 `client_error`. Every other check passed:
+  - `gpu_steady`: SW thermal 0.0006, 0 HW samples, clock CV 0.016, max 74 °C;
+  - `power_limit`: 350 W in all 3608 samples;
+  - `accounting`: 10,711 scheduled and recorded, 10,709 ok, equal to vLLM's success delta;
+  - `arrival_rate`, `recorder`, `client_lag`, `clean_git`, `kv_capacity`.
+- **What was read:** only `checks.json`, by REG-9's stopping rule. Not c_b, the backlog, any label, nor the two error rows of `requests.jsonl`.
+- **Heat:** the 350 W cap held over the full hour, at 74 °C peak against 82 °C and SW thermal 0.296 at 420 W in REG-6's attempt (decisions.md 2026-11-07 [DECISION]).
+- **Precedent:** one earlier client error, `20261105-130250_sweep_l1_pc_on_r4.5` (`ServerDisconnectedError`, cause unknown; decisions.md 2026-11-05 [OPS]); rerun unchanged.
+- **By REG-9's stopping rule:** not a heat failure, so the rule gives a rerun of `configs/long_pl350_pc_off_r3_s0.yaml`, unchanged (1 of 2). Put to the owner before launch, as every GPU run is.
