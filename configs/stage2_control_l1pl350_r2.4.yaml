@@ -1,0 +1,10 @@
+# REG-10 (exploratory; docs/decisions.md 2026-11-08): REG-8's G3' control at lambda = 2.4 (= 0.8 x mu_warm), L1 at 350 W.
+# Contents as REG-7/REG-8 registered for G3: judged at the burst's end, so both watches end at 2580 s.
+# Needs the owner's approval to run.
+extends: stage2_l1pl350_base.yaml
+name: stage2_control_l1pl350_r2.4
+seed: 1
+workload:
+  rate: 2.4
+verdict:
+  control_t_s: 1080

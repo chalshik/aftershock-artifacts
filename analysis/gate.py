@@ -281,6 +281,72 @@ def reg8_gate_verdict(control: dict, burst: dict) -> dict:
     return gate_verdict(control, burst, REG8["spans"], REG8["baseline_s"], REG8["cold_hit_drop"], REG8["conf"])
 
 
+# REG-10 (decisions.md 2026-11-08): an exploratory G3′ pair at L1, 350 W, chosen after REG-8's data. Judged as REG-8's
+# G3′. λ = 2.4 = REG-8's 0.8 μ_warm margin itself, with no grid step (owner's choice, 2026-11-08); it is ≥ 1.3 μ_sat,off.
+REG10 = {"lam": 2.4}
+REG10["control"] = f"*_stage2_control_l1pl350_r{REG10['lam']:g}"
+REG10["burst"] = f"*_burst_l1pl350_r{REG10['lam']:g}_s1"
+
+
+def queued_miss_share(run: dict, spans: list[tuple[float, float]]) -> list[float]:
+    """REG-10 readout, never decisive: per span after the burst's end, the share of ok later session turns (by first
+    token) with no cached tokens whose previous turn had no first token yet at this turn's planned arrival. Such a turn
+    misses even with an unlimited cache: open-loop queueing, not eviction (REG-10 review). NaN if no cold turn."""
+    q = _later_turns(run)
+    end, out = burst_end(run), []
+    for a, b in spans:
+        w = q[(q.status == "ok") & (q.t_first_token >= end + a) & (q.t_first_token < end + b) & (q.cached_tokens == 0)]
+        out.append(float((w.prev_first.isna() | (w.prev_first > w.t_planned)).mean()) if len(w) else math.nan)
+    return out
+
+
+def span_clock(run: dict, spans: list[tuple[float, float]], baseline_s: float) -> dict:
+    """REG-10 readout, never decisive: median busy SM clock (util >= the run's gpu_busy_util_pct) in the baseline
+    before the burst and in each span after it, to see a clock drift from heat."""
+    g, c, end = run["gpu"], run["cfg"]["checks"], burst_end(run)
+    busy = g[g.util_pct >= c["gpu_busy_util_pct"]]
+    med = lambda a, b: float(busy[(busy.t >= a) & (busy.t < b)].sm_clock_mhz.median())
+    start = float(run["cfg"]["trigger"]["at_s"])
+    return {"baseline": med(start - baseline_s, start), "spans": [med(end + a, end + b) for a, b in spans]}
+
+
+def reg10_pick(runs: list[dict]) -> dict:
+    """The run that counts: the latest valid one by run id (a rerun is launched only after the earlier run was invalid
+    or its pair `inconclusive`, so the latest is the one the stopping rule allows). Raises if there is none."""
+    if not runs:
+        raise ValueError("no valid run")
+    return sorted(runs, key=lambda r: r["dir"].name)[-1]
+
+
+def reg10_gate() -> dict:
+    """REG-10's verdict: the latest valid control and burst run at REG10's λ, judged by `reg8_gate_verdict`. The label
+    `inconclusive` is split: `stuck_unconfirmed` if the burst verdict is `stuck` and the control `recovered` (the span
+    test could not confirm; not rerun, the owner decides), otherwise `inconclusive` (an instrument gap; rerun).
+    Readouts, never decisive except overlap under `drains`: overlap_share, secondary_cb, queued_miss_share, span_clock."""
+    from analysis.load import find_runs
+    pair = []
+    for key in ("control", "burst"):
+        runs = find_runs(REG10[key])  # valid runs only
+        r = reg10_pick(runs)
+        if r["cfg"]["workload"]["rate"] != REG10["lam"]:
+            raise ValueError(f"{r['dir'].name} is not at λ = {REG10['lam']}")
+        pair.append(r)
+    control, burst = pair
+    res = reg8_gate_verdict(control, burst)
+    res["outcome"] = ("stuck_unconfirmed" if res["label"] == "inconclusive" and res["burst_verdict"] == "stuck"
+                      and res["control_verdict"] == "recovered" else res["label"])
+    end = burst_end(burst)
+    res["overlap_share"] = overlap_share(burst, end, burst["cfg"]["workload"]["duration_s"])
+    res["secondary_cb"] = secondary_cb(burst, burst["cfg"]["checks"]["max_scrape_gap_s"])
+    res["queued_miss_share"] = queued_miss_share(burst, REG8["spans"])
+    res["span_clock"] = span_clock(burst, REG8["spans"], REG8["baseline_s"])
+    res["runs"] = [control["dir"].name, burst["dir"].name]
+    return res
+
+
 if __name__ == "__main__":
     import sys
-    print({"reg7": reg7_zone, "reg8": reg8_zone}[sys.argv[1]]())   # no default: say which registration is computed
+    if sys.argv[1] == "reg10":
+        print(reg10_gate())
+    else:
+        print({"reg7": reg7_zone, "reg8": reg8_zone}[sys.argv[1]]())   # no default: say which registration is computed

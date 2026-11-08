@@ -1,0 +1,14 @@
+# REG-10 (exploratory; docs/decisions.md 2026-11-08): REG-8's G3' burst at lambda = 2.4 (= 0.8 x mu_warm), L1 at 350 W.
+# Contents as REG-7/REG-8 registered for G3. Same seed and duration as the control, so the same session schedule.
+# Needs the owner's approval to run.
+extends: stage2_l1pl350_base.yaml
+name: burst_l1pl350_r2.4_s1
+seed: 1
+workload:
+  rate: 2.4
+trigger:
+  kind: burst
+  at_s: 900
+  duration_s: 180
+  rate: 2.4
+  prompt_tokens: 2944

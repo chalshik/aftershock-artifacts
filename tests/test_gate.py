@@ -212,3 +212,55 @@ def test_sweep_rows_of_an_empty_sweep_gives_an_unmeasured_floor():
     assert len(rows) == 0
     f = G.cold_floor(rows, 0.85, 2, 0.95)
     assert f["status"] != "ok" and math.isnan(f["mu_sat_off"])
+
+
+def test_reg10_gate_takes_the_latest_valid_pair_and_splits_inconclusive(monkeypatch, tmp_path):
+    import pytest
+    import analysis.gate as g
+    import analysis.load
+    lam = g.REG10["lam"]
+    mk = lambda name, rate=lam: {"dir": tmp_path / name, "cfg": {"workload": {"rate": rate, "duration_s": 2580},
+                                                                  "checks": {"max_scrape_gap_s": 2.0}}}
+    verdict = {"label": "drains", "burst_verdict": "slow_drain", "control_verdict": "recovered"}
+    monkeypatch.setattr(g, "reg8_gate_verdict", lambda c, b: {**verdict, "pair": (c["dir"].name, b["dir"].name)})
+    monkeypatch.setattr(g, "burst_end", lambda run: 1080.0)
+    monkeypatch.setattr(g, "overlap_share", lambda run, a, b: (a, b))
+    monkeypatch.setattr(g, "secondary_cb", lambda run, gap: {})
+    monkeypatch.setattr(g, "queued_miss_share", lambda run, spans: [])
+    monkeypatch.setattr(g, "span_clock", lambda run, spans, base: {})
+
+    def runs(control, burst):
+        monkeypatch.setattr(analysis.load, "find_runs", lambda p: control if "control" in p else burst)
+
+    runs([mk("20261108-1_c")], [mk("20261108-2_b")])
+    res = g.reg10_gate()
+    assert res["outcome"] == "drains" and res["overlap_share"] == (1080.0, 2580)
+    runs([mk("20261108-3_c"), mk("20261108-1_c")], [mk("20261108-2_b"), mk("20261108-4_b")])  # after a rerun
+    assert g.reg10_gate()["pair"] == ("20261108-3_c", "20261108-4_b")
+    for bv, cv, out in [("stuck", "recovered", "stuck_unconfirmed"), ("unclear", "recovered", "inconclusive"),
+                        ("stuck", "unclear", "inconclusive")]:
+        verdict.update(label="inconclusive", burst_verdict=bv, control_verdict=cv)
+        assert g.reg10_gate()["outcome"] == out
+    for control, burst in [([], [mk("b")]), ([mk("c")], [mk("b", 9.0)])]:
+        runs(control, burst)
+        with pytest.raises(ValueError):
+            g.reg10_gate()
+
+
+def test_queued_miss_share_counts_cold_turns_whose_previous_turn_had_not_started(monkeypatch):
+    import analysis.gate as g
+    monkeypatch.setattr(g, "burst_end", lambda run: 0.0)
+    q = pd.DataFrame({"status": "ok", "t_first_token": [10.0, 20.0, 30.0, 40.0], "cached_tokens": [0, 0, 0, 500],
+                      "t_planned": [5.0, 15.0, 25.0, 35.0], "prev_first": [8.0, 12.0, None, 1.0]})
+    monkeypatch.setattr(g, "_later_turns", lambda run: q)
+    # cold turns: rows 0-2; previous not started at arrival: row 0 (8 > 5) and row 2 (none); row 3 is warm
+    assert g.queued_miss_share({}, [(0, 100)]) == [2 / 3]
+    assert math.isnan(g.queued_miss_share({}, [(100, 200)])[0])
+
+
+def test_reg10_lambda_is_reg8s_warm_margin_and_above_its_floor_margin():
+    import analysis.gate as g
+    # DERIVED in REG-10 from REG-8's μ_warm 3.0 and μ_sat,off 1.681: λ = 0.8 μ_warm, ≥ 1.3 μ_sat,off; REG-8's 0.5 grid has none
+    assert abs(g.REG10["lam"] - g.REG8["warm_frac"] * 3.0) < 1e-9 and g.REG10["lam"] >= g.REG8["floor_mult"] * 1.681
+    assert g.zone_check(3.0, 1.681, g.REG8["warm_frac"], g.REG8["floor_mult"], g.REG8["step"]) is None
+    assert g.REG10["control"].endswith("_r2.4") and g.REG10["burst"].endswith("_r2.4_s1")
