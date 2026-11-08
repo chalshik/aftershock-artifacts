@@ -2146,3 +2146,8 @@ Summary:
 ## 2026-11-09 · [OPS] REG-10 control VALID; burst run starts
 - **Run:** `20261108-211646_stage2_control_l1pl350_r2.4`. Copied with identical sha256 for 10 files; manifest +10; removed from `manifests/pending_copy.txt`.
 - **Checks** (FILE(runs/20261108-211646_stage2_control_l1pl350_r2.4/checks.json)): VALID. 6168 ok, 0 client errors; SW thermal 0.001, 0 HW samples, CV 0.015, max 75 °C; 350 W in 2586 of 2586 samples; arrival rate 2.420 against 2.4. Only `checks.json` was read; no verdict or label computed (REG-10: computed once after both runs).
+
+## 2026-11-09 · [OPS] REG-10 burst run launched
+- **Pre-launch read** (2026-11-08 22:02:46 UTC, VM clock; PROBE(docs/probe/20261108_reg9/prelaunch_reg10_burst.txt)): 350 W, 37 °C, 0 %, 1 MiB, no compute process; tree clean at the Mac's `main` after `git pull`; no tmux session.
+- **Launched:** `20261108-220248_burst_l1pl350_r2.4_s1`, `configs/burst_l1pl350_r2.4_s1.yaml` (force_close), in tmux with a redirect to `~/burst_l1pl350_r2.4_s1.log`. 2580 s; expected end about 22:47 UTC. Listed in `manifests/pending_copy.txt` until copied.
+- **Next:** if valid, `uv run python -m analysis.gate reg10` once, then the `[RESULT]`.

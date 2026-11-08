@@ -578,13 +578,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-09 · [OPS] REG-9 seed 0 VALID (0 client errors with force_close); `sustainable`; seed 1 starts
-- **Run:** `20261108-190906_long_pl350fc_pc_off_r3_s0`, ended about 20:13 UTC. Copied with identical sha256 for all 10 files; manifest +10 lines; removed from `manifests/pending_copy.txt`.
-- **Checks** (FILE(runs/20261108-190906_long_pl350fc_pc_off_r3_s0/checks.json)): VALID. `no_errors` 10,711 ok, **0 client errors** (amendment's prediction: hit; weak as a test, P ≈ 0.18 under the old pool). `gpu_steady` SW thermal 0.001, 0 HW samples, CV 0.016, max 75 °C; `power_limit` 350 W in all 3608 samples.
-- **Start rule, computed once** (`floor.reg9_seed1_may_start()`, through `floor.reg9_table`): seed 0 `sustainable`, c_b 3.2712 req/s against 1.05 × λp = 1.05 × 3.0487 = 3.2011 (DERIVED); 7 backlogged stretches totalling 1036.0 s; 3389 completions behind c_b. RUN(20261108-190906_long_pl350fc_pc_off_r3_s0, floor.reg9_table). So seed 1 starts.
-  - It clears the threshold by 0.070 req/s, about 2 % (DERIVED: 3.2712 / 3.2011 − 1 = 0.022): within the c_b noise the review named (relative SD about 2–3 %, alternative 6). Stated now, before seed 1.
-  - Prediction (model.md row 13): seed 0 c_b ≈ 3.2–3.45 and `sustainable` ≈ 0.5: hit.
-
 ### 2026-11-09 · [OPS] REG-9 seed 1 launched
 - **Pre-launch read** (PROBE(docs/probe/20261108_reg9/prelaunch_fc_s1.txt)): 350 W, 38 °C, 0 %, 1 MiB, no compute process; tree clean at the Mac's `main` after `git pull`; no tmux session.
 - **Launched:** `20261108-201227_long_pl350fc_pc_off_r3_s1`, `configs/long_pl350fc_pc_off_r3_s1.yaml`, at 20:12:27 UTC, in tmux with a redirect to `~/long_pl350fc_pc_off_r3_s1.log`. Expected end about 21:16 UTC. Listed in `manifests/pending_copy.txt` until copied.
@@ -617,3 +610,8 @@ Every model used to choose a run or read a result, with its equations, the evide
 ### 2026-11-09 · [OPS] REG-10 control VALID; burst run starts
 - **Run:** `20261108-211646_stage2_control_l1pl350_r2.4`. Copied with identical sha256 for 10 files; manifest +10; removed from `manifests/pending_copy.txt`.
 - **Checks** (FILE(runs/20261108-211646_stage2_control_l1pl350_r2.4/checks.json)): VALID. 6168 ok, 0 client errors; SW thermal 0.001, 0 HW samples, CV 0.015, max 75 °C; 350 W in 2586 of 2586 samples; arrival rate 2.420 against 2.4. Only `checks.json` was read; no verdict or label computed (REG-10: computed once after both runs).
+
+### 2026-11-09 · [OPS] REG-10 burst run launched
+- **Pre-launch read** (2026-11-08 22:02:46 UTC, VM clock; PROBE(docs/probe/20261108_reg9/prelaunch_reg10_burst.txt)): 350 W, 37 °C, 0 %, 1 MiB, no compute process; tree clean at the Mac's `main` after `git pull`; no tmux session.
+- **Launched:** `20261108-220248_burst_l1pl350_r2.4_s1`, `configs/burst_l1pl350_r2.4_s1.yaml` (force_close), in tmux with a redirect to `~/burst_l1pl350_r2.4_s1.log`. 2580 s; expected end about 22:47 UTC. Listed in `manifests/pending_copy.txt` until copied.
+- **Next:** if valid, `uv run python -m analysis.gate reg10` once, then the `[RESULT]`.
