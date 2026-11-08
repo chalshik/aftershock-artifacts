@@ -2106,3 +2106,10 @@ Summary:
   - "Write up + draft next REG": when REG-10 is done, compute it once, log the `[RESULT]`, and draft and review the next registration (REG-11 on `pass`; otherwise the change the readouts point to). No new registration runs before the owner approves it.
 - **Unchanged, so they still stop the queue:** a `client_error` under `loadgen_force_close` (amendment); `stuck_unconfirmed`; a burst run that does not fill the pool; a power limit other than 350 W (setting it needs root); any unexpected pre-launch check.
 - **The run order is as approved:** REG-9 seed 0 (running), seed 1 only if `floor.reg9_seed1_may_start()`, then REG-10's control and burst run.
+
+## 2026-11-09 · [OPS] REG-9 seed 0 VALID (0 client errors with force_close); `sustainable`; seed 1 starts
+- **Run:** `20261108-190906_long_pl350fc_pc_off_r3_s0`, ended about 20:13 UTC. Copied with identical sha256 for all 10 files; manifest +10 lines; removed from `manifests/pending_copy.txt`.
+- **Checks** (FILE(runs/20261108-190906_long_pl350fc_pc_off_r3_s0/checks.json)): VALID. `no_errors` 10,711 ok, **0 client errors** (amendment's prediction: hit; weak as a test, P ≈ 0.18 under the old pool). `gpu_steady` SW thermal 0.001, 0 HW samples, CV 0.016, max 75 °C; `power_limit` 350 W in all 3608 samples.
+- **Start rule, computed once** (`floor.reg9_seed1_may_start()`, through `floor.reg9_table`): seed 0 `sustainable`, c_b 3.2712 req/s against 1.05 × λp = 1.05 × 3.0487 = 3.2011 (DERIVED); 7 backlogged stretches totalling 1036.0 s; 3389 completions behind c_b. RUN(20261108-190906_long_pl350fc_pc_off_r3_s0, floor.reg9_table). So seed 1 starts.
+  - It clears the threshold by 0.070 req/s, about 2 % (DERIVED: 3.2712 / 3.2011 − 1 = 0.022): within the c_b noise the review named (relative SD about 2–3 %, alternative 6). Stated now, before seed 1.
+  - Prediction (model.md row 13): seed 0 c_b ≈ 3.2–3.45 and `sustainable` ≈ 0.5: hit.
