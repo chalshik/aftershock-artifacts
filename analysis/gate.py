@@ -296,7 +296,8 @@ def queued_miss_share(run: dict, spans: list[tuple[float, float]]) -> list[float
     end, out = burst_end(run), []
     for a, b in spans:
         w = q[(q.status == "ok") & (q.t_first_token >= end + a) & (q.t_first_token < end + b) & (q.cached_tokens == 0)]
-        out.append(float((w.prev_first.isna() | (w.prev_first > w.t_planned)).mean()) if len(w) else math.nan)
+        due = w.t_released.fillna(w.t_planned).astype(float) if "t_released" in w else w.t_planned  # REG-11 review, T4
+        out.append(float((w.prev_first.isna() | (w.prev_first > due)).mean()) if len(w) else math.nan)
     return out
 
 
@@ -318,20 +319,80 @@ def reg10_pick(runs: list[dict]) -> dict:
     return sorted(runs, key=lambda r: r["dir"].name)[-1]
 
 
-def reg10_gate() -> dict:
+def release_delay(run: dict, spans: list[tuple[float, float]], end: float | None = None) -> list[float]:
+    """REG-11 readout (closed-loop turns), never decisive: per span after the burst's end, the median of t_released -
+    t_planned over later session turns released in the span: how far the sessions have fallen behind their schedule.
+    NaN for an open-loop run or a span with no release."""
+    q, out = run["requests"], []
+    end = burst_end(run) if end is None else end
+    if "t_released" not in q:
+        return [math.nan for _ in spans]
+    q = q[(q.turn > 0) & q.t_released.notna()]
+    rel = q.t_released.astype(float)
+    for a, b in spans:
+        w = q[(rel >= end + a) & (rel < end + b)]
+        out.append(float((w.t_released.astype(float) - w.t_planned).median()) if len(w) else math.nan)
+    return out
+
+
+def release_delay_baseline(run: dict, baseline_s: float) -> float:
+    """release_delay over the baseline before the burst (REG-11 review, recommendation 6): the drift of a healthy
+    closed loop, the reference for the post-burst values."""
+    start = float(run["cfg"]["trigger"]["at_s"])
+    return release_delay(run, [(start - baseline_s, start)], end=0.0)[0]
+
+
+def shock_size(run: dict) -> dict:
+    """REG-11 readout (review, recommendation 1): how big the post-burst session backlog was. `outstanding`: session
+    requests (no burst rows) due by the burst's end (t_released, else t_planned) and not ended by then; `backlog_s`:
+    backlogged time from the burst's end to the end of arrivals (`secondary_cb`'s stretches)."""
+    q, end = run["requests"], burst_end(run)
+    s = q[~is_burst_request(run)]
+    due = s.t_released.fillna(s.t_planned).astype(float) if "t_released" in s else s.t_planned
+    out = int(((due <= end) & (s.t_end.isna() | (s.t_end > end))).sum())
+    return {"outstanding": out, "backlog_s": secondary_cb(run, run["cfg"]["checks"]["max_scrape_gap_s"])["backlog_s"]}
+
+
+def turn0_share(run: dict, spans: list[tuple[float, float]]) -> list[float]:
+    """REG-11 readout (review, recommendation 7): per span after the burst's end, the share of first turns among the
+    session completions (by t_end). Closed loop can change the queue mix; first turns carry no session prefix."""
+    q, end, out = run["requests"], burst_end(run), []
+    s = q[~is_burst_request(run) & (q.status == "ok")]
+    for a, b in spans:
+        w = s[(s.t_end >= end + a) & (s.t_end < end + b)]
+        out.append(float((w.turn == 0).mean()) if len(w) else math.nan)
+    return out
+
+
+def unreleased(run: dict, spans: list[tuple[float, float]]) -> list[int]:
+    """REG-11 readout (review, recommendation 4): per span after the burst's end, later session turns planned in the
+    span that were never sent. They count as misses in percent fast, which is binned by t_planned."""
+    q, end = run["requests"], burst_end(run)
+    s = q[~is_burst_request(run) & (q.turn > 0) & q.t_sent.isna()]
+    return [int(((s.t_planned >= end + a) & (s.t_planned < end + b)).sum()) for a, b in spans]
+
+
+def closed_loop(run: dict) -> bool:
+    return bool((run["cfg"]["workload"].get("sessions") or {}).get("closed_loop"))
+
+
+def reg10_gate(spec: dict | None = None) -> dict:
     """REG-10's verdict: the latest valid control and burst run at REG10's λ, judged by `reg8_gate_verdict`. The label
     `inconclusive` is split: `stuck_unconfirmed` if the burst verdict is `stuck` and the control `recovered` (the span
     test could not confirm; not rerun, the owner decides), otherwise `inconclusive` (an instrument gap; rerun).
     Readouts, never decisive except overlap under `drains`: overlap_share, secondary_cb, queued_miss_share, span_clock."""
     from analysis.load import find_runs
+    spec = spec or REG10
     pair = []
     for key in ("control", "burst"):
-        runs = find_runs(REG10[key])  # valid runs only
+        runs = find_runs(spec[key])  # valid runs only
         r = reg10_pick(runs)
-        if r["cfg"]["workload"]["rate"] != REG10["lam"]:
-            raise ValueError(f"{r['dir'].name} is not at λ = {REG10['lam']}")
-        if r["cfg"].get("loadgen_force_close") is not REG10["force_close"]:  # amendment review, trace A
+        if r["cfg"]["workload"]["rate"] != spec["lam"]:
+            raise ValueError(f"{r['dir'].name} is not at λ = {spec['lam']}")
+        if r["cfg"].get("loadgen_force_close") is not spec["force_close"]:  # amendment review, trace A
             raise ValueError(f"{r['dir'].name} is not a run with a new connection per request")
+        if closed_loop(r) is not spec.get("closed_loop", False):  # REG-11: the pair must be in the registered mode
+            raise ValueError(f"{r['dir'].name}: closed_loop is not {spec.get('closed_loop', False)}")
         pair.append(r)
     control, burst = pair
     res = reg8_gate_verdict(control, burst)
@@ -342,13 +403,51 @@ def reg10_gate() -> dict:
     res["secondary_cb"] = secondary_cb(burst, burst["cfg"]["checks"]["max_scrape_gap_s"])
     res["queued_miss_share"] = queued_miss_share(burst, REG8["spans"])
     res["span_clock"] = span_clock(burst, REG8["spans"], REG8["baseline_s"])
+    if spec.get("closed_loop"):
+        res["release_delay"] = release_delay(burst, REG8["spans"])
+        res["release_delay_baseline"] = release_delay_baseline(burst, REG8["baseline_s"])
+        res["shock_size"] = shock_size(burst)
+        res["turn0_share"] = turn0_share(burst, REG8["spans"])
+        res["unreleased"] = unreleased(burst, REG8["spans"])
     res["runs"] = [control["dir"].name, burst["dir"].name]
+    return res
+
+
+# REG-11 draft (docs/decisions.md 2026-11-09 [REG]): REG-10's pair with closed-loop turns, the only change.
+REG11 = {**REG10, "closed_loop": True}
+REG11["control"] = f"*_stage2_control_l1pl350cl_r{REG11['lam']:g}"
+REG11["burst"] = f"*_burst_l1pl350cl_r{REG11['lam']:g}_s1"
+
+
+REG11["comparable_frac"] = 0.5   # registered before REG-10's reference was computed (REG-11 review, recommendation 1)
+REG11["reference_run"] = "20261108-220248_burst_l1pl350_r2.4_s1"
+
+
+def reg11_reference() -> dict:
+    """REG-10's burst run's shock size, the reference for REG-11's reading of `drains`."""
+    from analysis.load import RUNS, load_run
+    return shock_size(load_run(RUNS / REG11["reference_run"]))
+
+
+def reg11_shock_comparable(res: dict, ref: dict) -> bool:
+    """REG-11's `drains` rules out overlap protection only if its shock was comparable to REG-10's: outstanding
+    session requests at the burst's end and post-burst backlogged time both >= comparable_frac x REG-10's."""
+    f, s = REG11["comparable_frac"], res["shock_size"]
+    return s["outstanding"] >= f * ref["outstanding"] and s["backlog_s"] >= f * ref["backlog_s"]
+
+
+def reg11_gate() -> dict:
+    """REG-11's verdict: `reg10_gate` on the closed-loop pair. overlap_share and queued_miss_share are 0 or NaN by
+    construction (a later turn is released only after its previous turn ended); release_delay is added."""
+    res = reg10_gate(REG11)
+    res["reference"] = reg11_reference()
+    res["shock_comparable"] = reg11_shock_comparable(res, res["reference"])
     return res
 
 
 if __name__ == "__main__":
     import sys
-    if sys.argv[1] == "reg10":
-        print(reg10_gate())
+    if sys.argv[1] in ("reg10", "reg11", "reg11_reference"):
+        print({"reg10": reg10_gate, "reg11": reg11_gate, "reg11_reference": reg11_reference}[sys.argv[1]]())
     else:
         print({"reg7": reg7_zone, "reg8": reg8_zone}[sys.argv[1]]())   # no default: say which registration is computed

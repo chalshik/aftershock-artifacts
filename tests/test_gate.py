@@ -265,3 +265,79 @@ def test_reg10_lambda_is_reg8s_warm_margin_and_above_its_floor_margin():
     assert abs(g.REG10["lam"] - g.REG8["warm_frac"] * 3.0) < 1e-9 and g.REG10["lam"] >= g.REG8["floor_mult"] * 1.681
     assert g.zone_check(3.0, 1.681, g.REG8["warm_frac"], g.REG8["floor_mult"], g.REG8["step"]) is None
     assert g.REG10["control"].endswith("_r2.4") and g.REG10["burst"].endswith("_r2.4_s1")
+
+
+def test_reg11_is_reg10_with_closed_loop_and_refuses_an_open_loop_pair(monkeypatch, tmp_path):
+    import fnmatch
+    import pytest
+    import analysis.gate as g
+    import analysis.load
+    assert {k: v for k, v in g.REG11.items() if k not in ("control", "burst", "closed_loop", "comparable_frac", "reference_run")} == \
+        {k: v for k, v in g.REG10.items() if k not in ("control", "burst")}
+    assert g.REG11["closed_loop"] is True
+    # neither registration's patterns match the other's run names
+    for a, b in [("REG10", "REG11"), ("REG11", "REG10")]:
+        for key, name in [("control", "stage2_control_l1pl350{}_r2.4"), ("burst", "burst_l1pl350{}_r2.4_s1")]:
+            own = name.format("cl" if b == "REG11" else "")
+            assert not fnmatch.fnmatch("20261110-000000_" + own, getattr(g, a)[key])
+    mk = lambda name, cl: {"dir": tmp_path / name, "cfg": {"workload": {"rate": 2.4, "duration_s": 2580,
+                           "sessions": {"closed_loop": cl}}, "loadgen_force_close": True, "checks": {"max_scrape_gap_s": 2.0}}}
+    monkeypatch.setattr(g, "reg8_gate_verdict", lambda c, b: {"label": "drains", "burst_verdict": "recovered",
+                                                               "control_verdict": "recovered"})
+    for f in ("overlap_share", "secondary_cb", "queued_miss_share", "span_clock", "release_delay",
+              "release_delay_baseline", "shock_size", "turn0_share", "unreleased"):
+        monkeypatch.setattr(g, f, lambda *a: "x")
+    monkeypatch.setattr(g, "burst_end", lambda run: 1080.0)
+    pairs = {"ok": ([mk("c", True)], [mk("b", True)]), "open": ([mk("c", None)], [mk("b", True)])}
+    for case, (c, b) in pairs.items():
+        monkeypatch.setattr(analysis.load, "find_runs", lambda p, c=c, b=b: c if "control" in p else b)
+        if case == "ok":
+            monkeypatch.setattr(g, "reg11_reference", lambda: {"outstanding": 10, "backlog_s": 100.0})
+            monkeypatch.setattr(g, "shock_size", lambda run: {"outstanding": 5, "backlog_s": 49.0})
+            res = g.reg11_gate()
+            assert res["release_delay"] == "x" and res["shock_comparable"] is False   # 49 < 0.5 x 100
+            monkeypatch.setattr(g, "shock_size", lambda run: {"outstanding": 5, "backlog_s": 50.0})
+            assert g.reg11_gate()["shock_comparable"] is True
+            monkeypatch.setattr(g, "shock_size", lambda run: "x")
+        else:
+            with pytest.raises(ValueError):
+                g.reg11_gate()
+    monkeypatch.setattr(analysis.load, "find_runs", lambda p: [mk("c", True)] if "control" in p else [mk("b", True)])
+    with pytest.raises(ValueError):  # REG-10 refuses a closed-loop pair
+        g.reg10_gate()
+
+
+def test_release_delay_is_the_median_lag_of_later_turns_per_span(monkeypatch):
+    import analysis.gate as g
+    monkeypatch.setattr(g, "burst_end", lambda run: 0.0)
+    q = pd.DataFrame({"turn": [0, 1, 1, 2, 1], "t_planned": [0.0, 10.0, 20.0, 30.0, 150.0],
+                      "t_released": [0.0, 12.0, 26.0, 40.0, None]})
+    assert g.release_delay({"requests": q}, [(0, 100), (100, 200)])[0] == 6.0
+    assert math.isnan(g.release_delay({"requests": q}, [(0, 100), (100, 200)])[1])
+    assert all(math.isnan(x) for x in g.release_delay({"requests": q.drop(columns="t_released")}, [(0, 1)]))
+
+
+def test_reg11_readouts_shock_size_turn0_share_unreleased_and_queued_miss_against_release(monkeypatch):
+    import analysis.gate as g
+    monkeypatch.setattr(g, "burst_end", lambda run: 100.0)
+    monkeypatch.setattr(g, "secondary_cb", lambda run, gap: {"backlog_s": 42.0})
+    nan = float("nan")
+    q = pd.DataFrame({
+        "turn":                 [0,    1,     1,     2,    0,     1],
+        "prompt_tokens_planned": [10,   20,    20,    30,   99,    20],   # row 4 is a burst request (99 tokens)
+        "t_planned":            [50.0, 90.0,  95.0,  700., 95.0,  800.],
+        "t_released":           [50.0, 98.0,  101.0, nan,  nan,   850.],
+        "t_sent":               [50.0, 98.0,  101.0, nan,  95.0,  850.],
+        "t_end":                [60.0, 150.0, 160.0, nan,  120.0, 900.],
+        "status":               ["ok", "ok",  "ok",  "unfinished", "ok", "ok"]})
+    run = {"requests": q, "cfg": {"trigger": {"kind": "burst", "prompt_tokens": 99, "at_s": 0},
+                                  "checks": {"max_scrape_gap_s": 2.0}}}
+    # due by 100 and not ended by 100: row 1 only (row 2 released at 101, row 4 is the burst)
+    assert g.shock_size(run) == {"outstanding": 1, "backlog_s": 42.0}
+    assert g.unreleased(run, [(500, 700), (0, 100)]) == [1, 0]   # row 3, planned at 700 = 100 + 600
+    assert g.turn0_share(run, [(-100, 0), (0, 100)]) == [1.0, 0.0]
+    w = pd.DataFrame({"status": "ok", "t_first_token": [150.0], "cached_tokens": [0], "t_planned": [90.0],
+                      "t_released": [140.0], "prev_first": [120.0]})
+    monkeypatch.setattr(g, "_later_turns", lambda run: w)
+    assert g.queued_miss_share({}, [(0, 100)]) == [0.0]          # previous started before release: not queued
+    assert g.queued_miss_share({}, [(0, 100)]) != [1.0]

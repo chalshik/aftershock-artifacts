@@ -14,6 +14,7 @@ One entry per term: one text definition, its source, and the code that computes 
 - **Code:**
   - `load.percent_fast` (`load.py:76`): a share for each 1 s arrival bin.
   - `load._level` `"pf"` (`load.py:150`): one share pooled over every request arriving in [a, b). This one feeds `verdict` and `ramp_table`. It counts requests, not bins, and it includes burst requests.
+  - **Closed-loop turns** (REG-11, decisions.md 2026-11-09 [REG]; `workload.sessions.closed_loop`): latency (`ttft`, `e2e` in `load.load_run`) is measured from the release time `t_released` instead of `t_planned`. Both computations above still bin by `t_planned`, so a turn released late, or never, counts in the window of its planned time (REG-11 review, T3). Open-loop runs are unchanged (`t_released` is None).
 - **Other text:** `analysis/CLAUDE.md:4` ("percent fast per arrival second").
 
 ### goodput ⚠ two meanings
