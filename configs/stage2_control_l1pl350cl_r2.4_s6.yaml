@@ -1,0 +1,5 @@
+# REG-12 (draft, docs/decisions.md 2026-11-09 [REG]): REG-11's control at seed 6, the only change.
+# Needs the owner's approval to run.
+extends: stage2_control_l1pl350cl_r2.4.yaml
+name: stage2_control_l1pl350cl_r2.4_s6
+seed: 6

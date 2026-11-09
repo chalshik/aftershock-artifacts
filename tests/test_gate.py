@@ -341,3 +341,74 @@ def test_reg11_readouts_shock_size_turn0_share_unreleased_and_queued_miss_agains
     monkeypatch.setattr(g, "_later_turns", lambda run: w)
     assert g.queued_miss_share({}, [(0, 100)]) == [0.0]          # previous started before release: not queued
     assert g.queued_miss_share({}, [(0, 100)]) != [1.0]
+
+
+def test_reg12_counts_stuck_only_with_a_recovered_control_and_checks_seeds(monkeypatch, tmp_path):
+    import fnmatch
+    import pytest
+    import analysis.gate as g
+    import analysis.load
+    from analysis.stats import cp_upper
+    assert g.REG12["closed_loop"] is True and g.REG12["lam"] == g.REG11["lam"] and g.REG12["seeds"] == (2, 3, 4, 5, 6)
+    for s in g.REG12["seeds"]:  # REG-11's seed-1 pair is never picked up, and seeds do not cross
+        spec = g.reg12_spec(s)
+        assert not fnmatch.fnmatch("20261109-042828_burst_l1pl350cl_r2.4_s1", spec["burst"])
+        assert not fnmatch.fnmatch("20261109-034255_stage2_control_l1pl350cl_r2.4", spec["control"])
+        assert not fnmatch.fnmatch(f"20261110-000000_burst_l1pl350cl_r2.4_s{s}6", spec["burst"])
+        assert fnmatch.fnmatch(f"20261110-000000_stage2_control_l1pl350cl_r2.4_s{s}", spec["control"])
+    verdicts = {2: ("recovered", "stuck", "pass"), 3: ("recovered", "stuck", "inconclusive"),
+                4: ("unclear", "stuck", "pass"), 5: ("recovered", "recovered", "drains"), 6: ("recovered", "stuck", "pass")}
+    seed_of = lambda p: int(p.rsplit("_s", 1)[1])
+    mk = lambda seed: [{"dir": tmp_path / f"x_s{seed}", "cfg": {"seed": seed}}]
+    monkeypatch.setattr(analysis.load, "find_runs", lambda p: mk(seed_of(p)))
+    monkeypatch.setattr(g, "end_window", lambda run: {})
+    monkeypatch.setattr(g, "reg10_gate", lambda spec: dict(zip(("control_verdict", "burst_verdict", "label"),
+                                                               verdicts[seed_of(spec["burst"])]), runs=[]))
+    t = g.reg12_table()
+    assert (t["k"], t["n"], t["k_pass"], t["n_control_recovered"]) == (3, 5, 2, 4)   # seed 4: in n, not in k
+    assert t["outcome"] == "supports" and t["cp_upper"] == cp_upper(3, 5, 0.95)
+    assert [r["stuck"] for r in t["rows"]] == [True, True, False, False, True]
+    assert g.reg12_table((2, 5))["outcome"] == "some"
+    assert g.reg12_table((5,))["outcome"] == "none"
+    assert g.reg12_table((4, 5))["outcome"] == "none"            # one control not recovered: not yet the first branch
+    verdicts[5] = ("unclear", "recovered", "drains")
+    assert g.reg12_table()["outcome"] == "controls_not_healthy"  # two controls not recovered: first, even with k = 3
+    assert g.reg12_outcome(5, 3, 0) == "controls_not_healthy" and g.reg12_outcome(5, 4, 0) == "none"
+    monkeypatch.setattr(analysis.load, "find_runs", lambda p: mk(9))
+    with pytest.raises(ValueError):                              # wrong seed
+        g.reg12_table((2,))
+    monkeypatch.setattr(analysis.load, "find_runs", lambda p: mk(seed_of(p)) * 2)
+    with pytest.raises(ValueError):                              # two valid runs for one pattern: refused
+        g.reg12_table((2,))
+
+
+def test_reg12_pair_runs_the_real_checks(monkeypatch, tmp_path):
+    """Review recommendation 8: reg12_pair through the real reg10_gate and reg8_gate_verdict checks (λ, force_close,
+    closed loop, 350 W, equal λ); only the verdict and the readouts are stubbed."""
+    import pytest
+    import analysis.gate as g
+    import analysis.load
+
+    def mk(name, seed=2, rate=2.4, fc=True, cl=True, w=350):
+        return {"dir": tmp_path / name, "cfg": {"seed": seed, "loadgen_force_close": fc,
+                "workload": {"rate": rate, "duration_s": 2580, "sessions": {"closed_loop": cl}},
+                "checks": {"expected_power_limit_w": w, "max_scrape_gap_s": 2.0}}}
+
+    monkeypatch.setattr(g, "gate_verdict", lambda c, b, *a: {"label": "pass", "control_verdict": "recovered",
+                                                             "burst_verdict": "stuck"})
+    for f in ("overlap_share", "secondary_cb", "queued_miss_share", "span_clock", "release_delay",
+              "release_delay_baseline", "shock_size", "turn0_share", "unreleased", "end_window"):
+        monkeypatch.setattr(g, f, lambda *a: "x")
+    monkeypatch.setattr(g, "burst_end", lambda run: 1080.0)
+
+    def runs(control, burst):
+        monkeypatch.setattr(analysis.load, "find_runs", lambda p: [control] if "control" in p else [burst])
+
+    runs(mk("c"), mk("b"))
+    r = g.reg12_pair(2)
+    assert r["stuck"] and r["stuck_pass"] and r["end_window"] == "x"
+    for c, b in [(mk("c", cl=None), mk("b")), (mk("c"), mk("b", fc=None)), (mk("c", w=420), mk("b")),
+                 (mk("c"), mk("b", rate=2.5)), (mk("c", seed=3), mk("b"))]:
+        runs(c, b)
+        with pytest.raises(ValueError):
+            g.reg12_pair(2)

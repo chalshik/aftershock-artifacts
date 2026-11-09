@@ -313,7 +313,8 @@ def span_clock(run: dict, spans: list[tuple[float, float]], baseline_s: float) -
 
 def reg10_pick(runs: list[dict]) -> dict:
     """The run that counts: the latest valid one by run id (a rerun is launched only after the earlier run was invalid
-    or its pair `inconclusive`, so the latest is the one the stopping rule allows). Raises if there is none."""
+    or, in REG-10 and REG-11 only, its pair `inconclusive`, so the latest is the one the stopping rule allows). REG-12
+    has no rerun on a verdict and pins one valid run per pattern (`reg12_only`). Raises if there is none."""
     if not runs:
         raise ValueError("no valid run")
     return sorted(runs, key=lambda r: r["dir"].name)[-1]
@@ -451,10 +452,94 @@ def reg11_gate() -> dict:
     return res
 
 
+
+# REG-12 draft (docs/decisions.md 2026-11-09 [REG]): the confirmatory matrix of REG-11's cell. One burst run and one
+# same-seed control per seed; REG-11's pair (seed 1) is not counted. A seed counts as stuck when the burst run's
+# `load.verdict` is `stuck` and its control's is `recovered` (C1's test, docs/claims.md); every other pair counts in n,
+# not in k. The gate label (span test) is reported per seed, not counted.
+REG12 = {**REG11, "seeds": (2, 3, 4, 5, 6), "most": 3, "conf": 0.95}
+for _k in ("comparable_frac", "reference_run"):
+    REG12.pop(_k, None)
+
+
+def reg12_spec(seed: int) -> dict:
+    return {**REG12, "control": f"*_stage2_control_l1pl350cl_r{REG12['lam']:g}_s{seed}",
+            "burst": f"*_burst_l1pl350cl_r{REG12['lam']:g}_s{seed}"}
+
+
+def reg12_only(runs: list[dict], pattern: str) -> dict:
+    """REG-12 pins its runs (review, recommendation 3): exactly one valid run per pattern. A rerun is made only after an
+    invalid run, never on a verdict or label, so a second valid run means something outside the registration."""
+    if len(runs) != 1:
+        raise ValueError(f"{pattern}: {len(runs)} valid runs, REG-12 needs exactly one")
+    return runs[0]
+
+
+def end_window(run: dict) -> dict:
+    """REG-12 readout (review, recommendation 4): what fills `load.verdict`'s end window [t_end - end_s, t_end).
+    burst_first_token: burst requests whose first token came in the window (a burst backlog still draining);
+    unreleased: later session turns planned in the window and never sent; unfinished_sent: later turns planned in the
+    window, sent, and not finished; q, q_slope and q / -q_slope (s to empty, NaN unless draining) from the verdict."""
+    v = verdict(run)
+    a, b = v["t_wipe"] + run["cfg"]["verdict"]["watch_s"] - run["cfg"]["verdict"]["end_s"], v["t_wipe"] + run["cfg"]["verdict"]["watch_s"]
+    q, burst = run["requests"], is_burst_request(run)
+    later = q[~burst & (q.turn > 0) & (q.t_planned >= a) & (q.t_planned < b)]
+    e = v["end"]
+    return {"window": (a, b),
+            "burst_first_token": int((burst & (q.t_first_token >= a) & (q.t_first_token < b)).sum()),
+            "unreleased": int(later.t_sent.isna().sum()),
+            "unfinished_sent": int((later.t_sent.notna() & (later.status == "unfinished")).sum()),
+            "q": e["q"], "q_slope": e["q_slope"],
+            "s_to_empty": float(e["q"] / -e["q_slope"]) if e["q_slope"] < 0 else math.nan}
+
+
+def reg12_pair(seed: int) -> dict:
+    """`reg10_gate` on one seed's closed-loop pair, after checking that each pattern has exactly one valid run, with
+    that seed. Adds `stuck` (C1's test), `stuck_pass` (stuck and the span test's label `pass`) and the end-window
+    readout of the burst run."""
+    from analysis.load import find_runs
+    spec = reg12_spec(seed)
+    burst = None
+    for key in ("control", "burst"):
+        r = reg12_only(find_runs(spec[key]), spec[key])
+        if r["cfg"]["seed"] != seed:
+            raise ValueError(f"{r['dir'].name} has seed {r['cfg']['seed']}, not {seed}")
+        burst = r
+    res = reg10_gate(spec)
+    res["seed"] = seed
+    res["stuck"] = res["burst_verdict"] == "stuck" and res["control_verdict"] == "recovered"
+    res["stuck_pass"] = res["stuck"] and res["label"] == "pass"
+    res["end_window"] = end_window(burst)
+    return res
+
+
+def reg12_outcome(n: int, n_control_recovered: int, k: int) -> str:
+    """REG-12's decision, in this order (review, recommendation 1): controls_not_healthy if two or more controls are
+    not `recovered` (the matrix cannot speak to C1); else supports if k >= most; some if k >= 1; else none."""
+    if n - n_control_recovered >= 2:
+        return "controls_not_healthy"
+    return "supports" if k >= REG12["most"] else ("some" if k >= 1 else "none")
+
+
+def reg12_table(seeds: tuple[int, ...] | None = None) -> dict:
+    """REG-12's result: per seed (control and burst verdict, gate label, stuck, stuck_pass), then k stuck of n with its
+    one-sided Clopper–Pearson upper bound, k_pass beside it, n_control_recovered, and `outcome` (`reg12_outcome`).
+    Needs exactly one valid pair for every seed."""
+    from analysis.stats import cp_upper
+    seeds = tuple(seeds or REG12["seeds"])
+    rows = [reg12_pair(s) for s in seeds]
+    k, n = sum(r["stuck"] for r in rows), len(rows)
+    n_rec = sum(r["control_verdict"] == "recovered" for r in rows)
+    out = reg12_outcome(n, n_rec, k)
+    return {"rows": [{key: r[key] for key in ("seed", "control_verdict", "burst_verdict", "label", "stuck", "stuck_pass",
+                                              "runs")} for r in rows],
+            "k": k, "n": n, "cp_upper": cp_upper(k, n, REG12["conf"]), "k_pass": sum(r["stuck_pass"] for r in rows),
+            "n_control_recovered": n_rec, "outcome": out, "supports": out == "supports", "details": rows}
+
 if __name__ == "__main__":
     import sys
-    if sys.argv[1] in ("reg10", "reg11", "reg11_reference", "reg11_turn0_reference"):
+    if sys.argv[1] in ("reg10", "reg11", "reg11_reference", "reg11_turn0_reference", "reg12"):
         print({"reg10": reg10_gate, "reg11": reg11_gate, "reg11_reference": reg11_reference,
-               "reg11_turn0_reference": reg11_turn0_reference}[sys.argv[1]]())
+               "reg11_turn0_reference": reg11_turn0_reference, "reg12": reg12_table}[sys.argv[1]]())
     else:
         print({"reg7": reg7_zone, "reg8": reg8_zone}[sys.argv[1]]())   # no default: say which registration is computed
