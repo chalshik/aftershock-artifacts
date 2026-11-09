@@ -412,3 +412,143 @@ def test_reg12_pair_runs_the_real_checks(monkeypatch, tmp_path):
         runs(c, b)
         with pytest.raises(ValueError):
             g.reg12_pair(2)
+
+
+
+# ---------------------------------------------------------------- REG-13
+
+def test_reg13_outcome_order_and_classes():
+    o = lambda complete=True, col=False, mu=3.0, carried=3.1: G.reg13_outcome(complete, col, mu, carried, 2.4, 2.711)
+    assert o(complete=False, col=True) == "incomplete"
+    assert o(col=True, mu=2.0, carried=2.1) == "collapsed"      # before overload: carried, then went cold (review T1)
+    assert o(col=True, mu=2.6, carried=2.758) == "below"        # a rate carrying >= 2.711 first, then a collapse above it
+    assert o(col=True, mu=2.4, carried=2.529) == "collapsed"
+    assert o(mu=math.nan, carried=math.nan) == "overload" and o(mu=2.0, carried=2.1) == "overload"
+    assert o(mu=2.6, carried=2.758) == "below"                  # realized planned rate, not the grid value (review T2)
+    assert o(mu=2.4, carried=2.529) == "partial"
+    assert G.REG13["post_lam_p_max"] == G.REG13["cold_runs"]["20261109-111316_burst_l1pl350cl_r2.4_s4"]
+
+
+def test_reg13_post_trigger_rate_from_the_burst_end_or_the_first_backlog(monkeypatch, tmp_path):
+    import analysis.floor
+    monkeypatch.setattr(G, "burst_end", lambda run: 1080.0)
+    monkeypatch.setattr(G, "planned_session_rate", lambda run, a, b: (a, b))
+    wl = {"warmup_s": 240, "duration_s": 2580}
+    burst = {"dir": tmp_path / "b", "cfg": {"workload": wl, "trigger": {"kind": "burst"}}, "metrics": None}
+    ctrl = {"dir": tmp_path / "c", "cfg": {"workload": wl}, "metrics": None}
+    assert G.post_trigger_rate(burst)["lam_p"] == (1080.0, 2580.0)
+    monkeypatch.setattr(analysis.floor, "backlogged_stretches", lambda m, a, b, w, s: [(1330.0, 2579.0), (2580.0, 2600.0)])
+    assert G.post_trigger_rate(ctrl)["lam_p"] == (1330.0, 2580.0)
+    monkeypatch.setattr(analysis.floor, "backlogged_stretches", lambda m, a, b, w, s: [])
+    assert math.isnan(G.post_trigger_rate(ctrl)["lam_p"])
+
+
+def test_reg13_due_unreleased_slope_grows_only_when_turns_fall_behind(tmp_path):
+    wl = {"warmup_s": 0, "duration_s": 100}
+    t = [float(x) for x in range(100)]
+    on_time = pd.DataFrame({"turn": 1, "t_planned": t, "t_released": [x + 5.0 for x in t]})
+    behind = pd.DataFrame({"turn": 1, "t_planned": t, "t_released": [x * 1.5 for x in t]})
+    mk = lambda q: {"cfg": {"workload": wl}, "requests": q}
+    assert abs(G.due_unreleased_slope(mk(on_time))) < 0.01
+    assert G.due_unreleased_slope(mk(behind)) > 0.3
+    assert G.due_unreleased_slope(mk(on_time.drop(columns="t_released"))) == 0.0   # open loop
+
+
+def test_reg13_collapsed_needs_a_warm_stretch_that_carried_its_load_then_a_hit_drop(monkeypatch, tmp_path):
+    import analysis.floor
+    wl = {"warmup_s": 240, "duration_s": 900}
+    req = pd.DataFrame({"status": "ok", "t_end": [300.0 + i for i in range(300)]})   # 300 done in [240, 600)
+    run = {"cfg": {"workload": wl, "capacity": {"min_throughput_frac": 0.95}}, "requests": req, "metrics": None}
+    monkeypatch.setattr(G, "planned_session_rate", lambda r, a, b: 300 / (b - a))
+    monkeypatch.setattr(G, "_level", lambda r, a, b: {"hit": 0.8 if a == 240 else 0.1})
+    monkeypatch.setattr(analysis.floor, "backlogged_stretches", lambda m, a, b, w, s: [(600.0, 899.0)])
+    assert G.collapsed(run)["collapsed"] is True
+    monkeypatch.setattr(analysis.floor, "backlogged_stretches", lambda m, a, b, w, s: [(500.0, 899.0)])   # < 300 s warm
+    assert G.collapsed(run)["collapsed"] is False
+    monkeypatch.setattr(analysis.floor, "backlogged_stretches", lambda m, a, b, w, s: [(600.0, 899.0)])
+    monkeypatch.setattr(G, "_level", lambda r, a, b: {"hit": 0.8 if a == 240 else 0.78})                 # no hit drop
+    assert G.collapsed(run)["collapsed"] is False
+    monkeypatch.setattr(G, "_level", lambda r, a, b: {"hit": 0.8 if a == 240 else 0.1})
+    monkeypatch.setattr(G, "planned_session_rate", lambda r, a, b: 400 / (b - a))                        # did not carry
+    assert G.collapsed(run)["collapsed"] is False
+
+
+def test_reg13_check_refuses_runs_outside_the_sweep(tmp_path):
+    ok = {"sweep_parent": "sweep_l1pl350cl_pc_on", "loadgen_force_close": True,
+          "workload": {"sessions": {"closed_loop": True}}, "checks": {"expected_power_limit_w": 350}}
+    G.reg13_check({"dir": tmp_path / "x", "cfg": ok})
+    bad = [{**ok, "sweep_parent": "sweep_l1pl350_pc_on"}, {**ok, "loadgen_force_close": False},
+           {**ok, "workload": {"sessions": {}}}, {**ok, "checks": {"expected_power_limit_w": None}}]
+    for cfg in bad:
+        with pytest.raises(ValueError):
+            G.reg13_check({"dir": tmp_path / "x", "cfg": cfg})
+
+
+def test_reg13_config_is_reg8s_sweep_with_closed_loop_and_the_same_schedules():
+    from harness.config import load_config, with_defaults
+    from harness.run import expand
+    from harness.workload import build_schedule
+    new = {r["workload"]["rate"]: r for r in expand(with_defaults(load_config(Path("configs/sweep_l1pl350cl_pc_on.yaml"))))}
+    old = {r["workload"]["rate"]: r for r in expand(with_defaults(load_config(Path("configs/sweep_l1pl350_pc_on.yaml"))))}
+    assert tuple(sorted(new)) == G.REG13["rates"]
+    for rate, r in new.items():
+        assert r["workload"]["sessions"]["closed_loop"] and r["loadgen_force_close"] and r["seed"] == 0
+        assert r["sweep_parent"] == G.REG13["sweep_on"] and r["checks"]["expected_power_limit_w"] == 350
+        assert r["capacity"] == old[3]["capacity"] and r["workload"]["duration_s"] == 900
+    for rate in G.REG13["paired"]:
+        a, _ = build_schedule(new[rate]["workload"], new[rate]["seed"], None)
+        b, _ = build_schedule(old[rate]["workload"], old[rate]["seed"], None)
+        assert a.equals(b)
+
+
+def _reg13_env(monkeypatch, tmp_path, rates, thr, due=0.0, col=False, cold=None):
+    import analysis.load
+    import analysis.tables
+    cfg = lambda rate: {"sweep_parent": "sweep_l1pl350cl_pc_on", "loadgen_force_close": True,
+                        "workload": {"rate": rate, "warmup_s": 240, "duration_s": 900, "sessions": {"closed_loop": True}},
+                        "checks": {"expected_power_limit_w": 350},
+                        "capacity": {"min_throughput_frac": 0.95, "max_q_slope": 0.01}}
+    runs = [{"dir": tmp_path / f"r{x}", "cfg": cfg(x), "checks": {"valid": True}, "metrics": [1]} for x in rates]
+    planned = {x: x * 1.05 for x in rates}
+    monkeypatch.setattr(analysis.load, "find_runs", lambda p: runs)
+    monkeypatch.setattr(analysis.load, "summarize", lambda r: {"throughput": thr(r["cfg"]["workload"]["rate"]),
+                        "planned_rate": planned[r["cfg"]["workload"]["rate"]], "q_slope_per_s": 0.0, "unfinished": 0})
+    monkeypatch.setattr(G, "sweep_rows", lambda parent, slo: pd.DataFrame(
+        {"run": [f"r{x}" for x in rates], "rate": rates, "throughput": 0.0, "planned_rate": [planned[x] for x in rates],
+         "kv_mean": 0.3, "pf": 1.0}))
+    monkeypatch.setattr(G, "due_unreleased_slope", lambda r: due)
+    monkeypatch.setattr(G, "collapsed", lambda r: {"collapsed": col})
+    monkeypatch.setattr(G, "release_delay", lambda r, spans, end=None: [10.0])
+    monkeypatch.setattr(G, "surge_max", lambda r, w: 3.0)
+    monkeypatch.setattr(analysis.tables, "sweep_capacity", lambda p: math.nan)
+    monkeypatch.setattr(analysis.load, "load_run", lambda p: {"dir": Path(p)})
+    regd = dict(G.REG13["cold_runs"])
+    monkeypatch.setattr(G, "post_trigger_rate", lambda run: {"lam_p": (cold or regd)[run["dir"].name]})
+    monkeypatch.setattr(G, "reg8_g1_may_start", lambda: {"mu_sat_off": 1.681})
+    monkeypatch.setattr(G, "choose_lambda", lambda *a: None)
+
+
+def test_reg13_table_outcomes(monkeypatch, tmp_path):
+    all_rates = list(G.REG13["rates"])
+    _reg13_env(monkeypatch, tmp_path, all_rates, lambda x: x * 1.05)
+    t = G.reg13_table()
+    assert t["mu_warm_cl"] == 3.0 and t["outcome"] == "below" and t["n_cold_below"] == 7 and t["chain_end"] is None
+    _reg13_env(monkeypatch, tmp_path, all_rates, lambda x: x * 1.05 if x < 2.8 else 1.0)
+    t = G.reg13_table()                            # μ = 2.6 carried 2.73 >= 2.711: below, on the realized rate
+    assert t["mu_warm_cl"] == 2.6 and t["carried"] == pytest.approx(2.73) and t["outcome"] == "below"
+    _reg13_env(monkeypatch, tmp_path, all_rates, lambda x: x * 1.05 if x < 2.8 else 1.0, col=True)
+    assert G.reg13_table()["outcome"] == "below"     # 2.6 carried 2.73 before 2.8 collapsed
+    _reg13_env(monkeypatch, tmp_path, all_rates, lambda x: x * 1.05 if x < 2.6 else 1.0, col=True)
+    assert G.reg13_table()["outcome"] == "collapsed"
+    _reg13_env(monkeypatch, tmp_path, all_rates, lambda x: x * 1.05 if x < 2.6 else 1.0)
+    t = G.reg13_table()
+    assert t["outcome"] == "partial" and t["n_cold_below"] == 6     # carried 2.52: all but seed 4's burst
+    _reg13_env(monkeypatch, tmp_path, all_rates, lambda x: x * 1.05, due=0.02)   # client backlog grows: fails (T3)
+    assert G.reg13_table()["outcome"] == "overload"
+    _reg13_env(monkeypatch, tmp_path, [2.0, 2.6], lambda x: x * 1.05)
+    t = G.reg13_table()
+    assert t["chain_end"] == 2.4 and t["outcome"] == "incomplete"
+    bad = {**G.REG13["cold_runs"], "20261109-111316_burst_l1pl350cl_r2.4_s4": 2.5}
+    _reg13_env(monkeypatch, tmp_path, all_rates, lambda x: x * 1.05, cold=bad)
+    with pytest.raises(ValueError):                # the registered threshold no longer matches its run (T4)
+        G.reg13_table()

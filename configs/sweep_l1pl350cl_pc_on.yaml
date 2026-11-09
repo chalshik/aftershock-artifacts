@@ -1,0 +1,13 @@
+# REG-13 (draft, docs/decisions.md 2026-11-09 [REG]): mu_warm of setup L1 at 350 W with closed-loop turns.
+# REG-8's G1' sweep (sweep_l1pl350_pc_on.yaml: seed 0, 900 s per rate, the monotone capacity rule against the planned
+# rate) with two changes, both as in REG-11/REG-12: closed-loop turns and a new connection per request.
+# Seed 0 and the rates 2 and 3 give the same planned schedules as REG-8's runs at those rates (paired comparison).
+# Needs the owner's approval to run.
+extends: sweep_l1pl350_pc_on.yaml
+name: sweep_l1pl350cl_pc_on
+loadgen_force_close: true           # a new connection per request (REG-9 amendment; REG-12)
+workload:
+  sessions:
+    closed_loop: true               # a later turn is released at the previous turn's end plus the planned gap
+sweep:
+  rates: [2, 2.4, 2.6, 2.8, 3]      # 2.4 = REG-11/REG-12's lambda; 2 and 3 as REG-8; 0.2 steps where the outcome turns

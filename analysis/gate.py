@@ -536,10 +536,183 @@ def reg12_table(seeds: tuple[int, ...] | None = None) -> dict:
             "k": k, "n": n, "cp_upper": cp_upper(k, n, REG12["conf"]), "k_pass": sum(r["stuck_pass"] for r in rows),
             "n_control_recovered": n_rec, "outcome": out, "supports": out == "supports", "details": rows}
 
+
+# REG-13 (decisions.md 2026-11-09 [REG], draft): μ_warm of L1 at 350 W with closed-loop turns, REG-8's G1′ sweep with
+# closed-loop turns and a new connection per request. It asks whether the cold, backlogged states of REG-11 and REG-12
+# persisted at a planned load the warm server carries (metastable) or above it (overload). Revised after its review
+# (rule F). Not to be changed after approval.
+REG13 = {
+    "sweep_on": "sweep_l1pl350cl_pc_on", "rates": (2.0, 2.4, 2.6, 2.8, 3.0), "lam": 2.4, "power_limit_w": 350,
+    "slo_ttft_s": 1.0, "surge_window_s": 120,
+    "max_backlog_slope": 0.01,     # req/s, on server queue + due-but-unreleased turns (review T3; the capacity rule's limit)
+    "collapse_min_warm_s": 300,    # a failing run carried its load this long before its first backlog (review T1)
+    "collapse_hit_drop": 0.06,     # and its hit rate then fell by this much (configs/stage2_base.yaml stuck_hit_drop)
+    # REG-8's open-loop runs with the same seed and planned schedule (checked: harness.workload.build_schedule)
+    "paired": {2.0: "20261107-103010_sweep_l1pl350_pc_on_r2", 3.0: "20261107-104614_sweep_l1pl350_pc_on_r3"},
+    # every run of REG-11 and REG-12 whose end window was cold and backlogged, with the planned session rate it faced
+    # after its trigger (gate.post_trigger_rate, computed before this registration; fixed here, review T4)
+    "cold_runs": {"20261109-042828_burst_l1pl350cl_r2.4_s1": 2.3593333333333333,
+                  "20261109-080203_burst_l1pl350cl_r2.4_s2": 2.3393333333333333,
+                  "20261109-093609_burst_l1pl350cl_r2.4_s3": 2.222,
+                  "20261109-111316_burst_l1pl350cl_r2.4_s4": 2.711333333333333,
+                  "20261109-125300_burst_l1pl350cl_r2.4_s5": 2.4,
+                  "20261109-151300_burst_l1pl350cl_r2.4_s6": 2.4193333333333333,
+                  "20261109-120308_stage2_control_l1pl350cl_r2.4_s5": 2.287382901894504},
+}
+REG13["post_lam_p_max"] = max(REG13["cold_runs"].values())   # 2.711, seed 4's burst run
+
+
+def post_trigger_rate(run: dict) -> dict:
+    """Where a cold run's trigger ended and the planned session rate λp it faced from then to the end of arrivals.
+    A burst run: from the burst's end. A run with no trigger: from the start of its first backlogged stretch
+    (`floor.backlogged_stretches` after warm-up, REG-6's stretch settings); NaN if it never backlogged."""
+    from analysis.floor import backlogged_stretches
+    wl = run["cfg"]["workload"]
+    if (run["cfg"].get("trigger") or {}).get("kind") == "burst":
+        start = burst_end(run)
+    else:
+        st = backlogged_stretches(run["metrics"], float(wl["warmup_s"]), float(wl["duration_s"]),
+                                  REG7["cb_min_waiting"], REG7["cb_min_stretch_s"])
+        start = float(st[0][0]) if st else math.nan
+    lam_p = planned_session_rate(run, start, float(wl["duration_s"])) if np.isfinite(start) else math.nan
+    return {"run": run["dir"].name, "from": start, "lam_p": lam_p}
+
+
+def surge_max(run: dict, window_s: float) -> float:
+    """Readout: the highest planned session rate over consecutive `window_s` windows of the measured window."""
+    wl = run["cfg"]["workload"]
+    a, b = float(wl["warmup_s"]), float(wl["duration_s"])
+    starts = np.arange(a, b - window_s + 1e-9, window_s)
+    return max((planned_session_rate(run, t, t + window_s) for t in starts), default=math.nan)
+
+
+def due_unreleased_slope(run: dict) -> float:
+    """Closed loop (review T3): slope (req/s) over the measured window of later session turns already due by their plan
+    (t_planned <= t) and not yet released (t_released > t or never), on a 1 s grid. Under closed loop part of a deficit
+    piles up here instead of in the server's queue. 0.0 for an open-loop run (every turn released at t_planned)."""
+    wl, q = run["cfg"]["workload"], run["requests"]
+    if "t_released" not in q:
+        return 0.0
+    q = q[q.turn > 0]
+    grid = np.arange(float(wl["warmup_s"]), float(wl["duration_s"]), 1.0)
+    planned = np.sort(q.t_planned.to_numpy(float))
+    released = np.sort(q.t_released.dropna().to_numpy(float))
+    due = np.searchsorted(planned, grid, "right") - np.searchsorted(released, grid, "right")
+    return float(np.polyfit(grid, due, 1)[0])
+
+
+def collapsed(run: dict) -> dict:
+    """A failing run that carried its load and then went cold (review T1): its first backlogged stretch after warm-up
+    (REG-6's stretch settings) starts at t_b >= warm-up + collapse_min_warm_s; over [warm-up, t_b) ok completions are
+    >= 0.95 x planned session requests; and the counter hit rate over [t_b, end of arrivals) is at least
+    collapse_hit_drop below that over [warm-up, t_b). Never true for a run with no backlog."""
+    from analysis.floor import backlogged_stretches
+    wl, r, frac = run["cfg"]["workload"], run["requests"], run["cfg"]["capacity"]["min_throughput_frac"]
+    a, b = float(wl["warmup_s"]), float(wl["duration_s"])
+    st = backlogged_stretches(run["metrics"], a, b, REG7["cb_min_waiting"], REG7["cb_min_stretch_s"])
+    out = {"t_backlog": float(st[0][0]) if st else math.nan, "collapsed": False}
+    if not st or st[0][0] < a + REG13["collapse_min_warm_s"]:
+        return out
+    tb = float(st[0][0])
+    done = int(((r.status == "ok") & (r.t_end >= a) & (r.t_end < tb)).sum())
+    planned = planned_session_rate(run, a, tb) * (tb - a)
+    hit_before, hit_after = _level(run, a, tb)["hit"], _level(run, tb, b)["hit"]
+    out.update(carried=done / planned if planned else math.nan, hit_before=hit_before, hit_after=hit_after)
+    out["collapsed"] = bool(planned and done >= frac * planned and np.isfinite(hit_before) and np.isfinite(hit_after)
+                            and hit_after <= hit_before - REG13["collapse_hit_drop"])
+    return out
+
+
+def reg13_check(run: dict) -> None:
+    """Raises unless the run is a REG-13 sweep run: its parent, closed-loop turns, a new connection per request, 350 W."""
+    cfg = run["cfg"]
+    if cfg.get("sweep_parent") != REG13["sweep_on"]:
+        raise ValueError(f"{run['dir'].name} is not a run of {REG13['sweep_on']}")
+    if not closed_loop(run) or not cfg.get("loadgen_force_close"):
+        raise ValueError(f"{run['dir'].name} lacks closed-loop turns or force_close")
+    if cfg["checks"].get("expected_power_limit_w") != REG13["power_limit_w"]:
+        raise ValueError(f"{run['dir'].name} is not a {REG13['power_limit_w']} W run")
+
+
+def reg13_outcome(complete: bool, end_collapsed: bool, mu: float, carried: float, lam: float, lam_post_max: float) -> str:
+    """In this order: `incomplete` (the chain reaches a registered rate with no valid run); `below` (`carried`, the
+    realized planned rate of the run at μ_warm,cl, >= the highest post-trigger λp of the cold runs; review T2);
+    `collapsed` (the first failing rate carried its load, then went cold: `collapsed`; review T1); `overload` (μ_warm,cl
+    undefined or below the cell's λ); `partial` (in between)."""
+    if not complete:
+        return "incomplete"
+    if np.isfinite(carried) and carried >= lam_post_max - 1e-9:
+        return "below"
+    if end_collapsed:
+        return "collapsed"
+    if not np.isfinite(mu) or mu < lam - 1e-9:
+        return "overload"
+    return "partial"
+
+
+def reg13_table() -> dict:
+    """REG-13's result. Per rate: throughput, planned rate, server queue slope, due-but-unreleased slope, `passes`
+    (throughput >= 0.95 x planned and the sum of both slopes <= max_backlog_slope), `collapsed`, and readouts. μ_warm,cl
+    by the configs' monotone rule (`load.capacity`) on that pass test, over the registered rates. `outcome`
+    (`reg13_outcome`). Readouts: μ by the configs' rule alone (`tables.sweep_capacity`), paired REG-8 rows, λ_test by
+    REG-7's rule, each cold run's margin."""
+    from analysis.load import capacity, find_runs, load_run, summarize
+    from analysis.tables import sweep_capacity
+    r13 = REG13
+    for rid, lam_p in r13["cold_runs"].items():   # the fixed threshold still matches its runs (review T4)
+        got = post_trigger_rate(load_run(f"runs/{rid}"))["lam_p"]
+        if not math.isclose(got, lam_p, rel_tol=1e-9):
+            raise ValueError(f"{rid}: post-trigger λp {got} differs from the registered {lam_p}")
+    runs = [r for r in find_runs(f"*_{r13['sweep_on']}_r*") if r["checks"] and r["checks"]["valid"]]
+    for r in runs:
+        reg13_check(r)
+        if not len(r["metrics"]):
+            raise ValueError(f"{r['dir'].name}: a valid run with no metrics")
+    names = {r["dir"].name for r in runs}
+    on = sweep_rows(r13["sweep_on"], r13["slo_ttft_s"])
+    on = on[on.run.isin(names)]                     # valid runs only (review T6)
+    rows = []
+    for r in sorted(runs, key=lambda r: r["cfg"]["workload"]["rate"]):
+        s, wl, cap = summarize(r), r["cfg"]["workload"], r["cfg"]["capacity"]
+        due = due_unreleased_slope(r)
+        row = on[on.run == r["dir"].name].iloc[0].to_dict()
+        passes = bool(s["throughput"] >= cap["min_throughput_frac"] * s["planned_rate"]
+                      and s["q_slope_per_s"] + due <= r13["max_backlog_slope"])
+        rows.append({**row, "q_slope": s["q_slope_per_s"], "due_slope": due, "unfinished": s["unfinished"],
+                     "passes": passes, **({} if passes else collapsed(r)),
+                     "release_delay": release_delay(r, [(float(wl["warmup_s"]), float(wl["duration_s"]))], end=0.0)[0],
+                     "surge_max": surge_max(r, r13["surge_window_s"])})
+    by = {row["rate"]: row for row in rows}
+    curve = pd.DataFrame({"rate": [x["rate"] for x in rows], "throughput": [x["throughput"] for x in rows],
+                          "planned_rate": [x["planned_rate"] for x in rows],
+                          "q_slope_per_s": [0.0 if x["passes"] else math.inf for x in rows]})
+    mu = capacity(curve, 0.0, 1.0, "planned_rate", monotone=True, swept_rates=list(r13["rates"])) if rows else math.nan
+    chain_end = next((x for x in r13["rates"] if x not in by or not by[x]["passes"]), None)
+    complete = chain_end is None or chain_end in by
+    end_collapsed = bool(complete and chain_end is not None and by[chain_end].get("collapsed"))
+    carried = by[mu]["planned_rate"] if np.isfinite(mu) else math.nan
+    paired = sweep_rows("sweep_l1pl350_pc_on", r13["slo_ttft_s"])
+    paired = paired[paired.run.isin(r13["paired"].values())].to_dict("records")
+    floor = reg8_g1_may_start()
+    return {"rows": rows, "mu_warm_cl": mu, "carried": carried, "chain_end": chain_end,
+            "outcome": reg13_outcome(complete, end_collapsed, mu, carried, r13["lam"], r13["post_lam_p_max"]),
+            "n_cold_below": sum(v <= carried + 1e-9 for v in r13["cold_runs"].values()) if np.isfinite(carried) else 0,
+            "mu_config_rule": sweep_capacity(r13["sweep_on"]) if runs else math.nan,
+            "paired_reg8": paired, "mu_sat_off": floor["mu_sat_off"],
+            "lam_test_reg7_rule": choose_lambda(mu, floor["mu_sat_off"], on, REG7) if np.isfinite(mu) else None}
+
+
+def reg13_inputs() -> dict:
+    """REG-13's design inputs, from runs that exist before it: the cold runs' post-trigger λp."""
+    from analysis.load import load_run
+    cold = [post_trigger_rate(load_run(f"runs/{rid}")) for rid in REG13["cold_runs"]]
+    return {"cold_runs": cold, "post_lam_p_max": max(c["lam_p"] for c in cold)}
+
 if __name__ == "__main__":
     import sys
-    if sys.argv[1] in ("reg10", "reg11", "reg11_reference", "reg11_turn0_reference", "reg12"):
+    if sys.argv[1] in ("reg10", "reg11", "reg11_reference", "reg11_turn0_reference", "reg12", "reg13", "reg13_inputs"):
         print({"reg10": reg10_gate, "reg11": reg11_gate, "reg11_reference": reg11_reference,
-               "reg11_turn0_reference": reg11_turn0_reference, "reg12": reg12_table}[sys.argv[1]]())
+               "reg11_turn0_reference": reg11_turn0_reference, "reg12": reg12_table, "reg13": reg13_table,
+               "reg13_inputs": reg13_inputs}[sys.argv[1]]())
     else:
         print({"reg7": reg7_zone, "reg8": reg8_zone}[sys.argv[1]]())   # no default: say which registration is computed

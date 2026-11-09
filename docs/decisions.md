@@ -2493,3 +2493,116 @@ Summary:
   3. **Closed-loop artifact:** in closed loop, released turns follow completions, so a slow server sees fewer turns; that protects it. A collapse despite that is not a client artifact. `release_chain` explains every unsent turn.
   4. **The verdict thresholds:** seeds 4 and 6 sit near them (seed 6 misses `recovered` by 0.002 in pf drop); seed 5 does not (pf 0, hit 0). With seed 6 counted `recovered`, `n_control_recovered` = 3 and the outcome would still be `controls_not_healthy` (2 not recovered); the thresholds are not changed after the fact (rule A5).
 - **Decision (registered):** `controls_not_healthy` → **the owner decides**; the registration names a closed-loop cache-on sweep to measure μ_warm first. The agent's recommendation and the options go to the owner; nothing is drafted as a [REG] before the owner picks a direction (the registered branch overrides the standing instruction to draft the next REG). C1's status does not change; REG-11's `pass` stays as an exploratory one-seed result, now with the caveat that its control's health is seed-dependent at this load.
+
+## 2026-11-09 · [REG] REG-13 (draft): μ_warm of L1 at 350 W with closed-loop turns, to separate overload from a cold state that outlasts its load (GPU, ≈ 1.8 h)
+- **ID:** REG-13. **Confirmatory** for the question below; exploratory otherwise. **Not approved:** no GPU run before the owner approves this entry.
+- **Why:** REG-12 ended `controls_not_healthy` (decisions.md 2026-11-09 [RESULT]); its registered decision: the owner decides, "a closed-loop cache-on sweep to measure μ_warm first". The owner asked for this draft on 2026-11-09 ("ok, draft the closed-loop sweep REG"). REG-12 left two readings apart: **overload** (λ = 2.4 is at or above the warm capacity with closed-loop turns) and **a metastable cold state** (the warm server carries the load; once cold, it stays cold). μ_warm = 3.0 was measured open-loop only (REG-8).
+- **Question:** what load does the warm server carry with closed-loop turns, and is it at or above the planned load each cold run of REG-11/12 faced after its trigger?
+- **Design inputs** (computed before this entry from existing runs; `uv run python -m analysis.gate reg13_inputs`, `gate.post_trigger_rate`; **fixed in `REG13["cold_runs"]`**, and `reg13_table` refuses to run if a recomputed value differs). The seven runs whose end window [1980, 2580) s was cold and backlogged, with the planned session rate λp from the trigger's end to the end of arrivals:
+
+  | run | trigger end (s) | λp after it |
+  |---|---|---|
+  | `20261109-042828_burst_l1pl350cl_r2.4_s1` (REG-11) | 1080 | 2.359 |
+  | `20261109-080203_burst_l1pl350cl_r2.4_s2` | 1080 | 2.339 |
+  | `20261109-093609_burst_l1pl350cl_r2.4_s3` | 1080 | 2.222 |
+  | `20261109-111316_burst_l1pl350cl_r2.4_s4` | 1080 | **2.711** |
+  | `20261109-125300_burst_l1pl350cl_r2.4_s5` (`bad_baseline`; end window hit 0, queue 261) | 1080 | 2.400 |
+  | `20261109-151300_burst_l1pl350cl_r2.4_s6` | 1080 | 2.419 |
+  | `20261109-120308_stage2_control_l1pl350cl_r2.4_s5` (no trigger: first backlogged stretch, REG-6 settings) | 1330 | 2.287 |
+
+  Not included: seed 4's control (backlogged only from 2467 s, end hit 0.65) and seed 6's (no backlog). **λp,max = 2.711** (seed 4's burst run) decides between `below` and `partial` on its own (review T5).
+  - **Exploratory, found by looking, no decision rests on it** (RUN(20261109-120308_stage2_control_l1pl350cl_r2.4_s5, gate.planned_session_rate), 120 s windows): seed 5's control had λp 3.39 in [1200, 1320) s, just before its backlog began, and 1.62–3.02 per window afterwards, while it stayed cold. Seed 2's control survived a 3.08 window and seed 6's a 3.22 window.
+  - In the cold runs the completion rate was 1.70–1.84 req/s per span and c_b 1.79–1.83 (decisions.md 2026-11-09 [RESULT] REG-12, RUN(<burst id>, gate.reg12_table)), well below any μ_warm,cl ≥ 2.4. Near-critical queueing without a cache loss would complete near the warm rate (review alternative for `below`).
+- **Setup:** `configs/sweep_l1pl350cl_pc_on.yaml` = REG-8's G1′ sweep (`sweep_l1pl350_pc_on.yaml`: L1, 350 W check, seed 0, 900 s per rate with 240 s warm-up, no dev mode) with `workload.sessions.closed_loop: true` and `loadgen_force_close: true` (as REG-11/12; connect cost median 0.55 ms, REG-9). **Rates 2, 2.4, 2.6, 2.8, 3**, one harness invocation, ascending. Resolved with `load_config`, `with_defaults`, `harness.run.expand` (checked).
+  - At λ = 2 and 3 the planned schedules equal REG-8's `20261107-103010_sweep_l1pl350_pc_on_r2` and `20261107-104614_sweep_l1pl350_pc_on_r3` (1802 and 2673 rows, `build_schedule` against their `schedule.parquet`; test): a paired open/closed comparison, which also differs in force_close.
+  - Seed 0's schedule in the measured window [240, 900) s (DERIVED, `build_schedule`): realized planned rate 2.097, 2.529, 2.758, 2.968, 3.124; highest 120 s window 2.21, 3.04, 3.33, 3.61, 3.55, at λ = 2, 2.4, 2.6, 2.8, 3.
+- **Result, computed once after every rate has a valid run or the stopping rule ends:** `uv run python -m analysis.gate reg13` (`gate.reg13_table`). Only valid runs of the sweep parent with closed loop, force_close and 350 W are read (`gate.reg13_check`).
+  - **Pass test per rate** (closed loop, review T3): throughput ≥ 0.95 × planned rate (the configs' rule) **and** the server queue slope plus `due_unreleased_slope` (slope of later turns already due by plan and not yet released) ≤ 0.01 req/s. On a healthy REG-12 control over [240, 900) s the second slope is −0.013 (RUN(20261109-055910_stage2_control_l1pl350cl_r2.4_s2, gate.due_unreleased_slope); a check of the function, not a threshold choice).
+  - **μ_warm,cl:** the highest registered rate whose run and every lower rate pass (`load.capacity`, monotone, over the registered rates; a rate with no valid run ends the chain). **`carried`:** the realized planned rate of the run at μ_warm,cl (review T2).
+  - **`collapsed`** (per failing rate, review T1): its first backlogged stretch after warm-up (REG-6 settings) starts ≥ 300 s after warm-up; before it, ok completions ≥ 0.95 × planned session requests; after it, the counter hit rate is ≥ 0.06 lower (`stuck_hit_drop`).
+  - **`outcome`** (`gate.reg13_outcome`, in this order): `incomplete` (the chain reaches a registered rate with no valid run); **`below`** (`carried` ≥ 2.711: every cold state persisted at a planned load the warm server carried); **`collapsed`** (the first failing rate carried its load for ≥ 300 s, then went cold); **`overload`** (μ_warm,cl undefined or < 2.4); `partial` (otherwise: 2.4 carried, not 2.711). `n_cold_below`: cold runs with λp ≤ `carried`.
+  - **Readouts, never decisive:** per rate pooled percent fast at TTFT ≤ 1.0 s (valid runs only), KV, unfinished, `release_delay`, `surge_max`, `collapsed` details; μ by the configs' rule alone (`tables.sweep_capacity`); REG-8's paired rows; λ_test by REG-7's rule with μ_sat,off 1.681.
+- **Prediction** (BELIEF; revised after the review, which showed seed 0's own surges reach 3.04–3.61 in the window): 2.4 passes p ≈ 0.8 (its highest window, 3.04, is below what seeds 2 and 6 survived); 2.6 passes p ≈ 0.5 (3.33, near seed 5's 3.39); 2.8 p ≈ 0.3. A failure at 2.4–2.8 is a collapse p ≈ 0.6. So P(`below`) ≈ 0.38, `collapsed` ≈ 0.32, `partial` ≈ 0.15, `overload` ≈ 0.1, `incomplete` ≈ 0.05. Paired runs: throughput within 3 % of REG-8's at λ = 2 (p ≈ 0.85); at λ = 3 the closed-loop run fails (p ≈ 0.6). Each run valid p ≈ 0.9.
+- **Decision under each outcome:**
+  - **`below`:** the cold states held at loads the warm server carries over 660 s: not plain overload (one seed; exploratory for C1). Draft for the owner, in order: (1) C1's confirmation at REG-11's cell (a burst run with a 4500 s watch, then the drop to λ = 1; C1 conditions 5–6), which tests the hysteresis directly; (2) a note that C1's matrix test as written (the no-trigger control must recover) cannot pass in this cell when the load's own surges trigger the same state: whether to reword C1 is the owner's (a paper claim).
+  - **`collapsed`:** the sweep found a warm state that carried its load and then went cold within 660 s: the same transition as REG-12's seed-5 control, at a known load. μ_warm,cl above it is not measurable this way. Draft the same confirmation run as under `below`; the owner decides whether the transition itself (its rate vs λ) is the next measurement.
+  - **`partial`:** report `n_cold_below` of 7. The owner chooses between the confirmation run and a lower-λ cell.
+  - **`overload`:** λ = 2.4 is beyond the closed-loop warm capacity; REG-12's control failures and the cold states of REG-11/12 are explained by overload. A [RESULT] note that REG-11's `pass` is not evidence of a metastable state (claims.md only after the owner reviews it). The owner picks another factor or cell.
+  - **`incomplete`:** reported from `checks.json`; the owner decides.
+- **Alternatives:**
+  1. **One seed, 660 s per rate:** capacity under seed 0's schedule in its window. `collapsed` separates a transition from steady overload; `surge_max` and `release_delay` per rate are reported.
+  2. **Warm for 660 s is not stable for 1500 s:** `below` says the cold state was not forced by the average load; it does not say the warm state lasts at that load (REG-12's controls at 2.4 did not in 3 of 5 seeds).
+  3. **Near-critical queueing** (review): at ρ ≈ 0.97, long backlogs occur without any cache mechanism, and a cold cache can follow a long queue rather than cause it. The cold runs completed at 1.70–1.84 req/s, far below a warm rate ≥ 2.4; queueing alone predicts completion near the warm rate. The hysteresis test (drop to λ = 1) separates the rest.
+  4. **The 5 % tolerance:** "carried" means throughput ≥ 0.95 × planned; `carried` uses the realized planned rate.
+  5. **Dev mode** (off here, on in REG-11/12; it only registers endpoints, open-questions S1; BELIEF that it does not change capacity) and **force_close** in the paired comparison.
+  6. **Heat:** `gpu_steady`, `power_limit` per run; REG-8's G1′ at 350 W ran at 64–69 °C.
+  7. **Recorder failure** (open-questions A14): not fixed; `accounting` catches it, as in REG-12.
+- **Stopping rule:** one harness invocation; an invalid rate is rerun unchanged with a rerun config listing that rate only (same `name`), at most twice; a heat-invalid run once after cooling to ≤ 45 °C, a second heat failure stops; a `client_error`, a limit other than 350 W or an unexpected pre-launch check stops. A rerun decision reads only `checks.json`. **No interim look** at any rate's throughput, slope or μ before all rates are valid or the rule ends.
+- **Operations:** REG-12's pre-launch checks (350 W, clean tree at this entry's commit on the VM and the Mac, no compute process, GPU ≤ 45 °C). The console log is named per attempt ([CORR] 2026-11-09).
+- **Cost:** 5 × (900 s + up to 300 s drain + ≈ 60 s start-up) ≈ 1.75 GPU h (DERIVED: 6300 s); worst case with every rerun ≈ 5.3 GPU h.
+- **Code and files:** `configs/sweep_l1pl350cl_pc_on.yaml`; `analysis/gate.py` (`REG13`, `post_trigger_rate`, `surge_max`, `due_unreleased_slope`, `collapsed`, `reg13_check`, `reg13_outcome`, `reg13_table`, `reg13_inputs`; CLI `reg13`, `reg13_inputs`); `tests/test_gate.py` (7 new). Gate tests 43 passed; full suite 220 passed before the review's changes, gate tests after.
+- **Not changed:** REG-12's result and runs; the configs' capacity rule (REG-13's pass test adds a closed-loop condition for this sweep only; `sweep_capacity` is reported beside it); no harness or check change.
+
+### Adversarial review (separate subagent; it saw only the first draft, its diff and the code and configs those call; it opened no runs and no docs). Verbatim:
+
+> **Rule F review of REG-13 (draft).** I read the draft, the diff, analysis/gate.py, load.py and tables.py, harness/loadgen.py, workload.py, run.py and checks.py, and the configs in the extends chain. I did not open runs/ or docs/. `pytest -k reg13`: 5 passed. Schedule numbers below come from `build_schedule` on the resolved configs (DERIVED, seed 0, measured window [240, 900) s).
+>
+> **1. Traces where the result is wrong or misleading**
+>
+> T1. **A collapse inside the sweep is read as `overload`** (gate.py `reg13_outcome`; tables.py:106 `sweep_capacity`). Seed 0's schedule has 120 s surges well above the open-loop μ_warm. Peak planned rate per 120 s window: 3.04 at λ = 2.4, 3.33 at 2.6, 3.61 at 2.8 (DERIVED). The draft treats seed 5's 3.39 surge as a possible trigger. Trace: the 2.4 run carries its load until a surge near 600 s, then turns cold and backlogged. Throughput falls below 0.95 × planned, so the chain ends at 2.0, μ = 2.0 and the outcome is `overload`. The registered decision under `overload` then calls REG-11's `pass` "not evidence" and stops closed-loop work at L1. But that trace is the metastable mechanism itself. The rule has no class for "carried, then collapsed".
+>
+> T2. **Nominal μ is compared with realized λp** (`reg13_outcome(mu, …, post_max)`). μ is a grid value. The capacity rule judges each run against its realized planned rate (`l1_base.yaml` `against: planned_rate`). Seed 0 runs high: realized 2.097, 2.529, 2.758, 2.968 and 3.124 at nominal 2, 2.4, 2.6, 2.8 and 3. A pass at nominal 2.6 means the server carried 2.758, which is above λp,max = 2.711. Yet the outcome would be `partial`, and `n_cold_below` (nominal) undercounts. The basis of the comparison has to be registered: nominal, realized planned rate, or delivered throughput.
+>
+> T3. **The queue-slope criterion is weaker under closed loop** (load.py:107 `summarize`; loadgen.py `session_chain`). With 8 turns and 5 s gaps, part of a deficit piles up as client release lag, not as `num_requests_waiting`. Rough estimate (DERIVED, BELIEF-level): mean lag ≈ 4 × e2e, so client-side growth ≈ 4 × dQ/dt. A slope of 0.01 req/s² then admits a deficit of about 0.05 req/s instead of 0.01. With the 5 % throughput tolerance, a nominal 2.8 run passes while delivering about 2.82 req/s against its realized 2.968. The rule leans towards a higher μ and so towards `below`. Nothing measures client backlog: `release_delay` is a median over the whole window, not a slope.
+>
+> T4. **λp,max is not actually fixed.** `reg13_table` recomputes `post_max` from runs/ and the current `backlogged_stretches`/REG7 settings at analysis time. It is not the registered 2.711. Any later change to those settings moves the threshold.
+>
+> T5. **Seed 4's burst decides between `below` and `partial` on its own.** It is the only λp above 2.42. Including seed 5's control rests on its first backlog start (1330 s), which was found by looking at the data. If λp were defined from the first cold window instead, the threshold would change.
+>
+> T6. **Smaller code issues:**
+> - `sweep_rows` (gate.py:188) does not filter on validity. The readout `lam_test_reg7_rule`/`slo_feasible` can therefore use an invalid run's pf.
+> - `on[on.run == name].iloc[0]` raises IndexError for a valid run with empty metrics.
+> - `chain_end`/`complete` agree with `sweep_capacity`'s union-of-swept-rates rule, including after a stop mid-sweep (chain reaches 2.8, which has no run → `incomplete`). That part is correct.
+>
+> Mechanics I checked, all fine:
+> - `expand` sets parent and rates.
+> - The `arrival_rate` check counts turn 0 only under closed loop. Seed 0's turn-0 counts are 175, 212, 231, 249, 264 against expected 165–247.5, all inside tolerance.
+> - `burst_requests(None)` returns 0.
+> - `release_chain` needs no trigger.
+> - Against the REG-11 burst config, only duration, dev mode, SLO/verdict and trigger keys differ. Turns and gaps are the same.
+>
+> **2. Strongest alternatives**
+>
+> - **`overload`:** a metastable collapse inside the sweep (T1), or a capacity cut from force_close or no-dev-mode that is specific to the sweep. What separates them is each run's time course. Overload shows a queue rising from the start at warm hit rate. A collapse shows a warm stretch (throughput ≈ planned, warm hit rate), then a surge, then a hit-rate drop and backlog.
+> - **`below`:** near-critical heavy traffic. At ρ ≈ 2.711 / ~2.8 ≈ 0.97, long backlog excursions happen with no cache mechanism, and a cold cache can be a result of the long queue rather than its cause. What separates them: in each cold run's stuck windows, is the completion rate well below μ_warm,cl, with the hit drop *preceding* the queue rise? Then the hysteresis test (drop to λ = 1). `below` alone cannot tell these apart.
+>
+> **3. Decisions, prediction, cost**
+>
+> - The outcomes do lead to different owner choices, so the run can change a decision.
+> - **The prediction does not fit the study's own data.** REG-12's controls at 2.4 went cold without a burst in 3 of 5 seeds, and seed 0 has bigger surges at 2.6 and 2.8. P(`below`) ≈ 0.65 needs three 660 s windows in a row with no collapse, and the draft gives no argument for that.
+> - Cost: 5 × 1260 s ≈ 1.75 h is right as an upper bound per run.
+> - **Missing from the decision table:**
+>   - a `collapsed` outcome (T1);
+>   - what `below` means when the confirmation burst run cannot be told apart from a self-triggered collapse (REG-12 seed 5);
+>   - a `partial` case judged on realized load (T2).
+>
+> **4. Recommendations**
+>
+> 1. **Blocking.** Register a `collapsed` class, with a criterion fixed before any run, for a failing rate that carried its load before failing. For example: an initial stretch of ≥ X s with throughput ≥ 0.95 × planned and warm hit rate, followed by a backlogged stretch with a hit drop ≥ `stuck_hit_drop`. Map `collapsed` to its own decision, not to `overload`.
+> 2. **Blocking.** Register the basis of comparison (realized planned rate or throughput of the highest chain-passing run vs λp). Fix `n_cold_below` to match.
+> 3. **Blocking.** Hard-code λp,max = 2.711 and the seven λp values in `REG13`, and assert that the recomputed values equal them.
+> 4. **Blocking.** Add a client-backlog criterion for closed loop to the capacity rule, or at least register it as a decisive co-condition. For example: the slope of turns due but not sent, or of the release delay, over the window ≤ a set limit. Without it the rule leans towards `below` (T3).
+> 5. Not blocking. Before spending GPU time, apply the capacity rule over [240, 900) to the 11 existing closed-loop runs at 2.4 (REG-11/12 bursts before the trigger, and the controls). This gives 2.4 with 11 seeds at no cost. Register the rule before computing it.
+> 6. Not blocking. For each cold run, report the completion rate in its stuck windows next to μ_warm,cl, and whether the hit drop came before the queue rise or after it.
+> 7. Not blocking. Revise P(`below`) in light of REG-12's collapse rate, or argue why a 660 s window avoids it.
+> 8. Not blocking. Filter `sweep_rows` on validity, and handle a valid run with empty metrics.
+
+**Changed because of it:**
+- **1–4 (Blocking): all adopted.**
+  - 1: `collapsed` (300 s warm and carried, then a hit drop ≥ 0.06), with its own outcome and decision. The order puts `below` first: a rate that carried ≥ 2.711 is the stronger statement even if a higher rate then collapsed.
+  - 2: `carried`, the realized planned rate of the run at μ_warm,cl; `n_cold_below` uses it.
+  - 3: the seven λp values and λp,max are in `REG13`; `reg13_table` raises if a recomputed value differs.
+  - 4: `due_unreleased_slope`, added to the server queue slope under the configs' 0.01 limit; decisive.
+- **6: partly.** The cold runs' completion rates (1.70–1.84) are cited above, against alternative 3. Whether the hit drop came before the queue rise is not implemented; it is left for the confirmation run.
+- **7, 8: adopted.** 7: the prediction is revised. 8: valid runs only; a valid run with no metrics raises.
+- **5: not adopted.** It measures 2.4 only, where 11 healthy baselines are already known from REG-11/12's verdicts. No outcome turns on 2.4 alone except `overload`, and the sweep's own 2.4 run covers that.
