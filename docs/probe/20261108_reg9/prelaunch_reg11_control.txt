@@ -1,0 +1,10 @@
+# pre-launch read for stage2_control_l1pl350cl_r2.4 (agent, read-only)
+2026-11-09T03:42:53+00:00
+power.limit [W], temperature.gpu, utilization.gpu [%], memory.used [MiB]
+350.00 W, 43, 0 %, 1 MiB
+# compute apps:
+# tree:
+1944c2b
+0
+/dev/mapper/ubuntu--vg-ubuntu--lv   62G   46G   13G  79% /
+no server running on /tmp/tmux-1000/default

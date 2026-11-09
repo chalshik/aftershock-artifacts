@@ -2289,3 +2289,7 @@ Summary:
 - **Done:** branch `reg11-closed-loop` (`78c1106`) merged into `main`; open-loop behaviour unchanged (tested).
 - **Standing instructions** (decisions.md 2026-11-09 [DECISION]) apply to REG-11 as to REG-10: one heat rerun after cooling, stop on a `client_error`, `stuck_unconfirmed`, a burst that does not fill the pool, a limit other than 350 W, or an unexpected pre-launch check. After REG-11: compute it once, log the `[RESULT]`, draft and review the next registration; nothing new runs before the owner approves it.
 - **Order:** control `configs/stage2_control_l1pl350cl_r2.4.yaml`, then the burst run `configs/burst_l1pl350cl_r2.4_s1.yaml`.
+
+## 2026-11-09 · [OPS] REG-11 control launched
+- **Pre-launch read** (2026-11-09 03:42:53 UTC, VM clock; PROBE(docs/probe/20261108_reg9/prelaunch_reg11_control.txt)): 350 W, 43 °C, 0 %, 1 MiB, no compute process; tree clean at `1944c2b` (the Mac's `main`) after `git pull`; no tmux session.
+- **Launched:** `20261109-034255_stage2_control_l1pl350cl_r2.4`, `configs/stage2_control_l1pl350cl_r2.4.yaml` (closed-loop turns, force_close), in tmux with a redirect to `~/stage2_control_l1pl350cl_r2.4.log`. 2580 s; expected end about 04:27 UTC. Listed in `manifests/pending_copy.txt` until copied.
