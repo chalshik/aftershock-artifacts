@@ -436,6 +436,12 @@ def reg11_shock_comparable(res: dict, ref: dict) -> bool:
     return s["outstanding"] >= f * ref["outstanding"] and s["backlog_s"] >= f * ref["backlog_s"]
 
 
+def reg11_turn0_reference() -> list[float]:
+    """REG-11's `pass` readout: `turn0_share` in REG-10's burst run's spans, against REG-11's (queue-mix alternative)."""
+    from analysis.load import RUNS, load_run
+    return turn0_share(load_run(RUNS / REG11["reference_run"]), REG8["spans"])
+
+
 def reg11_gate() -> dict:
     """REG-11's verdict: `reg10_gate` on the closed-loop pair. overlap_share and queued_miss_share are 0 or NaN by
     construction (a later turn is released only after its previous turn ended); release_delay is added."""
@@ -447,7 +453,8 @@ def reg11_gate() -> dict:
 
 if __name__ == "__main__":
     import sys
-    if sys.argv[1] in ("reg10", "reg11", "reg11_reference"):
-        print({"reg10": reg10_gate, "reg11": reg11_gate, "reg11_reference": reg11_reference}[sys.argv[1]]())
+    if sys.argv[1] in ("reg10", "reg11", "reg11_reference", "reg11_turn0_reference"):
+        print({"reg10": reg10_gate, "reg11": reg11_gate, "reg11_reference": reg11_reference,
+               "reg11_turn0_reference": reg11_turn0_reference}[sys.argv[1]]())
     else:
         print({"reg7": reg7_zone, "reg8": reg8_zone}[sys.argv[1]]())   # no default: say which registration is computed
