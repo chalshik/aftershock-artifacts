@@ -581,33 +581,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-09 · [RESULT] REG-10: `drains`; the burst filled the pool, the backlog cleared at 3.40 req/s, and the server was fully back by 600 s after the burst; `overlap_share` 0.608 > 0.5, so closed-loop turns are proposed to the owner
-- **Runs, both valid** at 350 W in all samples, 0 client errors with `loadgen_force_close`:
-  - control `20261108-211646_stage2_control_l1pl350_r2.4` (decisions.md 2026-11-09 [OPS]);
-  - burst `20261108-220248_burst_l1pl350_r2.4_s1` (FILE(runs/20261108-220248_burst_l1pl350_r2.4_s1/checks.json): 6590 ok; 422 of 422 burst requests sent; `manipulation` KV max during the burst 0.9998 ≥ 0.95, so **the burst filled the pool**; SW thermal 0.002, 0 HW samples, CV 0.024, max 75 °C; 350 W in 2586 of 2586 samples). Copied with identical sha256 for 10 files; manifest +10; removed from `manifests/pending_copy.txt`.
-- **Computed once:** `uv run python -m analysis.gate reg10` (`gate.reg10_gate`). RUN(20261108-211646_stage2_control_l1pl350_r2.4, gate.reg10_gate), RUN(20261108-220248_burst_l1pl350_r2.4_s1, gate.reg10_gate). Verdicts: control `recovered`, burst `recovered`. **Outcome `drains`.**
-
-  | span (s after the burst's last arrival) | n_done | c | c_upper | λp | hit share (baseline 0.838) | KV | waiting q | holds |
-  |---|---|---|---|---|---|---|---|---|
-  | 600–900 | 655 | 2.183 | 2.390 | 2.150 | 0.841 | 0.160 | 0.000 | no |
-  | 900–1200 | 796 | 2.653 | 2.880 | 2.677 | 0.838 | 0.236 | 0.003 | no |
-  | 1200–1500 | 713 | 2.377 | 2.592 | 2.350 | 0.838 | 0.183 | 0.000 | no |
-
-  In every span the hit share is at the baseline, KV is low, nothing waits, and c tracks λp: no span is cold or backlogged, so none qualifies.
-- **Readouts:**
-  - `overlap_share` over [1080, 2580): **0.608**, above REG-7's 0.5 limit. 61 % of the session cache hits after the burst came from a previous turn that was still running.
-  - `secondary_cb` (burst end to end of arrivals): `sustainable`, one backlogged stretch of 393 s, c_b **3.397** req/s over 1335 completions, against λp 2.359. For M2: 1 − c_b / μ_warm = 1 − 3.397 / 3.0 = −0.132 (DERIVED). The post-burst backlog completed faster than the warm TTFT-healthy rate, and 2.0× the cache-off floor 1.681 (DERIVED: 3.397 / 1.681).
-  - `queued_miss_share`: NaN, 0.0, NaN. Spans 1 and 3 had no cold later turns to count.
-  - `span_clock`: baseline 1875 MHz, spans 1875 / 1860 / 1875. No clock drift.
-- **Prediction** (model.md row 14): burst fills the pool p ≈ 0.85: hit. `drains` ≈ 0.45 (modal): hit. A stuck span near 1.7 req/s: not seen.
-- **What the detectable band means here:** REG-10 says a `drains` does not by itself license a negative, because a stuck state completing above about 2.0–2.2 req/s could not hold a span. That case did not occur: the spans have no backlog at all (q ≤ 0.003, hit share at baseline), and the one post-burst backlog completed at 3.4 req/s. This pair shows recovery, not a stuck state hidden by the band.
-- **Alternatives** (rule A2):
-  1. **Overlap protection (open-loop turns):** a session's next turn arrives while its previous turn is still running, so its prefix blocks are pinned in use and cannot be evicted. The cache stays warm through the backlog, and the backlog drains at near-warm speed. Supported by `overlap_share` 0.608 and c_b 3.4 ≫ 1.681. Separated by closed-loop turns: if the backlog then completes near the cache-off floor and holds, this was the cause.
-  2. **The burst was too short to evict the sessions:** 422 cold prompts × 2944 tokens fill the pool (KV 0.9998), but sessions keep only about 6–10 in flight (`n` in the spans), so few session prefixes may have been resident to lose. The hit share inside the backlog is not computed by a registered function, so not separable here; a longer or larger burst, or a hit-share readout over the backlog stretch, would separate it.
-  3. **λ = 2.4 has too much headroom:** M2 needs c(s*) < λ. The measured post-burst completion rate 3.397 is 1.4× λp (DERIVED: 3.397 / 2.359), so this state cannot be stuck at 2.4, whatever caused it. This is what `drains` says. It does not separate alternative 1 from 2.
-  4. **One seed, 350 W, dev mode:** as registered (alternatives 3, 5, 8); none of them points toward a hidden stuck state.
-- **Decision (registered):** record c_b in M2 (done, docs/model.md M2). `overlap_share` > 0.5, so **closed-loop turns are proposed to the owner** as the next single factor. This changes research rule 2 (open-loop arrivals) and the harness, so only the owner can decide. A draft registration follows (REG-11), written and reviewed by the standing instruction; **it does not run before the owner approves it.** L1 is not written up as negative: REG-10 is one exploratory pair, and the readout points to a mechanism that open-loop traffic cannot test.
-
 ### 2026-11-09 · [REG] REG-11 (exploratory, draft): REG-10's pair with closed-loop turns, L1, 350 W, λ = 2.4 (GPU, ≈ 1.6 h)
 - **ID:** REG-11. **Exploratory.** **Not approved:** no GPU run, and no merge of its code into `main`, before the owner approves this entry. The code is on branch `reg11-closed-loop` (commit `78c1106`); `main` and the VM do not have it.
 - **Why:** REG-10 gave `drains` with `overlap_share` 0.608 > 0.5 (decisions.md 2026-11-09 [RESULT]). REG-7's rule for that case: propose closed-loop turns to the owner as the next single factor (decisions.md 2026-11-05 [REG] REG-7, "If `overlap_share` > 0.5"). With open-loop turns, a session's next turn often arrives while its previous turn still runs, so the prefix it needs is pinned in use and cannot be evicted (REG-10 [RESULT], alternative 1). The post-burst backlog completed at 3.397 req/s, 2.0× the cache-off floor (RUN(20261108-220248_burst_l1pl350_r2.4_s1, gate.secondary_cb)). Closed-loop turns remove the overlap by construction and test whether it is what kept the cache warm.
@@ -727,3 +700,8 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **Run:** `20261109-034255_stage2_control_l1pl350cl_r2.4`. Copied with identical sha256 for 10 files; manifest +10; removed from `manifests/pending_copy.txt`.
 - **Checks** (FILE(runs/20261109-034255_stage2_control_l1pl350cl_r2.4/checks.json)): VALID. 6168 ok of 6168 scheduled, 0 client errors; `client_lag` p99 2.2 ms (against the release time); `arrival_rate` closed loop, 707 session starts against 702 expected; `release_chain` 0 unsent later turns; SW thermal 0.001, 0 HW samples, CV 0.012, max 76 °C; 350 W in 2601 of 2601 samples. Only `checks.json` was read.
 - **Note:** the live progress line in the VM log prints `lag` against the schedule's `t_planned`, so under closed loop it shows the sessions' accumulated delay (4–8 s in the first minute), not client lag. Not a check input.
+
+### 2026-11-09 · [OPS] REG-11 burst run launched
+- **Pre-launch read** (2026-11-09 04:28:26 UTC, VM clock; PROBE(docs/probe/20261108_reg9/prelaunch_reg11_burst.txt)): 350 W, 39 °C, 0 %, 1 MiB, no compute process; tree clean at the Mac's `main` after `git pull`; no tmux session.
+- **Launched:** `20261109-042828_burst_l1pl350cl_r2.4_s1`, `configs/burst_l1pl350cl_r2.4_s1.yaml` (closed-loop turns, force_close), in tmux with a redirect to `~/burst_l1pl350cl_r2.4_s1.log`. 2580 s; expected end about 05:13 UTC. Listed in `manifests/pending_copy.txt` until copied.
+- **Next:** if valid, `uv run python -m analysis.gate reg11` once, then the `[RESULT]`.
