@@ -2434,3 +2434,62 @@ Summary:
 - **Owner's answer:** "ok, approve REG-12, run it", to the question whether REG-12 (decisions.md 2026-11-09 [REG]) is approved: the C1 matrix of REG-11's cell, seeds 2–6 (the owner's choice, "go with 5 seeds"), each with a same-seed control, ≈ 8.2 GPU h.
 - **Order:** seeds 2, 3, 4, 5, 6; in each, `configs/stage2_control_l1pl350cl_r2.4_s<s>.yaml`, then `configs/burst_l1pl350cl_r2.4_s<s>.yaml`. Each launch after REG-11's pre-launch checks, run by an agent queue script that stops at the first run that is not valid or any pre-launch STOP; the agent then applies the stopping rule (reading only `checks.json`).
 - **Standing instructions** (decisions.md 2026-11-09 [DECISION]) apply. No verdict or label of any seed is computed before all 10 runs are valid and copied; then `gate.reg12_table` once, the `[RESULT]`, and the next drafts by the registered outcome, which do not run before the owner approves them.
+
+## 2026-11-09 · [OPS] REG-12 runs: 10 of 10 valid after one rerun (seed 6 control, `accounting`); pre-launch reads in `docs/probe/20261109_reg12/`
+- **Launched** by the agent's queue script, in the registered order, each after REG-11's pre-launch checks (350 W limit, clean tree at `32ae2f9` on the VM and the Mac, no compute process, GPU ≤ 45 °C; PROBE(docs/probe/20261109_reg12/prelaunch_reg12_<config>.txt)). The VM was reached over Tailscale (owner off the local network). The Mac slept on battery about 06:43–08:01 UTC, which delayed the seed-2 burst launch; from then on `caffeinate` held it awake on mains power.
+- **Runs and checks** (FILE(runs/<id>/checks.json) each; all at 350 W in every sample, 0 HW-throttle samples, SW thermal ≤ 0.003, max 67–78 °C, `client_lag` p99 ≤ 2.6 ms, `release_chain` 0 unexplained):
+
+  | seed | control | burst | burst KV max during burst | burst requests unfinished |
+  |---|---|---|---|---|
+  | 2 | `20261109-055910_stage2_control_l1pl350cl_r2.4_s2` | `20261109-080203_burst_l1pl350cl_r2.4_s2` | 0.9997 | 764 of 6462 |
+  | 3 | `20261109-085121_stage2_control_l1pl350cl_r2.4_s3` | `20261109-093609_burst_l1pl350cl_r2.4_s3` | 0.9995 | 673 of 6206 |
+  | 4 | `20261109-102614_stage2_control_l1pl350cl_r2.4_s4` | `20261109-111316_burst_l1pl350cl_r2.4_s4` | 0.9975 | 1411 of 7022 |
+  | 5 | `20261109-120308_stage2_control_l1pl350cl_r2.4_s5` | `20261109-125300_burst_l1pl350cl_r2.4_s5` | 0.9997 | 1049 of 6806 |
+  | 6 | `20261109-142813_stage2_control_l1pl350cl_r2.4_s6` (rerun) | `20261109-151300_burst_l1pl350cl_r2.4_s6` | 0.9998 | 1024 of 6609 |
+
+  Every burst filled the pool (`manipulation` ≥ 0.95). The seed-5 control ended with 296 of 6356 requests unfinished and 193 later turns never released (FILE(runs/20261109-120308_stage2_control_l1pl350cl_r2.4_s5/checks.json)); every other control finished all its requests.
+- **One invalid run: `20261109-134250_stage2_control_l1pl350cl_r2.4_s6`**, failed `accounting` only (FILE(runs/20261109-134250_stage2_control_l1pl350cl_r2.4_s6/checks.json)): 6173 of 6173 requests ok, but the vLLM success counter rose by 426. Not heat, not a client error, not a queue-stop condition, so by the stopping rule (read from `checks.json` only) it was **rerun unchanged once**; the rerun is valid. Kept and marked invalid; copied with identical sha256.
+  - **Cause, observed:** the recorder stopped writing `gpu.jsonl` and `metrics.jsonl` at t = 213 s (FILE(runs/20261109-134250_stage2_control_l1pl350cl_r2.4_s6/gpu.jsonl), last line) while the load ran to t = 2612 s (`events.jsonl` `load_end`). No error line in `metrics.jsonl`, so the recorder process exited outside its scrape `try`. **Suspected, BELIEF:** `LagTail.recent_max` (harness/recorder.py) `json.loads` a half-written line of `requests.jsonl` while loadgen appends to it, and the exception is not caught. Its traceback, if any, went to the VM console log, which the rerun overwrote ([CORR] below). Added to open-questions.
+  - **Two checks passed on the broken run** and so would not have caught it alone: `gpu_steady` (0 busy samples, max temp null) and `recorder` (max gap 1.0 s, which looks only at gaps inside the recorded data, not at its end). `accounting` caught it. A fix to the recorder and to both checks needs the owner (checks: rule C); proposed after REG-12, not made during it (it would change the commit mid-matrix).
+- **Copied** to the Mac with identical sha256 (10 files per run); manifest +110 lines; none listed in `manifests/pending_copy.txt`. The VM copies are kept.
+- **Stray file:** the first queue start (a seed-list bug in the agent's script, no GPU use) left a 128-byte log `~/stage2_control_l1pl350cl_r2.4_s2` in the VM home; harmless, left in place (deleting needs the owner).
+
+## 2026-11-09 · [CORR] The rerun's console log overwrote the invalid run's on the VM
+- **Error:** the agent's launch script writes the console log to `~/<config>.log` on the VM. The rerun of the seed-6 control used the same config name, so it overwrote the log of `20261109-134250_stage2_control_l1pl350cl_r2.4_s6`, the only place a recorder traceback would have been. The agent saved the pre-launch probe of the first attempt (`prelaunch_reg12_stage2_control_l1pl350cl_r2.4_s6_attempt1.txt`) but not the console log.
+- **Effect:** the recorder failure's cause stays a BELIEF. The run folder (raw data) is intact. No result changes.
+- **Fix:** later launches name the console log by run attempt (agent script; no harness change).
+
+## 2026-11-09 · [RESULT] REG-12: `controls_not_healthy`. Stuck with a recovered control in 2 of 5 seeds; three controls did not recover without any burst, one (seed 5) collapsing into the same cold, full, backlogged state
+- **Computed once:** `uv run python -m analysis.gate reg12` (`gate.reg12_table`) on the ten valid runs above (each RUN(<id>, gate.reg12_table)).
+
+  | seed | control verdict | burst verdict | gate label | stuck (C1 test) | stuck and `pass` | λp after t = 1080 s (control) |
+  |---|---|---|---|---|---|---|
+  | 2 | recovered | stuck | pass | yes | yes | 2.339 |
+  | 3 | recovered | stuck | pass | yes | yes | 2.222 |
+  | 4 | **stuck** | stuck | control_not_healthy | no | no | 2.711 |
+  | 5 | **stuck** | bad_baseline | inconclusive | no | no | 2.400 |
+  | 6 | **unclear** | stuck | inconclusive | no | no | 2.419 |
+
+  **k = 2 of n = 5**, one-sided 95 % Clopper–Pearson upper bound **0.811**, lower bound 0.076 (DERIVED: 1 − cp_upper(3, 5)); k_pass = 2; **`n_control_recovered` = 2**; **outcome `controls_not_healthy`** (checked first, as registered); `supports` false. λp column: RUN(<control id>, gate.planned_session_rate) over [1080, 2580) s.
+- **The controls** (RUN(<id>, load.verdict); baseline [480, 1080) s, end window [1980, 2580) s; thresholds configs/stage2_base.yaml:15–20):
+  - seed 2: pf 0.999 → 1.000, hit 0.828 → 0.835, q 0.005 → 0.002: recovered.
+  - seed 3: pf 1.000 → 1.000, hit 0.832 → 0.835, q 0.000 → 0.002: recovered.
+  - **seed 4:** pf 1.000 → 0.741, hit 0.829 → 0.653, q 0.008 → 1.29, KV 0.23 → 0.48: `stuck` by the thresholds, but **partly degraded, not the cold state** (hits 0.65, KV half full, a short queue).
+  - **seed 5:** pf 0.999 → **0.000**, hit 0.818 → **0.000**, q 0.012 → **100.2** (slope +0.12/s), KV 0.24 → **0.95**, running 7.6 → 30.5: **the same cold, full, backlogged state the burst runs reach, with no burst.**
+  - **seed 6:** pf 1.000 → 0.978, hit 0.828 → 0.747, q 0.003 → 0.033: not recovered (pf drop 0.022 > 0.02, hit drop 0.081 > 0.06), not stuck: `unclear`; mildly degraded.
+- **The burst runs:** four of five `stuck` (2, 3, 4, 6); seed 5's is `bad_baseline` (baseline pf 0.970 < 0.98, RUN(20261109-125300_burst_l1pl350cl_r2.4_s5, load.verdict)) and ends at pf 0, hit 0, q 261. In all five, every span after the burst is cold (hit share 0.000), full (KV 0.95) and backlogged, with c 1.70–1.84 req/s (RUN(<burst id>, gate.reg12_table) `details.spans`); `secondary_cb` `not_sustainable` in all five (c_b 1.79–1.83). `end_window`: 0 burst requests with a first token in [1980, 2580) s in every seed; queue 204–282, slope +0.06 to +0.20 per s.
+- **Prediction** (model.md row 16): runs valid: 10 of 11 attempts (p ≈ 0.9 each: fits). Bursts fill the pool: 5 of 5 (fits). Each control `recovered` p ≈ 0.9: **2 of 5, a miss**; P(≤ 2 of 5 | p = 0.9) = 0.0086 (DERIVED: 1 − 0.9⁵ − 5·0.9⁴·0.1 − 10·0.9³·0.1² = 1 − 0.59049 − 0.32805 − 0.0729). k ≥ 3 ≈ 0.77: did not happen. P(burst `stuck`) ≈ 0.72: 4 of 5 (fits).
+- **What it shows, and what it does not:**
+  - **Observed:** at λ = 2.4 with closed-loop turns, the cold, full, backlogged state is reached **without the trigger** in one of five controls (seed 5), and two more controls degrade partway (seeds 4, 6). After the burst it is reached in all five seeds (four `stuck`, seed 5 already degrading).
+  - **Derived:** the registered reading applies: **λ = 2.4 is not reliably warm-healthy with closed-loop turns; the matrix cannot speak to C1**, whatever k is. The burst is not shown to be the cause of the stuck state in this cell: the load alone reaches it within 2580 s in at least one seed.
+  - **Two readings of seed 5's control, not separated here:**
+    1. **Plain overload:** λ = 2.4 (λp 2.40 in the watch) is at or above the closed-loop warm capacity, so the queue grows by itself. Then there is no healthy state at this load to be metastable against.
+    2. **A self-triggered metastable transition:** the warm state held for ≥ 1080 s (baseline pf 0.999, hit 0.818), and a load fluctuation tipped it into the cold state, which then held. That is a metastable failure with the load's own variance as the trigger, but C1 as written needs a recovered control, so it cannot be claimed from this matrix.
+    - **Evidence that separates them:** the closed-loop warm capacity (a cache-on sweep with closed-loop turns: if μ_warm,cl is well above 2.4 and the state still forms and holds, reading 2 gains); how long the warm state lasts at loads below 2.4 (a fluctuation-triggered transition becomes rare quickly as λ falls; plain overload does not occur below capacity); and in seed 5's control, when the collapse began and whether the λp of the minutes before it was high (`gate.planned_session_rate` on windows; descriptive, needs a function for the onset).
+  - **Not shown:** whether C1 holds at a lower λ; whether the two `stuck`-with-recovered-control seeds (2, 3) differ from the others only by lighter load (their λp 2.22–2.34 are the two lowest; the controls that failed have 2.40–2.71). This pattern fits alternative 1 of REG-12 (seed-dependent load) and reading 1 above, from five points, unregistered: BELIEF.
+- **Alternatives** (rule A2):
+  1. **The recorder or harness failed in the controls:** all five controls are valid; seed 5's degraded state is in the server's own metrics (hit counter 0, `num_requests_waiting` 100, KV 0.95), not only the client's.
+  2. **Heat:** SW thermal ≤ 0.003 in every run, 350 W in every sample; the clock is not the cause of a 0.000 hit rate.
+  3. **Closed-loop artifact:** in closed loop, released turns follow completions, so a slow server sees fewer turns; that protects it. A collapse despite that is not a client artifact. `release_chain` explains every unsent turn.
+  4. **The verdict thresholds:** seeds 4 and 6 sit near them (seed 6 misses `recovered` by 0.002 in pf drop); seed 5 does not (pf 0, hit 0). With seed 6 counted `recovered`, `n_control_recovered` = 3 and the outcome would still be `controls_not_healthy` (2 not recovered); the thresholds are not changed after the fact (rule A5).
+- **Decision (registered):** `controls_not_healthy` → **the owner decides**; the registration names a closed-loop cache-on sweep to measure μ_warm first. The agent's recommendation and the options go to the owner; nothing is drafted as a [REG] before the owner picks a direction (the registered branch overrides the standing instruction to draft the next REG). C1's status does not change; REG-11's `pass` stays as an exploratory one-seed result, now with the caveat that its control's health is seed-dependent at this load.
