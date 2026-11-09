@@ -2606,3 +2606,8 @@ Summary:
 - **6: partly.** The cold runs' completion rates (1.70–1.84) are cited above, against alternative 3. Whether the hit drop came before the queue rise is not implemented; it is left for the confirmation run.
 - **7, 8: adopted.** 7: the prediction is revised. 8: valid runs only; a valid run with no metrics raises.
 - **5: not adopted.** It measures 2.4 only, where 11 healthy baselines are already known from REG-11/12's verdicts. No outcome turns on 2.4 alone except `overload`, and the sweep's own 2.4 run covers that.
+
+## 2026-11-10 · [DECISION] Owner approves REG-13 and its runs
+- **Owner's answer:** "ok, approve REG-13, run it", to the question whether REG-13 (decisions.md 2026-11-09 [REG]) is approved: the closed-loop cache-on sweep at L1, 350 W, seed 0, rates 2, 2.4, 2.6, 2.8, 3, ≈ 1.8 GPU h.
+- **Run:** one harness invocation, `configs/sweep_l1pl350cl_pc_on.yaml`, after REG-12's pre-launch checks (350 W read, the VM tree clean at the Mac's `main`, no compute process, GPU ≤ 45 °C), reads saved in `docs/probe/20261110_reg13/`. The VM console log is named per attempt (`~/<config>_<UTC time>.log`), after the [CORR] of 2026-11-09.
+- **Standing instructions** (decisions.md 2026-11-09 [DECISION]) and REG-13's stopping rule apply; a rerun decision reads only `checks.json`. No rate's throughput, queue slope or μ is looked at before every rate has a valid run or the rule ends; then `gate.reg13_table` once, the `[RESULT]`, and the next drafts by the registered outcome, which do not run before the owner approves them.
