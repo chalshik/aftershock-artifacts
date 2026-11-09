@@ -2611,3 +2611,48 @@ Summary:
 - **Owner's answer:** "ok, approve REG-13, run it", to the question whether REG-13 (decisions.md 2026-11-09 [REG]) is approved: the closed-loop cache-on sweep at L1, 350 W, seed 0, rates 2, 2.4, 2.6, 2.8, 3, ≈ 1.8 GPU h.
 - **Run:** one harness invocation, `configs/sweep_l1pl350cl_pc_on.yaml`, after REG-12's pre-launch checks (350 W read, the VM tree clean at the Mac's `main`, no compute process, GPU ≤ 45 °C), reads saved in `docs/probe/20261110_reg13/`. The VM console log is named per attempt (`~/<config>_<UTC time>.log`), after the [CORR] of 2026-11-09.
 - **Standing instructions** (decisions.md 2026-11-09 [DECISION]) and REG-13's stopping rule apply; a rerun decision reads only `checks.json`. No rate's throughput, queue slope or μ is looked at before every rate has a valid run or the rule ends; then `gate.reg13_table` once, the `[RESULT]`, and the next drafts by the registered outcome, which do not run before the owner approves them.
+
+## 2026-11-10 · [OPS] REG-13 runs: 5 of 5 valid in one invocation, no rerun; pre-launch read in `docs/probe/20261110_reg13/`
+- **Pre-launch** (PROBE(docs/probe/20261110_reg13/prelaunch_reg13_attempt1.txt)): 2026-11-09 19:02:19 UTC, limit 350.00 W, 42 °C, 0 % use, no compute process, VM tree `723fc40` with 0 changed files (the Mac's `main`), 11 GB free, no tmux session. Launched `configs/sweep_l1pl350cl_pc_on.yaml`; console log `~/sweep_l1pl350cl_pc_on_20261109T190219Z.log` on the VM.
+- **Runs** (each valid, `failed` empty, RUN(<id>, checks.json)); heat and limit as printed by the copy script from each run's `checks.json` details:
+
+  | rate | run | sw_thermal | max °C | limit (W) |
+  |---|---|---|---|---|
+  | 2 | `20261109-190221_sweep_l1pl350cl_pc_on_r2` | 0.002 | 72 | 350.0 |
+  | 2.4 | `20261109-191845_sweep_l1pl350cl_pc_on_r2.4` | 0.000 | 72 | 350.0 |
+  | 2.6 | `20261109-193526_sweep_l1pl350cl_pc_on_r2.6` | 0.002 | 72 | 350.0 |
+  | 2.8 | `20261109-195349_sweep_l1pl350cl_pc_on_r2.8` | 0.000 | 72 | 350.0 |
+  | 3 | `20261109-201246_sweep_l1pl350cl_pc_on_r3` | 0.000 | 72 | 350.0 |
+
+- **Copied** to the Mac, sha256 identical for 10 files per run; `manifests/runs.sha256` +50 lines. The VM copies are kept.
+- The agent's watcher script printed shell errors (a count parse) for its first 20 min; it never touched the VM run, and was fixed and restarted. Only `checks.json` lines were read before the result.
+
+## 2026-11-10 · [CORR] REG-13's client-side backlog test (`due_unreleased_slope`) was not checked on a healthy closed-loop run before registration, and it fails one
+- **Error (the agent's):** adopting review recommendation T3, the agent added `gate.due_unreleased_slope` to the capacity test (sum with the server queue slope ≤ 0.01) without first applying it to closed-loop runs already known to be healthy. Found after the result, at λ = 2, where every other readout is healthy: pf 1.000, queue slope 0.000004, 0 unfinished, throughput 0.974 × planned, but `due_slope` 0.0195 (RUN(20261109-190221_sweep_l1pl350cl_pc_on_r2, gate.reg13_table)).
+- **Why it fires** (exploratory, after the result; computed on the same run with the definition in `gate.due_unreleased_slope`): later turns due but not yet released ≈ (rate of later turns) × (release lag). Seed 0's later-turn planned rate rises from 1.395 to 2.174 req/s between the first and last 120 s of the window, which alone gives a slope of 0.011 at a 10 s lag; the median lag by planned minute drifts 8.7 → 12.7 s. The count stays between 10 and 25 per minute mark with no runaway. So the test measures the schedule's ramp, not a deficit, and 0.01 was a limit set for a server queue, not for this quantity.
+- **What it changes:** nothing in the registered result (rule A5: no threshold or test is changed after the data it judges). The [RESULT] reports the registered outcome and, separately and labeled exploratory, what the configs' own rule gives. Any future closed-loop capacity test is checked on known-healthy runs before registration.
+
+## 2026-11-10 · [RESULT] REG-13: `overload` by the registered test (the chain ends at λ = 2, on the client-side slope; see the correction above). By the configs' own rule μ_warm,cl = 2.4, below λp,max 2.711; at 2.6, 2.8 and 3 the server went cold 368–602 s after warm-up (DERIVED: backlog start − 240)
+- **Computed once:** `uv run python -m analysis.gate reg13` (`gate.reg13_table`) on the five valid runs of the [OPS] entry above; every value below is RUN(<run at that rate>, gate.reg13_table) unless tagged otherwise.
+
+  | rate | throughput | planned | ratio | queue slope | due slope | pf | KV mean | unfinished | backlog from (s) | hit before → after | release delay (s) | surge max |
+  |---|---|---|---|---|---|---|---|---|---|---|---|---|
+  | 2 | 2.042 | 2.097 | 0.974 | 0.000 | 0.0195 | 1.000 | 0.169 | 0 | — | — | 9.8 | 2.21 |
+  | 2.4 | 2.403 | 2.529 | 0.950 | −0.000 | 0.0460 | 0.992 | 0.243 | 0 | — | — | 11.5 | 3.04 |
+  | 2.6 | 2.395 | 2.758 | 0.869 | 0.0077 | 0.134 | 0.825 | 0.335 | 0 | 842 | 0.786 → 0.000 | 12.8 | 3.33 |
+  | 2.8 | 2.533 | 2.968 | 0.854 | 0.0142 | 0.191 | 0.765 | 0.415 | 0 | 810 | 0.772 → 0.000 | 14.8 | 3.61 |
+  | 3 | 2.221 | 3.124 | 0.711 | 0.114 | 0.700 | 0.425 | 0.659 | 125 | 608 | 0.698 → 0.000 | 23.1 | 3.55 |
+
+  Ratio = throughput / planned (DERIVED from the two columns). `collapsed` is false at every rate: at 2.6, 2.8 and 3 the ok completions before the backlog were 0.938, 0.932 and 0.883 × planned, under the registered 0.95.
+- **Registered outcome: `overload`.** μ_warm,cl is undefined: λ = 2 fails the registered test only through `due_slope` (0.0195 > 0.01). n_cold_below 0.
+- **The configs' own rule** (`mu_config_rule`, `tables.sweep_capacity`, no due slope): μ = **2.4**, and 2.4 passes with a ratio of 0.9503 against 0.95, at the edge. This reading is exploratory (the registered test includes the due slope), but it gives the same answer to REG-13's question: the warm closed-loop server does not carry λp,max = 2.711, and 2.6 (realized 2.758) fails. Had it been the test, the outcome would have been `partial` (realized load carried 2.529; 6 of 7 cold runs at λp ≤ 2.529, DERIVED from the λp table in the [REG]). Neither reading supports `below`.
+- **Paired with REG-8** (open-loop, same schedules; RUN(20261107-103010_sweep_l1pl350_pc_on_r2, gate.reg13_table), RUN(20261107-104614_sweep_l1pl350_pc_on_r3, gate.reg13_table)): at λ = 2, throughput 2.042 vs 2.071 (−1.4 %, DERIVED), pf 1.000 vs 1.000. At λ = 3, 2.221 vs 3.023 (−26.5 %, DERIVED), pf 0.425 vs 0.990, KV mean 0.659 vs 0.336, hit 0 after 608 s. **Closed-loop turns lower the warm capacity at L1 from 3.0 to about 2.4–2.6:** a large effect, one seed.
+- **Prediction** (model.md row 17): `overload` had p ≈ 0.1; the config-rule reading (`partial`) 0.15. Held: λ = 2 within 3 % of REG-8 (p ≈ 0.85); λ = 3 fails (p ≈ 0.6). Missed: 2.4 passes (p ≈ 0.8: fails the registered test, passes the config rule at the edge); a failure is a collapse (p ≈ 0.6: three failures went cold, none met the 0.95 bar).
+- **Alternatives:**
+  1. **Overload, not a transition** (the registered reading): above 2.4 the server cannot keep up, the backlog grows, and the cache goes cold as a consequence. Separates from 2: a queue that rises from warm-up at a warm hit rate. Here the backlog started late (608–842 s) after 368–602 s at 0.883–0.938 × planned with hit 0.698–0.786; that fits a slow deficit as well as a switch. Not separated by this sweep.
+  2. **A cold switch at a surge** (the `collapsed` reading, missed by its 0.95 bar): each failing rate went from hit ≈ 0.78 to exactly 0 with surges of 3.33–3.61 in its window. Separates from 1: dropping the load after the switch (C1 condition 6), which this sweep does not do.
+  3. **Closed-loop working set:** with turns released only after the previous reply, sessions last longer, more prefixes are live at once (KV mean 0.66 vs 0.34 at λ = 3), and the pool fills at a lower rate. This is a mechanism for 1 and 2 alike (BELIEF; open-questions A15).
+  4. **One seed and a rising schedule:** seed 0's load rises across the window (status.md, M4); each rate's failure starts late, where the realized load is highest. μ from one schedule may be low.
+  5. **The due-slope test** ([CORR] above) decides `overload` vs `partial` here; it does not change whether `below` holds.
+- **Registered decision (`overload`):** λ = 2.4 is at or beyond the closed-loop warm capacity at L1, 350 W; REG-12's control failures and the cold states of REG-11/12 are explained by overload as well as by a metastable state, and this sweep cannot tell them apart. **REG-11's `pass` is not evidence of a metastable state** (claims.md changes only after the owner reviews this). The owner picks another factor or cell. Under the config-rule reading (`partial`) the choice would be the same: the owner's, between the confirmation run and a lower-λ cell.
+- **Not changed:** REG-11/12's results and runs; claims.md; no threshold or code.
