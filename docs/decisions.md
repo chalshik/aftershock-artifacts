@@ -2293,3 +2293,8 @@ Summary:
 ## 2026-11-09 · [OPS] REG-11 control launched
 - **Pre-launch read** (2026-11-09 03:42:53 UTC, VM clock; PROBE(docs/probe/20261108_reg9/prelaunch_reg11_control.txt)): 350 W, 43 °C, 0 %, 1 MiB, no compute process; tree clean at `1944c2b` (the Mac's `main`) after `git pull`; no tmux session.
 - **Launched:** `20261109-034255_stage2_control_l1pl350cl_r2.4`, `configs/stage2_control_l1pl350cl_r2.4.yaml` (closed-loop turns, force_close), in tmux with a redirect to `~/stage2_control_l1pl350cl_r2.4.log`. 2580 s; expected end about 04:27 UTC. Listed in `manifests/pending_copy.txt` until copied.
+
+## 2026-11-09 · [OPS] REG-11 control VALID; burst run starts
+- **Run:** `20261109-034255_stage2_control_l1pl350cl_r2.4`. Copied with identical sha256 for 10 files; manifest +10; removed from `manifests/pending_copy.txt`.
+- **Checks** (FILE(runs/20261109-034255_stage2_control_l1pl350cl_r2.4/checks.json)): VALID. 6168 ok of 6168 scheduled, 0 client errors; `client_lag` p99 2.2 ms (against the release time); `arrival_rate` closed loop, 707 session starts against 702 expected; `release_chain` 0 unsent later turns; SW thermal 0.001, 0 HW samples, CV 0.012, max 76 °C; 350 W in 2601 of 2601 samples. Only `checks.json` was read.
+- **Note:** the live progress line in the VM log prints `lag` against the schedule's `t_planned`, so under closed loop it shows the sessions' accumulated delay (4–8 s in the first minute), not client lag. Not a check input.

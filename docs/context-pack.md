@@ -94,7 +94,7 @@ Steps:
 
 ## Runs on record
 
-144 run folders: 117 VALID, 23 INVALID, 4 without checks. All kept; none counts unless VALID.
+145 run folders: 118 VALID, 23 INVALID, 4 without checks. All kept; none counts unless VALID.
 
 - **No checks:** `20261030-114021_first_real` (failed start, no load sent); `20261031-025032_tau` (VM shut down 140 s in); `20261104-134159_long_pc_off_r3_s0` (REG-6 seed 0, VM powered off at t = 3168 s of 3600, DERIVED: power key 14:35:45.08 − planned load start 13:42:56.74 from `events.jsonl` `load_t0_planned`; copied 2026-11-05).
 - **No checks, REG-7 G2:** `20261105-181511_sweep_l1_pc_off_r2` (stopped by the owner at t = 247 s).
@@ -581,11 +581,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-09 · [OPS] REG-10 burst run launched
-- **Pre-launch read** (2026-11-08 22:02:46 UTC, VM clock; PROBE(docs/probe/20261108_reg9/prelaunch_reg10_burst.txt)): 350 W, 37 °C, 0 %, 1 MiB, no compute process; tree clean at the Mac's `main` after `git pull`; no tmux session.
-- **Launched:** `20261108-220248_burst_l1pl350_r2.4_s1`, `configs/burst_l1pl350_r2.4_s1.yaml` (force_close), in tmux with a redirect to `~/burst_l1pl350_r2.4_s1.log`. 2580 s; expected end about 22:47 UTC. Listed in `manifests/pending_copy.txt` until copied.
-- **Next:** if valid, `uv run python -m analysis.gate reg10` once, then the `[RESULT]`.
-
 ### 2026-11-09 · [RESULT] REG-10: `drains`; the burst filled the pool, the backlog cleared at 3.40 req/s, and the server was fully back by 600 s after the burst; `overlap_share` 0.608 > 0.5, so closed-loop turns are proposed to the owner
 - **Runs, both valid** at 350 W in all samples, 0 client errors with `loadgen_force_close`:
   - control `20261108-211646_stage2_control_l1pl350_r2.4` (decisions.md 2026-11-09 [OPS]);
@@ -727,3 +722,8 @@ Every model used to choose a run or read a result, with its equations, the evide
 ### 2026-11-09 · [OPS] REG-11 control launched
 - **Pre-launch read** (2026-11-09 03:42:53 UTC, VM clock; PROBE(docs/probe/20261108_reg9/prelaunch_reg11_control.txt)): 350 W, 43 °C, 0 %, 1 MiB, no compute process; tree clean at `1944c2b` (the Mac's `main`) after `git pull`; no tmux session.
 - **Launched:** `20261109-034255_stage2_control_l1pl350cl_r2.4`, `configs/stage2_control_l1pl350cl_r2.4.yaml` (closed-loop turns, force_close), in tmux with a redirect to `~/stage2_control_l1pl350cl_r2.4.log`. 2580 s; expected end about 04:27 UTC. Listed in `manifests/pending_copy.txt` until copied.
+
+### 2026-11-09 · [OPS] REG-11 control VALID; burst run starts
+- **Run:** `20261109-034255_stage2_control_l1pl350cl_r2.4`. Copied with identical sha256 for 10 files; manifest +10; removed from `manifests/pending_copy.txt`.
+- **Checks** (FILE(runs/20261109-034255_stage2_control_l1pl350cl_r2.4/checks.json)): VALID. 6168 ok of 6168 scheduled, 0 client errors; `client_lag` p99 2.2 ms (against the release time); `arrival_rate` closed loop, 707 session starts against 702 expected; `release_chain` 0 unsent later turns; SW thermal 0.001, 0 HW samples, CV 0.012, max 76 °C; 350 W in 2601 of 2601 samples. Only `checks.json` was read.
+- **Note:** the live progress line in the VM log prints `lag` against the schedule's `t_planned`, so under closed loop it shows the sessions' accumulated delay (4–8 s in the first minute), not client lag. Not a check input.
