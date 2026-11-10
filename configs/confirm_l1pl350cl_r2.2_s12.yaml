@@ -1,0 +1,13 @@
+# REG-15 (draft, docs/decisions.md 2026-11-10 [REG]): C1's confirmation run (PROTOCOL §3 conditions 5-6) at REG-14's cell.
+# REG-14's burst run with seed 12 (the judged-window rule, gate.reg15_seed_rule; owner 2026-11-10), a 4500 s watch,
+# then λ = 1 for 1800 s, then λ = 2.2 for 1500 s. Needs the owner's approval to run.
+extends: burst_l1pl350cl_r2.2_s2.yaml
+name: confirm_l1pl350cl_r2.2_s12
+seed: 12
+workload:
+  duration_s: 8880        # 900 baseline + 180 burst + 4500 watch + 1800 at λ = 1 + 1500 back at λ = 2.2
+  steps:
+    - {at_s: 5580, rate: 1}
+    - {at_s: 7380, rate: 2.2}
+verdict:
+  watch_s: 4500           # condition 5: judged at the burst's end + 4500 s

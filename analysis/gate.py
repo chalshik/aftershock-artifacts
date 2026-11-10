@@ -872,13 +872,194 @@ def reg14_outcome(res: dict) -> str:
           for r, w in zip(res["spans"], res["control_waiting"])]
     return "pass_clear" if any(ok) else "pass_warm_edge"
 
+# REG-15 draft (docs/decisions.md 2026-11-10 [REG]): C1's confirmation run at REG-14's cell (PROTOCOL §3, conditions 5
+# and 6). One run: REG-14's burst config at seed 12 (`reg15_seed_rule`, owner 2026-11-10) with a 4500 s watch, then
+# λ = 1 for 1800 s, then λ = 2.2 for 1500 s.
+REG15 = {"pattern": "*_confirm_l1pl350cl_r2.2_s12", "lam": 2.2, "seed": 12, "power_limit_w": 350,
+         "watch_s": 4500, "drop_rate": 1.0, "drop_s": 1800, "return_s": 1500, "return_end_s": 600,
+         "timeline_s": 300, "n_cap": 256, "window_tol": 0.05}
+
+
+def reg15_phases(run: dict) -> dict:
+    """The run's phases from its config: baseline window, burst, watch end, drop and return (absolute seconds).
+    Raises unless the config is REG-15's design (one drop to `drop_rate`, then back to λ, at the watch's end)."""
+    cfg, wl, tr = run["cfg"], run["cfg"]["workload"], run["cfg"]["trigger"]
+    end = float(tr["at_s"] + tr["duration_s"])
+    watch_end = end + float(cfg["verdict"]["watch_s"])
+    steps = wl.get("steps") or []
+    ok = (len(steps) == 2 and float(steps[0]["at_s"]) == watch_end and float(steps[0]["rate"]) == REG15["drop_rate"]
+          and float(steps[1]["at_s"]) == watch_end + REG15["drop_s"] and float(steps[1]["rate"]) == float(wl["rate"])
+          and float(wl["duration_s"]) == watch_end + REG15["drop_s"] + REG15["return_s"]
+          and float(cfg["verdict"]["watch_s"]) == REG15["watch_s"])
+    if not ok:
+        raise ValueError(f"{run['dir'].name} does not have REG-15's watch, drop and return")
+    return {"baseline": (float(tr["at_s"]) - float(cfg["verdict"]["baseline_s"]), float(tr["at_s"])),
+            "burst_end": end, "watch_end": watch_end, "drop": (watch_end, watch_end + REG15["drop_s"]),
+            "return": (watch_end + REG15["drop_s"], float(wl["duration_s"])),
+            "return_end": (float(wl["duration_s"]) - REG15["return_end_s"], float(wl["duration_s"]))}
+
+
+def line_reached_zero(run: dict, a: float, b: float) -> bool | None:
+    """Condition 6's "the line reached 0 during the drop": some scrape in [a, b) has 0 requests waiting.
+    None if no scrape in the window has a value."""
+    m = run["metrics"]
+    q = m["vllm:num_requests_waiting"][(m.t >= a) & (m.t < b)].dropna()
+    return None if not len(q) else bool((q == 0).any())
+
+
+def recovered_against(run: dict, base: dict, a: float, b: float) -> bool | None:
+    """`load.verdict`'s `recovered` test for the window [a, b) against a given baseline level, with the run's own
+    `verdict` settings. None if a value it needs is NaN."""
+    from analysis.load import _level
+    c, w = run["cfg"]["verdict"], _level(run, a, b)
+    if any(np.isnan(x) for x in (w["pf"], w["hit"], w["q"], base["pf"], base["hit"], base["q"])):
+        return None
+    return bool(w["pf"] >= base["pf"] - c["recovered_pf_drop"] and w["hit"] >= base["hit"] - c["recovered_hit_drop"]
+                and w["q"] <= base["q"] + c["recovered_q_excess"])
+
+
+def reg15_outcome(v5: str, line_zero: bool | None, back: bool | None, broken: bool = False) -> str:
+    """REG-15's outcome from condition 5 (`load.verdict` of the 4500 s watch), persistence through the watch (review T3)
+    and condition 6 (the line reached 0 in the drop; the last 600 s of the return `recovered` against the baseline).
+    - bad_baseline: v5 `bad_baseline` (the owner decides);
+    - not_persistent: v5 `recovered` or `slow_drain` (condition 5 fails);
+    - inconclusive: v5 `unclear`, or a needed value is missing (an instrument gap; rerun);
+    - reformed: stuck at the watch's end, but some 300 s window of the watch was `recovered` (`broken`): the cold
+      state cleared and came back, so persistence is not shown;
+    - drop_inconclusive: stuck, but the line never reached 0 in the drop (condition 6 inconclusive, PROTOCOL §3);
+    - no_return: stuck, the line reached 0, but the end of the return is not `recovered`;
+    - confirms: stuck through the watch, the line reached 0, and the end of the return is `recovered`."""
+    if v5 == "bad_baseline":
+        return "bad_baseline"
+    if v5 in ("recovered", "slow_drain"):
+        return "not_persistent"
+    if v5 != "stuck":
+        return "inconclusive"
+    if broken:
+        return "reformed"
+    if line_zero is None:
+        return "inconclusive"
+    if not line_zero:
+        return "drop_inconclusive"
+    if back is None:
+        return "inconclusive"
+    return "confirms" if back else "no_return"
+
+
+def watch_broken(run: dict, base: dict, burst_end_s: float, watch_end_s: float) -> dict:
+    """Review T3: `recovered_against` the baseline for each 300 s window from the burst's end to the watch's end.
+    `broken` is True if any window is `recovered` (a window with a missing value counts as not recovered)."""
+    step = REG15["timeline_s"]
+    wins = [(a, a + step) for a in np.arange(burst_end_s, watch_end_s - step + 1e-9, step)]
+    rec = [recovered_against(run, base, a, b) for a, b in wins]
+    lam = [planned_session_rate(run, a, b) for a, b in wins] if "requests" in run else [math.nan] * len(wins)
+    return {"windows": wins, "recovered": rec, "lam_p": lam, "broken": any(x is True for x in rec)}
+
+
+def reg15_timeline(run: dict) -> list[dict]:
+    """Readout, never decisive: `_level` over consecutive `timeline_s` windows of the whole run, with λp per window."""
+    from analysis.load import _level
+    dur, step = float(run["cfg"]["workload"]["duration_s"]), REG15["timeline_s"]
+    return [{"t": (a, a + step), "lam_p": planned_session_rate(run, a, a + step), **_level(run, a, a + step)}
+            for a in np.arange(0.0, dur - step + 1e-9, step)]
+
+
+def reg15_check(run: dict) -> None:
+    c = run["cfg"]
+    if not (run["checks"] and run["checks"]["valid"]):
+        raise ValueError(f"{run['dir'].name} is not valid")
+    if (c["seed"] != REG15["seed"] or float(c["workload"]["rate"]) != REG15["lam"] or not closed_loop(run)
+            or c.get("loadgen_force_close") is not True
+            or c["checks"].get("expected_power_limit_w") != REG15["power_limit_w"]):
+        raise ValueError(f"{run['dir'].name} is not REG-15's seed, λ, closed loop, force_close and 350 W")
+
+
+def reg15_table() -> dict:
+    """REG-15's result: the latest valid confirmation run (`reg10_pick`), its outcome, and readouts (never decisive):
+    the span test over the watch in 300 s spans, condition 4's loop levels over the watch's last 1500 s, release
+    delay at the phase edges, the timeline."""
+    from analysis.load import _level, find_runs, verdict
+    run = reg10_pick(find_runs(REG15["pattern"]))
+    reg15_check(run)
+    ph, v = reg15_phases(run), verdict(run)
+    base = v["baseline"]
+    line = line_reached_zero(run, *ph["drop"])
+    back = recovered_against(run, base, *ph["return_end"])
+    brk = watch_broken(run, base, ph["burst_end"], ph["watch_end"])
+    watch = [(a, a + 300.0) for a in np.arange(0.0, REG15["watch_s"] - 300 + 1e-9, 300.0)]
+    spans = burst_backlog(run, watch, REG8["baseline_s"], REG8["cold_hit_drop"], REG8["conf"])
+    loop = _level(run, ph["watch_end"] - 1500, ph["watch_end"])
+    m = run["metrics"]
+    n_max = float(m["vllm:num_requests_running"][(m.t >= ph["watch_end"] - 1500) & (m.t < ph["watch_end"])].max())
+    return {"run": run["dir"].name, "v5": v["verdict"], "baseline": base, "watch_end_level": v["end"],
+            "line_reached_zero": line, "return_end_level": _level(run, *ph["return_end"]), "return_recovered": back,
+            "outcome": reg15_outcome(v["verdict"], line, back, brk["broken"]), "phases": ph, "watch_broken": brk,
+            "drop_level": _level(run, ph["drop"][1] - REG15["return_end_s"], ph["drop"][1]),
+            "judged_lam_p": {k: planned_session_rate(run, a, b) for k, (a, b) in
+                             {"baseline": ph["baseline"], "previous": (ph["watch_end"] - 2 * run["cfg"]["verdict"]["end_s"],
+                              ph["watch_end"] - run["cfg"]["verdict"]["end_s"]),
+                              "end": (ph["watch_end"] - run["cfg"]["verdict"]["end_s"], ph["watch_end"]),
+                              "return_end": ph["return_end"]}.items()},
+            "watch_spans": [{k: r[k] for k in ("span", "c", "c_upper", "lam_p", "holds")} for r in spans],
+            "loop": {"kv": loop["kv"], "n": loop["n"], "n_over_base": loop["n"] / base["n"], "n_max": n_max,
+                     "n_cap": REG15["n_cap"]},
+            "release_delay": release_delay(run, [(ph["watch_end"] - 300, ph["watch_end"]), (ph["drop"][1] - 300,
+                                           ph["drop"][1]), (ph["return_end"][0], ph["return_end"][1])], end=0.0),
+            "timeline": reg15_timeline(run)}
+
+
+def reg15_judged_windows(seed: int) -> dict:
+    """REG-15 review T1/T2 (design input, no run): the confirmation config at `seed`, planned λp in the windows the
+    outcome judges (baseline, the verdict's previous and end windows, the return's end) and the highest 120 s window
+    inside the end window and the return's end."""
+    from harness.workload import build_schedule
+    b = _burst_cfg("confirm_l1pl350cl_r2.2_s12")
+    s, _ = build_schedule(b["workload"], seed, b["trigger"])
+    s = s[~s.burst]
+    rate = lambda lo, hi: float(((s.t_planned >= lo) & (s.t_planned < hi)).sum() / (hi - lo))
+    v, tr = b["verdict"], b["trigger"]
+    t0, we, dur = float(tr["at_s"]), float(tr["at_s"] + tr["duration_s"] + v["watch_s"]), float(b["workload"]["duration_s"])
+    win = {"baseline": (t0 - v["baseline_s"], t0), "previous": (we - 2 * v["end_s"], we - v["end_s"]),
+           "end": (we - v["end_s"], we), "return_end": (dur - REG15["return_end_s"], dur)}
+    peak = lambda lo, hi: max(rate(t, t + 120) for t in np.arange(lo, hi - 120 + 1e-9, 60.0))
+    return {"seed": seed, "windows": win, "lam_p": {k: rate(*w) for k, w in win.items()},
+            "peak_end": peak(*win["end"]), "peak_return_end": peak(*win["return_end"])}
+
+
+def reg15_seed_rule(seeds=range(1, 31), tol: float | None = None) -> dict:
+    """The seed REG-15 uses (review recommendation 2): the lowest candidate whose four judged windows all have λp
+    within `tol` x λ of λ, so the stuck test and the recovery test judge the same planned load."""
+    tol = REG15["window_tol"] if tol is None else tol
+    rows = [reg15_judged_windows(sd) for sd in seeds]
+    ok = [r for r in rows if all(abs(x - REG15["lam"]) <= tol * REG15["lam"] for x in r["lam_p"].values())]
+    return {"picked": ok[0]["seed"] if ok else None, "qualifying": [r["seed"] for r in ok], "rows": rows}
+
+
+def reg15_inputs() -> dict:
+    """REG-15's design inputs from the config alone (no run): planned λp per phase and the 120 s windows above λ."""
+    from harness.workload import build_schedule
+    b = _burst_cfg("confirm_l1pl350cl_r2.2_s12")
+    s, _ = build_schedule(b["workload"], b["seed"], b["trigger"])
+    n_burst = int(s.burst.sum())
+    s = s[~s.burst]
+    rate = lambda lo, hi: float(((s.t_planned >= lo) & (s.t_planned < hi)).sum() / (hi - lo))
+    wd = float(b["trigger"]["at_s"] + b["trigger"]["duration_s"] + b["verdict"]["watch_s"])
+    dur = float(b["workload"]["duration_s"])
+    wins = [(float(t), rate(t, t + 120)) for t in np.arange(240.0, dur - 120 + 1e-9, 120)]
+    return {"n_session": len(s), "n_burst": n_burst, "lam_p": {"baseline": rate(300, 900), "watch": rate(1080, wd),
+            "watch_last_300": rate(wd - 300, wd), "drop": rate(wd, wd + 1800), "return": rate(wd + 1800, dur),
+            "return_last_600": rate(dur - 600, dur),
+            "drop_by_600": [rate(a, a + 600) for a in (wd, wd + 600, wd + 1200)]},
+            "windows_above_lam": [w for w in wins if w[1] > float(b["workload"]["rate"])]}
+
 if __name__ == "__main__":
     import sys
     if sys.argv[1] in ("reg10", "reg11", "reg11_reference", "reg11_turn0_reference", "reg12", "reg13", "reg13_inputs",
-                       "reg14", "reg14_inputs", "reg14_sensitivity"):
+                       "reg14", "reg14_inputs", "reg14_sensitivity",
+                       "reg15", "reg15_inputs"):
         print({"reg10": reg10_gate, "reg11": reg11_gate, "reg11_reference": reg11_reference,
                "reg11_turn0_reference": reg11_turn0_reference, "reg12": reg12_table, "reg13": reg13_table,
                "reg13_inputs": reg13_inputs, "reg14": reg14_gate, "reg14_inputs": reg14_inputs,
-               "reg14_sensitivity": reg14_sensitivity}[sys.argv[1]]())
+               "reg14_sensitivity": reg14_sensitivity, "reg15": reg15_table, "reg15_inputs": reg15_inputs}[sys.argv[1]]())
     else:
         print({"reg7": reg7_zone, "reg8": reg8_zone}[sys.argv[1]]())   # no default: say which registration is computed

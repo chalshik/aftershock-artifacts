@@ -14,7 +14,7 @@ Living document: update it after every run or decision. Last updated: 2026-11-10
 
 **Headline so far: the first stuck state that overload does not explain, in one seed.** REG-14 (decisions.md 2026-11-10 [RESULT]): closed-loop turns at L1, 350 W, λ = 2.2, seed 2: the control stays warm with an empty queue; after a 180 s burst the same schedule stays cold, full and backlogged for the whole 1500 s watch, completing near the cache-off floor. Earlier, at λ = 2.4 (REG-11/12) the cold states sat at the closed-loop warm capacity of about 2.4 (REG-13), so overload explained them as well. Not yet C1: needs the matrix and the confirmation run (drop to λ = 1). Claims and their status: `docs/claims.md`.
 
-**Next action: the owner chooses the seeds for the confirmatory matrix at λ = 2.2** (REG-14's registered decision for `pass_clear`, decisions.md 2026-11-10 [RESULT]); the agent then drafts it, and after it C1's confirmation run (4500 s watch, then λ = 1). **REG-14 is done: `pass_clear`**, the first stuck state that warm-side overload does not explain: at λ = 2.2, seed 2, the control ran with an empty queue while after the burst the same schedule stayed cold (hit 0, KV 0.95, queue 116 → 177) at 1.73–1.81 req/s for 1500 s. One seed, exploratory. REG-13 is done: 5 of 5 runs valid; the closed-loop warm capacity at L1, 350 W is about 2.4 (configs' rule; ratio 0.950 at the edge), not 3.0, below the cold runs' λp,max 2.711; the registered test says `overload` through a client-side slope that misfires on a ramping schedule (decisions.md 2026-11-10 [CORR]). At 2.6–3 the warm state lasted 368–602 s, then went cold. So REG-11's `pass` is not evidence of a metastable state: overload explains REG-11/12 as well. Also for the owner: the recorder failure in one REG-12 run and two checks that missed it (open-questions A14). **REG-12 is done:** 10 of 10 runs valid after one rerun. **REG-11 is done: `pass`, the first stuck state of the study** (decisions.md 2026-11-09 [RESULT]; exploratory, one seed). With closed-loop turns at L1, 350 W, λ = 2.4, after a 180 s burst the server stayed cold (0 hits), full (KV 0.95) and backlogged (queue 169 → 248) for the whole 1500 s watch, completing 1.72–1.79 req/s, at the cache-off floor; the same-seed control was healthy. Not yet C1: needs the matrix, the 4500 s confirmation and the drop to λ = 1; C2 needs its controls. Seed-count wording to fix in REG-12 (decisions.md 2026-11-09 [CORR]). **REG-10 is done** (decisions.md 2026-11-09 [RESULT]): both runs valid, the burst filled the pool, outcome `drains`; the post-burst backlog completed at 3.40 req/s (2.0× the cold floor) and cleared; `overlap_share` 0.608 > 0.5. **REG-9 is done** (decisions.md 2026-11-09 [RESULT]): both seeds valid at 350 W with 0 client errors; seed 0 `sustainable` (c_b 3.271 vs 3.201), seed 1 `unclear` (c_b 3.115 vs 3.184); outcome `no_change`, so REG-6's first edge is not applied and A1 stays open. Then the owner picks the next factor for L1 (REG-8 [RESULT]).** REG-8 is done: 13 of 13 runs valid at 350 W; μ_warm 3.0, cold floor 1.681 (`ok`), **no λ_test**, so no shock matrix at L1. The cold state loses 0.585 of capacity (0.116 at the default pool), but the warm side fails TTFT early. The outcome rests on λ = 3.5's queue slope, 0.0145 against 0.01. The owner set the GPU back to 420 W on 2026-11-07 (read 14:30 UTC, `docs/probe/20261107_power_limit/read_420w.txt`); a further L1 run at 350 W needs the owner to set 350 W again. REG-7 ended with no valid G2 run (λ = 1 SW-thermal 0.062, 0.097, 0.135; decisions.md [OPS] 2026-11-06), so the floor is unmeasured. The owner chose a power-limit amendment, and REG-8 (decisions.md 2026-11-06 [REG]) repeats REG-7's gate at 350 W: G2′ part a (λ = 1, the heat test) → G2′ part b → G1′ part a → G1′ part b → gate once → G3′, each step with a registered start rule (`gate.reg8_part_a`, `gate.reg8_g1_may_start`, `gate.reg8_g1b_may_start`). Written, reviewed (rule F) and **approved by the owner on 2026-11-07**. The `power_limit` check was approved by the owner on 2026-11-06. REG-7's G1 (420 W, valid at λ = 2–5.5) stays as judged; no μ is computed.
+**Next action: the owner reviews REG-15** (decisions.md 2026-11-10 [REG], reviewed under rule F in two rounds): C1's confirmation run at λ = 2.2, seed 12 (judged-window rule, owner's choice): a 4500 s watch, then λ = 1 for 1800 s, then back to 2.2 for 1500 s (≈ 2.6 GPU h). `confirms` → the matrix at λ = 2.2 on seeds 3–7 (owner, decisions.md 2026-11-10 [DECISION]); `not_persistent`, `reformed` or `no_return` → no matrix. Nothing runs before approval. **REG-14 is done: `pass_clear`**, the first stuck state that warm-side overload does not explain: at λ = 2.2, seed 2, the control ran with an empty queue while after the burst the same schedule stayed cold (hit 0, KV 0.95, queue 116 → 177) at 1.73–1.81 req/s for 1500 s. One seed, exploratory. REG-13 is done: 5 of 5 runs valid; the closed-loop warm capacity at L1, 350 W is about 2.4 (configs' rule; ratio 0.950 at the edge), not 3.0, below the cold runs' λp,max 2.711; the registered test says `overload` through a client-side slope that misfires on a ramping schedule (decisions.md 2026-11-10 [CORR]). At 2.6–3 the warm state lasted 368–602 s, then went cold. So REG-11's `pass` is not evidence of a metastable state: overload explains REG-11/12 as well. Also for the owner: the recorder failure in one REG-12 run and two checks that missed it (open-questions A14). **REG-12 is done:** 10 of 10 runs valid after one rerun. **REG-11 is done: `pass`, the first stuck state of the study** (decisions.md 2026-11-09 [RESULT]; exploratory, one seed). With closed-loop turns at L1, 350 W, λ = 2.4, after a 180 s burst the server stayed cold (0 hits), full (KV 0.95) and backlogged (queue 169 → 248) for the whole 1500 s watch, completing 1.72–1.79 req/s, at the cache-off floor; the same-seed control was healthy. Not yet C1: needs the matrix, the 4500 s confirmation and the drop to λ = 1; C2 needs its controls. Seed-count wording to fix in REG-12 (decisions.md 2026-11-09 [CORR]). **REG-10 is done** (decisions.md 2026-11-09 [RESULT]): both runs valid, the burst filled the pool, outcome `drains`; the post-burst backlog completed at 3.40 req/s (2.0× the cold floor) and cleared; `overlap_share` 0.608 > 0.5. **REG-9 is done** (decisions.md 2026-11-09 [RESULT]): both seeds valid at 350 W with 0 client errors; seed 0 `sustainable` (c_b 3.271 vs 3.201), seed 1 `unclear` (c_b 3.115 vs 3.184); outcome `no_change`, so REG-6's first edge is not applied and A1 stays open. Then the owner picks the next factor for L1 (REG-8 [RESULT]).** REG-8 is done: 13 of 13 runs valid at 350 W; μ_warm 3.0, cold floor 1.681 (`ok`), **no λ_test**, so no shock matrix at L1. The cold state loses 0.585 of capacity (0.116 at the default pool), but the warm side fails TTFT early. The outcome rests on λ = 3.5's queue slope, 0.0145 against 0.01. The owner set the GPU back to 420 W on 2026-11-07 (read 14:30 UTC, `docs/probe/20261107_power_limit/read_420w.txt`); a further L1 run at 350 W needs the owner to set 350 W again. REG-7 ended with no valid G2 run (λ = 1 SW-thermal 0.062, 0.097, 0.135; decisions.md [OPS] 2026-11-06), so the floor is unmeasured. The owner chose a power-limit amendment, and REG-8 (decisions.md 2026-11-06 [REG]) repeats REG-7's gate at 350 W: G2′ part a (λ = 1, the heat test) → G2′ part b → G1′ part a → G1′ part b → gate once → G3′, each step with a registered start rule (`gate.reg8_part_a`, `gate.reg8_g1_may_start`, `gate.reg8_g1b_may_start`). Written, reviewed (rule F) and **approved by the owner on 2026-11-07**. The `power_limit` check was approved by the owner on 2026-11-06. REG-7's G1 (420 W, valid at λ = 2–5.5) stays as judged; no μ is computed.
 
 Steps:
 1. **Read-only VM checks: done 2026-11-05** (decisions.md [OPS], evidence in `docs/probe/20261105_vm_checks/`).
@@ -561,6 +561,7 @@ Every model used to choose a run or read a result, with its equations, the evide
 | 16 | 2026-11-09 | C1 matrix (REG-12 draft, REG-11's cell, seeds 2–6) | Per seed P(stuck and control recovered) ≈ 0.65; k ≥ 3 of 5 ≈ 0.77; P(k = 0) ≈ 0.005; each control `recovered` ≈ 0.9; each run valid ≈ 0.9; each burst fills the pool ≈ 0.95. Approved by the owner 2026-11-09, before any run | 10 of 11 attempts valid (seed-6 control rerun once, `accounting`); 5 of 5 bursts filled the pool; **`controls_not_healthy`**: controls recovered 2 of 5 (seeds 4, 5 `stuck`, 6 `unclear`; seed 5's control fell to hit 0, KV 0.95, q 100 with no burst); bursts `stuck` 4 of 5; k = 2 of 5 (upper bound 0.811), k_pass 2 | Hit: validity, pool filled, P(burst stuck). **Miss: controls** (2 of 5 against p 0.9; P(≤ 2) = 0.0086). λ = 2.4 is not warm-healthy with closed-loop turns in every seed | RUN(20261109-120308_stage2_control_l1pl350cl_r2.4_s5, gate.reg12_table), RUN(20261109-080203_burst_l1pl350cl_r2.4_s2, gate.reg12_table) and the other REG-12 runs (decisions.md 2026-11-09 [RESULT] REG-12) |
 | 17 | 2026-11-09 | M2 (REG-13 draft, closed-loop μ_warm at L1, 350 W, seed 0, rates 2–3) | 2.4 passes p ≈ 0.8, 2.6 ≈ 0.5, 2.8 ≈ 0.3; a failure is a collapse p ≈ 0.6; `below` ≈ 0.38, `collapsed` ≈ 0.32, `partial` ≈ 0.15, `overload` ≈ 0.1, `incomplete` ≈ 0.05; paired λ = 2 within 3 % of REG-8 p ≈ 0.85; λ = 3 fails p ≈ 0.6. Approved by the owner 2026-11-10, before any run | `overload` (registered test, chain ends at λ = 2 on the due slope, [CORR]); config rule μ 2.4; 2.6–3 went cold; λ = 2 pair −1.4 %, λ = 3 pair −26.5 % | Missed (`overload` p ≈ 0.1); paired λ = 2 and λ = 3 fail held | decisions.md 2026-11-10 [RESULT] |
 | 18 | 2026-11-10 | M2 (REG-14 draft, REG-12's seed-2 pair at λ = 2.2, closed loop, L1, 350 W) | Both valid ≈ 0.85; burst fills the pool ≈ 0.85; control `recovered` ≈ 0.75; burst `stuck` ≈ 0.55; given a valid pair `pass` ≈ 0.35 (of which `pass_clear` ≈ 0.6), `stuck_unconfirmed` ≈ 0.1, `drains` ≈ 0.3, `control_not_healthy` ≈ 0.15, `inconclusive` ≈ 0.1; `shock_comparable` ≈ 0.6. Approved by the owner 2026-11-10, before any run | `pass_clear`: control `recovered` (end queue 0.003), burst `stuck`, all 3 spans hold (c 1.73–1.81), `shock_comparable` | Hit (every listed prediction held; `pass_clear` had ≈ 0.21) | decisions.md 2026-11-10 [RESULT] REG-14 |
+| 19 | 2026-11-10 | C1 conditions 5–6 (REG-15 draft, confirmation run at λ = 2.2, seed 12) | Valid ≈ 0.75; baseline healthy ≈ 0.85; burst fills the pool ≈ 0.85; given those: stuck through the watch ≈ 0.5, line reaches 0 ≈ 0.85, return `recovered` ≈ 0.6; `confirms` ≈ 0.26, `not_persistent` ≈ 0.35, `reformed` ≈ 0.1, `no_return` ≈ 0.17, `drop_inconclusive` ≈ 0.08. **Not approved** | Not run | Untested | — |
 
 **Record so far:** M1 is 0 for 3 on tested predictions (rows 1, 3, 4). It should not be used to choose loads again until it is revised and its revision predicts the existing runs it missed.
 
@@ -593,176 +594,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-10 · [REG] REG-14 (exploratory, draft): REG-12's seed-2 pair at λ = 2.2 instead of 2.4, closed-loop turns, L1, 350 W (GPU, ≈ 1.5 h)
-- **ID:** REG-14. **Exploratory.** **Not approved:** no GPU run before the owner approves this entry.
-- **Why:** REG-13 ended `overload` (decisions.md 2026-11-10 [RESULT]): with closed-loop turns the warm server at L1, 350 W carries about 2.4 req/s by the configs' rule, so REG-11/12's cold states at λ = 2.4 sit at the warm capacity and overload explains them as well as a metastable state. Its registered decision: the owner picks another factor or cell. The owner asked on 2026-11-10 for a closed-loop cell at λ = 2 ("ok, draft the λ = 2 closed-loop cell REG"). The first draft (λ = 2, seed 1) failed review: at λ = 2 the registered span test can see a cold span only if it completes ≤ 1.81 req/s, against cold rates of 1.70–1.84 seen so far (review T1, below). **The owner then chose λ = 2.2, seed 2** (2026-11-10, answering the agent's question with the sensitivity numbers below). A cold state that holds at λ = 2.2, with the same-seed control healthy, sits below the warm capacity rather than at it.
-- **Owner decisions this needs (C. Authority):** (1) research rule 2 relaxed for these runs as for REG-11/12 (owner, 2026-11-09): closed-loop later turns, session starts and burst requests open loop; (2) the cell λ = 2.2, seed 2 (given 2026-11-10, before any run of it); (3) approval of the run.
-- **Question:** with REG-11's setup and burst, at λ = 2.2 and seed 2, does the server hold a cold backlog after the burst (a counting span) while the same-seed control stays healthy?
-- **Claim tested:** none confirmatory. A `pass` is a reason for a confirmatory matrix, not evidence for C1.
-- **Setup:** REG-12's seed-2 configs with `rate: 2.2`. Resolved with `load_config`, `with_defaults`, `harness.run.expand`: each differs from its REG-12 config only in `name` and `workload.rate` (test `test_reg14_configs_are_reg12_seed2_at_lambda_2_2_and_share_the_session_schedule`).
-  - `configs/stage2_control_l1pl350cl_r2.2_s2.yaml`: `extends: stage2_control_l1pl350cl_r2.4_s2.yaml`.
-  - `configs/burst_l1pl350cl_r2.2_s2.yaml`: `extends: burst_l1pl350cl_r2.4_s2.yaml`. **The burst is unchanged:** at 900 s, 180 s at 2.4 req/s, 2944-token prompts, `burst_min_kv_max` 0.95.
-  - So: L1, 350 W check, closed-loop turns, force_close, dev mode, seed 2, 2580 s, control judged at 1080 s. No harness or check change.
-- **Design inputs** (computed before this entry from the configs and from runs that exist; no REG-14 data exists): `uv run python -m analysis.gate reg14_inputs` and `reg14_sensitivity` (`gate.reg14_inputs`, `gate.reg14_schedule_inputs`, `gate.span_sensitivity`, `gate.max_holding_c`, `gate.reg14_seed_rule`; schedules DERIVED from `build_schedule` on the resolved configs).
-  - **What the span test can see** (review recommendation 1). A span holds only if `poisson_rate_upper(n, 300 s, 0.99)` < min(λ, λp) (`gate.burst_backlog`), so `max_holding_c` is the highest cold completion rate that can still hold. For seeds 1–10:
-    - at **λ = 2**, every span's limit is ≤ 1.81 for every seed. The cold runs at 2.4 completed 1.70–1.84 per span (decisions.md 2026-11-09 [RESULT] REG-12, RUN(<burst id>, gate.reg12_table)). With seed 1, spans 1 and 3 could not hold even at 1.717 (limits 1.54, 1.65). **No seed qualifies under the rule below.**
-    - at **λ = 2.2**, limits reach 2.00.
-  - **Seed rule** (`gate.reg14_seed_rule`): the lowest seed in 1–10 whose every span has a limit above 1.84 (`REG14["cold_c_max"]`, the highest cold span rate seen). At λ = 2.2 it gives **seed 2**; at λ = 2 none. The rule was written after REG-11/12's cold rates were known and before any λ = 2.2 run.
-  - **Seed 2 at λ = 2.2:**
-
-    | | value |
-    |---|---|
-    | session requests | 5489 |
-    | burst requests | 463 (REG-12's seed 2: 463) |
-    | control schedule equals the burst run's session rows | yes |
-    | λp, 600 s baseline before the burst | 2.200 |
-    | λp, burst's end to end of arrivals | 2.178 |
-    | λp in REG-8's spans (600–900, 900–1200, 1200–1500 s after the burst's end) | **2.207, 2.100, 2.347** |
-    | holding limit per span | **2.000, 1.903, 2.000** |
-    | 120 s windows above 2.4 | 2.742 (480–600 s, before the burst), 2.675 (1560 s), 2.617 (1680 s), 2.425 (2280 s), 2.433 (2400 s) |
-
-  - **Warm side** (review recommendation 5): REG-13's closed-loop runs carried planned 2.097 at λ = 2 (throughput 2.042) and 2.529 at λ = 2.4 (2.403, ratio 0.950, the configs' rule at its edge) (RUN(20261109-190221_sweep_l1pl350cl_pc_on_r2, gate.reg13_table), RUN(20261109-191845_sweep_l1pl350cl_pc_on_r2.4, gate.reg13_table)). REG-13's registered test failed λ = 2 on the client-side slope only ([CORR] 2026-11-10). **The direct evidence that this schedule is carried warm is its own control**; a `pass` needs it `recovered` and not backlogged in the counting span.
-  - **Shock reference:** REG-12's seed-2 burst run (`20261109-080203_burst_l1pl350cl_r2.4_s2`, same seed and burst at λ = 2.4, `stuck`): 46 outstanding session requests at the burst's end, 1499 s backlogged (RUN(20261109-080203_burst_l1pl350cl_r2.4_s2, gate.shock_size)).
-- **Analysis, computed once after both runs are valid and copied:** `uv run python -m analysis.gate reg14` (`gate.reg14_gate` = `gate.reg10_gate(REG14)`, `REG14 = {**REG11, "lam": 2.2, "seed": 2}` with the `r2.2_s2` patterns). It refuses a run not at λ = 2.2, not seed 2, not closed loop or not force_close. Labels are REG-11's: `pass`, `drains`, `control_not_healthy`, `stuck_unconfirmed`, `inconclusive`. **`outcome`** (`gate.reg14_outcome`, round-2 review B1) splits `pass`: **`pass_clear`** if in some counting span the control waited (waiting > 0) at ≤ 0.5 of its scrapes (`REG14["max_control_waiting"]`, fixed now), else **`pass_warm_edge`** (the control queued through every counting span, so overload at the warm edge is not excluded there).
-  - Readouts, never decisive except as stated under `drains`: REG-11's (`release_delay`, `release_delay_baseline`, `turn0_share`, `unreleased`, `span_clock`, `secondary_cb`, λp and c per span) and `post_trigger` (λp from the burst's end).
-  - New readouts (review recommendation 4): `max_holding_c` per span next to its c; `release_rate`, the session requests released per second in each span (first turns included, the same population as λp; round-2 review T5), against λp (review T2: under closed loop the released load falls when sessions lag); `control_waiting`, the share of the control's scrapes with waiting > 0 and its mean in each span (review T3).
-  - **`shock_comparable`** against REG-12's seed-2 burst run with REG-11's rule: outstanding ≥ 0.5 × 46 and backlog_s ≥ 0.5 × 1499 (`REG11["comparable_frac"]`, unchanged).
-- **Prediction** (BELIEF):
-  - Both runs valid p ≈ 0.85.
-  - The burst fills the pool p ≈ 0.85 (review recommendation 6). The same burst filled it at 2.4; baseline KV at 2.2 is lower, between REG-13's 0.169 at λ = 2 and 0.243 at 2.4. No fallback is registered: a burst that does not fill the pool goes to the owner.
-  - Control `recovered` p ≈ 0.75. Seed 2's control at 2.4 recovered (REG-12), but this schedule surges to 2.68 at 1560 s, inside the control's watch.
-  - Burst verdict `stuck` p ≈ 0.55. At 2.4 seed 2 was stuck; at 2.2 the cold-side surplus is λp − c ≈ 2.18 − 1.8 ≈ 0.4 (DERIVED), against ≈ 0.5 at 2.4.
-  - Given a valid pair: `pass` ≈ 0.35, `stuck_unconfirmed` ≈ 0.1, `drains` ≈ 0.3, `control_not_healthy` ≈ 0.15, `inconclusive` ≈ 0.1.
-  - A `pass` is `pass_clear` p ≈ 0.6 (BELIEF: REG-13's λ = 2.4 run kept the queue near empty at a 0.950 ratio, but a waiting share was not measured there).
-  - `shock_comparable` p ≈ 0.6.
-  - **`cold_c_max` caveat** (round-2 T7): 1.84 is the highest point rate at λ = 2.4; if the cold rate rises at lower load, a span's limit may not cover it. A `drains` reports c per span against its limit.
-- **Decision under each outcome:**
-  - **`pass_clear`:** the first cold state that held below the closed-loop warm capacity, with its own control healthy. Report as exploratory, one seed, with `release_rate` and `control_waiting` in the counting span. Draft for the owner, in order: (1) a confirmatory matrix at λ = 2.2 (REG-12's design, five seeds, each with a same-seed control, ≈ 8 GPU h; which seeds is the owner's call, since this seed was picked by the detector rule); (2) C1's confirmation run (4500 s watch, then the drop to λ = 1).
-  - **`pass_warm_edge`:** reported as "held, but the control was queueing in the counting span"; no matrix is drafted. The owner decides.
-  - **`stuck_unconfirmed`:** not rerun; reported with the readouts; the owner decides.
-  - **`drains` with `shock_comparable`** (review recommendation 2): report "no cold state held at λ = 2.2, seed 2, with this detector (limits 1.90–2.00 per span)", with c per span against its limit. It is not by itself a negative result for L1. The owner chooses between a second seed at 2.2, λ = 2.3, or a larger trigger.
-  - **`drains` without `shock_comparable`:** "λ = 2.2 made the shock smaller"; nothing is ruled out. For the owner: a larger trigger, sized from `shock_size`.
-  - **`control_not_healthy`:** the closed-loop warm state does not last 2580 s at 2.2 either. With REG-12 (3 of 5 controls not healthy at 2.4), the window between a stable warm state and a detectable cold one is narrow or absent at L1 with closed loop. The owner decides.
-  - **`inconclusive`:** rerun the pair unchanged, at most twice.
-  - **Burst run invalid on `burst_min_kv_max`:** not rerun; the owner decides.
-- **Alternatives:**
-  1. **A slow drain or criticality read as `stuck`:** a backlog that neither grows nor clears over 1500 s. The span test needs c_upper below both λ and λp; `release_rate` shows whether the server kept up with what was released. C1's confirmation run (4500 s, then λ = 1) separates the rest.
-  2. **The released load is not λp** (review T2): closed-loop sessions that fall behind release less than planned. `release_rate` below λp in a counting span says part of the deficit sits as session lag rather than in the server's queue; the size of the cold-state deficit is then smaller than λp − c. Reported, never decisive.
-  3. **Near-saturation queueing in the control** (review T3, round-2 T6): REG-11's rule counts a control as not backlogged if a single scrape shows an empty queue, and the seed rule favours spans with high λp (span 1 follows windows of 2.675 and 2.617; span 3 has λp 2.347). `pass_warm_edge` separates a `pass` whose control queued through the counting span; only `pass_clear` leads to the matrix.
-  4. **Load-dependent cold rate** (review): the cold completion rate may rise at lower λ (a smaller working set), so a `drains` could mean bistability over a narrower λ range rather than none. c per span against REG-12's seed-2 spans at 2.4.
-  5. **Seed picked by the detector:** seed 2's spans have high λp, which favors both a holding span and warm-side strain. Its own control checks the warm side; a matrix would not reuse this rule without the owner.
-  6. **Surges:** seed 2 surges to 2.74 before the burst and 2.68 after; the control has the same schedule.
-  7. **Percent-fast binning by planned time** pushes the burst verdict toward `stuck` (REG-11 owner decision 3); `pass` also needs a holding span.
-  8. **Recorder failure** (open-questions A14): not fixed; `accounting` catches it. One seed, dev mode, 350 W, L1 only.
-- **Stopping rule:** REG-11's. Each run once; an invalid run (other than `burst_min_kv_max`) is rerun unchanged, at most twice; a heat-invalid run once after cooling to ≤ 45 °C, a second heat failure stops; a `client_error`, a limit other than 350 W or an unexpected pre-launch check stops. A rerun decision reads only `checks.json`. No interim look at either run's verdict before both are valid.
-- **Operations:** REG-13's pre-launch checks (350 W read, the VM tree clean at the Mac's `main`, no compute process, GPU ≤ 45 °C); console log named per attempt. Control first, then the burst run.
-- **Cost:** 2 × (2580 s + about 60 s start-up) ≈ 1.5 GPU h (DERIVED: 5280 s), plus cooling; worst case with every rerun ≈ 4.4 GPU h.
-- **Code and files:** the two configs; `analysis/gate.py` (`REG14`, `max_holding_c`, `span_sensitivity`, `reg14_seed_rule`, `reg14_sensitivity`, `reg14_schedule_inputs`, `reg14_inputs`, `release_rate`, `control_waiting`, `reg14_gate`, `reg14_outcome`; CLI `reg14`, `reg14_inputs`, `reg14_sensitivity`; also `due_unreleased_profile`, for the [CORR] of 2026-11-10); `tests/test_gate.py` (8 new: the configs against REG-12's with the same session schedule; the patterns and spec; `max_holding_c`; the seed rule; the gate's shock comparison and its λ and seed checks; `release_rate`; `reg14_outcome`; `due_unreleased_profile`).
-- **Not changed:** REG-11/12/13's results and runs; no harness, check or threshold change.
-
-### Adversarial review (separate subagent; it saw only the draft, its diff and the code and configs those call; it opened no runs and no docs). Round 1, on the first draft (λ = 2, seed 1). Verbatim:
-
-> ## Rule F review: REG-14 draft (registration and diff only; no runs/ or docs/ opened)
->
-> I ran `uv run pytest -q tests/test_gate.py`: 48 passed. I ran `uv run python -m analysis.gate reg14_inputs` and it reproduces the draft's inputs: λp,post 1.950; spans 1.717 / 2.103 / 1.833; surge 2.558 at 960 s; 422 burst requests and 5137 session requests; schedules identical; warm planned rate 2.097; reference 65 requests / 1499 s; feasible True.
->
-> ### 1. Traces where the verdict or the code is wrong
->
-> **T1. In practice the gate tests one 300 s span, and the feasibility check measures the wrong quantity.** A span holds only when `c_upper < min(λ, λp)` (analysis/gate.py, `burst_backlog`, the `row["holds"]` line). `c_upper` is `poisson_rate_upper(n, 300, 0.99)`. I computed the largest point completion rate c that can still hold in each span (DERIVED, by searching over n):
-> - span 1: below 1.717 needs c ≤ 1.54
-> - span 2: below min(2.0, 2.103) = 2.0 needs c ≤ 1.81
-> - span 3: below 1.833 needs c ≤ 1.65
->
-> The draft's cold reference rates are 1.717–1.84. On those, spans 1 and 3 cannot hold, and the 1.84 that `reg14_feasible` uses holds in no span at all (`p(552, 300, .99)` = 2.03 > 2.0). `reg14_feasible` compares the post-burst average λp (1.95) with a point c (1.84), so it reports a 6 % margin. The real margin is 1.81 against REG-11's 1.717–1.79, which is 0.02–0.09 req/s, in span 2 only.
->
-> - **Concrete trace:** a burst run that stays cold, backlogged and burst-free, with c = 1.79, 1.80 and 1.82 across the spans, yields `drains`, and the `drains`+comparable branch then reads it as "overload explains every stuck state". The test cannot detect the hypothesis it is meant to test.
->
-> **T2. Under closed loop, λp is not the offered load.** The loadgen releases a later turn at the previous turn's `t_end` plus the planned gap (harness/loadgen.py:90–105), so a session that falls behind never catches up. The turns actually released in a span fall below the planned λp whenever the lag grows. "c < λp while the queue never empties" therefore also fits a server that serves everything released to it while the deficit builds up as session lag (the subject of the [CORR] on `due_unreleased_slope`). The span test gets its force from c being well below the warm capacity of ≈2.4, not from c < λp. No readout reports the per-span release rate next to λp.
->
-> **T3. The control's "not backlogged" rule is weak in span 2.** `control_backlog` sets `backlogged = q.min() > 0` (gate.py, `control_backlog`). In span 2 λp is 2.103. A control with waiting > 0 at all scrapes but one counts as healthy there, so a `pass` can come from queueing near saturation that the burst's leftover backlog amplifies. This is REG-11's rule and is not a code bug, but the risk is highest exactly in span 2.
->
-> **T4. The warm-side bound contradicts itself.** The feasibility bound is 2.097, and span 2, where the draft expects a `pass`, has λp 2.103 > 2.097. The evidence that λ = 2 is carried warm is a run that failed REG-13's registered test (the due slope, per the [CORR]). This does not change any decision: the same-seed control is the real check. It should be stated as such.
->
-> **Code:** I found no logic bug. The patterns, the λ check (YAML `2` == `2.0`), the inherited `comparable_frac` and the reference override are all correct. `reg14_gate` loads the reference run on every call, which is harmless.
->
-> ### 2. Strongest alternative explanation per outcome
-> - **`pass` (span 2 only):** a slow drain during a local rise in the schedule, with lag growing under closed loop (T2), or near-saturation queueing (T3). These are separated by the per-span release rate, the control's waiting fraction and mean in that span, and c compared with 2.4. Only C1's watch-then-drop run separates them fully.
-> - **`drains` with `shock_comparable`:** the gate was blind to the result (T1), or the cold completion rate depends on load (fewer concurrent sessions leave a smaller working set, so it recovers at 2.0 but not at 2.4). That would be bistability over a narrower range of λ, not overload. These are separated by c per span against the T1 thresholds, the hit share per span, and an intermediate λ such as 2.2.
-> - **`stuck_unconfirmed` / `inconclusive`:** criticality (cold c ≈ λp ≈ 1.83 in span 3), where the backlog neither grows nor drains. The span test cannot settle it; it needs a longer watch.
-> - **`control_not_healthy`:** the 2.558 surge at 960–1080 s, which falls inside the control's baseline window. It is separated by the control's first backlogged stretch against the surge time.
->
-> ### 3. Can the run change a decision?
-> Partly. `pass` and `drains`+comparable lead to different actions (an 8 GPU h matrix against a pivot). `stuck_unconfirmed`, `control_not_healthy`, `drains` without comparable, and invalid on `burst_min_kv_max` all end in "the owner decides" or something close to it, so they are not distinct decisions. Given T1, a `drains` is weak evidence. If the `drains`+comparable outcome reads it as "no metastable state shown at L1", the run can push a negative write-up it cannot support.
->
-> The feasibility check is not a gate: its inputs were known when it was written (the draft says so), and it computes the wrong quantity (T1). As written it cannot fail.
->
-> ### 4. Recommendations
-> 1. **Blocking.** Replace `reg14_feasible` with a per-span sensitivity design input. For each span, compute the largest c that can hold, from `min(λ, λp)` and `poisson_rate_upper` at 0.99, and set it against REG-11/12's observed cold span c values. Put these numbers in the entry and label them as design inputs, not a test.
-> 2. **Blocking.** Rewrite the decision under `drains` with `shock_comparable`. It should read "no cold state held at λ = 2 with this detector (one span testable, c ≤ 1.81)". It should not read "overload explains every stuck state". Writing L1 up as negative should not be one of its options without an intermediate λ or a second seed.
-> 3. **Blocking (owner).** Decide whether seed 1 stays. At λ = 2 the schedule already differs from REG-11's, so keeping seed 1 buys only the shared burst. If the owner prefers a seed whose spans are all ≥ ≈ 2.0, pick it from `build_schedule` before any run and record the rule used to pick it.
-> 4. **Non-blocking.** Add readouts: the per-span release rate (`t_released` in the span), the share of control scrapes with waiting > 0 and its mean in each span, and each span's c next to its threshold from recommendation 1.
-> 5. **Non-blocking.** Restate the warm-side evidence (T4): the same-seed control is the evidence. REG-13's λ = 2 run failed its registered test, and span 2's λp is above 2.097.
-> 6. **Non-blocking.** Estimate how often the burst will fail to fill the pool, given the lower baseline KV (0.169), since that outcome means no rerun. If that probability is high, decide before the run whether a larger burst is the fallback.
-
-### Round 2, on the revised draft (λ = 2.2, seed 2, the owner's choice). Verbatim:
-
-> ## Rule F review, round 2: REG-14 revised (λ = 2.2, seed 2)
->
-> Neither file under runs/ or docs/ was opened. `uv run pytest -q tests/test_gate.py`: 50 passed. `uv run python -m analysis.gate reg14_inputs` reproduces the draft's numbers:
-> - λp per span: 2.207 / 2.100 / 2.347; post-burst λp 2.178.
-> - `max_c` per span: 2.000 / 1.903 / 2.000.
-> - 120 s windows above 2.4 start at 480, 1560, 1680, 2280 and 2400 s.
-> - 463 burst requests; the control's schedule equals the burst run's session rows.
-> - Warm runs: planned 2.097 / 2.529.
-> - Reference: 46 requests / 1499 s; `seed_rule` = 2.
->
-> I started `reg14_sensitivity` and stopped it before it finished. Its output was not seen; its seed-2 result agrees with `reg14_inputs`.
->
-> ### (1) Status of recommendations 1–6
-> 1. **Addressed.** `max_holding_c`, `span_sensitivity` and `reg14_seed_rule` compute the quantity the gate actually tests. At λ = 2.2, seed 2, every span's limit (≥ 1.90) is above the cold rates seen so far (1.70–1.84).
-> 2. **Addressed.** `drains` is now read as "with this detector, at λ = 2.2, seed 2" and is no longer a negative result for L1.
-> 3. **Addressed.** The owner chose the cell and the seed by a stated rule, before any run of it. The draft also admits the seed is picked by the detector (alternative 5).
-> 4. **Partly addressed.** `release_rate` is defined wrongly (T5 below). `control_waiting` is a readout only.
-> 5. **Addressed.** The control is now named as the direct evidence that the schedule is carried warm.
-> 6. **Partly addressed, acceptable.** p ≈ 0.85 is given and no fallback is registered; a burst that does not fill the pool goes to the owner.
->
-> ### (2) New traces
-> **T5. `release_rate` leaves out first turns but is compared with a λp that includes them** (analysis/gate.py:818). It counts only `turn > 0`. λp (`planned_session_rate`) counts every session request, first turns included, and first turns are open loop. So `release_rate` < λp by the first-turn share even when no session lags at all.
-> - Concrete trace: a healthy server that keeps up, with first turns at about 0.4 of λp in a span. `release_rate` reads about 0.6 × λp, which looks like heavy session lag.
-> - The other direction: a server that is truly cold and lagging can show `release_rate` ≈ c by coincidence. Alternative 2's reading "`release_rate` ≈ c means the deficit is session lag" then rests on a mismatched comparison.
-> - Fix: add the first turns planned in the span (open loop), or compare with the planned rate of later turns only.
->
-> **T6. The seed rule favours spans near the warm capacity, and the control check there is weak.** The rule picks the seed with high λp in every span. Span 1 (1680–1980 s) opens with the 2.617 window at 1680 s and follows the 2.675 window at 1560 s. Span 3 has λp 2.347 and windows of 2.425 and 2.433. The closed-loop warm server was shown to carry 2.4 only at the edge of the configs' rule (2.403 / 2.529 = 0.950).
-> - In those spans the control counts as not backlogged if a single scrape shows an empty queue (gate.py:115, `q.min() > 0`).
-> - So a `pass` counted in span 1 or 3 is still open to the overload explanation that REG-14 was built to remove. The draft only "names" a control waiting share above 0.9; nothing in the code acts on it, and `pass` still leads to the ≈ 8 GPU h matrix.
-> - Span 2 (λp 2.100, limit 1.903) is the only span that is clean on this point.
->
-> **T7 (minor).** `cold_c_max` = 1.84 (gate.py:733) is the highest point estimate from the λ = 2.4 runs. If the cold rate depends on load, it can be higher at 2.2, so "every span can see a cold state" is a belief, not a guarantee. A `drains` result already reports c per span against its limit, which covers this. Non-blocking.
->
-> The rest of the code (patterns, λ and seed checks, `max_holding_c` boundaries, shock comparison, burst RNG independent of the rate) looks correct.
->
-> ### (3) Remaining blocking items
-> - **B1 (needs the owner, because it changes the decision map; register before any run).** Make the `pass` → matrix decision depend on the counting span. The matrix is drafted only if:
->   - the counting span is span 2, or
->   - in the counting span the control's `share_waiting` is ≤ a threshold fixed now (e.g. 0.5) and the control's queue mean is near its baseline.
->
->   Any other `pass` is reported as "pass at the warm edge" and goes to the owner. This can be a readout rule in the decisions entry; `reg10_gate`'s label does not need to change.
-> - **B2.** Fix `release_rate` (T5) and its test before registration, or remove the "`release_rate` ≈ c" reading from alternative 2.
-
-### Changed because of it
-- **Round 1:** 1 adopted: `reg14_feasible` removed; `max_holding_c`, `span_sensitivity`, `reg14_seed_rule`, `reg14_sensitivity` added, and their numbers are in the design inputs. 2 adopted: `drains` is read as "not detected with this detector". 3: put to the owner, who chose λ = 2.2, seed 2 (the rule's pick). 4 adopted: `release_rate`, `control_waiting`, `max_holding_c` per span. 5 adopted. 6 adopted as a prediction; no fallback.
-- **Round 2:** B2 adopted: `release_rate` counts every session request sent (first turns included), the same population as λp, with its test. B1 adopted in a stricter, uniform form: `pass_clear` requires a counting span whose control waited at ≤ 0.5 of its scrapes, whatever the span; no span-2 exemption, because span 2 (λp 2.10) can also queue. The queue-mean condition was not adopted: there is no registered baseline for it, and the waiting share already measures it. Other `pass` → `pass_warm_edge`, to the owner. The 0.5 is fixed in `REG14["max_control_waiting"]` before any run; it is the agent's choice, and the owner can change it before approval. T7: noted as a caveat in the prediction.
-
-### 2026-11-10 · [DECISION] Owner approves REG-14 and its runs
-- **Owner's answer:** "ok, approve REG-14, run it", to the question whether REG-14 (decisions.md 2026-11-10 [REG]) is approved: REG-12's seed-2 control and burst run at λ = 2.2 with closed-loop turns, ≈ 1.5 GPU h. The `pass_clear` threshold stays at 0.5 (the owner did not change it). Research rule 2 is relaxed for these two runs as for REG-11/12.
-- **Order:** `configs/stage2_control_l1pl350cl_r2.2_s2.yaml`, then `configs/burst_l1pl350cl_r2.2_s2.yaml`, each after REG-13's pre-launch checks, reads saved in `docs/probe/20261110_reg14/`; VM console logs named per attempt. An agent queue script stops at the first run that is not valid or any pre-launch STOP; the agent then applies the stopping rule, reading only `checks.json`.
-- **Standing instructions** (decisions.md 2026-11-09 [DECISION]) apply. No verdict is computed before both runs are valid and copied; then `gate.reg14_gate` once, the `[RESULT]`, and the next drafts by the registered outcome, which do not run before the owner approves them.
-
-### 2026-11-10 · [OPS] REG-14 runs: 2 of 2 valid, no rerun; pre-launch reads in `docs/probe/20261110_reg14/`
-- **Control** `20261110-055201_stage2_control_l1pl350cl_r2.2_s2`: launched 05:51:59 UTC at 350.00 W, 42 °C, no compute process, VM tree `41d1850` clean (PROBE(docs/probe/20261110_reg14/prelaunch_reg14_stage2_control_l1pl350cl_r2.2_s2_attempt1.txt)). Valid, `failed` empty (RUN(20261110-055201_stage2_control_l1pl350cl_r2.2_s2, checks.json)); sw_thermal 0.001, max 72 °C, limit 350.0 W.
-- **Burst** `20261110-063647_burst_l1pl350cl_r2.2_s2`: launched 06:36:45 UTC at 350.00 W, 44 °C (PROBE(docs/probe/20261110_reg14/prelaunch_reg14_burst_l1pl350cl_r2.2_s2_attempt1.txt)). Valid, `failed` empty (RUN(20261110-063647_burst_l1pl350cl_r2.2_s2, checks.json)), so the burst filled the pool (`burst_min_kv_max`); sw_thermal 0.000, max 72 °C, limit 350.0 W.
-- Console logs on the VM: `~/stage2_control_l1pl350cl_r2.2_s2_20261110T055158Z.log`, `~/burst_l1pl350cl_r2.2_s2_20261110T063644Z.log`. Copied to the Mac, sha256 identical (10 files each); `manifests/runs.sha256` +20 lines. VM copies kept.
-
 ### 2026-11-10 · [RESULT] REG-14: `pass_clear`. At λ = 2.2 the burst left the server cold, full and backlogged in all three spans, while the same-seed control kept an empty queue and full speed
 - **Computed once:** `uv run python -m analysis.gate reg14` (`gate.reg14_gate`) on the two runs above; values RUN(<run>, gate.reg14_gate) unless tagged otherwise. Verdicts (`load.verdict`): control **`recovered`**, burst **`stuck`**. Label `pass`; all three spans count; **outcome `pass_clear`** (the control's waiting share in the counting spans is 0.000–0.003, under 0.5).
 
@@ -792,3 +623,215 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **Error (the agent's):** the REG-14 [RESULT] (alternative 8) says "whether it persists when the load drops (C1's λ = 1 condition) is untested", and the agent told the owner in chat that staying stuck at low load would be the core of C1. **docs/claims.md C1 ("Supports") requires the confirmation run to be `stuck` over a 4500 s watch and then `recovered` after the drop to λ = 1 (condition 6).** The drop shows the cold state is held by the load, not a broken server; staying stuck at λ = 1 would not support C1.
 - **Correct reading of REG-14's open point:** untested are (a) whether the cold state lasts the 4500 s watch and (b) whether it recovers after the drop to λ = 1.
 - **Not changed:** REG-14's outcome and decision; C1's text.
+
+### 2026-11-10 · [DECISION] Owner: C1's confirmation run before the matrix; the matrix at λ = 2.2 on seeds 3–7
+- **Owner's answer:** "Agree", to the agent's recommendation after REG-14's `pass_clear` (decisions.md 2026-11-10 [RESULT]): (1) draft C1's confirmation run (PROTOCOL §3 conditions 5–6: a 4500 s watch, then λ = 1 for 1800 s, then λ back for 1500 s) at λ = 2.2 with seed 2 **before** the confirmatory matrix, reversing the order REG-14 registered; (2) the matrix, when drafted, uses seeds 3–7 (seed 2, the pilot, not counted; no seed chosen by the detector rule).
+- **Why the order changed** (the agent's argument): the confirmation run costs less than a third of the matrix and can rule C1 out at this cell on its own (a cold state that clears within 4500 s fails condition 5 whatever the matrix shows).
+- Each is a separate registration with its own review; nothing runs before the owner approves it.
+
+### 2026-11-10 · [CORR] The confirmation run does not repeat REG-14's session schedule, though it uses the same seed
+- **Error (the agent's):** recommending the confirmation run, the agent told the owner that with seed 2 it "repeats the REG-14 burst run with a longer watch". It does not. `build_schedule` draws each load segment's session starts at once over the segment's length (`harness/workload.py` `_poisson_times`, `_arrival_times`), so a longer run gives a different session schedule from t = 0: 5921 session requests planned before 2580 s, against REG-14's 5952, with different times (DERIVED: `build_schedule` on `configs/confirm_l1pl350cl_r2.2_s2.yaml` and `configs/burst_l1pl350cl_r2.2_s2.yaml`; test `test_reg15_config_is_reg14s_burst_run_with_the_watch_drop_and_return`). Only the burst is identical (its own generator).
+- **What it changes:** REG-14's control is not a control for the confirmation run's schedule. The return to λ = 2.2 inside the run (condition 6) is the in-run check that the warm server carries that schedule. The REG-15 draft says so.
+
+### 2026-11-10 · [REG] REG-15 (draft): C1's confirmation run at REG-14's cell, seed 12: a 4500 s watch, then λ = 1, then back to λ = 2.2 (GPU, ≈ 2.6 h)
+- **ID:** REG-15. **Confirmatory for C1's conditions 5 and 6 at one load, in one run** (PROTOCOL §3); not for C1 as a whole, which also needs the matrix (condition 3) and condition 4. **Not approved:** no GPU run before the owner approves this entry.
+- **Why:** REG-14 gave `pass_clear` (decisions.md 2026-11-10 [RESULT]). The owner chose to run C1's confirmation run before the matrix (decisions.md 2026-11-10 [DECISION]). It costs less than a third of the matrix and can rule C1 out at this cell on its own. The first draft used seed 2. The review (below, T1–T2) showed that seed 2's schedule loads the window judged `stuck` at 2.44 and the window judged `recovered` at 2.21. **The owner then chose seed 12** (2026-11-10), picked by the judged-window rule below.
+- **Question:** at λ = 2.2 with closed-loop turns (L1, 350 W):
+  - (5) is the server still `stuck` 4500 s after the burst, without having recovered on the way?
+  - (6) λ then drops to 1 req/s for 1800 s and returns to 2.2 for 1500 s. Does the queue reach 0 during the drop, and are the last 600 s `recovered` against the original baseline?
+- **Setup:** `configs/confirm_l1pl350cl_r2.2_s12.yaml`: `extends: burst_l1pl350cl_r2.2_s2.yaml` (REG-14's burst run), with `seed: 12`, `workload.duration_s: 8880`, `workload.steps: [{at_s: 5580, rate: 1}, {at_s: 7380, rate: 2.2}]` and `verdict.watch_s: 4500`.
+  - Resolved with `load_config`, `with_defaults`, `harness.run.expand`. It differs from REG-14's burst config only in `name`, `seed`, `workload.duration_s`, `workload.steps` and `verdict.watch_s` (test `test_reg15_config_is_reg14s_burst_run_with_the_watch_drop_and_return`).
+  - So: L1, 350 W check, closed-loop turns, force_close, dev mode. The burst starts at 900 s and lasts 180 s, at 2.4 req/s with 2944-token prompts; `burst_min_kv_max` 0.95.
+  - `workload.steps` is the harness's existing load-step mechanism (the ramp configs use it). No harness or check change.
+  - **Phases** (absolute s): baseline 300–900; burst 900–1080; watch 1080–5580; drop 5580–7380 at λ = 1; return 7380–8880 at λ = 2.2.
+  - **Judged windows:** `verdict.end_s` is 600 in the resolved config, so condition 5 is judged on the end window 4980–5580, with the previous window 4380–4980 for the recovery signs. Condition 6 is judged on 8280–8880. The test checks these windows against the config (review recommendation 6).
+  - **No separate control** ([CORR] 2026-11-10, above): REG-14's control used another schedule. The burst draw also depends on the seed: 440 burst requests here, against REG-14's 463. **The return phase is the in-run check that the warm server carries this schedule at λ = 2.2.**
+- **Seed rule** (`gate.reg15_seed_rule`, `gate.reg15_judged_windows`; DERIVED from `build_schedule`): the lowest seed in 1–30 whose four judged windows (baseline, previous, end, return's end) all have planned λp within ± 5 % of 2.2 (`REG15["window_tol"]`). Of 30 seeds **only seed 12 qualifies**. The rule and its 5 % tolerance were written after the review and after seeing seed 2's windows, before any run of this design. The tolerance judges no result, only the choice of schedule.
+
+  | judged window | seed 12 λp | seed 2 λp (first draft) |
+  |---|---|---|
+  | baseline 300–900 | 2.260 | 2.345 |
+  | previous 4380–4980 | 2.165 | 2.133 |
+  | end 4980–5580 | **2.155** | **2.442** |
+  | return's end 8280–8880 | **2.237** | **2.208** |
+
+  - Highest 120 s window inside the end window: 2.567. Inside the return's end: 2.942. The heavier peak is on the side judged `recovered`, which biases the run against `confirms`.
+- **Design inputs** (DERIVED, `uv run python -m analysis.gate reg15_inputs`, `gate.reg15_inputs`, from the config alone):
+  - 17373 session requests and 440 burst requests.
+  - Planned session rate λp by phase: watch 2.124, drop 1.153, return 2.252.
+  - **The drop is not exactly λ = 1 in the planned schedule** (round-2 review N1): λp is 1.052, 1.067 and **1.340** over its three 600 s windows. Sessions started before the drop still have turns planned in it, and the last window holds a surge. This makes `line_reached_zero` slightly harder to reach, and `drop_level` (over the drop's last 600 s, at 1.34) understates how warm the server gets at λ ≈ 1.
+  - 120 s windows above 2.2 include 3.100 at 240–360 s (the baseline starts at 300 s), 3.058 at 4320–4440 s (just before and into the previous window), 2.875 at 7920 s and 2.942 at 8400 s (the return's end).
+- **Result, computed once after the run is valid and copied:** `uv run python -m analysis.gate reg15` (`gate.reg15_table`, on the latest valid run of the pattern).
+  - `gate.reg15_check` refuses a run that is not seed 12, λ = 2.2, closed loop, force_close and 350 W. `gate.reg15_phases` refuses one whose watch, drop and return are not this design.
+  - **Condition 5:** `load.verdict` with `watch_s` 4500, judged on the windows above, with the thresholds of `configs/stage2_base.yaml` (unchanged).
+  - **Persistence through the watch** (review T3, decisive): `gate.watch_broken` applies `recovered_against` to the baseline in each 300 s window from the burst's end to the watch's end. A window that passes breaks persistence. Each window's λp is reported, so a break on a dip in the schedule can be seen (round-2 N2; the watch's 300 s λp ranges 1.78–2.63). A break in the first window (1080–1380 s) would mean a delayed onset rather than a re-formed collapse (round-2 N3); it is still scored `reformed`, which works against `confirms`.
+  - **Condition 6:**
+    - `gate.line_reached_zero`: some scrape in the drop (5580–7380 s) shows 0 requests waiting;
+    - `gate.recovered_against`: the return's end (8280–8880 s) passes `load.verdict`'s `recovered` test against the original baseline: pf ≥ base − 0.02, hit ≥ base − 0.06, waiting mean ≤ base + 1.
+  - **`outcome`** (`gate.reg15_outcome`, in this order):
+    - **`bad_baseline`**;
+    - **`not_persistent`**: the watch ended `recovered` or `slow_drain`, so condition 5 fails;
+    - **`inconclusive`**: `unclear`, or a needed value is missing;
+    - **`reformed`**: `stuck` at the watch's end, but some 300 s window of the watch was `recovered`;
+    - **`drop_inconclusive`**: the line never reached 0 in the drop (PROTOCOL §3);
+    - **`no_return`**: the line reached 0, but the return's end is not `recovered`;
+    - **`confirms`**: stuck through the whole watch, the line reached 0, and the return's end is `recovered`.
+  - **Readouts, never decisive:**
+    - the span test over the watch in 300 s spans (`gate.burst_backlog`, REG-8's settings);
+    - condition 4's levels over the watch's last 1500 s: mean KV, mean N, N / baseline N, and max N against the 256 cap;
+    - `drop_level`, `_level` over the drop's last 600 s (review recommendation 5): hit with the line near 0, which splits `no_return`;
+    - `release_delay` at the end of the watch, of the drop and of the return;
+    - the judged windows' λp, from the run's own requests (round-2 N5);
+    - the baseline's pf and queue next to the outcome (round-2 N4: the 3.10 window at 240–360 s can loosen both `recovered` tests);
+    - a 300 s timeline of pf, hit, queue, KV, N and λp over the whole run (`gate.reg15_timeline`).
+- **Checks over a long run with load steps** (review T5):
+  - `gpu_steady` computes one SM-clock CV over all busy samples. On past runs it was 0.011–0.016, against its 0.05 limit, including the open-loop ramps whose loads change from step to step: RUN(20261103-043121_ramp_d300, checks.json) 0.014; RUN(20261103-053730_ramp_d600, checks.json) 0.016; RUN(20261110-063647_burst_l1pl350cl_r2.2_s2, checks.json) 0.013; RUN(20261108-190906_long_pl350fc_pc_off_r3_s0, checks.json) 0.016. So the check is expected to be outcome-neutral here (BELIEF from those runs).
+  - `recorder` (any gap over 2.0 s) is more exposed over 8880 s, but not differentially by outcome.
+  - `arrival_rate`, `accounting` and `release_chain` use the step segments and the same deadline as loadgen (review: correct).
+- **Prediction** (BELIEF):
+  - The run valid p ≈ 0.75. It is 2.6 h, longer than any closed-loop run so far (open-questions A14).
+  - The baseline healthy p ≈ 0.85, with the 3.10 window at its start.
+  - The burst fills the pool p ≈ 0.85: 440 burst requests, against 463 in REG-14.
+  - Given a valid run with a healthy baseline:
+    - stuck at 4500 s with no recovered window, p ≈ 0.5;
+    - the line reaches 0 in the drop, p ≈ 0.85;
+    - the return `recovered`, p ≈ 0.6, since the return's end carries a 2.94 window.
+  - So `confirms` ≈ 0.26 (DERIVED: 0.5 × 0.85 × 0.6), `not_persistent` ≈ 0.35, `reformed` ≈ 0.1, `no_return` ≈ 0.17, `drop_inconclusive` ≈ 0.08, other ≈ 0.04.
+- **Decision under each outcome:**
+  - **`confirms`:** C1's conditions 5 and 6 hold at λ = 2.2 in one run: two states at one load. The cold one lasted the whole 4500 s watch and left when the load dropped. Draft the confirmatory matrix at λ = 2.2 on seeds 3–7 (owner, decisions.md 2026-11-10 [DECISION]). C1's status changes only after the owner reviews the matrix's result (condition 3) and condition 4's readouts.
+  - **`not_persistent`** or **`reformed`:** persistence is not shown at this cell. The cold state cleared on its own (the timeline says when), or cleared and came back. **The matrix is not drafted.** The owner chooses between another cell and reporting the cell as a long but transient cold state.
+  - **`no_return`:** the server did not end healthy after the drop and return. `drop_level` and the timeline separate two readings:
+    - the cold state never left during the drop (hit stayed low with the line near 0): not held by load, which goes against condition 6;
+    - it left and came back on the return: a re-trigger by the 2.94 window.
+
+    The owner decides; no matrix before that.
+  - **`drop_inconclusive`:** reported; the owner decides (a longer drop).
+  - **`bad_baseline`:** the server was unhealthy before the burst. A spontaneous collapse at λ = 2.2 would itself be news; the timeline shows it. Not rerun; the owner decides.
+  - **`inconclusive`:** rerun unchanged, at most twice.
+  - **Run invalid on `burst_min_kv_max`:** not rerun; the owner decides.
+- **Alternatives:**
+  1. **Load, not history** (review T2): the seed rule puts all four judged windows within ± 5 % of λ. The remaining load difference favors `recovered` at the return (peak 2.94 against 2.57 at the watch's end).
+  2. **A collapse that ended and re-formed** (review T3): `reformed` catches it, using 300 s windows. A recovery shorter than one 300 s window is not caught; the timeline is reported.
+  3. **A long transient read as `stuck`:** a queue that shrinks slowly counts as stuck only if it would not empty within 3600 s (`drain_horizon_s`). The timeline and the span test show the trend.
+  4. **No separate control:** a cold state late in the watch could come from this schedule's own surges (3.06 at 4320 s), not from the burst. `watch_broken` requires it to run unbroken from the burst. The return shows that the warm server carries λ = 2.2 here.
+  5. **Closed loop in the drop:** sessions lagging 4–6 minutes keep releasing turns planned before the drop, so the released load falls to λ = 1 only gradually. 1800 s is ≈ 5 × that lag. `release_delay` at the drop's end shows it.
+  6. **A single 1 s scrape at 0 satisfies "the line reached 0"** (review T4): it matches PROTOCOL's wording, and the return's recovery stays decisive.
+  7. **Heat and the recorder over 2.6 h:** see the checks above. One run, one seed, L1, 350 W, closed loop, dev mode.
+- **Stopping rule:** the run once.
+  - An invalid run (other than on `burst_min_kv_max`) is rerun unchanged, at most twice.
+  - A heat-invalid run is rerun once, after cooling to ≤ 45 °C; a second heat failure stops.
+  - A `client_error`, a limit other than 350 W or an unexpected pre-launch check stops.
+  - A rerun decision reads only `checks.json`. No interim look at the verdict.
+- **Operations:** REG-14's (pre-launch checks, a console log per attempt, reads in `docs/probe/20261110_reg15/`).
+- **Cost:** 8880 s + up to 300 s drain + about 60 s start-up ≈ 2.6 GPU h (DERIVED: 9240 s); worst case with two reruns ≈ 7.7 GPU h.
+- **Code and files:**
+  - `configs/confirm_l1pl350cl_r2.2_s12.yaml`;
+  - `analysis/gate.py`: `REG15`, `reg15_phases`, `line_reached_zero`, `recovered_against`, `reg15_outcome`, `watch_broken`, `reg15_timeline`, `reg15_check`, `reg15_judged_windows`, `reg15_seed_rule`, `reg15_table`, `reg15_inputs`; CLI `reg15`, `reg15_inputs`;
+  - `tests/test_gate.py`, 8 new: the config against REG-14's and the judged windows from the config; `load.verdict` itself judging those windows (round-2 point 6); the phase check; the outcome classes including `reformed`; `line_reached_zero` and `recovered_against`; the run check; the seed rule; `watch_broken`.
+- **Not changed:** REG-14's result and runs; the verdict thresholds; no harness or check change.
+
+### Adversarial review (separate subagent; it saw only the draft, its diff, the code and configs those call, and PROTOCOL §3; it opened no runs and no other docs). Round 1, on the first draft (seed 2). Verbatim:
+
+> ## REG-15 adversarial review (rule F)
+>
+> Scope: I read the draft, the diff, `analysis/gate.py`, `analysis/load.py`, `harness/{workload,loadgen,checks,config,run}.py`, the config chain and PROTOCOL §3. `tests/test_gate.py` passes (56/56). `reg15_inputs` gives the same numbers as the draft. I also computed λp for the windows the verdict actually judges (DERIVED, `build_schedule` on the resolved config, same method as `reg15_inputs`).
+>
+> ### 1. Traces where the outcome or the code is wrong
+>
+> **T1. The draft names the wrong judged window.** The resolved config has `verdict.end_s: 600` (`configs/stage2_base` via defaults). So `load.verdict` judges the end window **4980–5580 s** and the "previous" window **4380–4980 s** (`analysis/load.py:verdict`, `prev`/`end`). The draft says "end window 5280–5580 s" and quotes λp for the last 300 s (2.333). Neither is what gets judged. The judged windows have:
+> - end window 4980–5580: λp **2.442**
+> - previous window 4380–4980: λp **2.133**
+> - return's end 8280–8880: λp **2.208**
+> - baseline 300–900: λp **2.345**
+>
+> **T2. Condition 5 and condition 6 are confounded by planned load.** "Stuck at 5580" is judged on a window planned at 2.44, which contains the 2.983 surge at 5160 s. "Recovered at 8880" is judged on a window planned at 2.21. Trace: a server with no memory of the burst, whose warm closed-loop capacity sits near 2.4, falls behind in 4980–5580 because of the surge and is cleanly warm at 2.21. That gives v5 = `stuck` and back = True, so `confirms` (gate.py `reg15_outcome`). The two-states reading would then come from a 10.6 % difference in offered load, not from history (DERIVED: 2.442 / 2.208 = 1.106).
+> - The slow_drain signs make this worse. They compare end with prev, and prev is lighter (2.13 against 2.44). A pf or hit climb is therefore less likely, which pushes `stuck` over `slow_drain`.
+> - REG-13's warm capacity figure is something I could only see in a commit message ("2.4"), which is not evidence. The owner should check it in decisions.md.
+>
+> **T3. A collapse that ended and then re-formed still counts as persistent.** Trace: the cold state clears around 2500 s. The timeline shows `recovered` windows, and the span test shows `holds = False`. The 5160 s surge then tips the server cold again, and the end window is `stuck`. The result is `confirms`, because the span test and the timeline are "readouts, never decisive" (`reg15_table`). Condition 5 ("persistence") is then passed by a second collapse. The draft's alternative 2 names this risk, but no pre-registered rule acts on it.
+>
+> **T4. `line_reached_zero` passes on a single 1 s scrape with 0 waiting** (`gate.py:901–906`). This matches PROTOCOL's wording. But a single zero is weak evidence that the cold state left (hit can stay low with an empty queue). That gap matters only if the return's recovery is not itself decisive, and it is decisive. Low severity.
+>
+> **T5. Checks over an 8880 s run with load steps:**
+> - **gpu_steady** (`checks.py:106–115`): one SM-clock CV over every busy sample from 240 to 8880 s, across stuck, λ = 1 and warm phases. At a 350 W cap, the clock depends on the load mix. The check has never been exercised on a closed-loop run with steps (the ramps were open loop).
+>   - Possible trace: a healthy run fails on CV > 0.05 only because the phases differ.
+>   - The failure is tied to the outcome: a run that stays stuck throughout has a uniform load and a low CV, while a `confirms`-shaped run mixes phases. That makes invalidation differential across outcomes.
+> - **recorder** (`checks.py:91–96`): a single gap over 2.0 s in about 9000 scrapes invalidates the run. The risk grows with duration but does not depend on the outcome. Acceptable under the stopping rule.
+> - **arrival_rate** (`checks.py:120–128`): `expected_requests` uses the segments with steps, and burst turn-0 requests are added. Correct.
+> - **release_chain** and the **accounting** cut-off rule: the deadline is max t_planned + drain_s in both `loadgen` and `checks`, so they agree. Correct.
+> - **client_lag**, **power_limit**: no step-specific issue.
+> - I found no trace where a broken run is marked valid.
+>
+> **T6. The schedule is not REG-14's.** `_arrival_times` draws per segment, so changing `duration_s` reshuffles the whole first segment. The draft acknowledges this. The consequence is that this run has no warm reference at λ = 2.2 for the 4980–5580 window specifically.
+>
+> ### 2. Strongest alternative per outcome
+> - **`confirms`:** overload in a heavy judged window (2.44, with a 2.98 surge) against a light return window (2.21), or a re-formed collapse (T3). What separates them: a no-burst control on this exact 8880 s schedule (its 4980–5580 window must be `recovered`), or a pre-registered decisive rule that the cold state stays unbroken through the watch.
+> - **`not_persistent`:** a genuine transient, or a recovery made easier by the light previous window. The timeline separates these, together with λp per span.
+> - **`no_return`:** a re-trigger on the return's 2.60 and 2.56 windows, or the cold state never left. Hit during the drop with the queue at 0 separates them, as the draft says.
+> - **`drop_inconclusive`:** closed-loop lag still releasing turns planned before the drop. `release_delay` at the end of the drop separates this.
+>
+> ### 3. Can the run change a decision?
+> Yes. `not_persistent`, `no_return` and `drop_inconclusive` each stop the matrix at this cell. That is a real, cheap kill test. `confirms` triggers drafting the matrix, but T2 and T3 mean it can be reached by artifact. So the run's power to *support* C1 is weaker than the draft implies; its power to *refute* it is intact.
+>
+> ### 4. Recommendations
+> 1. **Blocking:** Correct the judged windows in the draft (end 4980–5580, previous 4380–4980) and report their λp (2.442, 2.133) beside the return's end (2.208) and the baseline (2.345).
+> 2. **Blocking:** Pre-register a decisive guard against T2. Any one of these would do:
+>    - a λp tolerance on the end window (e.g. |λp − λ| ≤ x), with the outcome `confounded` if it is exceeded;
+>    - a different seed, or shifted steps, that puts the watch-end window near λ, chosen by a rule fixed before the run (as with REG-14's seed rule);
+>    - a no-burst control on this schedule (+2.6 GPU h).
+> 3. **Blocking:** Make persistence decisive against T3. For example, `confirms` requires no 300 s timeline window in the watch to be `recovered` (or requires the span test to hold in all spans after the first k). Otherwise call the outcome `reformed`.
+> 4. **Non-blocking:** Before approval, have the owner read `busy_sm_clock_cv` in past checks.json files (ramps, REG-14) to judge the gpu_steady risk on a mixed-load run. State in the registration whether the check is expected to be outcome-neutral.
+> 5. **Non-blocking:** Add `drop_level` to the output: `_level` over the drop's last 600 s (hit with the line at 0). It is already needed to split `no_return`, so it should not be left to the timeline's reading.
+> 6. **Non-blocking:** Add a test that `reg15_table`'s verdict uses `end_s` from the config, so the registration and code cannot drift on the window again.
+
+### Round 2, on the revised draft (seed 12, the owner's choice). Verbatim:
+
+> ## REG-15 review, round 2 (seed 12)
+>
+> No blocking item remains. I reran the gate tests (58/58 pass) and confirmed `reg15_seed_rule()`: it picks 12, and 12 is the only seed in 1–30 that qualifies. Its judged windows are baseline 2.260, previous 2.165, end 2.155 and return's end 2.237 (DERIVED, `reg15_judged_windows(12)`).
+>
+> ### (1) Status of recommendations 1–6
+> 1. **Wrong judged windows: addressed.** The draft now gives 4980–5580 (end) and 4380–4980 (previous), with their λp.
+> 2. **Planned-load confound (T2): addressed.** The seed rule fixes it on design inputs alone, before any run. The highest 120 s peak now sits on the side judged `recovered` (2.94 at the return's end against 2.57 at the watch's end), which works against `confirms`, as the draft says.
+>    - The 5 % tolerance was set after seeing seed 2. It lets exactly one seed through and judges no result, so it does not break rule A5. The draft should still say plainly that the tolerance was chosen at that moment.
+> 3. **Collapse that re-forms (T3): addressed.** `watch_broken` is decisive and `reformed` stops the matrix (gate.py, diff lines 83–89 and 72–73).
+> 4. **gpu_steady risk: addressed, but not verified by me.** The draft cites CVs of 0.011–0.016 from four runs' checks.json. I was not allowed to open runs/, so I could not check them.
+> 5. **`drop_level`: addressed** (diff line 130).
+> 6. **Window test: partly addressed.** `test_reg15_config_is_reg14s…` checks the windows of `reg15_judged_windows`, which is a separate copy of `load.verdict`'s window arithmetic. No test checks that `verdict()` itself judges 4980–5580 on a run at this config, so the two copies could drift apart unnoticed. A small fake-metrics test calling `verdict` would close this.
+>
+> ### (2) New traces
+> - **N1. The drop is not λ = 1 in the planned schedule.** Seed 12's session starts in the drop come to 1.142 req/s, and planned λp per 600 s is 1.052, 1.067 and **1.340** (6780–7380) (DERIVED, `build_schedule`; seed 2 had 0.94 overall). The seed rule never constrained the drop.
+>   - Effect: `line_reached_zero` (diff line 36) is a little harder to reach, which pushes towards `drop_inconclusive`.
+>   - `drop_level` is measured over the 1.34 window, so it understates how warm the server got at λ ≈ 1. That weakens the split it is meant to give for `no_return`.
+>   - This is not decisive, but the draft quotes a drop λp of 1.153 without saying it falls short of PROTOCOL's "drops to 1 req/s".
+> - **N2. Light watch windows tilt the persistence test.** The watch's 300 s λp ranges from 1.78 to 2.63, with 1.867 and 1.783 at 3180–3780. `watch_broken` can therefore break on a dip in the schedule. That is arguably a true break (the load dipped and the server re-warmed, which is condition 6's logic), and it biases against `confirms`, not towards it. Report the λp of any breaking window in the result.
+> - **N3. A slow-onset collapse could read as `reformed`.** With a smaller burst (440 against 463), the first window 1080–1380 could pass `recovered` (it needs q ≤ base q + 1) before the backlog builds. Persistence would then be scored as broken although there was a single delayed collapse. This is unlikely, since the pool is full at the burst's end and the backlog shows at once, and it is conservative. Non-blocking: say in the draft that a break in the first window means delayed onset, not re-formation.
+> - **N4. The baseline surge loosens both `recovered` tests.** The window 240–360 peaks at 3.10, and the first baseline half runs at 2.39. If that raises the baseline's q or lowers its pf, both `recovered_against` tests become easier (`watch_broken` and the return). The effects run in opposite directions for `confirms`. Readout only: report the baseline's q and pf next to the outcome.
+> - **N5. Minor code issue.** `reg15_table` gets `judged_lam_p` from `reg15_judged_windows(seed)` (diff line 131). That function rebuilds the schedule from the repo config, not the run's own config.yaml, so this readout comes from a different source than the rest of the table. It is not decisive.
+> - I found no new trace where the outcome code (`reg15_outcome`, `watch_broken`, `recovered_against`) returns a wrong class for its inputs. The ordering bad_baseline → not_persistent → inconclusive → reformed → drop → return is consistent with PROTOCOL §3.
+>
+> ### (3) Remaining blocking items
+> None. These are non-blocking but worth doing before approval:
+> - the `verdict()` window test (point 6);
+> - stating the drop's realized λp, 1.15 rising to 1.34 at the end (N1);
+> - the note on a first-window break (N3).
+>
+> The run can still change a decision. `not_persistent`, `reformed`, `no_return` and `drop_inconclusive` each stop the matrix at this cell. `confirms` is no longer reachable through the planned-load confound.
+
+### Changed because of it
+- **Round 1:**
+  - 1: adopted; the windows are corrected.
+  - 2: put to the owner, who chose seed 12 by the judged-window rule (`reg15_seed_rule`).
+  - 3: adopted; `watch_broken` makes persistence decisive, and the outcome is `reformed` when it breaks.
+  - 4: adopted. The agent read `busy_sm_clock_cv` in four runs' `checks.json` (cited above with their run ids).
+  - 5: adopted; `drop_level` is reported.
+  - 6: adopted; the test is in round 2's point 6.
+  - REG-13's warm capacity is in decisions.md 2026-11-10 [RESULT] REG-13: μ = 2.4 by the configs' rule, with a ratio of 0.950.
+- **Round 2:**
+  - point 6: adopted; `test_load_verdict_judges_reg15s_windows_from_the_config` calls `load.verdict` itself.
+  - The tolerance's timing is now stated (point 2).
+  - N1: the drop's λp by 600 s window (1.052, 1.067, 1.340) is in the design inputs (`reg15_inputs` `drop_by_600`).
+  - N2: `watch_broken` reports each window's λp.
+  - N3: the note on a first-window break is in the draft.
+  - N4: the baseline's pf and queue are reported next to the outcome.
+  - N5: `judged_lam_p` is now computed from the run's own requests.

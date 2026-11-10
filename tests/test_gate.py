@@ -662,3 +662,114 @@ def test_due_unreleased_profile_reports_the_slope_rates_and_lag(tmp_path):
     p = G.due_unreleased_profile(run)
     assert p["later_rate_first"] == pytest.approx(2 / 120) and p["later_rate_last"] == pytest.approx(2 / 120)
     assert p["lag_by_minute"][0] == 10.0 and p["lag_by_minute"][-2] == 20.0 and len(p["lag_by_minute"]) == 11
+
+
+# ---------------------------------------------------------------- REG-15
+
+def _reg15_cfg(**over):
+    cfg = {"seed": 12, "loadgen_force_close": True, "checks": {"expected_power_limit_w": 350},
+           "trigger": {"kind": "burst", "at_s": 900, "duration_s": 180},
+           "verdict": {"watch_s": 4500, "baseline_s": 600, "recovered_pf_drop": 0.02, "recovered_hit_drop": 0.06,
+                       "recovered_q_excess": 1.0},
+           "workload": {"rate": 2.2, "duration_s": 8880, "sessions": {"closed_loop": True},
+                        "steps": [{"at_s": 5580, "rate": 1}, {"at_s": 7380, "rate": 2.2}]}}
+    for k, v in over.items():
+        cfg["workload"][k] = v
+    return cfg
+
+
+def test_reg15_config_is_reg14s_burst_run_with_the_watch_drop_and_return():
+    from harness.config import load_config, with_defaults
+    from harness.run import expand
+    from harness.workload import build_schedule
+    res = lambda n: expand(with_defaults(load_config(Path(f"configs/{n}.yaml"))))[0]
+    new, old = res("confirm_l1pl350cl_r2.2_s12"), res("burst_l1pl350cl_r2.2_s2")
+    diff = {k for k in set(new) | set(old) if new.get(k) != old.get(k)}
+    assert diff == {"name", "seed", "workload", "verdict"} and new["seed"] == 12
+    assert {k for k in new["workload"] if new["workload"].get(k) != old["workload"].get(k)} == {"duration_s", "steps"}
+    assert {k for k in new["verdict"] if new["verdict"][k] != old["verdict"][k]} == {"watch_s"}
+    ph = G.reg15_phases({"dir": Path("x"), "cfg": new})
+    assert ph["watch_end"] == 5580 and ph["drop"] == (5580, 7380) and ph["return_end"] == (8280, 8880)
+    w = G.reg15_judged_windows(12)["windows"]   # the verdict's own windows (end_s from the config: review rec. 6)
+    assert w["end"] == (5580 - new["verdict"]["end_s"], 5580) == (4980, 5580) and w["previous"] == (4380, 4980)
+    assert w["baseline"] == (300, 900) and w["return_end"] == (8280, 8880)
+
+
+def test_reg15_phases_refuse_another_design():
+    run = lambda cfg: {"dir": Path("x"), "cfg": cfg}
+    assert G.reg15_phases(run(_reg15_cfg()))["baseline"] == (300, 900)
+    for bad in (_reg15_cfg(steps=[{"at_s": 5580, "rate": 1}]), _reg15_cfg(duration_s=8000),
+                _reg15_cfg(steps=[{"at_s": 5580, "rate": 0.5}, {"at_s": 7380, "rate": 2.2}]),
+                _reg15_cfg(steps=[{"at_s": 5580, "rate": 1}, {"at_s": 7380, "rate": 2.4}])):
+        with pytest.raises(ValueError):
+            G.reg15_phases(run(bad))
+
+
+def test_reg15_outcome_classes():
+    o = G.reg15_outcome
+    assert o("stuck", True, True) == "confirms" and o("stuck", True, False) == "no_return"
+    assert o("stuck", False, True) == "drop_inconclusive"
+    assert o("recovered", None, None) == "not_persistent" and o("slow_drain", True, True) == "not_persistent"
+    assert o("bad_baseline", True, True) == "bad_baseline"
+    assert o("unclear", True, True) == "inconclusive" and o("stuck", None, True) == "inconclusive"
+    assert o("stuck", True, None) == "inconclusive"
+    assert o("stuck", True, True, broken=True) == "reformed" and o("stuck", None, None, broken=True) == "reformed"
+    assert o("recovered", True, True, broken=True) == "not_persistent"
+
+
+def test_line_reached_zero_and_recovered_against(monkeypatch):
+    m = pd.DataFrame({"t": [0.0, 10.0, 20.0, 30.0], "vllm:num_requests_waiting": [5.0, 0.0, 3.0, float("nan")]})
+    run = {"metrics": m, "cfg": _reg15_cfg()}
+    assert G.line_reached_zero(run, 0, 20) is True and G.line_reached_zero(run, 20, 40) is False
+    assert G.line_reached_zero(run, 30, 40) is None
+    import analysis.load
+    base = {"pf": 1.0, "hit": 0.83, "q": 0.0}
+    for lv, want in [({"pf": 0.99, "hit": 0.80, "q": 0.5}, True), ({"pf": 0.97, "hit": 0.80, "q": 0.5}, False),
+                     ({"pf": 0.99, "hit": 0.76, "q": 0.5}, False), ({"pf": 0.99, "hit": 0.80, "q": 1.5}, False),
+                     ({"pf": float("nan"), "hit": 0.80, "q": 0.5}, None)]:
+        monkeypatch.setattr(analysis.load, "_level", lambda r, a, b, lv=lv: lv)
+        assert G.recovered_against(run, base, 0, 1) is want
+
+
+def test_reg15_check_refuses_runs_outside_the_design():
+    ok = {"dir": Path("x"), "checks": {"valid": True}, "cfg": _reg15_cfg()}
+    G.reg15_check(ok)
+    for change in ({"seed": 2}, {"loadgen_force_close": None}, {"checks": {"expected_power_limit_w": 420}}):
+        with pytest.raises(ValueError):
+            G.reg15_check({**ok, "cfg": {**ok["cfg"], **change}})
+    with pytest.raises(ValueError):
+        G.reg15_check({**ok, "checks": {"valid": False}})
+    with pytest.raises(ValueError):
+        G.reg15_check({**ok, "cfg": _reg15_cfg(rate=2.4)})
+
+
+def test_reg15_seed_rule_picks_the_lowest_seed_with_every_judged_window_near_lambda(monkeypatch):
+    lam = {1: [2.2, 2.2, 2.44, 2.2], 2: [2.2, 2.1, 2.3, 2.25], 3: [2.2] * 4}
+    monkeypatch.setattr(G, "reg15_judged_windows", lambda sd: {"seed": sd, "lam_p": dict(zip("abcd", lam[sd]))})
+    assert G.reg15_seed_rule(seeds=(1, 2, 3))["picked"] == 2                       # 2.31 is the edge at 5 %
+    assert G.reg15_seed_rule(seeds=(1, 2, 3), tol=0.04)["picked"] == 3
+    assert G.reg15_seed_rule(seeds=(1,))["picked"] is None
+
+
+def test_watch_broken_flags_any_recovered_window(monkeypatch):
+    seq = iter([False, None, True, False])
+    monkeypatch.setattr(G, "recovered_against", lambda run, base, a, b: next(seq))
+    r = G.watch_broken({}, {}, 1080.0, 2280.0)
+    assert r["windows"][0] == (1080.0, 1380.0) and len(r["windows"]) == 4 and r["broken"] is True
+    seq = iter([False, None, False, False])
+    assert G.watch_broken({}, {}, 1080.0, 2280.0)["broken"] is False
+
+
+def test_load_verdict_judges_reg15s_windows_from_the_config(monkeypatch):
+    """Review round 2, point 6: `load.verdict` itself, on a run with REG-15's config, judges 4980-5580 against
+    4380-4980 and the baseline 300-900: the same windows as `reg15_judged_windows`."""
+    import analysis.load as L
+    from harness.config import load_config, with_defaults
+    from harness.run import expand
+    cfg = expand(with_defaults(load_config(Path("configs/confirm_l1pl350cl_r2.2_s12.yaml"))))[0]
+    seen = []
+    monkeypatch.setattr(L, "_level", lambda run, a, b: seen.append((a, b)) or
+                        {"pf": 1.0, "hit": 0.8, "q": 0.0, "q_slope": 0.0, "n": 5.0, "kv": 0.2})
+    L.verdict({"cfg": cfg, "metrics": pd.DataFrame(), "requests": pd.DataFrame(), "trigger": pd.DataFrame()})
+    w = G.reg15_judged_windows(12)["windows"]
+    assert seen == [w["baseline"], w["previous"], w["end"]]
