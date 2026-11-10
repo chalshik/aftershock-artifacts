@@ -552,3 +552,113 @@ def test_reg13_table_outcomes(monkeypatch, tmp_path):
     _reg13_env(monkeypatch, tmp_path, all_rates, lambda x: x * 1.05, cold=bad)
     with pytest.raises(ValueError):                # the registered threshold no longer matches its run (T4)
         G.reg13_table()
+
+
+# ---------------------------------------------------------------- REG-14
+
+def test_reg14_configs_are_reg12_seed2_at_lambda_2_2_and_share_the_session_schedule():
+    from harness.config import load_config, with_defaults
+    from harness.run import expand
+
+    def flat(d, p=""):
+        out = {}
+        for k, v in d.items():
+            out.update(flat(v, p + k + ".") if isinstance(v, dict) else {p + k: v})
+        return out
+    res = lambda n: flat(expand(with_defaults(load_config(Path(f"configs/{n}.yaml"))))[0])
+    for new, old in [("stage2_control_l1pl350cl_r2.2_s2", "stage2_control_l1pl350cl_r2.4_s2"),
+                     ("burst_l1pl350cl_r2.2_s2", "burst_l1pl350cl_r2.4_s2")]:
+        a, b = res(new), res(old)
+        assert {k for k in set(a) | set(b) if a.get(k) != b.get(k)} == {"name", "workload.rate"}
+        assert a["workload.rate"] == 2.2 and a["seed"] == 2
+    assert G.reg14_schedule_inputs()["control_schedule_same"] is True
+
+
+def test_reg14_patterns_match_only_its_own_runs_and_spec_is_reg11_at_2_2():
+    import fnmatch
+    extra = ("lam", "seed", "control", "burst", "reference_run", "cold_c_max", "seed_candidates", "warm_runs",
+             "max_control_waiting")
+    assert {k: v for k, v in G.REG14.items() if k not in extra} == \
+        {k: v for k, v in G.REG11.items() if k not in ("lam", "control", "burst", "reference_run")}
+    assert G.REG14["lam"] == 2.2 and G.REG14["seed"] == 2 and G.REG14["closed_loop"] is True
+    own = {"control": "20261110-000000_stage2_control_l1pl350cl_r2.2_s2", "burst": "20261110-000000_burst_l1pl350cl_r2.2_s2"}
+    others = ["20261109-034255_stage2_control_l1pl350cl_r2.4", "20261109-042828_burst_l1pl350cl_r2.4_s1",
+              "20261109-055910_stage2_control_l1pl350cl_r2.4_s2", "20261109-080203_burst_l1pl350cl_r2.4_s2",
+              "20261109-190221_sweep_l1pl350cl_pc_on_r2", "20261110-000000_burst_l1pl350cl_r2.2_s20"]
+    for key, pat in (("control", G.REG14["control"]), ("burst", G.REG14["burst"])):
+        assert fnmatch.fnmatch(own[key], pat)
+        assert not any(fnmatch.fnmatch(o, pat) for o in others + [own["burst" if key == "control" else "control"]])
+
+
+def test_max_holding_c_is_the_highest_rate_whose_upper_bound_is_below_the_cap():
+    from analysis.stats import poisson_rate_upper
+    for lam, lam_p in [(2.0, 2.103), (2.2, 2.1), (2.0, 1.717)]:
+        c = G.max_holding_c(lam, lam_p, 300, 0.99)
+        n = round(c * 300)
+        assert poisson_rate_upper(n, 300, 0.99) < min(lam, lam_p) <= poisson_rate_upper(n + 1, 300, 0.99)
+    assert math.isnan(G.max_holding_c(0.001, 0.001, 300, 0.99))
+
+
+def test_reg14_seed_rule_picks_the_lowest_seed_with_every_span_above_the_cold_rate(monkeypatch):
+    rows = {1: [2.0, 1.7, 2.0], 2: [2.0, 1.9, 2.0], 3: [2.0, 2.0, 2.0]}
+    monkeypatch.setattr(G, "span_sensitivity", lambda lam, sd: {"spans": [{"max_c": c} for c in rows[sd]]})
+    assert G.reg14_seed_rule(2.2, seeds=(1, 2, 3), cold_c_max=1.84) == 2
+    assert G.reg14_seed_rule(2.2, seeds=(1, 2, 3), cold_c_max=1.95) == 3
+    assert G.reg14_seed_rule(2.2, seeds=(1,), cold_c_max=1.84) is None
+
+
+def test_reg14_gate_reads_the_shock_against_reg12_seed2_and_checks_lambda_and_seed(monkeypatch, tmp_path):
+    import analysis.load
+    mk = lambda name, rate=2.2, seed=2: {"dir": tmp_path / name, "cfg": {"seed": seed, "workload": {"rate": rate,
+                                         "duration_s": 2580, "sessions": {"closed_loop": True}},
+                                         "loadgen_force_close": True, "checks": {"max_scrape_gap_s": 2.0}}}
+    pair = {"c": mk("c"), "b": mk("b")}
+    monkeypatch.setattr(analysis.load, "find_runs", lambda p: [pair["c"]] if "control" in p else [pair["b"]])
+    monkeypatch.setattr(analysis.load, "load_run", lambda p: pair.get(Path(p).name, {"dir": Path(p)}))
+    monkeypatch.setattr(G, "reg8_gate_verdict", lambda c, b: {"label": "drains", "burst_verdict": "recovered",
+                        "control_verdict": "recovered", "spans": [{"span": (1680, 1980), "lam_p": 2.1}]})
+    for f in ("overlap_share", "secondary_cb", "queued_miss_share", "span_clock", "release_delay",
+              "release_delay_baseline", "turn0_share", "unreleased", "release_rate", "control_waiting"):
+        monkeypatch.setattr(G, f, lambda *a: "x")
+    monkeypatch.setattr(G, "burst_end", lambda run: 1080.0)
+    monkeypatch.setattr(G, "post_trigger_rate", lambda run: {"lam_p": 2.178})
+    ref = {"outstanding": 46, "backlog_s": 1499.0}
+    sizes = {"b": {"outstanding": 22, "backlog_s": 1499.0}}
+    monkeypatch.setattr(G, "shock_size", lambda run: ref if run["dir"].name == G.REG14["reference_run"] else sizes["b"])
+    res = G.reg14_gate()
+    assert res["reference"] == ref and res["shock_comparable"] is False and res["post_trigger"]["lam_p"] == 2.178
+    assert res["max_holding_c"][0] == pytest.approx(G.max_holding_c(2.2, 2.1, 300, 0.99))
+    sizes["b"] = {"outstanding": 23, "backlog_s": 750.0}
+    assert G.reg14_gate()["shock_comparable"] is True                                  # 23 >= 23, 750 >= 749.5
+    for bad in (mk("c", rate=2.4), mk("c", seed=1)):
+        pair["c"] = bad
+        with pytest.raises(ValueError):
+            G.reg14_gate()
+
+
+def test_release_rate_counts_every_released_session_request_per_span(monkeypatch):
+    monkeypatch.setattr(G, "burst_end", lambda run: 0.0)
+    monkeypatch.setattr(G, "is_burst_request", lambda run: pd.Series([False, False, False, True, False]))
+    q = pd.DataFrame({"turn": [0, 1, 2, 0, 3], "t_released": [None, 5.0, 150.0, 6.0, None],
+                      "t_planned": [1.0, 4.0, 9.0, 6.0, 20.0], "t_sent": [1.0, 5.0, 150.0, 6.0, None]})
+    # first turn (t_planned 1) and turn 1 in span 1; turn 2 in span 2; burst row and the never-sent turn 3 left out
+    assert G.release_rate({"requests": q}, [(0, 100), (100, 200)]) == [0.02, 0.01]
+    assert math.isnan(G.release_rate({"requests": q.drop(columns="t_released")}, [(0, 1)])[0])
+
+
+def test_reg14_outcome_splits_pass_by_the_controls_waiting_share():
+    spans = [{"counts": True}, {"counts": False}, {"counts": True}]
+    w = lambda *xs: [{"share_waiting": x} for x in xs]
+    assert G.reg14_outcome({"outcome": "pass", "spans": spans, "control_waiting": w(0.9, 0.1, 0.5)}) == "pass_clear"
+    assert G.reg14_outcome({"outcome": "pass", "spans": spans, "control_waiting": w(0.9, 0.1, 0.51)}) == "pass_warm_edge"
+    for o in ("drains", "control_not_healthy", "stuck_unconfirmed", "inconclusive"):
+        assert G.reg14_outcome({"outcome": o}) == o
+
+
+def test_due_unreleased_profile_reports_the_slope_rates_and_lag(tmp_path):
+    q = pd.DataFrame({"turn": [1, 1, 1, 1], "t_planned": [250.0, 300.0, 800.0, 850.0],
+                      "t_released": [260.0, 310.0, 820.0, 870.0]})
+    run = {"cfg": {"workload": {"warmup_s": 240, "duration_s": 900}}, "requests": q}
+    p = G.due_unreleased_profile(run)
+    assert p["later_rate_first"] == pytest.approx(2 / 120) and p["later_rate_last"] == pytest.approx(2 / 120)
+    assert p["lag_by_minute"][0] == 10.0 and p["lag_by_minute"][-2] == 20.0 and len(p["lag_by_minute"]) == 11

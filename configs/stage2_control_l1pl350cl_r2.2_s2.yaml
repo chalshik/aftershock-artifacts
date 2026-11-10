@@ -1,0 +1,6 @@
+# REG-14 (draft, docs/decisions.md 2026-11-10 [REG]): REG-12's seed-2 control at λ = 2.2 instead of 2.4, the only change.
+# Needs the owner's approval to run.
+extends: stage2_control_l1pl350cl_r2.4_s2.yaml
+name: stage2_control_l1pl350cl_r2.2_s2
+workload:
+  rate: 2.2

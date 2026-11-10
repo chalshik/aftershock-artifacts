@@ -10,6 +10,7 @@ Every threshold is an argument; the registered values are in REG7. The rules wer
 review, before any L1 run existed (decisions.md 2026-11-05 [REG] REG-7).
 """
 import math
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -708,11 +709,176 @@ def reg13_inputs() -> dict:
     cold = [post_trigger_rate(load_run(f"runs/{rid}")) for rid in REG13["cold_runs"]]
     return {"cold_runs": cold, "post_lam_p_max": max(c["lam_p"] for c in cold)}
 
+def due_unreleased_profile(run: dict, window_s: float = 120.0) -> dict:
+    """Exploratory readout ([CORR] 2026-11-10 on REG-13): why `due_unreleased_slope` grows on a healthy closed loop.
+    Over the measured window: the slope it gives; the planned rate of later turns over the first and last `window_s`;
+    and the median release lag (t_released - t_planned) of later turns by planned minute."""
+    wl, q = run["cfg"]["workload"], run["requests"]
+    a, b = float(wl["warmup_s"]), float(wl["duration_s"])
+    q = q[q.turn > 0]
+    rate = lambda lo, hi: float(((q.t_planned >= lo) & (q.t_planned < hi)).sum() / (hi - lo))
+    lag = q.t_released.astype(float) - q.t_planned
+    by_min = [float(lag[(q.t_planned >= t) & (q.t_planned < t + 60)].median()) for t in np.arange(a, b, 60.0)]
+    return {"slope": due_unreleased_slope(run), "later_rate_first": rate(a, a + window_s),
+            "later_rate_last": rate(b - window_s, b), "lag_by_minute": by_min}
+
+
+# REG-14 draft (docs/decisions.md 2026-11-10 [REG]): REG-12's seed-2 pair at λ = 2.2 instead of 2.4, the only change
+# (owner's choice of cell after the review, 2026-11-10). Judged as REG-11 (`reg10_gate`). The shock is read against
+# REG-12's seed-2 burst run: the same seed and burst at λ = 2.4.
+REG14 = {**REG11, "lam": 2.2, "seed": 2}
+REG14["control"] = "*_stage2_control_l1pl350cl_r2.2_s2"
+REG14["burst"] = "*_burst_l1pl350cl_r2.2_s2"
+REG14["reference_run"] = "20261109-080203_burst_l1pl350cl_r2.4_s2"   # REG-12's seed-2 burst run (`stuck`)
+REG14["cold_c_max"] = 1.84   # highest span completion rate of REG-11/12's cold runs (decisions.md 2026-11-09 [RESULT] REG-12)
+REG14["seed_candidates"] = tuple(range(1, 11))
+REG14["max_control_waiting"] = 0.5   # review round 2, B1: a `pass` drafts the matrix only below this (fixed before any run)
+REG14["warm_runs"] = ("20261109-190221_sweep_l1pl350cl_pc_on_r2", "20261109-191845_sweep_l1pl350cl_pc_on_r2.4")
+
+
+def max_holding_c(lam: float, lam_p: float, span_s: float, conf: float) -> float:
+    """The highest point completion rate n / span_s whose upper bound `poisson_rate_upper(n, span_s, conf)` is still
+    below min(λ, λp): the most a cold span may complete and still hold (`burst_backlog`). NaN if no n holds."""
+    from analysis.stats import poisson_rate_upper
+    cap, n = min(lam, lam_p), -1
+    while poisson_rate_upper(n + 1, span_s, conf) < cap:
+        n += 1
+    return n / span_s if n >= 0 else math.nan
+
+
+def _burst_cfg(name: str = "burst_l1pl350cl_r2.2_s2") -> dict:
+    from harness.config import load_config, with_defaults
+    from harness.run import expand
+    return expand(with_defaults(load_config(Path(f"configs/{name}.yaml"))))[0]
+
+
+def span_sensitivity(lam: float, seed: int) -> dict:
+    """REG-14 review, recommendation 1 (design input, no run): REG-14's burst config at λ and seed, its planned λp in
+    each of REG-8's spans after the burst, and the highest cold completion rate that could hold in each span."""
+    from harness.workload import build_schedule
+    b = _burst_cfg()
+    s, _ = build_schedule({**b["workload"], "rate": lam}, seed, b["trigger"])
+    s = s[~s.burst]
+    end = float(b["trigger"]["at_s"] + b["trigger"]["duration_s"])
+    rows = []
+    for x, y in REG8["spans"]:
+        lo, hi = end + x, end + y
+        lp = float(((s.t_planned >= lo) & (s.t_planned < hi)).sum() / (hi - lo))
+        rows.append({"span": (x, y), "lam_p": lp, "max_c": max_holding_c(lam, lp, hi - lo, REG8["conf"])})
+    return {"lam": lam, "seed": seed, "spans": rows}
+
+
+def reg14_seed_rule(lam: float, seeds=None, cold_c_max: float | None = None) -> int | None:
+    """The seed REG-14 uses: the lowest candidate whose every span could hold a cold completion rate above
+    `cold_c_max` (each span's `max_c` > the highest cold rate seen). None if no candidate qualifies."""
+    seeds = REG14["seed_candidates"] if seeds is None else seeds
+    c = REG14["cold_c_max"] if cold_c_max is None else cold_c_max
+    for sd in seeds:
+        if all(r["max_c"] > c for r in span_sensitivity(lam, sd)["spans"]):
+            return sd
+    return None
+
+
+def reg14_sensitivity(lams=(2.0, 2.2)) -> dict:
+    """Design inputs for the cell choice: every candidate seed at each λ, and the seed the rule picks."""
+    return {lam: {"seeds": [span_sensitivity(lam, sd) for sd in REG14["seed_candidates"]],
+                  "picked": reg14_seed_rule(lam)} for lam in lams}
+
+
+def reg14_schedule_inputs() -> dict:
+    """REG-14's design inputs from the configs alone (no run): λp in the baseline, from the burst's end to the end of
+    arrivals and per span, the highest 120 s window, request counts, and whether the control's schedule equals the
+    burst run's session rows."""
+    from harness.workload import build_schedule
+    c, b = _burst_cfg("stage2_control_l1pl350cl_r2.2_s2"), _burst_cfg()
+    sc, _ = build_schedule(c["workload"], c["seed"], c.get("trigger"))
+    sb, _ = build_schedule(b["workload"], b["seed"], b["trigger"])
+    s = sb[~sb.burst].reset_index(drop=True)
+    rate = lambda lo, hi: float(((s.t_planned >= lo) & (s.t_planned < hi)).sum() / (hi - lo))
+    start, dur = float(b["trigger"]["at_s"]), float(b["workload"]["duration_s"])
+    end = start + float(b["trigger"]["duration_s"])
+    wins = [(float(t), rate(t, t + 120)) for t in np.arange(float(b["workload"]["warmup_s"]), dur - 120 + 1e-9, 120)]
+    same = len(s) == len(sc) and bool((s.t_planned.values == sc.t_planned.values).all()
+                                      and (s.prompt_len.values == sc.prompt_len.values).all())
+    return {"lam_p_post": rate(end, dur), "lam_p_baseline": rate(start - REG8["baseline_s"], start),
+            "spans": span_sensitivity(b["workload"]["rate"], b["seed"])["spans"],
+            "surge_max": max(wins, key=lambda w: w[1]), "windows_above_2_4": [w for w in wins if w[1] > 2.4],
+            "n_burst": int(sb.burst.sum()), "n_session": len(s), "control_schedule_same": same}
+
+
+def reg14_inputs() -> dict:
+    from analysis.load import RUNS, load_run, summarize
+    out = reg14_schedule_inputs()
+    out["warm"] = [{k: summarize(load_run(RUNS / rid))[k] for k in ("planned_rate", "throughput")} | {"run": rid}
+                   for rid in REG14["warm_runs"]]
+    out["reference"] = shock_size(load_run(RUNS / REG14["reference_run"]))
+    out["seed_rule"] = reg14_seed_rule(REG14["lam"])
+    return out
+
+
+def release_rate(run: dict, spans: list[tuple[float, float]]) -> list[float]:
+    """REG-14 readout (review, recommendation 4 and T5): per span after the burst's end, session requests released per
+    second, first turns included (released at t_released, else t_planned), the same population as λp
+    (`planned_session_rate`): under closed loop the released load falls below λp when sessions lag."""
+    q, end = run["requests"], burst_end(run)
+    if "t_released" not in q:
+        return [math.nan for _ in spans]
+    s = q[~is_burst_request(run)]
+    rel = s.t_released.astype(float).fillna(s.t_planned.astype(float))
+    rel = rel[s.t_sent.notna()] if "t_sent" in s else rel
+    return [float(((rel >= end + a) & (rel < end + b)).sum() / (b - a)) for a, b in spans]
+
+
+def control_waiting(control: dict, abs_spans: list[tuple[float, float]]) -> list[dict]:
+    """REG-14 readout (review T3): per absolute span, the share of the control's scrapes with waiting > 0 and its mean."""
+    m, out = control["metrics"], []
+    for lo, hi in abs_spans:
+        q = m["vllm:num_requests_waiting"][(m.t >= lo) & (m.t < hi)]
+        out.append({"share_waiting": float((q > 0).mean()) if len(q) else math.nan,
+                    "mean": float(q.mean()) if len(q) else math.nan})
+    return out
+
+
+def reg14_gate() -> dict:
+    """REG-14's verdict: `reg10_gate` on the λ = 2.2 closed-loop pair of seed 2, with REG-11's comparability rule
+    against REG-12's seed-2 burst run; readouts: post-burst λp, per-span max holding c, release rate, control waiting."""
+    from analysis.load import RUNS, load_run
+    res = reg10_gate(REG14)
+    control, burst = (load_run(RUNS / n) for n in res["runs"])
+    for r in (control, burst):
+        if r["cfg"]["seed"] != REG14["seed"]:
+            raise ValueError(f"{r['dir'].name} is not seed {REG14['seed']}")
+    res["reference"] = shock_size(load_run(RUNS / REG14["reference_run"]))
+    f, s = REG14["comparable_frac"], res["shock_size"]
+    res["shock_comparable"] = s["outstanding"] >= f * res["reference"]["outstanding"] and \
+        s["backlog_s"] >= f * res["reference"]["backlog_s"]
+    res["post_trigger"] = post_trigger_rate(burst)
+    end = burst_end(burst)
+    res["max_holding_c"] = [max_holding_c(REG14["lam"], r["lam_p"], r["span"][1] - r["span"][0], REG8["conf"])
+                            for r in res["spans"]]
+    res["release_rate"] = release_rate(burst, REG8["spans"])
+    res["control_waiting"] = control_waiting(control, [(end + a, end + b) for a, b in REG8["spans"]])
+    res["outcome"] = reg14_outcome(res)
+    return res
+
+
+def reg14_outcome(res: dict) -> str:
+    """REG-14's decision map (review round 2, B1). A `pass` is `pass_clear` if some counting span has the control
+    waiting at no more than `max_control_waiting` of its scrapes, otherwise `pass_warm_edge` (the control queued in
+    every counting span: overload is not excluded there). Every other outcome is `reg10_gate`'s."""
+    if res["outcome"] != "pass":
+        return res["outcome"]
+    ok = [r["counts"] and w["share_waiting"] <= REG14["max_control_waiting"]
+          for r, w in zip(res["spans"], res["control_waiting"])]
+    return "pass_clear" if any(ok) else "pass_warm_edge"
+
 if __name__ == "__main__":
     import sys
-    if sys.argv[1] in ("reg10", "reg11", "reg11_reference", "reg11_turn0_reference", "reg12", "reg13", "reg13_inputs"):
+    if sys.argv[1] in ("reg10", "reg11", "reg11_reference", "reg11_turn0_reference", "reg12", "reg13", "reg13_inputs",
+                       "reg14", "reg14_inputs", "reg14_sensitivity"):
         print({"reg10": reg10_gate, "reg11": reg11_gate, "reg11_reference": reg11_reference,
                "reg11_turn0_reference": reg11_turn0_reference, "reg12": reg12_table, "reg13": reg13_table,
-               "reg13_inputs": reg13_inputs}[sys.argv[1]]())
+               "reg13_inputs": reg13_inputs, "reg14": reg14_gate, "reg14_inputs": reg14_inputs,
+               "reg14_sensitivity": reg14_sensitivity}[sys.argv[1]]())
     else:
         print({"reg7": reg7_zone, "reg8": reg8_zone}[sys.argv[1]]())   # no default: say which registration is computed
