@@ -593,12 +593,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-10 · [CORR] The numbers in the REG-13 due-slope correction came from an uncommitted script; recomputed with `gate.due_unreleased_profile`
-- **Error (the agent's):** the [CORR] of 2026-11-10 on `due_unreleased_slope` quoted later-turn planned rates of 1.395 and 2.174 req/s, a slope of 0.011 at a 10 s lag, and lags of 8.7 → 12.7 s, all from a one-off script, against `analysis/CLAUDE.md` and rule I (every number from a committed function).
-- **Recomputed** with the committed `gate.due_unreleased_profile` (RUN(20261109-190221_sweep_l1pl350cl_pc_on_r2, gate.due_unreleased_profile)): due slope 0.0195; later-turn planned rate **1.433** over the first 120 s of the measured window and **2.467** over the last 120 s (the script had used trailing 60 s windows averaged over 120 s, a different quantity); median release lag by planned minute 8.7–12.7 s, median of the minutes 9.7 s.
-- **The explanation holds, with these values:** due ≈ later-turn rate × lag gives a slope of (2.467 − 1.433) × 9.7 / 540 = 0.019 (DERIVED; 540 s between the two windows' midpoints, 300 s and 840 s), against the measured 0.0195. **The 0.011 figure is withdrawn.**
-- **Not changed:** REG-13's registered outcome and its [RESULT].
-
 ### 2026-11-10 · [REG] REG-14 (exploratory, draft): REG-12's seed-2 pair at λ = 2.2 instead of 2.4, closed-loop turns, L1, 350 W (GPU, ≈ 1.5 h)
 - **ID:** REG-14. **Exploratory.** **Not approved:** no GPU run before the owner approves this entry.
 - **Why:** REG-13 ended `overload` (decisions.md 2026-11-10 [RESULT]): with closed-loop turns the warm server at L1, 350 W carries about 2.4 req/s by the configs' rule, so REG-11/12's cold states at λ = 2.4 sit at the warm capacity and overload explains them as well as a metastable state. Its registered decision: the owner picks another factor or cell. The owner asked on 2026-11-10 for a closed-loop cell at λ = 2 ("ok, draft the λ = 2 closed-loop cell REG"). The first draft (λ = 2, seed 1) failed review: at λ = 2 the registered span test can see a cold span only if it completes ≤ 1.81 req/s, against cold rates of 1.70–1.84 seen so far (review T1, below). **The owner then chose λ = 2.2, seed 2** (2026-11-10, answering the agent's question with the sensitivity numbers below). A cold state that holds at λ = 2.2, with the same-seed control healthy, sits below the warm capacity rather than at it.
@@ -793,3 +787,8 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **What this is:** the first stuck state of the study that warm-side overload does not explain: the same schedule, warm, ran with an empty queue; after a 180 s burst it ran cold at the cache-off floor (c_b 1.784 against μ_sat,off 1.681, ×1.06, DERIVED) with a growing queue. One seed, exploratory; not evidence for C1 until the matrix and the confirmation run.
 - **Registered decision (`pass_clear`):** draft for the owner, in order, (1) a confirmatory matrix at λ = 2.2 (REG-12's design, five seeds each with a same-seed control, ≈ 8 GPU h; which seeds is the owner's call) and (2) C1's confirmation run (4500 s watch, then the drop to λ = 1). Neither runs before the owner approves it. claims.md is not changed before the owner reviews this.
 - **Not changed:** REG-11/12/13's results; claims.md; no code or threshold.
+
+### 2026-11-10 · [CORR] C1's λ = 1 condition is recovery after the drop, not persistence; misstated in REG-14's result and to the owner
+- **Error (the agent's):** the REG-14 [RESULT] (alternative 8) says "whether it persists when the load drops (C1's λ = 1 condition) is untested", and the agent told the owner in chat that staying stuck at low load would be the core of C1. **docs/claims.md C1 ("Supports") requires the confirmation run to be `stuck` over a 4500 s watch and then `recovered` after the drop to λ = 1 (condition 6).** The drop shows the cold state is held by the load, not a broken server; staying stuck at λ = 1 would not support C1.
+- **Correct reading of REG-14's open point:** untested are (a) whether the cold state lasts the 4500 s watch and (b) whether it recovers after the drop to λ = 1.
+- **Not changed:** REG-14's outcome and decision; C1's text.

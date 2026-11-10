@@ -2856,3 +2856,8 @@ Summary:
 - **What this is:** the first stuck state of the study that warm-side overload does not explain: the same schedule, warm, ran with an empty queue; after a 180 s burst it ran cold at the cache-off floor (c_b 1.784 against μ_sat,off 1.681, ×1.06, DERIVED) with a growing queue. One seed, exploratory; not evidence for C1 until the matrix and the confirmation run.
 - **Registered decision (`pass_clear`):** draft for the owner, in order, (1) a confirmatory matrix at λ = 2.2 (REG-12's design, five seeds each with a same-seed control, ≈ 8 GPU h; which seeds is the owner's call) and (2) C1's confirmation run (4500 s watch, then the drop to λ = 1). Neither runs before the owner approves it. claims.md is not changed before the owner reviews this.
 - **Not changed:** REG-11/12/13's results; claims.md; no code or threshold.
+
+## 2026-11-10 · [CORR] C1's λ = 1 condition is recovery after the drop, not persistence; misstated in REG-14's result and to the owner
+- **Error (the agent's):** the REG-14 [RESULT] (alternative 8) says "whether it persists when the load drops (C1's λ = 1 condition) is untested", and the agent told the owner in chat that staying stuck at low load would be the core of C1. **docs/claims.md C1 ("Supports") requires the confirmation run to be `stuck` over a 4500 s watch and then `recovered` after the drop to λ = 1 (condition 6).** The drop shows the cold state is held by the load, not a broken server; staying stuck at λ = 1 would not support C1.
+- **Correct reading of REG-14's open point:** untested are (a) whether the cold state lasts the 4500 s watch and (b) whether it recovers after the drop to λ = 1.
+- **Not changed:** REG-14's outcome and decision; C1's text.
