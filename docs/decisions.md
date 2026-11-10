@@ -3361,3 +3361,50 @@ Summary:
 - **Read as:** approval of REG-16 as finally written above, with the round-2 fixes, and of its run under its stopping rule. "Correct output" is read as a valid, decisive test, not a wished-for result. A seed chosen for the result it might give would bias the test, so the choice used only margin and load, before any run.
 - **Agent's choice:** seed 14, drop 9000 s (REG-16 entry, table). Seed 24 was set aside because its lighter watch (λp 2.180, peak 3.000) would favour `control_warm`. The rule's 7200 s left 1620 s in the pessimistic case against the 1200 s needed. The longer drop costs ≈ 0.5 GPU h per run.
 - **Not covered:** REG-17 still needs its own registration, review and approval.
+
+## 2026-11-10 · [OPS] REG-16 run: valid on the first attempt, no rerun; pre-launch read in `docs/probe/20261110_reg16/`
+- **Run** `20261110-122001_stage2_control_l1pl350cl_r2.2_long_s14`: launched 12:19:59 UTC at 350.00 W, 45 °C, 0 % busy, no compute process, VM tree `c198a30` clean, 9.4 GB free (PROBE(docs/probe/20261110_reg16/prelaunch_reg16_attempt1.txt)). Valid, `failed` empty, all 10 checks passed, including `power_limit` (RUN(20261110-122001_stage2_control_l1pl350cl_r2.2_long_s14, checks.json)). sw_thermal 0.004, max 73 °C, busy SM-clock CV 0.017, limit 350.0 W over 16109 samples.
+- Console log on the VM: `~/stage2_control_l1pl350cl_r2.2_long_s14_20261110T121959Z.log`. Copied to the Mac, sha256 identical (10 files); `manifests/runs.sha256` +10 lines. VM copy kept.
+
+## 2026-11-10 · [RESULT] REG-16: `control_cold_persistent`. With no burst, the control went cold at 4080–4380 s, after three windows of λp 2.46–2.71, and stayed cold to the end of the watch (`stuck`); it warmed again in the drop and stayed warm on the return to 2.2
+- **Computed once:** `uv run python -m analysis.gate reg16` (`gate.reg16_table`) on `20261110-122001_stage2_control_l1pl350cl_r2.2_long_s14`; values RUN(20261110-122001_stage2_control_l1pl350cl_r2.2_long_s14, gate.reg16_table) unless tagged otherwise.
+- **Baseline** (300–900 s, `REG16["baseline"]`): pf 1.000, hit 0.838, queue 0.003, KV 0.184. The watch verdict's own baseline (480–1080 s): pf 1.000, hit 0.828, queue 0.008. Neither is `bad_baseline`.
+- **Watch** (1080–5580 s): `load.verdict` is **`stuck`**. End window (4980–5580 s): pf 0.000, hit 0.000, queue 96.9 (slope +0.087 /s), KV 0.949, 30.2 running.
+- **Cold windows** (`gate.cold_windows`, 50 windows of 300 s from 1080 s): 8 cold, 4080–6480 s, one unbroken stretch. `longest_cold_s` 2400 s ≥ `persistent_s` 1500 s, and the watch's last window is cold, so `cold_persistent` is true by both rules. `first_cold` 4080–4380 s, in the watch. `hit_low_queued` in 7 windows, 4380–6480 s. No other window is cold.
+- **Outcome** (`gate.reg16_control_outcome`): **`control_cold_persistent`**.
+- **Timeline** (300 s windows from 0 s, `gate.reg16_table` timeline; t in s):
+
+  | phase | t | λp | pf | hit | waiting q mean | KV |
+  |---|---|---|---|---|---|---|
+  | baseline | 600–900 | 2.24 | 1.000 | 0.835 | 0.007 | 0.183 |
+  | watch | 3000–3300 | 1.97 | 1.000 | 0.840 | 0.003 | 0.159 |
+  | watch | 3600–3900 | 2.57 | 1.000 | 0.826 | 0.007 | 0.242 |
+  | watch | 3900–4200 | 2.46 | 1.000 | 0.834 | 0.000 | 0.216 |
+  | watch | 4200–4500 | 2.71 | 0.453 | 0.417 | 2.6 | 0.708 |
+  | watch | 4500–4800 | 2.13 | 0.000 | 0.000 | 22.1 | 0.949 |
+  | watch | 4800–5100 | 2.54 | 0.000 | 0.000 | 58.5 | 0.951 |
+  | watch | 5100–5400 | 2.16 | 0.000 | 0.000 | 98.1 | 0.948 |
+  | watch → drop | 5400–5700 | 1.54 | 0.000 | 0.000 | 113.1 | 0.950 |
+  | drop | 6000–6300 | 1.23 | 0.014 | 0.000 | 47.6 | 0.952 |
+  | drop | 6300–6600 | 0.91 | 0.713 | 0.335 | 9.0 | 0.650 |
+  | drop | 6600–6900 | 1.01 | 1.000 | 0.840 | 0.000 | 0.063 |
+  | return | 15000–15300 | 2.30 | 1.000 | 0.835 | 0.003 | 0.195 |
+  | return | 15600–15900 | 2.24 | 0.999 | 0.815 | 0.000 | 0.183 |
+
+  - Every window from 0 to 4200 s is warm (hit 0.823–0.843, pf 1.000, queue ≤ 0.01), including windows at λp 2.57 and 2.60. Every drop window from 6600 s and every return window is warm (hit 0.815–0.848, queue ≤ 0.003).
+- **Readouts:**
+  - **Peak before the first cold window** (`peak_120s_before_first_cold`): λp 2.783 over 120 s.
+  - **Return:** `return_recovered` true; return's end (15480–16080 s): pf 0.999, hit 0.816, queue 0.002, KV 0.202.
+  - **`window_mix`:** 0 planned-but-unsent requests in every window, so `pf_by_sent` misses nothing here. First-turn share 0.074–0.156; the highest (0.149–0.156) fall in the cold watch windows, the lowest (0.074–0.099) in the first drop windows.
+- **Prediction** (model.md row 20):
+  - valid: hit (0.7);
+  - baseline healthy: hit (0.9);
+  - outcome: **miss** of the modal `control_warm` (0.5); `control_cold_persistent` had 0.2.
+- **Alternatives:**
+  1. **Overload during a surge, then a backlog** (the reading the registration feared): the collapse came in the third straight window above λp 2.4 (2.57, 2.46, 2.71; peak 2.78 over 120 s), above the closed-loop warm capacity of about 2.4 (decisions.md 2026-11-10 [RESULT] REG-13). REG-13's runs at 2.6–3 went cold in the same way after 368–602 s. Once the queue held ≈ 100 requests in a full pool, any state would lag. This explains the collapse without a second stable state.
+  2. **Two states at one load, with a surge as the trigger:** after the collapse the server stayed cold at λp 2.13 and 2.16 with a growing queue (slope +0.09 /s and +0.10 /s), loads that the same run carried warm before (2.20–2.29) and after (2.24–2.30). The same load held both states, depending on history. The two readings differ in what the cold state does when the surge has passed; this run cannot separate them, because the watch ended 1100–1400 s after the collapse with the backlog still growing.
+  3. **The client backlog, not the cache, held the cold state:** under closed loop the late sessions keep arriving with long prompts. Against a cache-only cause: the line emptied in the drop by ≈ 6600 s and hit returned to 0.840 in the next window (above). That is what a cold state held by its backlog does; it says nothing about a cache that holds without one.
+  4. **Heat or clock:** sw_thermal 0.004, max 73 °C, CV 0.017 (OPS above). Not a factor.
+- **What this is:** in one control run at λ = 2.2, without any burst, the schedule's own surge took the server cold, and it stayed cold until the load dropped. So REG-14's and REG-15's cold states are not shown to need the burst: on a long enough schedule at this load, the warm state does not last. One seed (rule H: 1 cold of n = 1; the one-sided 95 % Clopper–Pearson lower bound on the chance of a cold episode per 4.5 h run is 0.05, DERIVED: 0.05^(1/1)). Observed as a side result in this run: the cold state left once the line emptied at λ = 1, and λ = 2.2 then ran warm for 1500 s.
+- **Registered decision (`control_cold_persistent`):** **no REG-17 and no matrix at λ = 2.2.** The owner chooses: a lower λ, or reporting λ = 2.2 as a load where the warm state is not stable. Nothing runs before the owner chooses and approves a new registration.
+- **Not changed:** claims.md, REG-11–15's results, code, thresholds. `configs/confirm_l1pl350cl_r2.2_long_s14.yaml` stays unregistered and unused.
