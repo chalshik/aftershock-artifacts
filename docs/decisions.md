@@ -3077,3 +3077,54 @@ Summary:
 - **Owner's answer:** "approved", to the question whether REG-15 (decisions.md 2026-11-10 [REG]) is approved: C1's confirmation run at λ = 2.2 with closed-loop turns, seed 12, a 4500 s watch, then λ = 1 for 1800 s, then 2.2 for 1500 s, ≈ 2.6 GPU h.
 - **Run:** `configs/confirm_l1pl350cl_r2.2_s12.yaml` after REG-14's pre-launch checks, reads in `docs/probe/20261110_reg15/`, VM console log named per attempt. Research rule 2 relaxed for this run as for REG-11 to REG-14.
 - **Standing instructions** (decisions.md 2026-11-09 [DECISION]) and REG-15's stopping rule apply; a rerun decision reads only `checks.json`. No look at the verdict before the run is valid and copied; then `gate.reg15_table` once, the `[RESULT]`, and the next draft by the registered outcome, which does not run before the owner approves it.
+
+## 2026-11-10 · [OPS] REG-15 run: valid on the first attempt, no rerun; pre-launch read in `docs/probe/20261110_reg15/`
+- **Run** `20261110-085730_confirm_l1pl350cl_r2.2_s12`: launched 08:57:28 UTC at 350.00 W, 42 °C, 0 % busy, no compute process, VM tree `3c30215` clean, 9.9 GB free (PROBE(docs/probe/20261110_reg15/prelaunch_reg15_attempt1.txt)). Valid, `failed` empty, all 12 checks passed, including `trigger` (the burst filled the pool) and `power_limit` (RUN(20261110-085730_confirm_l1pl350cl_r2.2_s12, checks.json)). sw_thermal 0.000, max 75 °C, busy SM-clock CV 0.009, limit 350.0 W over 9185 samples.
+- Console log on the VM: `~/confirm_l1pl350cl_r2.2_s12_20261110T085727Z.log`. Copied to the Mac, sha256 identical (10 files); `manifests/runs.sha256` +10 lines. VM copy kept.
+
+## 2026-11-10 · [RESULT] REG-15: `drop_inconclusive`. Stuck through the whole 4500 s watch with no recovered window (condition 5 holds), but the queue never reached 0 in the 1800 s drop, so condition 6 is untested
+- **Computed once:** `uv run python -m analysis.gate reg15` (`gate.reg15_table`) on `20261110-085730_confirm_l1pl350cl_r2.2_s12`; values RUN(20261110-085730_confirm_l1pl350cl_r2.2_s12, gate.reg15_table) unless tagged otherwise.
+- **Baseline** (300–900 s): pf 0.984, hit 0.835, queue 0.007, KV 0.199, 6.1 running, at λp 2.26 from the run's own requests.
+- **Condition 5:** `load.verdict` of the 4500 s watch is **`stuck`**. End window (4980–5580 s): pf 0.000, hit 0.000, queue 399.7, KV 0.949, 30.1 running. **`watch_broken` false:** none of the 15 windows of 300 s from 1080 to 5580 s passes `recovered` against the baseline (window λp 1.78–2.63).
+- **Condition 6:** **`line_reached_zero` false**. No scrape in 5580–7380 s shows 0 waiting. `return_recovered` false (return's end: pf 0.000, hit 0.000, queue 351.8, KV 0.950); it is not decisive here, because the outcome order stops at `drop_inconclusive`.
+- **Timeline** (300 s windows, `gate.reg15_timeline`; t in s):
+
+  | phase | t | λp | hit | waiting q mean | KV |
+  |---|---|---|---|---|---|
+  | baseline | 600–900 | 2.13 | 0.838 | 0.007 | 0.175 |
+  | burst | 900–1200 | 1.92 | 0.017 | 130 | 0.937 |
+  | watch | 1500–1800 | 2.41 | 0.000 | 116 | 0.949 |
+  | watch | 3000–3300 | 2.13 | 0.000 | 227 | 0.952 |
+  | watch | 5100–5400 | 2.08 | 0.000 | 399 | 0.950 |
+  | drop | 5700–6000 | 1.00 | 0.000 | 411 | 0.951 |
+  | drop | 6300–6600 | 1.15 | 0.000 | 363 | 0.950 |
+  | drop | 6900–7200 | 1.38 | 0.000 | 309 | 0.949 |
+  | drop → return | 7200–7500 | 1.65 | 0.000 | 265 | 0.950 |
+  | return | 8400–8700 | 2.61 | 0.000 | 346 | 0.953 |
+
+  - Every 300 s window from 1200 s to the end has hit 0.000 and KV 0.947–0.955. Within each watch window the queue's slope was positive (q_slope +0.02 to +0.21 /s); within each drop window it was negative (−0.06 to −0.12 /s).
+- **Readouts:**
+  - **Span test** over the watch (15 spans of 300 s): c 1.72–1.90; it holds in 11 of 15. The 4 that fail are spans whose λp (1.78–2.07) is under c_upper (1.92–2.09).
+  - **Condition 4** (watch's last 1500 s): KV 0.949, N 30.3 (4.93 × baseline), max N 34 against the 256 cap.
+  - **`drop_level`** (6780–7380 s): pf 0, hit 0, queue 301.5, q_slope −0.127 /s, KV 0.950, N 28.4.
+  - **`release_delay`** at the end of the watch, the drop and the return: 856, 930, 719 s.
+  - **Judged windows' λp** from the run's own requests: baseline 2.260, previous 2.165, end 2.155, return's end 2.237. All are within ± 5 % of 2.2, as the seed rule planned.
+- **Prediction** (model.md row 19):
+  - valid: hit (0.75);
+  - baseline healthy: hit (0.85);
+  - the burst fills the pool: hit (0.85);
+  - stuck through the watch with no recovered window: hit (0.5);
+  - the line reaches 0: **miss** (0.85);
+  - `drop_inconclusive` had 0.08.
+- **Alternatives:**
+  1. **The drop was too short for the backlog** (design): at the drop's start the server held ≈ 410 waiting (above), and the clients lagged 856–930 s. The queue fell in every drop window at 0.06–0.13 /s, so it was draining, not held. A linear extrapolation of the last drop window (301.5 / 0.127 ≈ 2370 s more, DERIVED; BELIEF that the fall stays linear) puts the empty line ≈ 40 min past the drop's end. A longer drop separates this from 2.
+  2. **A cold state that the load does not hold** (against condition 6's reading): hit stayed 0.000 through the drop, but with ≥ 265 requests still waiting and KV at 0.95 the pool was still full of backlog. The data cannot tell a cache that would warm once the line empties from one that would not. Only a drop in which the line reaches 0 separates them.
+  3. **Persistence by overload rather than history:** this run has no same-schedule control (REG-15, "No separate control"), and the return, its in-run check, never ran warm. Against it: the baseline carried λp 2.26 at pf 0.984 with an empty queue, and REG-14's control carried λ = 2.2 on another schedule (decisions.md 2026-11-10 [RESULT] REG-14). Evidence for a persistence that overload does not explain, not proof.
+  4. **Heat or clock:** sw_thermal 0.000, max 75 °C, CV 0.009 (OPS above). Not a factor.
+- **What this is:** condition 5 at one load, in one run. The cold state that REG-14 held for 1500 s held here for 4500 s, unbroken, with a queue that grew from 116 to 399. Condition 6 (it leaves when the load drops) is untested, not failed. Not C1.
+- **Registered decision (`drop_inconclusive`):** reported; the owner decides (a longer drop). **The matrix is not drafted.** Nothing runs before the owner chooses and approves a new registration.
+- **Not changed:** claims.md, REG-11–14's results, code, thresholds.
+
+## 2026-11-10 · [CORR] REG-15's registration assumed a 4–6 minute client lag in the drop; the lag had grown to 14–16 minutes
+- REG-15's alternative 5 (decisions.md 2026-11-10 [REG]) said sessions lag 4–6 minutes and that the 1800 s drop is ≈ 5 × that lag. The figure came from REG-14's 1500 s watch (release_delay 234–356 s). Over a 4500 s watch the backlog keeps growing, and so does the lag. Measured: 856 s at the watch's end and 930 s at the drop's end (RUN(20261110-085730_confirm_l1pl350cl_r2.2_s12, gate.reg15_table)), so the drop was ≈ 1.9 × the lag (DERIVED: 1800 / 930).
+- I carried a value measured over a short watch into a design three times longer without checking how it scales. The registered outcome order already handled the case (`drop_inconclusive`), so no result changes. A new drop length must come from this run's drain (alternative 1 of the result above), not from REG-14.
