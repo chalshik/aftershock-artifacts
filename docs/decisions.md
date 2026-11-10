@@ -3529,3 +3529,38 @@ Summary:
 ## 2026-11-10 · [DECISION] Owner approves REG-17 and its run
 - **Owner (2026-11-10):** "yes", in reply to "Do you approve the REG-17 run?", asked after the reviewed registration above (with its two changes from the proposal: the C1 verdict pair plus a measured cold side instead of the span test, and the review's fixes) was committed in `39f01a9`.
 - **Approved:** REG-17 as registered, and its run under its stopping rule: the control `configs/stage2_control_l1pl350cl_r2.0_s2.yaml`, then the burst run `configs/burst_l1pl350cl_r2.0_s2.yaml`, pre-launch reads in `docs/probe/20261110_reg17/`.
+
+## 2026-11-10 · [OPS] REG-17 runs: 2 of 2 valid, no rerun; pre-launch reads in `docs/probe/20261110_reg17/`
+- **Control** `20261110-174432_stage2_control_l1pl350cl_r2.0_s2`: launched 17:44:30 UTC at 350.00 W, 43 °C, 0 % busy, no compute process, VM tree `778f24b` clean, 8.6 GB free (PROBE(docs/probe/20261110_reg17/prelaunch_reg17_stage2_control_l1pl350cl_r2.0_s2_attempt1.txt)). Valid, `failed` empty (RUN(20261110-174432_stage2_control_l1pl350cl_r2.0_s2, checks.json)). sw_thermal 0.004, max 71 °C, busy SM-clock CV 0.011, limit 350.0 W over 2599 samples.
+- **Burst run** `20261110-182920_burst_l1pl350cl_r2.0_s2`: launched 18:29:18 UTC at 350.00 W, 43 °C, 0 % busy, no compute process, VM tree `778f24b` clean, 8.4 GB free (PROBE(docs/probe/20261110_reg17/prelaunch_reg17_burst_l1pl350cl_r2.0_s2_attempt1.txt)). Valid, `failed` empty (RUN(20261110-182920_burst_l1pl350cl_r2.0_s2, checks.json)). sw_thermal 0.002, max 70 °C, CV 0.014, limit 350.0 W over 2886 samples.
+- Both copied to the Mac, sha256 identical (10 files each); `manifests/runs.sha256` +20 lines. VM copies kept.
+
+## 2026-11-10 · [RESULT] REG-17: `pass_clear`. At λ = 2.0, seed 2, the control stayed warm with an empty queue while after the burst the same schedule stayed cold, full and backlogged for the 1500 s watch, completing 1.73–1.77 req/s, below 2.0 and below every span's planned load
+- **Computed once:** `uv run python -m analysis.gate reg17` (`gate.reg17_gate`) on the two runs above; values RUN(20261110-182920_burst_l1pl350cl_r2.0_s2, gate.reg17_gate) and RUN(20261110-174432_stage2_control_l1pl350cl_r2.0_s2, gate.reg17_gate) unless tagged otherwise. Baselines and end windows: `load.verdict` on each run.
+- **Control:** `recovered`. Baseline pf 1.000, hit 0.842, queue 0.000; end window pf 1.000, hit 0.838, queue 0.003, KV 0.171. Waiting > 0 in 0.007, 0.003, 0.003 of the scrapes of the three spans. Never reached KV onset (`surge_run`: not tipped; its highest 120 s planned rate 2.608 at 590 s).
+- **Burst run:** `stuck`. Baseline pf 0.996, hit 0.841, queue 0.002. KV onset at 965 s (the burst runs 900–1080 s). End window pf 0.000, hit 0.000, queue 110.8 (slope +0.061 /s), KV 0.949, 30.0 running.
+- **Cold side** (`gate.reg17_cold_side`): **holds**.
+
+  | span after the burst's end (s) | λp | c | c 95 % upper | waiting q mean (min) | KV | hit (counter) |
+  |---|---|---|---|---|---|---|
+  | 600–900 | 2.097 | 1.773 | 1.961 | 76.5 (54) | 0.951 | 0.000 |
+  | 900–1200 | 2.007 | 1.733 | 1.919 | 101.5 (91) | 0.950 | 0.000 |
+  | 1200–1500 | 2.167 | 1.753 | 1.940 | 120.2 (101) | 0.948 | 0.000 |
+
+  Every span's c is below min(2.0, λp), and the end-window queue slope is > 0.
+- **Outcome** (`gate.reg17_outcome`): **`pass_clear`**.
+- **Readouts:**
+  - **Span test** (`reg10_gate`, not decisive here): label `pass`. Every span's upper bound (1.92–1.96) is below min(λ, λp), so it confirms as well. The registration expected it could not (max holding c 1.81); the cold rates came in at 1.73–1.77, under that limit.
+  - **The lull did not drain it:** `drain_time` NaN. The line never emptied after the burst's end (q_min 54 in the first span), though the first third of the watch planned λp 1.73.
+  - `secondary_cb` c_b 1.772 over one 1499 s backlogged stretch, `not_sustainable` against λp 1.984. Release rate 1.90 / 1.78 / 1.84; release delay 218 / 259 / 304 s (baseline 10 s); unreleased later turns 0 / 0 / 166; turn-0 share 0.141 / 0.146 / 0.141.
+  - Shock size: 36 outstanding over 1499 s, against REG-12's seed-2 burst run's 46.
+- **Prediction** (model.md row 21): control `recovered` (0.9): hit; burst `stuck` (0.6): hit; cold side holds given stuck (0.8): hit; `pass_clear` (0.45): hit. Readouts: span c 1.73–1.77 within the predicted 1.70–1.82; end-window queue 110.8 and rising within 60–200. `drains` (0.35) did not happen.
+- **Alternatives:**
+  1. **Overload at this schedule's load:** against it, the control on the identical session schedule ran with waiting in ≤ 0.7 % of scrapes and hit 0.838 to the end, and the burst run's own baseline was warm. The warm state carries this load; the cold state does not.
+  2. **A slowly draining burst backlog:** against it, every span's completion rate is below its planned load and the queue rose from span to span (76 → 101 → 120) with a positive end slope. The span test's upper bounds agree.
+  3. **Bistability at the local λp ≈ 2.1, not at 2.0:** against it, c is below 2.0 in every span, including the one at λp 2.007.
+  4. **Heat or clock:** sw_thermal ≤ 0.004, max 71 °C (OPS above). Not a factor.
+  5. **Limits:** one seed (rule H: 1 of 1; one-sided 95 % lower bound 0.05, DERIVED: 0.05^(1/1)); a 1500 s watch, not 4500 s; no drop to λ = 1 in this design. The warm side barely tests the surge reading: the control's peak was 2.61 (registration, review N1).
+- **What this is:** M2's condition c_cold < λ < c_warm observed at λ = 2.0 in one seed, with a measured cold side, at a load where the schedule's own surges are rare (1 of 40 seeds within 2600 s, `gate.surge_hazard`). Unlike λ = 2.2, the no-burst control is not expected to tip by itself here. Not yet C1: it needs the matrix and the long confirmation with the drop.
+- **Registered decision (`pass_clear`):** draft the matrix at λ = 2.0 on the reserved seeds 3–7 (5 pairs, ≈ 7.2 GPU h), decided by C1's per-seed test and the same cold-side condition, with each schedule's highest 120 s peak in the control and its watch lull registered as covariates, not seed filters. Its own registration, rule F review and owner approval; nothing runs before that.
+- **Not changed:** claims.md, earlier results, code, thresholds.
