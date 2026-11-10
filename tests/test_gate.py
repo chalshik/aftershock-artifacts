@@ -773,3 +773,151 @@ def test_load_verdict_judges_reg15s_windows_from_the_config(monkeypatch):
     L.verdict({"cfg": cfg, "metrics": pd.DataFrame(), "requests": pd.DataFrame(), "trigger": pd.DataFrame()})
     w = G.reg15_judged_windows(12)["windows"]
     assert seen == [w["baseline"], w["previous"], w["end"]]
+
+
+# ---------------------------------------------------------------- REG-16
+
+def _res(name):
+    from harness.config import load_config, with_defaults
+    from harness.run import expand
+    return expand(with_defaults(load_config(Path(f"configs/{name}.yaml"))))[0]
+
+
+def test_reg16_control_is_reg14s_control_with_reg17s_schedule():
+    from harness.workload import build_schedule
+    new, old = _res("stage2_control_l1pl350cl_r2.2_long_s14"), _res("stage2_control_l1pl350cl_r2.2_s2")
+    assert {k for k in set(new) | set(old) if new.get(k) != old.get(k)} == {"name", "seed", "workload", "verdict"}
+    assert {k for k in new["workload"] if new["workload"].get(k) != old["workload"].get(k)} == {"duration_s", "steps"}
+    assert {k for k in new["verdict"] if new["verdict"][k] != old["verdict"][k]} == {"watch_s"}
+    burst = _res("confirm_l1pl350cl_r2.2_long_s14")
+    assert burst["workload"] == new["workload"] and burst["seed"] == new["seed"] == 14
+    assert burst == {**G.reg16_burst_cfg(14, G.REG16["drop_s"]), "name": burst["name"]} and G.REG16["drop_s"] == 9000
+    sc, _ = build_schedule(new["workload"], new["seed"], new.get("trigger"))
+    sb, _ = build_schedule(burst["workload"], burst["seed"], burst["trigger"])
+    cols = ["t_planned", "session_id", "turn", "prompt_len"]
+    assert sc[cols].equals(sb[~sb.burst][cols].reset_index(drop=True))
+    ph = G.reg16_phases({"dir": Path("x"), "cfg": new})
+    assert ph["watch"] == (1080, 5580) and ph["drop"] == (5580, 14580) and ph["return_end"] == (15480, 16080)
+    with pytest.raises(ValueError):
+        G.reg16_phases({"dir": Path("x"), "cfg": burst})                     # a burst run is not the control
+    with pytest.raises(ValueError):
+        G.reg16_phases({"dir": Path("x"), "cfg": {**new, "workload": {**new["workload"], "duration_s": 16000}}})
+
+
+def test_reg16_spec_keeps_the_matrix_seeds_and_the_baseline_window():
+    assert not set(G.REG16["seeds"]) & {3, 4, 5, 6, 7} and 14 in G.REG16["seeds"]
+    b = _res("confirm_l1pl350cl_r2.2_long_s14")
+    t = float(b["trigger"]["at_s"])
+    assert G.REG16["baseline"] == (t - b["verdict"]["baseline_s"], t)
+
+
+def test_completion_rate_and_owed_backlog():
+    q = pd.DataFrame({"t_planned": [0.0, 1.0, 2.0, 3.0], "t_end": [0.5, 5.0, float("nan"), 3.5]})
+    run = {"requests": q}
+    assert G.completion_rate(run, 0, 4) == 2 / 4
+    assert G.owed_backlog(run, 2.5) == 2          # planned before 2.5: ids 0-2; id 0 done
+    assert G.owed_backlog(run, 6.0) == 1          # only the never-completed one
+
+
+def test_reg16_empty_time_bounds():
+    cfg = G.reg16_burst_cfg(14, 7200)
+    fast = {"owed_at_trigger": 0, "c_watch": 100.0, "c_drop": 100.0, "c_watch_min": 100.0, "c_drop_min": 100.0}
+    assert G.reg16_empty_time(cfg, fast) == 0.0
+    zero = {"owed_at_trigger": 0, "c_watch": 0.0, "c_drop": 0.0, "c_watch_min": 0.0, "c_drop_min": 0.0}
+    assert math.isnan(G.reg16_empty_time(cfg, zero))
+    cal = {"owed_at_trigger": 28, "c_watch": 1.758, "c_drop": 1.672, "c_watch_min": 1.728, "c_drop_min": 1.637}
+    assert G.reg16_empty_time(cfg, cal) < G.reg16_empty_time(cfg, cal, pessimistic=True)
+    # the pessimistic rates are the lowest 600 s rates minus c_pessimism, not the means minus it
+    alt = {**cal, "c_watch_min": cal["c_watch"], "c_drop_min": cal["c_drop"]}
+    assert G.reg16_empty_time(cfg, alt, pessimistic=True) < G.reg16_empty_time(cfg, cal, pessimistic=True)
+
+
+def test_pf_by_sent_uses_send_time():
+    q = pd.DataFrame({"t_planned": [0.0, 0.0, 500.0], "t_sent": [900.0, 950.0, 510.0], "status": ["ok"] * 3,
+                      "ttft": [5.0, 0.2, 0.2]})
+    run = {"requests": q, "cfg": {"slo": {"ttft_s": 1.0}}}
+    assert G.pf_by_sent(run, 900, 1000) == 0.5 and G.pf_by_sent(run, 500, 600) == 1.0
+    assert math.isnan(G.pf_by_sent(run, 0, 100))
+
+
+def test_cold_windows_need_both_stuck_levels_and_flag_low_hit_with_a_queue(monkeypatch):
+    lv = iter([{"hit": 0.0, "q": 50.0}, {"hit": 0.0, "q": 50.0}, {"hit": float("nan"), "q": 0.0},
+               {"hit": 0.78, "q": 0.0}])
+    pf = iter([0.0, 0.95, 0.0, 0.0])
+    monkeypatch.setattr(G, "_level", lambda run, a, b: next(lv))
+    monkeypatch.setattr(G, "pf_by_sent", lambda run, a, b: next(pf))
+    run = {"cfg": {"verdict": {"stuck_hit_drop": 0.06, "stuck_pf_drop": 0.10, "recovered_q_excess": 1.0}}}
+    r = G.cold_windows(run, {"hit": 0.84, "pf": 1.0, "q": 0.0}, 1080.0, 2280.0)
+    assert r["windows"][0] == (1080.0, 1380.0)
+    assert r["cold"] == [True, False, None, True]
+    assert r["hit_low_queued"] == [True, True, None, False]
+
+
+def test_cold_persistent_at_a_phase_end_or_a_long_stretch():
+    cw = {"windows": [(0, 300), (300, 600), (600, 900)], "cold": [True, False, False]}
+    assert G.cold_persistent(cw, [900]) is False
+    assert G.cold_persistent({**cw, "cold": [False, False, True]}, [900]) is True
+    assert G.cold_persistent(cw, [300]) is True
+    assert G.cold_persistent({**cw, "cold": [True, None, False]}, [600]) is None        # gap at a phase end after cold
+    assert G.cold_persistent({**cw, "cold": [False, None, False]}, [600]) is False
+    wins = [(x, x + 300) for x in range(0, 3000, 300)]
+    long = {"windows": wins, "cold": [False] + [True] * 5 + [False] * 4}                 # 1500 s cold, then warm
+    assert G.longest_cold_s(long) == 1500 and G.cold_persistent(long, [3000]) is True
+    short = {"windows": wins, "cold": [False] + [True] * 4 + [None, True] + [False] * 3}  # None breaks a stretch
+    assert G.longest_cold_s(short) == 1200 and G.cold_persistent(short, [3000]) is False
+
+
+def test_window_mix_counts_unsent_and_first_turns():
+    q = pd.DataFrame({"t_planned": [0.0, 10.0, 20.0, 30.0], "t_sent": [5.0, float("nan"), 25.0, 35.0],
+                      "turn": [0, 1, 0, 2], "prompt_tokens_planned": [10, 20, 10, 30]})
+    run = {"requests": q, "cfg": {}}
+    assert G.window_mix(run, 0, 40) == {"unsent": 1, "turn0_share": 2 / 3}
+
+
+def _cw(cold, low=None):
+    return {"cold": cold, "hit_low_queued": low if low is not None else [False] * len(cold)}
+
+
+@pytest.mark.parametrize("base_ok,v,cw,pers,back,want", [
+    (False, "recovered", _cw([False]), False, True, "bad_baseline"),
+    (True, "bad_baseline", _cw([False]), False, True, "bad_baseline"),          # review N3: to the owner, not a rerun
+    (None, "recovered", _cw([False]), False, True, "inconclusive"),
+    (True, "unclear", _cw([False, True]), True, None, "control_cold_persistent"),
+    (True, "stuck", _cw([False]), False, True, "control_cold_persistent"),
+    (True, "recovered", _cw([True, False]), False, True, "control_cold_transient"),
+    (True, "recovered", _cw([True, None]), None, True, "inconclusive"),
+    (True, "unclear", _cw([False]), False, True, "inconclusive"),
+    (True, "recovered", _cw([False, None]), False, True, "inconclusive"),
+    (True, "recovered", _cw([False], [None]), False, True, "inconclusive"),
+    (True, "recovered", _cw([False]), False, None, "inconclusive"),
+    (True, "recovered", _cw([False, False], [False, True]), False, True, "control_unclear"),
+    (True, "slow_drain", _cw([False]), False, True, "control_not_recovered"),
+    (True, "recovered", _cw([False]), False, False, "control_not_recovered"),
+    (True, "recovered", _cw([False, False]), False, True, "control_warm"),
+])
+def test_reg16_control_outcome_order(base_ok, v, cw, pers, back, want):
+    assert G.reg16_control_outcome(base_ok, v, cw, pers, back) == want
+
+
+def test_reg16_check_pins_the_registered_config():
+    cfg = G._burst_cfg(G.REG16_CONTROL)
+    run = lambda c: {"dir": Path("x"), "checks": {"valid": True}, "cfg": c}
+    G.reg16_check(run({**cfg, "run_id": "x", "source_config": "y"}))           # run-time extras are fine
+    for bad in ({**cfg, "seed": 12}, {**cfg, "trigger": {"kind": "wipe"}},
+                {**cfg, "workload": {**cfg["workload"], "rate": 2.4}}):
+        with pytest.raises(ValueError):
+            G.reg16_check(run(bad))
+    with pytest.raises(ValueError):
+        G.reg16_check({"dir": Path("x"), "checks": {"valid": False}, "cfg": cfg})
+
+
+def test_reg16_seed_rule_picks_the_shortest_drop_then_the_lowest_seed(monkeypatch):
+    cal = {"run": "x", "owed_at_trigger": 28, "owed_at_watch_end": 2149, "owed_at_drop_end": 1215,
+           "c_watch": 1.758119658119658, "c_drop": 1.6716666666666666, "c_watch_min": 1.7283333333333333,
+           "c_drop_min": 1.6366666666666667, "released_drop": 1.58}
+    monkeypatch.setattr(G, "reg16_calibration", lambda: cal)
+    monkeypatch.setattr(G, "REG16", {**G.REG16, "seeds": (13, 14, 24)})
+    r = G.reg16_seed_rule()
+    assert r["picked"] == {"drop_s": 7200, "seed": 14}
+    row = next(x for x in r["rows"] if x["drop_s"] == 5400 and x["seed"] == 14)
+    assert row["windows_ok"] and not row["drop_ok"]

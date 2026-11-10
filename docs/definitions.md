@@ -15,6 +15,7 @@ One entry per term: one text definition, its source, and the code that computes 
   - `load.percent_fast` (`load.py:76`): a share for each 1 s arrival bin.
   - `load._level` `"pf"` (`load.py:150`): one share pooled over every request arriving in [a, b). This one feeds `verdict` and `ramp_table`. It counts requests, not bins, and it includes burst requests.
   - **Closed-loop turns** (REG-11, decisions.md 2026-11-09 [REG]; `workload.sessions.closed_loop`): latency (`ttft`, `e2e` in `load.load_run`) is measured from the release time `t_released` instead of `t_planned`. Both computations above still bin by `t_planned`, so a turn released late, or never, counts in the window of its planned time (REG-11 review, T3). Open-loop runs are unchanged (`t_released` is None).
+  - `gate.pf_by_sent` (added 2026-11-10 for REG-16, decisions.md [REG] REG-16): one share pooled over the requests **sent** in [a, b), by `t_sent`. Under closed loop a turn is served near its send time, up to 15 min after its planned time, so this computation lines pf up with the scrape-time hit rate. Requests never sent are left out (6.1 % of REG-15's requests; REG-16 review round 2, T3), which leans towards "fast" in a collapse; `gate.window_mix` reports them per window. Used only by REG-16's `cold_windows`, against a baseline pf from `_level`.
 - **Other text:** `analysis/CLAUDE.md:4` ("percent fast per arrival second").
 
 ### goodput ⚠ two meanings

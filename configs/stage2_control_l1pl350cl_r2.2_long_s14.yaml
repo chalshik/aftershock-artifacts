@@ -1,0 +1,14 @@
+# REG-16 (draft, docs/decisions.md 2026-11-10 [REG]): a no-burst control at λ = 2.2 on the session schedule of REG-17's
+# confirmation run (confirm_l1pl350cl_r2.2_long_s14.yaml): REG-14's control at seed 14 (`gate.reg16_seed_rule`), with a
+# 4500 s watch, then λ = 1 for 9000 s, then λ = 2.2 for 1500 s. Judged at 1080 s (control_t_s), the burst run's end.
+# Needs the owner's approval to run.
+extends: stage2_control_l1pl350cl_r2.2_s2.yaml
+name: stage2_control_l1pl350cl_r2.2_long_s14
+seed: 14
+workload:
+  duration_s: 16080
+  steps:
+    - {at_s: 5580, rate: 1}
+    - {at_s: 14580, rate: 2.2}
+verdict:
+  watch_s: 4500

@@ -1052,14 +1052,298 @@ def reg15_inputs() -> dict:
             "drop_by_600": [rate(a, a + 600) for a in (wd, wd + 600, wd + 1200)]},
             "windows_above_lam": [w for w in wins if w[1] > float(b["workload"]["rate"])]}
 
+
+# REG-16 draft (docs/decisions.md 2026-11-10 [REG]): a no-burst control at λ = 2.2 on the exact session schedule of a
+# later confirmation run with a longer drop (REG-17, registered separately). The drop is sized from the total owed
+# backlog (server waiting plus turns planned but not completed), calibrated on REG-15's run (reviewer, 2026-11-10).
+REG16 = {"lam": 2.2, "power_limit_w": 350, "watch_s": 4500, "drop_rate": 1.0, "return_s": 1500, "return_end_s": 600,
+         "timeline_s": 300, "window_tol": 0.05, "drop_candidates": (5400, 7200, 9000),
+         "seeds": tuple(s for s in range(1, 31) if s not in (3, 4, 5, 6, 7)),   # 3-7 kept for the matrix (owner)
+         "calib_run": "20261110-085730_confirm_l1pl350cl_r2.2_s12",
+         "c_pessimism": 0.05,     # c_b 1.78-1.83 across REG-11/12/14 (decisions.md [RESULT]s): the spread of cold rates
+         "calib_window_s": 600,   # review T3: the pessimistic rates start from REG-15's lowest 600 s rate per phase
+         "warm_watch_s": 1200, "grid_s": 10.0,
+         "control_pattern": "*_stage2_control_l1pl350cl_r2.2_long_s{seed}",
+         "baseline": (300.0, 900.0),   # the burst run's baseline window (trigger at 900 s, baseline_s 600), for both runs
+         "drop_s": 9000,     # chosen over the rule's 7200 s for margin (review round 2, N1; owner delegated, 2026-11-10)
+         "persistent_s": 1500}   # review round 2, T1: a cold stretch this long counts as persistent: the study's watch
+                                 # window, max(1200 s, 5 tau) (docs/definitions.md "watch window")
+
+
+def completion_rate(run: dict, a: float, b: float) -> float:
+    """Requests (session and burst) completed per second in [a, b), by t_end."""
+    q = run["requests"]
+    return float(((q.t_end >= a) & (q.t_end < b)).sum() / (b - a))
+
+
+def owed_backlog(run: dict, t: float) -> int:
+    """The total line at time t: requests planned before t and not completed by t (server waiting and running, plus
+    closed-loop turns not yet released)."""
+    q = run["requests"]
+    return int(((q.t_planned < t) & ~(q.t_end < t)).sum())
+
+
+def reg16_calibration() -> dict:
+    """The drain model's inputs from REG-15's run: owed backlog at the burst's start, the watch's end and the drop's end;
+    completion rates over burst-plus-watch and over the drop; the drop's released rate."""
+    from analysis.load import load_run
+    run = load_run(Path("runs") / REG16["calib_run"])
+    ph = reg15_phases(run)
+    t0, we, de = float(run["cfg"]["trigger"]["at_s"]), ph["watch_end"], ph["drop"][1]
+    w = REG16["calib_window_s"]
+    lowest = lambda a, b: min(completion_rate(run, x, x + w) for x in np.arange(a, b - w + 1e-9, w))
+    return {"run": run["dir"].name, "owed_at_trigger": owed_backlog(run, t0), "owed_at_watch_end": owed_backlog(run, we),
+            "owed_at_drop_end": owed_backlog(run, de), "c_watch": completion_rate(run, t0, we),
+            "c_drop": completion_rate(run, we, de), "c_watch_min": lowest(ph["burst_end"], we),
+            "c_drop_min": lowest(we, de), "released_drop": release_rate(run, [(we - ph["burst_end"],
+                                                                                de - ph["burst_end"])])[0]}
+
+
+def reg16_burst_cfg(seed: int, drop_s: float) -> dict:
+    """The REG-17 confirmation config at `seed` and `drop_s` (resolved; REG-15's design with a longer drop)."""
+    b = _burst_cfg("confirm_l1pl350cl_r2.2_s12")
+    we = float(b["trigger"]["at_s"] + b["trigger"]["duration_s"] + REG16["watch_s"])
+    wl = {**b["workload"], "duration_s": we + drop_s + REG16["return_s"],
+          "steps": [{"at_s": we, "rate": REG16["drop_rate"]}, {"at_s": we + drop_s, "rate": REG16["lam"]}]}
+    return {**b, "seed": seed, "workload": wl}
+
+
+def reg16_empty_time(cfg: dict, cal: dict, pessimistic: bool = False) -> float:
+    """Predicted seconds from the drop's start until the owed backlog reaches 0 (NaN if not within the drop): owed at
+    the trigger, plus every request planned since, minus completions at REG-15's cold rates per phase. Pessimistic
+    (review T3): REG-15's lowest 600 s rate in each phase, lowered by `c_pessimism`."""
+    dc = REG16["c_pessimism"] if pessimistic else 0.0
+    cw, cd = (cal["c_watch_min"], cal["c_drop_min"]) if pessimistic else (cal["c_watch"], cal["c_drop"])
+    from harness.workload import build_schedule
+    s, _ = build_schedule(cfg["workload"], cfg["seed"], cfg["trigger"])
+    t0 = float(cfg["trigger"]["at_s"])
+    we = float(cfg["workload"]["steps"][0]["at_s"])
+    de = float(cfg["workload"]["steps"][1]["at_s"])
+    tp = np.sort(s.t_planned.to_numpy())
+    for t in np.arange(we, de + 1e-9, REG16["grid_s"]):
+        planned = np.searchsorted(tp, t) - np.searchsorted(tp, t0)
+        done = (cw - dc) * (we - t0) + (cd - dc) * (t - we)
+        if cal["owed_at_trigger"] + planned - done <= 0:
+            return float(t - we)
+    return math.nan
+
+
+def reg16_judged_windows(cfg: dict) -> dict:
+    """λp (session requests) in the windows the outcomes judge: baseline, the verdict's previous and end windows, the
+    return's end; as `reg15_judged_windows`, for any design."""
+    from harness.workload import build_schedule
+    s, _ = build_schedule(cfg["workload"], cfg["seed"], cfg["trigger"])
+    s = s[~s.burst]
+    rate = lambda lo, hi: float(((s.t_planned >= lo) & (s.t_planned < hi)).sum() / (hi - lo))
+    v, tr, dur = cfg["verdict"], cfg["trigger"], float(cfg["workload"]["duration_s"])
+    t0, we = float(tr["at_s"]), float(tr["at_s"] + tr["duration_s"] + REG16["watch_s"])
+    win = {"baseline": (t0 - v["baseline_s"], t0), "previous": (we - 2 * v["end_s"], we - v["end_s"]),
+           "end": (we - v["end_s"], we), "return_end": (dur - REG16["return_end_s"], dur)}
+    return {k: rate(*w) for k, w in win.items()}
+
+
+def reg16_seed_rule() -> dict:
+    """REG-16's design: the shortest drop in `drop_candidates`, and in it the lowest seed in `seeds`, whose four judged
+    windows have λp within `window_tol` x λ of λ and whose pessimistic predicted empty time (cold rates lowered by
+    `c_pessimism` from REG-15's lowest 600 s rates) leaves `warm_watch_s` of the drop to watch the cache."""
+    cal = reg16_calibration()
+    rows = []
+    for d in REG16["drop_candidates"]:
+        for sd in REG16["seeds"]:
+            cfg = reg16_burst_cfg(sd, d)
+            lam = reg16_judged_windows(cfg)
+            t_mid, t_pess = reg16_empty_time(cfg, cal), reg16_empty_time(cfg, cal, pessimistic=True)
+            ok_w = all(abs(x - REG16["lam"]) <= REG16["window_tol"] * REG16["lam"] for x in lam.values())
+            ok_d = bool(np.isfinite(t_pess) and t_pess + REG16["warm_watch_s"] <= d)
+            rows.append({"drop_s": d, "seed": sd, "lam_p": lam, "empty_s": t_mid, "empty_s_pessimistic": t_pess,
+                         "windows_ok": ok_w, "drop_ok": ok_d})
+        ok = [r for r in rows if r["drop_s"] == d and r["windows_ok"] and r["drop_ok"]]
+        if ok:
+            return {"calibration": cal, "picked": {"drop_s": d, "seed": ok[0]["seed"]}, "rows": rows}
+    return {"calibration": cal, "picked": None, "rows": rows}
+
+
+def reg16_phases(run: dict) -> dict:
+    """REG-16's control phases (absolute s): its own baseline (verdict, `control_t_s`), the burst run's watch, drop and
+    return, and the return's end. Raises unless the config is REG-16's design."""
+    cfg, wl = run["cfg"], run["cfg"]["workload"]
+    t = float(cfg["verdict"]["control_t_s"])
+    we, dur = t + REG16["watch_s"], float(wl["duration_s"])
+    steps = wl.get("steps") or []
+    ok = ((cfg.get("trigger") or {}).get("kind") != "burst" and float(cfg["verdict"]["watch_s"]) == REG16["watch_s"]
+          and len(steps) == 2 and float(steps[0]["at_s"]) == we and float(steps[0]["rate"]) == REG16["drop_rate"]
+          and float(steps[1]["rate"]) == REG16["lam"] and dur == float(steps[1]["at_s"]) + REG16["return_s"])
+    if not ok:
+        raise ValueError(f"{run['dir'].name} does not have REG-16's control design")
+    return {"baseline": (t - float(cfg["verdict"]["baseline_s"]), t), "watch": (t, we),
+            "drop": (we, float(steps[1]["at_s"])), "return": (float(steps[1]["at_s"]), dur),
+            "return_end": (dur - REG16["return_end_s"], dur)}
+
+
+def pf_by_sent(run: dict, a: float, b: float) -> float:
+    """Percent fast of requests sent in [a, b) (review T2: under closed loop a request is served near its send time, not
+    near its planned time, which lags by up to 15 min). NaN with no request."""
+    r, slo = run["requests"], run["cfg"]["slo"]["ttft_s"]
+    q = r[(r.t_sent >= a) & (r.t_sent < b)]
+    return float(((q.status == "ok") & (q.ttft <= slo)).mean()) if len(q) else math.nan
+
+
+def cold_windows(run: dict, base: dict, a: float, b: float) -> dict:
+    """Per `timeline_s` window in [a, b), with no new threshold:
+    - `cold`: the hit share (scrape time) and percent fast (`pf_by_sent`) both at `load.verdict`'s stuck levels against
+      the baseline: hit <= base - stuck_hit_drop and pf <= base - stuck_pf_drop; None if either is NaN;
+    - `hit_low_queued` (review T2): hit <= base - stuck_hit_drop with a waiting mean above base + recovered_q_excess,
+      whatever pf says; None if either is NaN."""
+    c, step = run["cfg"]["verdict"], REG16["timeline_s"]
+    wins = [(x, x + step) for x in np.arange(a, b - step + 1e-9, step)]
+    cold, low = [], []
+    for lo, hi in wins:
+        w, pf = _level(run, lo, hi), pf_by_sent(run, lo, hi)
+        hit_low = None if np.isnan(w["hit"]) else bool(w["hit"] <= base["hit"] - c["stuck_hit_drop"])
+        cold.append(None if hit_low is None or np.isnan(pf) else bool(hit_low and pf <= base["pf"] - c["stuck_pf_drop"]))
+        low.append(None if hit_low is None or np.isnan(w["q"]) else
+                   bool(hit_low and w["q"] > base["q"] + c["recovered_q_excess"]))
+    return {"windows": wins, "cold": cold, "hit_low_queued": low}
+
+
+def longest_cold_s(cw: dict) -> float:
+    """The longest run of consecutive cold windows, in seconds (a None breaks a run)."""
+    best = cur = 0.0
+    for (lo, hi), x in zip(cw["windows"], cw["cold"]):
+        cur = cur + (hi - lo) if x is True else 0.0
+        best = max(best, cur)
+    return best
+
+
+def cold_persistent(cw: dict, phase_ends: list[float]) -> bool | None:
+    """Review T1 and round 2, T1: True if some cold window is the last window of its phase (still cold when the phase
+    ends), or a cold stretch lasts `persistent_s` or more. None if a phase's last window is missing right after a cold
+    window (it cannot be told whether the stretch ended), unless already True. Else False."""
+    pairs = list(zip(cw["windows"], cw["cold"]))
+    if any(x is True and w[1] in phase_ends for w, x in pairs) or longest_cold_s(cw) >= REG16["persistent_s"]:
+        return True
+    if any(x is None and w[1] in phase_ends and i > 0 and pairs[i - 1][1] is True for i, (w, x) in enumerate(pairs)):
+        return None
+    return False
+
+
+def window_mix(run: dict, a: float, b: float) -> dict:
+    """Readout (review round 2, T3 and N2): requests planned in [a, b) never sent (`pf_by_sent` cannot count them), and
+    the first-turn share of the session requests sent in [a, b)."""
+    r = run["requests"]
+    planned = r[(r.t_planned >= a) & (r.t_planned < b)]
+    sent = r[(r.t_sent >= a) & (r.t_sent < b) & ~is_burst_request(run).reindex(r.index, fill_value=False)]
+    return {"unsent": int(planned.t_sent.isna().sum()),
+            "turn0_share": float((sent.turn == 0).mean()) if len(sent) else math.nan}
+
+
+def reg16_control_outcome(base_ok: bool | None, v: str, cw: dict, persistent: bool | None, back: bool | None) -> str:
+    """REG-16's outcome, in this order (the baseline is the burst run's window, `REG16["baseline"]`):
+    - bad_baseline: the baseline's pf is under `min_baseline_pf` (base_ok False), or the watch verdict is `bad_baseline`
+      on its own 480-1080 s baseline (review N3: fixed by the schedule, so a rerun cannot change it); the owner decides;
+    - inconclusive: the baseline pf is NaN (base_ok None);
+    - control_cold_persistent: `cold_persistent` is True (cold at a phase's end, or a cold stretch of `persistent_s`
+      or more), or the watch verdict is `stuck`: the warm state did not last on this schedule without a burst;
+    - inconclusive: `cold_persistent` is None (a phase's last window missing right after a cold window);
+    - control_cold_transient: some window is cold, every cold stretch ended inside its phase and was shorter than
+      `persistent_s` (review T1);
+    - inconclusive: any other missing value: the watch verdict `unclear`, a window, or the return's end;
+    - control_unclear: never cold, but some window has a low hit with a queue (`hit_low_queued`, review T2);
+    - control_not_recovered: the watch verdict is not `recovered`, or the return's end is not `recovered_against` the
+      baseline (a queue, not the cache);
+    - control_warm: never cold, no low-hit queued window, the watch `recovered` and the return's end `recovered`.
+    A cold window decides even if another value is missing."""
+    if base_ok is False or v == "bad_baseline":
+        return "bad_baseline"
+    if base_ok is None:
+        return "inconclusive"
+    if persistent is True or v == "stuck":
+        return "control_cold_persistent"
+    if persistent is None:
+        return "inconclusive"
+    if any(x is True for x in cw["cold"]):
+        return "control_cold_transient"
+    if v == "unclear" or any(x is None for x in cw["cold"] + cw["hit_low_queued"]) or back is None:
+        return "inconclusive"
+    if any(x is True for x in cw["hit_low_queued"]):
+        return "control_unclear"
+    return "control_warm" if v == "recovered" and back else "control_not_recovered"
+
+
+REG16_CONTROL = "stage2_control_l1pl350cl_r2.2_long_s14"
+
+
+def reg16_check(run: dict) -> None:
+    """Refuses a run that is not valid, or whose config differs from the registered file on any key that file sets
+    (review N6: this also pins seed, λ, closed loop, force_close, 350 W and no trigger)."""
+    if not (run["checks"] and run["checks"]["valid"]):
+        raise ValueError(f"{run['dir'].name} is not valid")
+    flat = lambda d, p="": {k2: v2 for k, v in d.items()
+                            for k2, v2 in (flat(v, p + k + ".") if isinstance(v, dict) else {p + k: v}).items()}
+    reg, got = flat(_burst_cfg(REG16_CONTROL)), flat(run["cfg"])
+    diff = sorted(k for k in reg if got.get(k) != reg[k])
+    if diff or (run["cfg"].get("trigger") or {}).get("kind") is not None:
+        raise ValueError(f"{run['dir'].name} is not REG-16's registered control (differs on {diff[:5]})")
+
+
+def reg16_table(seed: int = 14) -> dict:
+    """REG-16's result: the latest valid control of the pattern (`reg10_pick`), its outcome, and readouts (never
+    decisive): where the first cold window falls, the highest 120 s λp in the 600 s before it, both baselines,
+    the timeline."""
+    from analysis.load import find_runs
+    run = reg10_pick(find_runs(REG16["control_pattern"].format(seed=seed)))
+    reg16_check(run)
+    ph, v = reg16_phases(run), verdict(run)
+    base = _level(run, *REG16["baseline"])
+    base_ok = None if np.isnan(base["pf"]) else bool(base["pf"] >= run["cfg"]["verdict"]["min_baseline_pf"])
+    cw = cold_windows(run, base, ph["watch"][0], ph["return"][1])
+    persistent = cold_persistent(cw, [ph["watch"][1], ph["drop"][1], ph["return"][1]])
+    back = recovered_against(run, base, *ph["return_end"])
+    first = next((w for w, x in zip(cw["windows"], cw["cold"]) if x is True), None)
+    peak = None
+    if first is not None:
+        lo = max(0.0, first[0] - 600.0)
+        peak = max(planned_session_rate(run, t, t + 120) for t in np.arange(lo, first[0] - 120 + 1e-9, 60.0))
+    return {"run": run["dir"].name, "v_watch": v["verdict"], "verdict_baseline": v["baseline"], "baseline": base,
+            "watch_end_level": v["end"], "return_end_level": _level(run, *ph["return_end"]), "return_recovered": back,
+            "phases": ph, "cold_windows": cw, "first_cold": first, "longest_cold_s": longest_cold_s(cw),
+            "window_mix": [window_mix(run, lo, hi) for lo, hi in cw["windows"]],
+            "first_cold_phase": None if first is None else next(k for k in ("watch", "drop", "return")
+                                                                 if ph[k][0] <= first[0] < ph[k][1]),
+            "peak_120s_before_first_cold": peak,
+            "outcome": reg16_control_outcome(base_ok, v["verdict"], cw, persistent, back),
+            "timeline": reg15_timeline(run)}
+
+
+def reg16_inputs() -> dict:
+    """REG-16's design inputs from the config alone (no run): session requests, planned λp per phase, the 120 s
+    windows above λ per phase, and the drain prediction for REG-17's burst run."""
+    from harness.workload import build_schedule
+    c = _burst_cfg("stage2_control_l1pl350cl_r2.2_long_s14")
+    b = _burst_cfg("confirm_l1pl350cl_r2.2_long_s14")
+    s, _ = build_schedule(c["workload"], c["seed"], c.get("trigger"))
+    rate = lambda lo, hi: float(((s.t_planned >= lo) & (s.t_planned < hi)).sum() / (hi - lo))
+    ph = reg16_phases({"dir": Path("x"), "cfg": c})
+    peaks = {k: max(rate(t, t + 120) for t in np.arange(a, bb - 120 + 1e-9, 60.0))
+             for k, (a, bb) in [("baseline", ph["baseline"]), ("watch", ph["watch"]), ("drop", ph["drop"]),
+                                ("return", ph["return"])]}
+    cal = reg16_calibration()
+    return {"n_session": len(s), "lam_p": {"verdict_baseline": rate(*ph["baseline"]), "baseline": rate(*REG16["baseline"]),
+                                           **{k: rate(*ph[k]) for k in ("watch", "drop", "return", "return_end")}},
+            "peak_120s": peaks, "n_120s_above": {k: int(sum(rate(t, t + 120) > 3.0 for t in np.arange(a, bb - 120 + 1e-9, 60.0)))
+                                                  for k, (a, bb) in [("watch", ph["watch"]), ("return", ph["return"])]},
+            "judged_lam_p": reg16_judged_windows(b), "empty_s": reg16_empty_time(b, cal),
+            "empty_s_pessimistic": reg16_empty_time(b, cal, pessimistic=True), "calibration": cal}
+
 if __name__ == "__main__":
     import sys
     if sys.argv[1] in ("reg10", "reg11", "reg11_reference", "reg11_turn0_reference", "reg12", "reg13", "reg13_inputs",
                        "reg14", "reg14_inputs", "reg14_sensitivity",
-                       "reg15", "reg15_inputs"):
+                       "reg15", "reg15_inputs", "reg16", "reg16_inputs", "reg16_seed_rule"):
         print({"reg10": reg10_gate, "reg11": reg11_gate, "reg11_reference": reg11_reference,
                "reg11_turn0_reference": reg11_turn0_reference, "reg12": reg12_table, "reg13": reg13_table,
                "reg13_inputs": reg13_inputs, "reg14": reg14_gate, "reg14_inputs": reg14_inputs,
-               "reg14_sensitivity": reg14_sensitivity, "reg15": reg15_table, "reg15_inputs": reg15_inputs}[sys.argv[1]]())
+               "reg14_sensitivity": reg14_sensitivity, "reg15": reg15_table, "reg15_inputs": reg15_inputs,
+               "reg16": reg16_table, "reg16_inputs": reg16_inputs, "reg16_seed_rule": reg16_seed_rule}[sys.argv[1]]())
     else:
         print({"reg7": reg7_zone, "reg8": reg8_zone}[sys.argv[1]]())   # no default: say which registration is computed

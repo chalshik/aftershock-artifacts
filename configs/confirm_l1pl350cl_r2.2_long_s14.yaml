@@ -1,0 +1,12 @@
+# REG-17 (to be registered after REG-16's result; docs/decisions.md 2026-11-10 [REG] REG-16): REG-15's confirmation run
+# at seed 14 with a 9000 s drop instead of 1800 s (seed 14 by `gate.reg16_seed_rule`; drop length chosen for margin, decisions.md 2026-11-10 [REG] REG-16). Same seed, duration and steps as REG-16's
+# control, so the same session schedule; the burst draws from its own generator.
+# Not registered and not approved: no run before the owner approves REG-17.
+extends: confirm_l1pl350cl_r2.2_s12.yaml
+name: confirm_l1pl350cl_r2.2_long_s14
+seed: 14
+workload:
+  duration_s: 16080
+  steps:
+    - {at_s: 5580, rate: 1}
+    - {at_s: 14580, rate: 2.2}
