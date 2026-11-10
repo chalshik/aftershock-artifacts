@@ -3072,3 +3072,8 @@ Summary:
   - N3: the note on a first-window break is in the draft.
   - N4: the baseline's pf and queue are reported next to the outcome.
   - N5: `judged_lam_p` is now computed from the run's own requests.
+
+## 2026-11-10 · [DECISION] Owner approves REG-15 and its run
+- **Owner's answer:** "approved", to the question whether REG-15 (decisions.md 2026-11-10 [REG]) is approved: C1's confirmation run at λ = 2.2 with closed-loop turns, seed 12, a 4500 s watch, then λ = 1 for 1800 s, then 2.2 for 1500 s, ≈ 2.6 GPU h.
+- **Run:** `configs/confirm_l1pl350cl_r2.2_s12.yaml` after REG-14's pre-launch checks, reads in `docs/probe/20261110_reg15/`, VM console log named per attempt. Research rule 2 relaxed for this run as for REG-11 to REG-14.
+- **Standing instructions** (decisions.md 2026-11-09 [DECISION]) and REG-15's stopping rule apply; a rerun decision reads only `checks.json`. No look at the verdict before the run is valid and copied; then `gate.reg15_table` once, the `[RESULT]`, and the next draft by the registered outcome, which does not run before the owner approves it.
