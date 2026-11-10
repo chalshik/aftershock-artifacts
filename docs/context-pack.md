@@ -610,10 +610,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-10 · [OPS] REG-16 run: valid on the first attempt, no rerun; pre-launch read in `docs/probe/20261110_reg16/`
-- **Run** `20261110-122001_stage2_control_l1pl350cl_r2.2_long_s14`: launched 12:19:59 UTC at 350.00 W, 45 °C, 0 % busy, no compute process, VM tree `c198a30` clean, 9.4 GB free (PROBE(docs/probe/20261110_reg16/prelaunch_reg16_attempt1.txt)). Valid, `failed` empty, all 10 checks passed, including `power_limit` (RUN(20261110-122001_stage2_control_l1pl350cl_r2.2_long_s14, checks.json)). sw_thermal 0.004, max 73 °C, busy SM-clock CV 0.017, limit 350.0 W over 16109 samples.
-- Console log on the VM: `~/stage2_control_l1pl350cl_r2.2_long_s14_20261110T121959Z.log`. Copied to the Mac, sha256 identical (10 files); `manifests/runs.sha256` +10 lines. VM copy kept.
-
 ### 2026-11-10 · [RESULT] REG-16: `control_cold_persistent`. With no burst, the control went cold at 4080–4380 s, after three windows of λp 2.46–2.71, and stayed cold to the end of the watch (`stuck`); it warmed again in the drop and stayed warm on the return to 2.2
 - **Computed once:** `uv run python -m analysis.gate reg16` (`gate.reg16_table`) on `20261110-122001_stage2_control_l1pl350cl_r2.2_long_s14`; values RUN(20261110-122001_stage2_control_l1pl350cl_r2.2_long_s14, gate.reg16_table) unless tagged otherwise.
 - **Baseline** (300–900 s, `REG16["baseline"]`): pf 1.000, hit 0.838, queue 0.003, KV 0.184. The watch verdict's own baseline (480–1080 s): pf 1.000, hit 0.828, queue 0.008. Neither is `bad_baseline`.
@@ -773,3 +769,7 @@ Every model used to choose a run or read a result, with its equations, the evide
   - T4: `drains` reworded to seed 2's schedule only; `gate.drain_time` added as the readout that tells the lull from the load; another seed at 2.0 added to the owner's options.
   - N1–N3: stated under rule G. N3's per-seed figures checked with `gate.schedule_peak_series` (3.05 in the 8000 s schedule before 2580 s, 2.608 in the run's own). N4: the code comment and the text both give 1.72–1.90 with sources. N5: readout predictions added.
 - **Not covered:** the run waits for the owner's approval of this registration.
+
+### 2026-11-10 · [DECISION] Owner approves REG-17 and its run
+- **Owner (2026-11-10):** "yes", in reply to "Do you approve the REG-17 run?", asked after the reviewed registration above (with its two changes from the proposal: the C1 verdict pair plus a measured cold side instead of the span test, and the review's fixes) was committed in `39f01a9`.
+- **Approved:** REG-17 as registered, and its run under its stopping rule: the control `configs/stage2_control_l1pl350cl_r2.0_s2.yaml`, then the burst run `configs/burst_l1pl350cl_r2.0_s2.yaml`, pre-launch reads in `docs/probe/20261110_reg17/`.
