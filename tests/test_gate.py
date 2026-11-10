@@ -921,3 +921,114 @@ def test_reg16_seed_rule_picks_the_shortest_drop_then_the_lowest_seed(monkeypatc
     assert r["picked"] == {"drop_s": 7200, "seed": 14}
     row = next(x for x in r["rows"] if x["drop_s"] == 5400 and x["seed"] == 14)
     assert row["windows_ok"] and not row["drop_ok"]
+
+
+# ---------------------------------------------------------------- surge statistic
+
+def _surge_run(t_planned, kv, burst_at=None, duration=3000.0, burst_rows=()):
+    """A synthetic closed-loop run: session requests at `t_planned` (turn 1), KV usage per 1 s scrape from `kv(t)`,
+    optional burst requests (turn 0, prompt 2944) at `burst_rows`."""
+    t = [float(x) for x in range(int(duration))]
+    m = pd.DataFrame({"t": t, "vllm:kv_cache_usage_perc": [kv(x) for x in t]})
+    rows = [{"t_planned": float(x), "turn": 1, "prompt_tokens_planned": 896} for x in t_planned]
+    rows += [{"t_planned": float(x), "turn": 0, "prompt_tokens_planned": 2944} for x in burst_rows]
+    cfg = {"workload": {"rate": 2.0, "duration_s": duration}}
+    if burst_at is not None:
+        cfg["trigger"] = {"kind": "burst", "at_s": burst_at, "duration_s": 180, "prompt_tokens": 2944}
+    return {"dir": Path("x_run"), "cfg": cfg, "metrics": m, "requests": pd.DataFrame(rows)}
+
+
+def test_rolling_rate_counts_the_trailing_window():
+    import numpy as np
+    x = G.rolling_rate([10.0, 50.0, 119.0, 130.0], np.array([120.0, 200.0]), 120.0)
+    assert x[0] == pytest.approx(3 / 120) and x[1] == pytest.approx(2 / 120)   # [0,120) holds 3; [80,200) holds 2
+
+
+def test_kv_onset_needs_a_sustained_mean():
+    spike = _surge_run([], lambda t: 1.0 if 1000 <= t < 1010 else 0.2)       # a 10 s spike: mean stays below 0.9
+    assert math.isnan(G.kv_onset(spike))
+    full = _surge_run([], lambda t: 0.95 if t >= 1000 else 0.2)
+    assert 1000 < G.kv_onset(full) < 1060                                      # trailing 60 s mean crosses 0.9 inside
+
+
+def test_surge_run_splits_the_tipping_peak_from_warm_time():
+    import numpy as np
+    base = list(np.arange(0, 3000, 0.5))                                       # 2 req/s throughout
+    surge = list(np.arange(1860, 1980, 0.8))                                    # +1.25 req/s for 120 s
+    run = _surge_run(base + surge, lambda t: 0.95 if t >= 2000 else 0.2)
+    r = G.surge_run(run)
+    assert r["tipped"] and r["onset"] == pytest.approx(2053, abs=2)
+    assert r["peak_tip"] == pytest.approx(3.25, abs=0.02)                      # inside the last 180 s before onset - 60
+    assert r["peak_before"] == pytest.approx(2.0, abs=0.02)
+
+
+def test_surge_run_burst_run_stops_at_the_burst_and_ignores_burst_requests():
+    import numpy as np
+    run = _surge_run(list(np.arange(0, 3000, 0.5)), lambda t: 0.95 if t >= 960 else 0.2, burst_at=900.0,
+                     burst_rows=list(np.arange(880, 899, 0.1)))                 # burst-sized rows before 900 left out
+    r = G.surge_run(run)
+    assert not r["tipped"] and r["warm_s"] == pytest.approx(900 - G.SURGE["start_s"])
+    assert math.isnan(r["peak_tip"]) and r["peak_before"] == pytest.approx(2.0, abs=0.02)
+
+
+def test_pair_schedule_reproduces_reg14s_burst_run_at_its_own_rate():
+    """At λ 2.2 and seed 2 the pair schedule is REG-14's burst config itself; its baseline λp matches the REG-14 rule's
+    readout (`reg14_schedule_inputs`), so a pair at another λ changes only the rate."""
+    p = G.pair_schedule(2.2, 2)
+    assert p["lam_p_baseline"] == pytest.approx(G.reg14_schedule_inputs()["lam_p_baseline"])
+    assert len(p["lam_p_watch_thirds"]) == 3 and p["peak_run"] >= p["peak_pre_burst"]
+
+
+# ---------------------------------------------------------------- REG-17
+
+def test_reg17_configs_change_only_the_rate():
+    flat = lambda d, p="": {k2: v2 for k, v in d.items()
+                            for k2, v2 in (flat(v, p + k + ".") if isinstance(v, dict) else {p + k: v}).items()}
+    for new, old in (("stage2_control_l1pl350cl_r2.0_s2", "stage2_control_l1pl350cl_r2.2_s2"),
+                     ("burst_l1pl350cl_r2.0_s2", "burst_l1pl350cl_r2.2_s2")):
+        a, b = flat(G._burst_cfg(new)), flat(G._burst_cfg(old))
+        assert sorted(k for k in a.keys() | b.keys() if a.get(k) != b.get(k)) == ["name", "workload.rate"]
+        assert a["workload.rate"] == 2.0
+
+
+def test_reg17_outcome_order():
+    calm = [{"share_waiting": 0.0}] * 3
+    tip = {"tipped": True, "peak_tip": 3.3}
+    flat = {"tipped": False, "peak_tip": math.nan}
+    assert G.reg17_outcome("bad_baseline", "stuck", {}, calm) == "bad_baseline"
+    assert G.reg17_outcome("recovered", "bad_baseline", {}, calm) == "bad_baseline"
+    assert G.reg17_outcome("stuck", "stuck", tip, calm) == "control_cold_surge"
+    assert G.reg17_outcome("stuck", "stuck", {"tipped": True, "peak_tip": 3.1}, calm) == "control_cold_no_surge"
+    assert G.reg17_outcome("unclear", "stuck", {"tipped": True, "peak_tip": 3.1}, calm) == "control_cold_no_surge"
+    # review T1: an unclear control that never tipped is an instrument question, not a refutation
+    assert G.reg17_outcome("unclear", "stuck", flat, calm) == "control_unclear"
+    assert G.reg17_outcome("slow_drain", "stuck", flat, calm) == "control_warm_queue"
+    assert G.reg17_outcome("recovered", "stuck", {}, calm) == "pass_clear"
+    assert G.reg17_outcome("recovered", "stuck", {}, calm, cold_side=False) == "stuck_draining"   # review T2
+    assert G.reg17_outcome("recovered", "stuck", {}, calm, cold_side=None) == "inconclusive"
+    assert G.reg17_outcome("recovered", "stuck", {}, calm[:2] + [{"share_waiting": 0.6}]) == "pass_warm_edge"
+    assert G.reg17_outcome("recovered", "stuck", {}, calm[:2] + [{"share_waiting": math.nan}]) == "pass_warm_edge"
+    assert G.reg17_outcome("recovered", "slow_drain", {}, calm) == "drains"
+    assert G.reg17_outcome("recovered", "recovered", {}, calm) == "drains"
+    assert G.reg17_outcome("recovered", "unclear", {}, calm) == "unclear"
+
+
+def test_reg17_cold_side_and_drain_time_on_reg14s_burst_run():
+    """On REG-14's stuck burst run at 2.2 (judged at λ 2.0 here only to exercise the code): its spans completed
+    1.73-1.81, below 2.0 and below each span's λp, and its queue grew to the end, so the cold side holds; its line
+    never emptied."""
+    from analysis.load import RUNS, load_run
+    d = RUNS / "20261110-063647_burst_l1pl350cl_r2.2_s2"
+    if not d.exists():
+        pytest.skip("run folder not on this machine")
+    r = load_run(d)
+    cs = G.reg17_cold_side(r)
+    assert cs["holds"] is True and all(1.6 < x["c"] < 1.9 for x in cs["spans"]) and cs["end_q_slope"] > 0
+    assert math.isnan(G.drain_time(r))
+
+
+def test_reg17_span_test_cannot_confirm_the_known_cold_rates():
+    """Why REG-17 is decided by the verdict pair: every span's highest confirmable cold rate is below REG-14's
+    cold_c_max (1.84), so REG-14's seed rule finds no seed at 2.0."""
+    assert all(r["max_c"] < G.REG14["cold_c_max"] for r in G.span_sensitivity(2.0, 2)["spans"])
+    assert G.reg14_seed_rule(2.0) is None

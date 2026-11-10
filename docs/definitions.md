@@ -199,6 +199,15 @@ The original code, recovered verbatim from session transcripts, is in `analysis/
 - **Text:** of the session cache hits in a span (by first token), the share served while the previous turn was still running: Σ cached tokens of later turns whose first token came before the previous turn's end ÷ Σ cached tokens of all later turns.
 - **Code:** `gate.overlap_share`. Related, not the same: `derived.overlap_fraction` (share of turns *sent* before the previous first token) and `derived.cached_share_split` (mean shares over the whole window).
 
+### 120 s surge peak
+- **Text:** the highest number of planned session requests (burst requests left out, by `t_planned`) in a trailing 120 s window, per second, on a 5 s grid from 240 s. For a no-burst run that tipped: the peak in the last 180 s of its warm time (`peak_tip`), and before that (`peak_before`). A readout found in the data (decisions.md 2026-11-10 [CORR]), not a threshold, except where a registration fixes one (REG-17's `surge_tip` 3.2).
+- **Code:** `gate.rolling_rate`, `gate.surge_run`, `gate.surge_table`; schedule only: `gate.schedule_peak_series`, `gate.surge_hazard`, `gate.pair_schedule`.
+- **Other text:** `gate.surge_max` (REG-13) takes the highest planned rate over consecutive, non-overlapping 120 s windows, and REG-16's `peak_120s_before_first_cold` over 120 s windows stepped by 60 s; both can read lower than this on the same run (REG-16: 2.78 against 3.45).
+
+### KV onset
+- **Text:** the first scrape time whose trailing 60 s mean KV usage is ≥ 0.9 (at least 30 scrapes in the window); NaN if never. Marks a tip into the cold state; warm time ends 60 s before it.
+- **Code:** `gate.kv_onset`.
+
 ## Used configs that cannot be fixed (rule 5)
 
 Used configs are never edited. Their known defects are recorded here instead.

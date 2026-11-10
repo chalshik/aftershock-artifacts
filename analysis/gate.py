@@ -1335,15 +1335,260 @@ def reg16_inputs() -> dict:
             "judged_lam_p": reg16_judged_windows(b), "empty_s": reg16_empty_time(b, cal),
             "empty_s_pessimistic": reg16_empty_time(b, cal, pessimistic=True), "calibration": cal}
 
+
+# ---------------------------------------------------------------- surge statistic (reviewer session, 2026-11-10)
+# The reviewer session's exploratory reading (owner-approved for commit, 2026-11-10): no-burst collapses follow a short
+# surge of planned arrivals, not a sustained mean above a capacity. These functions reproduce it from committed code.
+# The settings below are the reviewer's, fixed as found; they were chosen with the data in view (rule A5: a readout,
+# not a registered threshold, until a registration fixes it).
+
+SURGE = {"pattern": "*_l1pl350cl_*",   # every closed-loop run at L1, 350 W (REG-11 to REG-16)
+         "window_s": 120.0, "grid_s": 5.0, "start_s": 240.0,
+         "kv_onset": 0.9, "kv_roll_s": 60, "kv_min_periods": 30,
+         "lead_s": 60.0,      # a tipped run's warm time ends this long before its KV onset
+         "tip_s": 180.0,      # the surge that tipped it: the peak in the last tip_s of its warm time
+         "hazard_cfg": "stage2_control_l1pl350cl_r2.2_s2", "hazard_seeds": tuple(range(1, 41)),
+         "hazard_lams": (1.8, 1.9, 2.0, 2.1, 2.2, 2.4), "hazard_s": 8000.0,
+         "hazard_horizons": (2600.0, 5600.0, 8000.0), "hazard_thresholds": (3.0, 3.2, 3.4)}
+
+
+def rolling_rate(t: np.ndarray, grid: np.ndarray, window_s: float) -> np.ndarray:
+    """Events per second in [g - window_s, g) for each grid point g; `t` need not be sorted."""
+    t = np.sort(np.asarray(t, float))
+    return (np.searchsorted(t, grid) - np.searchsorted(t, grid - window_s)) / window_s
+
+
+def kv_onset(run: dict) -> float:
+    """The first scrape time whose trailing kv_roll_s mean KV usage is >= kv_onset (at least kv_min_periods scrapes
+    in the window); NaN if never."""
+    m = run["metrics"]
+    if "vllm:kv_cache_usage_perc" not in m or not len(m):
+        return math.nan
+    k = pd.Series(m["vllm:kv_cache_usage_perc"].to_numpy(float), index=pd.to_timedelta(m.t.to_numpy(float), unit="s"))
+    k = k.rolling(f"{SURGE['kv_roll_s']}s", min_periods=SURGE["kv_min_periods"]).mean()
+    hit = k[k >= SURGE["kv_onset"]]
+    return float(hit.index[0].total_seconds()) if len(hit) else math.nan
+
+
+def surge_run(run: dict) -> dict:
+    """One run's warm time and its 120 s planned-rate peaks (session requests only, by t_planned). Warm time runs from
+    start_s to: the trigger's start (a burst run); KV onset - lead_s (a run with no burst that reached the onset:
+    `tipped`); the end of arrivals otherwise. For a tipped run, `peak_tip` is the highest 120 s rate in the last tip_s
+    of its warm time and `peak_before` the highest before that; otherwise `peak_before` covers all warm time."""
+    cfg, q = run["cfg"], run["requests"]
+    burst = (cfg.get("trigger") or {}).get("kind") == "burst"
+    s = q[~is_burst_request(run) & q.turn.notna()]
+    on = kv_onset(run)
+    tipped = (not burst) and np.isfinite(on)
+    end = float(cfg["trigger"]["at_s"]) if burst else (on - SURGE["lead_s"] if tipped else float(cfg["workload"]["duration_s"]))
+    grid = np.arange(SURGE["start_s"], end, SURGE["grid_s"])
+    x = rolling_rate(s.t_planned.to_numpy(float), grid, SURGE["window_s"])
+    out = {"run": run["dir"].name, "lam": float(cfg["workload"]["rate"]), "burst": burst, "onset": on,
+           "tipped": tipped, "warm_s": max(0.0, end - SURGE["start_s"]), "peak_tip": math.nan, "peak_before": math.nan}
+    pre = grid >= end - SURGE["tip_s"] if tipped else np.zeros(len(grid), bool)
+    if pre.any():
+        out["peak_tip"] = float(x[pre].max())
+    if (~pre).any():
+        out["peak_before"] = float(x[~pre].max())
+        out["t_peak_before"] = float(grid[~pre][x[~pre].argmax()])
+    return out
+
+
+def surge_table() -> dict:
+    """`surge_run` on every valid closed-loop L1 350 W run, and the summary: tipped runs and the range of their tipping
+    peaks; the highest peak in warm time that did not tip (and its run); total warm seconds."""
+    from analysis.load import find_runs
+    rows = [surge_run(r) for r in find_runs(SURGE["pattern"]) if closed_loop(r)]
+    tip = [r for r in rows if r["tipped"]]
+    calm = [r for r in rows if np.isfinite(r["peak_before"])]
+    top = max(calm, key=lambda r: r["peak_before"]) if calm else None
+    return {"runs": rows, "n_runs": len(rows), "n_tipped": len(tip),
+            "tipped": [r["run"] for r in tip],
+            "peak_tip_range": (min(r["peak_tip"] for r in tip), max(r["peak_tip"] for r in tip)) if tip else None,
+            "max_peak_not_tipping": None if top is None else (top["peak_before"], top["run"]),
+            "warm_s_total": float(sum(r["warm_s"] for r in rows))}
+
+
+def schedule_peak_series(cfg: dict, lam: float, seed: int, duration_s: float) -> tuple[np.ndarray, np.ndarray]:
+    """Schedule only (no run): the 120 s planned session rate on the grid from start_s, for `cfg`'s workload at
+    rate `lam`, `seed` and `duration_s`, with no steps and no trigger."""
+    from harness.workload import build_schedule
+    s, _ = build_schedule({**cfg["workload"], "rate": lam, "duration_s": duration_s, "steps": None}, seed, None)
+    grid = np.arange(SURGE["start_s"], duration_s, SURGE["grid_s"])
+    return grid, rolling_rate(s.t_planned.to_numpy(float), grid, SURGE["window_s"])
+
+
+def surge_hazard() -> dict:
+    """Schedule only: per λ and threshold, how many of the hazard seeds reach a 120 s planned rate >= the threshold
+    before each horizon, on REG-14's control workload; and the median of each seed's highest 120 s rate before the
+    first horizon."""
+    cfg = _burst_cfg(SURGE["hazard_cfg"])
+    out = {}
+    for lam in SURGE["hazard_lams"]:
+        first = {thr: [] for thr in SURGE["hazard_thresholds"]}
+        mx = []
+        for sd in SURGE["hazard_seeds"]:
+            g, x = schedule_peak_series(cfg, lam, sd, SURGE["hazard_s"])
+            for thr in first:
+                i = np.flatnonzero(x >= thr)
+                first[thr].append(float(g[i[0]]) if len(i) else math.inf)
+            mx.append(float(x[g < SURGE["hazard_horizons"][0]].max()))
+        out[lam] = {"n_seeds": len(SURGE["hazard_seeds"]),
+                    "counts": {thr: {h: int(sum(t < h for t in ts)) for h in SURGE["hazard_horizons"]}
+                               for thr, ts in first.items()},
+                    "median_peak_first_horizon": float(np.median(mx))}
+    return out
+
+
+def pair_schedule(lam: float, seed: int, name: str = "burst_l1pl350cl_r2.2_s2") -> dict:
+    """Schedule only: REG-14's burst config at `lam` and `seed`. The highest 120 s planned session rate up to the burst's
+    start and over the whole run (and when); λp in the baseline (300-900 s), over the watch (the burst's end + watch_s)
+    and in its three thirds."""
+    from harness.workload import build_schedule
+    b = _burst_cfg(name)
+    s, _ = build_schedule({**b["workload"], "rate": lam}, seed, b["trigger"])
+    tp = s[~s.burst].t_planned.to_numpy(float)
+    dur, at = float(b["workload"]["duration_s"]), float(b["trigger"]["at_s"])
+    g = np.arange(SURGE["start_s"], dur, SURGE["grid_s"])
+    x = rolling_rate(tp, g, SURGE["window_s"])
+    rate = lambda a, z: float(((tp >= a) & (tp < z)).sum() / (z - a))
+    te, w = at + float(b["trigger"]["duration_s"]), float(b["verdict"]["watch_s"])
+    return {"lam": lam, "seed": seed, "peak_pre_burst": float(x[g <= at].max()), "peak_run": float(x.max()),
+            "t_peak_run": float(g[x.argmax()]), "lam_p_baseline": rate(at - 600.0, at), "lam_p_watch": rate(te, te + w),
+            "lam_p_watch_thirds": [rate(te + i * w / 3, te + (i + 1) * w / 3) for i in range(3)]}
+
+
+def surge_pair_inputs(lams=(2.0, 2.1, 2.2), seeds=tuple(range(2, 8))) -> dict:
+    """`pair_schedule` for seeds 2-7 at each λ (design inputs for a pair on REG-14's design; no run)."""
+    return {lam: [pair_schedule(lam, sd) for sd in seeds] for lam in lams}
+
+
+
+# REG-17 draft (docs/decisions.md 2026-11-10 [REG]): REG-14's seed-2 pair at λ = 2.0, the only change. Decided by C1's
+# per-seed test (REG-12's: burst `stuck`, control `recovered`) plus a measured cold side (review T2), not by the span
+# test: at λ = 2.0 a span confirms a cold rate only up to 1.81 req/s (`span_sensitivity`), inside the cold rates seen
+# (1.72-1.90: REG-14 c 1.73-1.81, REG-15 span c 1.72-1.90), so the span label is a readout. The control's tip, if any,
+# is read by `surge_run`.
+REG17 = {**REG14, "lam": 2.0, "seed": 2,
+         "control": "*_stage2_control_l1pl350cl_r2.0_s2", "burst": "*_burst_l1pl350cl_r2.0_s2",
+         "surge_tip": 3.2,     # splits a control's tip by its 120 s peak; a covariate found in the data, not a tip
+                               # threshold (review N2): tips 3.24-3.49 overlap untipped peaks up to 3.32 (`surge_table`)
+         "max_control_waiting": 0.5}   # REG-14's: share of a span's scrapes with waiting > 0
+
+
+def reg17_cold_side(burst: dict) -> dict:
+    """Review T2, registered before any run: the cold state completes below the load it faces. In every REG-8 span
+    after the burst's end, the point completion rate (`completion_rate`, all requests by t_end) is below min(λ, the
+    span's λp); and the verdict's end-window queue slope is > 0. `holds` is None if any value is NaN."""
+    end, lam = burst_end(burst), REG17["lam"]
+    rows = []
+    for a, b in REG8["spans"]:
+        c, lp = completion_rate(burst, end + a, end + b), planned_session_rate(burst, end + a, end + b)
+        rows.append({"span": (a, b), "c": c, "lam_p": lp,
+                     "below": None if not (np.isfinite(c) and np.isfinite(lp)) else bool(c < min(lam, lp))})
+    slope = verdict(burst)["end"]["q_slope"]
+    vals = [r["below"] for r in rows] + [None if not np.isfinite(slope) else bool(slope > 0)]
+    return {"spans": rows, "end_q_slope": slope, "holds": None if None in vals else all(vals)}
+
+
+def reg17_outcome(cv: str, bv: str, control_surge: dict, control_waiting: list[dict],
+                  cold_side: bool | None = True) -> str:
+    """In this order (review T1):
+    `bad_baseline` (either run);
+    control not `recovered`: `control_cold_surge` if it tipped (KV onset) after a 120 s peak >= surge_tip,
+    `control_cold_no_surge` if it tipped otherwise (the surge reading is wrong), `control_unclear` if it did not tip and
+    its verdict is `unclear` (an instrument gap is not a refutation), `control_warm_queue` if it did not tip (queued
+    without going cold);
+    burst `stuck`: `stuck_draining` unless the cold side holds (`reg17_cold_side`; None gives `inconclusive`), then
+    `pass_clear` if the control had waiting > 0 in at most max_control_waiting of the scrapes of every span, else
+    `pass_warm_edge` (also when a share is NaN);
+    `drains` (burst `recovered` or `slow_drain`); `unclear` (burst `unclear`)."""
+    if "bad_baseline" in (cv, bv):
+        return "bad_baseline"
+    if cv != "recovered":
+        if control_surge.get("tipped"):
+            pk = control_surge.get("peak_tip", math.nan)
+            return "control_cold_surge" if np.isfinite(pk) and pk >= REG17["surge_tip"] else "control_cold_no_surge"
+        return "control_unclear" if cv == "unclear" else "control_warm_queue"
+    if bv == "stuck":
+        if cold_side is None:
+            return "inconclusive"
+        if not cold_side:
+            return "stuck_draining"
+        sh = [w["share_waiting"] for w in control_waiting]
+        clear = bool(sh) and all(np.isfinite(x) and x <= REG17["max_control_waiting"] for x in sh)
+        return "pass_clear" if clear else "pass_warm_edge"
+    if bv in ("recovered", "slow_drain"):
+        return "drains"
+    return "unclear"
+
+
+def drain_time(burst: dict, grid_s: float = 10.0) -> float:
+    """REG-17 readout (review T4): seconds after the burst's end until the first scrape with 0 waiting that is followed
+    by 0 waiting for 30 s; NaN if never before the end of arrivals. Read against the watch's thirds."""
+    m, end = burst["metrics"], burst_end(burst)
+    w = m[(m.t >= end) & (m.t < float(burst["cfg"]["workload"]["duration_s"]))]
+    t, q = w.t.to_numpy(float), w["vllm:num_requests_waiting"].to_numpy(float)
+    for i in np.flatnonzero(q == 0):
+        if (q[(t >= t[i]) & (t < t[i] + 30.0)] == 0).all():
+            return float(t[i] - end)
+    return math.nan
+
+
+def reg17_gate() -> dict:
+    """REG-17's result: `reg10_gate` on the λ = 2.0 seed-2 pair (verdicts and the span label), REG-14's readouts, the
+    surge readouts of both runs, and `reg17_outcome`."""
+    from analysis.load import RUNS, load_run
+    res = reg10_gate(REG17)
+    control, burst = (load_run(RUNS / n) for n in res["runs"])
+    for r in (control, burst):
+        if r["cfg"]["seed"] != REG17["seed"]:
+            raise ValueError(f"{r['dir'].name} is not seed {REG17['seed']}")
+    end = burst_end(burst)
+    res["post_trigger"] = post_trigger_rate(burst)
+    res["max_holding_c"] = [max_holding_c(REG17["lam"], r["lam_p"], r["span"][1] - r["span"][0], REG8["conf"])
+                            for r in res["spans"]]
+    res["release_rate"] = release_rate(burst, REG8["spans"])
+    res["control_waiting"] = control_waiting(control, [(end + a, end + b) for a, b in REG8["spans"]])
+    res["reference"] = shock_size(load_run(RUNS / REG17["reference_run"]))
+    res["surge_control"], res["surge_burst"] = surge_run(control), surge_run(burst)
+    res["cold_side"], res["drain_time_s"] = reg17_cold_side(burst), drain_time(burst)
+    res["outcome"] = reg17_outcome(res["control_verdict"], res["burst_verdict"], res["surge_control"],
+                                   res["control_waiting"], res["cold_side"]["holds"])
+    return res
+
+
+def reg17_inputs() -> dict:
+    """REG-17's design inputs from the configs alone (no run): the pair schedule, REG-14's span test limits at
+    λ = 2.0, whether the control's schedule equals the burst run's session rows, and the surge hazard row at 2.0."""
+    from harness.workload import build_schedule
+    c, b = _burst_cfg("stage2_control_l1pl350cl_r2.0_s2"), _burst_cfg("burst_l1pl350cl_r2.0_s2")
+    sc, _ = build_schedule(c["workload"], c["seed"], c.get("trigger"))
+    sb, _ = build_schedule(b["workload"], b["seed"], b["trigger"])
+    s = sb[~sb.burst].reset_index(drop=True)
+    same = len(s) == len(sc) and bool((s.t_planned.values == sc.t_planned.values).all()
+                                      and (s.prompt_len.values == sc.prompt_len.values).all())
+    g, x = schedule_peak_series({"workload": {**c["workload"], "steps": None}}, REG17["lam"], c["seed"],
+                                float(c["workload"]["duration_s"]))
+    return {"pair": pair_schedule(REG17["lam"], REG17["seed"], "burst_l1pl350cl_r2.0_s2"),
+            "spans": span_sensitivity(REG17["lam"], REG17["seed"])["spans"],
+            "control_schedule_same": same, "n_session": len(s), "n_burst": int(sb.burst.sum()),
+            "control_peak": float(x.max()), "lam_cfg": (c["workload"]["rate"], b["workload"]["rate"]),
+            "seeds": (c["seed"], b["seed"])}
+
+
 if __name__ == "__main__":
     import sys
     if sys.argv[1] in ("reg10", "reg11", "reg11_reference", "reg11_turn0_reference", "reg12", "reg13", "reg13_inputs",
                        "reg14", "reg14_inputs", "reg14_sensitivity",
-                       "reg15", "reg15_inputs", "reg16", "reg16_inputs", "reg16_seed_rule"):
+                       "reg15", "reg15_inputs", "reg16", "reg16_inputs", "reg16_seed_rule",
+                       "surge", "surge_hazard", "surge_pair_inputs", "reg17", "reg17_inputs"):
         print({"reg10": reg10_gate, "reg11": reg11_gate, "reg11_reference": reg11_reference,
                "reg11_turn0_reference": reg11_turn0_reference, "reg12": reg12_table, "reg13": reg13_table,
                "reg13_inputs": reg13_inputs, "reg14": reg14_gate, "reg14_inputs": reg14_inputs,
                "reg14_sensitivity": reg14_sensitivity, "reg15": reg15_table, "reg15_inputs": reg15_inputs,
-               "reg16": reg16_table, "reg16_inputs": reg16_inputs, "reg16_seed_rule": reg16_seed_rule}[sys.argv[1]]())
+               "reg16": reg16_table, "reg16_inputs": reg16_inputs, "reg16_seed_rule": reg16_seed_rule,
+               "surge": surge_table, "surge_hazard": surge_hazard, "surge_pair_inputs": surge_pair_inputs,
+               "reg17": reg17_gate, "reg17_inputs": reg17_inputs}[sys.argv[1]]())
     else:
         print({"reg7": reg7_zone, "reg8": reg8_zone}[sys.argv[1]]())   # no default: say which registration is computed
