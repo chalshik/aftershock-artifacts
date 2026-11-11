@@ -3713,3 +3713,52 @@ Summary:
 ## 2026-11-11 · [DECISION] Owner approves REG-18 as drafted
 - **Owner (2026-11-11):** "Approve", in reply to the reviewed registration above (committed in `702bc26`), offered with three options: approve as drafted (order 4, 3, 5, 6, 7 with the futility stop), approve without the futility stop (all five seeds), or change the design first.
 - **Approved:** REG-18 as registered, with the futility stop, and its runs under its stopping rule: per seed in the order 4, 3, 5, 6, 7, the control `configs/stage2_control_l1pl350cl_r2.0_s<s>.yaml`, then the burst run `configs/burst_l1pl350cl_r2.0_s<s>.yaml`; each pair copied to the Mac and checksum-verified, then `python -m analysis.gate reg18_step` once; pre-launch reads in `docs/probe/20261111_reg18/`.
+
+## 2026-11-11 · [OPS] REG-18 runs: 8 of 8 valid, no rerun; queue ended by the futility stop after seed 6; one copy failure in the agent's queue script, recovered by hand; pre-launch reads in `docs/probe/20261111_reg18/`
+- **Runs**, in run order (validity RUN(<run>, checks.json); every `failed` list empty; `power_limit` 350.0 W in every sample; pre-launch reads PROBE(docs/probe/20261111_reg18/prelaunch_reg18_<config>_attempt1.txt): 350.00 W, 0 % busy, 1 MiB, no compute process, VM tree `3fa1f1d` clean):
+
+  | seed | run | launched (UTC) | start °C | free | sw_thermal | max °C | busy SM-clock CV |
+  |---|---|---|---|---|---|---|---|
+  | 4 | `20261111-093312_stage2_control_l1pl350cl_r2.0_s4` | 09:33:10 | 42 | 8.3 GB | 0.002 | 71 | 0.011 |
+  | 4 | `20261111-101805_burst_l1pl350cl_r2.0_s4` | 10:18:03 | 42 | 8.1 GB | 0.000 | 73 | 0.014 |
+  | 3 | `20261111-110919_stage2_control_l1pl350cl_r2.0_s3` | 11:09:17 | 38 | 8.0 GB | 0.005 | 70 | 0.011 |
+  | 3 | `20261111-115409_burst_l1pl350cl_r2.0_s3` | 11:54:07 | 42 | 7.9 GB | 0.001 | 70 | 0.015 |
+  | 5 | `20261111-124527_stage2_control_l1pl350cl_r2.0_s5` | 12:45:25 | 38 | 7.7 GB | 0.002 | 70 | 0.011 |
+  | 5 | `20261111-133019_burst_l1pl350cl_r2.0_s5` | 13:30:17 | 42 | 7.6 GB | 0.001 | 72 | 0.014 |
+  | 6 | `20261111-142155_stage2_control_l1pl350cl_r2.0_s6` | 14:21:53 | 38 | 7.4 GB | 0.002 | 70 | 0.011 |
+  | 6 | `20261111-150642_burst_l1pl350cl_r2.0_s6` | 15:06:40 | 44 | 7.3 GB | 0.001 | 72 | 0.014 |
+
+- **`reg18_step`**, computed once after each copied pair, printing only `done` and `continue`: after seed 4 True, after 3 True, after 5 True, after 6 **False**. The queue stopped there; seed 7 was not run.
+- **Copy failure (agent error):** after seed 4 the queue script stopped with `QUEUE STOP copy failed`. Its rsync source was written `$H:aftershock-artifacts/...`; zsh read `:a` as a path modifier, so rsync looked for a local path that does not exist. Nothing was copied or changed on either side. The agent fixed the line to `${H}:...`, copied seed 4's two runs by hand with the same checks, updated the manifest, ran `reg18_step` once (True) and restarted the queue at seed 3. The fault was in the agent's scratch script only (not in the repo); seed 3 started at 11:09 UTC, about 5 min after seed 4 ended.
+- **Copies:** all 8 runs on the Mac, every file's sha256 identical to the VM's (10 files each); `manifests/runs.sha256` +80 lines. VM copies kept (7.3 GB free).
+
+## 2026-11-11 · [RESULT] REG-18: `some`, 1 of 4 on seeds 4, 3, 5, 6 (run in the order 4, 3, 5, 6, 7; stopped because ≥ 3 was out of reach). Every control stayed warm and every burst run ended cold, full and backlogged; two seeds failed only the per-span cold side in a quiet span with the backlog still growing, and one was an instrument gap (burst-run baseline pf 0.978 against 0.98)
+- **Computed once:** `uv run python -m analysis.gate reg18` (`gate.reg18_table`) on the 8 runs in the [OPS] entry above; values RUN(<run>, gate.reg18_table) unless tagged otherwise. Baselines and end windows: `load.verdict` on each run.
+- **Matrix** (`gate.reg18_outcome`): **`some`**: k = 1, k_clear = 1, n = 4, none excluded, 0 bad controls. Stopped early, so **no Clopper–Pearson bound** (as registered, R2-T3): this is a count on these four seeds, not a rate for λ = 2.0. Outcome counts: `pass_clear` 1, `stuck_draining` 2, `bad_baseline` 1.
+- **Per seed** (span = 300 s REG-8 span after the burst's end; c = completions per s; q = mean waiting):
+
+  | seed | control (end hit, q) | burst verdict | outcome | span λp | span c | span q | end q (slope /s) | cold side |
+  |---|---|---|---|---|---|---|---|---|
+  | 4 | `recovered` (0.824, 0.003) | `stuck` | **`pass_clear`** | 2.423, 2.123, 2.513 | 1.760, 1.797, 1.750 | 129, 166, 208 | 187.1 (+0.137) | holds |
+  | 3 | `recovered` (0.839, 0.000) | `stuck` | `stuck_draining` | 2.190, 1.880, **1.623** | 1.777, 1.740, **1.727** | 94, 114, 121 | 117.4 (+0.023) | fails in span 3 |
+  | 5 | `recovered` (0.836, 0.003) | `bad_baseline` | `bad_baseline` | 1.763, 1.910, 1.883 | 1.667, 1.753, 1.740 | 154, 141, 157 | 149.4 (+0.057) | holds |
+  | 6 | `recovered` (0.831, 0.003) | `stuck` | `stuck_draining` | **1.760**, 2.560, 2.057 | **1.767**, 1.723, 1.793 | 101, 128, 154 | 141.2 (+0.082) | fails in span 1 (by 0.007) |
+
+  In every burst run: hit 0.000 in every span and at the end, KV 0.948–0.952, ≈ 30 running, `drain_time` NaN (the line never emptied). Burst-run baselines before the burst: pf 0.986, 0.987, **0.978**, 0.995; hit 0.835–0.839. Controls: baseline hit 0.833–0.840, waiting > 0 in ≤ 0.7 % of each span's scrapes, none tipped (`surge_run`).
+- **Seed 5's `bad_baseline`:** its burst run's pf before the burst is 0.978, under `min_baseline_pf` 0.98 (FILE(configs/stage2_base.yaml:15); `load.verdict`). The registration counts it in n as an instrument gap, not a pass and not a bad control. Its watch looks like the other stuck runs (cold side holds, queue 149 and rising), so (DERIVED from `reg18_continue`'s rule) had its baseline been 0.98 or more and the seed passed, k would have been 2 with 1 seed left and seed 7 would have run. The stop rested on a 0.002 margin. The threshold was fixed beforehand and stays (rule A5).
+- **Readouts:**
+  - k_c1 (C1's per-seed test alone, no cold side) = 3 of 4.
+  - **`backlog_persists`: 2 of 2** `stuck_draining` seeds (3 and 6): no drain and the end-window queue still rising. Both failed the cold side in one span only, the span with the lowest λp. Seed 6's span 1 completed 1.767 against 1.760 planned.
+  - `lull_agrees` 4 of 4: the lull flag (lowest span λp < 1.84) matched pass or no pass on every seed. For seed 5 it matched for a different reason (the baseline), and the statistic was chosen after the schedules were seen (registered as weak).
+  - Seed 4, the exposed seed: its control went through the 3.217 surge at 2435 s without tipping (`surge_run` not tipped; end hit 0.824, q 0.003). That is weak evidence on the surge reading either way, as registered (3.217 is 0.017 over `surge_tip`).
+  - Shock size (outstanding at the burst's end): 54, 55, 62, 56 (REG-17's seed 2: 36). Release delay in the spans 258–438 s (baselines 9–10 s); `secondary_cb` c_b 1.769–1.787, all `not_sustainable`.
+- **Prediction** (REG-18 [REG], BELIEF): pass per seed 4 ≈ 0.45: hit; 3 ≈ 0.10, 5 ≈ 0.35, 6 ≈ 0.40: no pass, as more likely. k = 1–2 ≈ 0.66: hit. 4 seeds run ≈ 0.28. Each control `recovered` ≈ 0.9 (seed 4 ≈ 0.75): 4 of 4. Span c 1.70–1.84: 11 of 12 spans, seed 5's span 1 at 1.667 below. End-window queue 60–200: 4 of 4 (117–187). Not predicted: a burst-side `bad_baseline`.
+- **Alternatives:**
+  1. **The burst leaves the server stuck, and the per-span cold side is stricter than "stuck" at λ = 2.0** (registered alternative for `some`): for it, every burst run ended cold (hit 0, KV 0.95) with the queue rising, never emptied, and both cold-side failures sit in the one span planned below the cold rate. Against it: in those spans the server completed more than planned, which is what a slowly draining backlog looks like locally. Separated by a longer watch: a backlog that drains empties later, a stuck state does not (REG-15/16's design, with a drop long enough to empty the line).
+  2. **Slow drain, not a stuck state:** seed 3 fits it best: end slope +0.023 /s, and its last span planned 1.623 against c 1.727. Its queue still rose from span to span (94 → 114 → 121), but that includes later turns released in the closed loop, which λp does not count. Separated by the same longer watch, or by the session queue alone.
+  3. **Overload at seed 4's heavy schedule (λp 2.12–2.51), not metastability:** against it, the control on the identical schedule stayed warm with waiting ≤ 0.7 % and hit 0.824 at the end, through a 3.217 surge. As registered, a pass at λp ≈ 2.5 is weaker evidence than one near 2.0.
+  4. **Heat or order:** sw_thermal ≤ 0.005, max 73 °C, CV 0.011–0.015, the same across run order (OPS above). Not a factor.
+  5. **Limits:** four seeds picked by a fixed order with a stop that fires on low k; single control per seed (rule H); 1500 s watch; closed loop, L1, 350 W only.
+- **What this is:** REG-17's pass did not repeat in most seeds under the registered test (1 of 4, stopped). Observed: at λ = 2.0, with the same schedule, every control stayed warm and every burst run ended cold and backlogged (4 of 4 by the end-window readouts, `load.verdict`), but the registered per-seed test passed only one. Not C1.
+- **Registered decision (`some`, after a futility stop):** report as above. The owner chooses, with no recommendation drafted beforehand, among: a matrix at λ = 2.1; a revised per-seed test registered as a new claim; or reporting the zone as too narrow for this workload. A stop alone does not support a next step that rests on the surge reading (such as λ = 2.1) without the owner's review (R2-T1). Nothing is drafted before the owner chooses.
+- **Not changed:** claims.md, earlier results, code, thresholds.
