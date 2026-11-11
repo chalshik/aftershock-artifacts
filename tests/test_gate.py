@@ -1145,3 +1145,198 @@ def test_reg18_pair_refuses_missing_runs(monkeypatch):
     monkeypatch.setattr(L, "find_runs", lambda pattern: [])
     with pytest.raises(ValueError):
         G.reg18_pair(3)
+
+
+# ---- REG-19 (draft): REG-17's pair at λ = 2.0 on seeds 15-19 with a 3000 s watch and a whole-window cold side
+
+def test_reg19_configs_change_only_seed_watch_and_duration():
+    flat = lambda d, p="": {k2: v2 for k, v in d.items()
+                            for k2, v2 in (flat(v, p + k + ".") if isinstance(v, dict) else {p + k: v}).items()}
+    for sd in G.REG19["seeds"]:
+        for new, old in ((f"stage2_control_l1pl350cl_r2.0_w3000_s{sd}", "stage2_control_l1pl350cl_r2.0_s2"),
+                         (f"burst_l1pl350cl_r2.0_w3000_s{sd}", "burst_l1pl350cl_r2.0_s2")):
+            a, b = flat(G._burst_cfg(new)), flat(G._burst_cfg(old))
+            assert sorted(k for k in a.keys() | b.keys() if a.get(k) != b.get(k)) == \
+                ["name", "seed", "verdict.watch_s", "workload.duration_s"]
+            assert (a["seed"], a["workload.rate"], a["verdict.watch_s"], a["workload.duration_s"]) == (sd, 2.0, 3000, 4080)
+
+
+def test_reg19_seeds_are_new():
+    """Seeds 15-19 appear in no earlier config (seed 12 and 14 were used at λ = 2.2)."""
+    import yaml
+    from pathlib import Path
+    for f in Path("configs").glob("*.yaml"):
+        if "_w3000_" in f.name:
+            continue
+        seed = (yaml.safe_load(f.read_text()) or {}).get("seed")
+        assert seed not in G.REG19["seeds"], f.name
+
+
+def test_reg19_inputs_schedule_facts():
+    """Each control's schedule equals its burst run's session rows; no control reaches surge_tip in 4080 s, so the
+    order rule gives 15-19 ascending; the window's λp is 1.92-2.08 and every seed has a span below 1.84."""
+    d = G.reg19_inputs()
+    rows = {r["seed"]: r for r in d["seeds"]}
+    assert all(r["control_schedule_same"] and r["seeds"] == (s, s) and r["watch"] == (3000, 3000)
+               and r["duration"] == (4080, 4080) for s, r in rows.items())
+    assert not any(r["exposure"]["exposed"] for r in rows.values())
+    assert d["order"] == (15, 16, 17, 18, 19)
+    assert all(1.9 < r["lam_p_window"] < 2.1 for r in rows.values())
+    assert all(r["lowest_span"] < G.REG14["cold_c_max"] for r in rows.values())
+    assert len(G.reg19_spans()) == 8 and G.reg19_spans()[0] == (600.0, 900.0) and G.reg19_spans()[-1][1] == 3000.0
+
+
+def test_reg19_order_rule_puts_exposed_seeds_first(monkeypatch):
+    monkeypatch.setattr(G, "reg19_exposed", lambda sd: {"exposed": sd in (17, 19)})
+    assert G.reg19_order() == (17, 19, 15, 16, 18)
+
+
+def test_reg19_patterns_never_pick_another_run():
+    for sd in G.REG19["seeds"]:
+        spec = G.reg19_spec(sd)
+        assert fnmatch.fnmatch(f"20261112-000000_burst_l1pl350cl_r2.0_w3000_s{sd}", spec["burst"])
+        assert fnmatch.fnmatch(f"20261112-000000_stage2_control_l1pl350cl_r2.0_w3000_s{sd}", spec["control"])
+        assert not fnmatch.fnmatch(f"20261112-000000_burst_l1pl350cl_r2.0_s{sd}", spec["burst"])   # 1500 s watch
+        assert not fnmatch.fnmatch(f"20261112-000000_burst_l1pl350cl_r2.0_w3000_s{sd}0", spec["burst"])
+        assert not fnmatch.fnmatch("20261111-101805_burst_l1pl350cl_r2.0_s4", spec["burst"])
+
+
+def test_reg19_seed_outcome_rules():
+    calm8, ex_none = [{"share_waiting": 0.0}] * 8, {"exposed": False, "t_first": math.nan}
+    S = lambda cv, bv, cold, drained, cw=calm8, surge=None, rw=None: G.reg19_seed_outcome(
+        cv, bv, surge or {}, cw, cold, drained, ex_none, rw)
+    assert S("recovered", "stuck", True, False) == "pass_clear"
+    assert S("recovered", "stuck", True, False, calm8[:7] + [{"share_waiting": 0.6}]) == "pass_warm_edge"
+    assert S("recovered", "stuck", True, False, calm8[:7] + [{"share_waiting": math.nan}]) == "inconclusive"
+    # the line emptied in the watch: never a pass; split by what the server did then (review T1)
+    assert S("recovered", "stuck", True, True, rw=True) == "emptied_retipped"
+    assert S("recovered", "stuck", True, True, rw=False) == "emptied_cold"
+    assert S("recovered", "stuck", True, True, rw=None) == "emptied_unclear"
+    assert S("recovered", "stuck", None, True, rw=False) == "emptied_cold"     # decided even with the cold side NaN
+    assert S("recovered", "stuck", False, True, rw=True) == "emptied_retipped"
+    assert S("recovered", "stuck", False, False) == "stuck_not_cold"
+    assert S("recovered", "stuck", None, False) == "inconclusive"
+    assert S("recovered", "slow_drain", True, False) == "drains"
+    assert S("recovered", "recovered", True, True, rw=True) == "drains"
+    assert S("recovered", "unclear", True, False) == "unclear"
+    assert S("recovered", "bad_baseline", True, False) == "bad_baseline"
+    # the control is judged first, as REG-18 (a tip without a surge stops the matrix)
+    tip = {"tipped": True, "onset": 3000.0, "peak_tip": 2.5}
+    assert S("stuck", "stuck", True, False, surge=tip) == "control_cold_no_surge"
+    assert S("stuck", "bad_baseline", True, False, surge=tip) == "control_cold_no_surge"   # REG-18 R2-T2
+    assert S("slow_drain", "stuck", True, False, surge={"tipped": False}) == "control_warm_queue"
+
+
+def _burst19(q):
+    """A minimal burst run for REG-19's line readouts: waiting `q(t)` scraped each second to the end of arrivals."""
+    import numpy as np
+    import pandas as pd
+    t = np.arange(0.0, 4080.0)
+    return {"metrics": pd.DataFrame({"t": t, "vllm:num_requests_waiting": [q(x) for x in t]}),
+            "requests": pd.DataFrame({"t_planned": [0.0], "t_end": [1.0], "turn": [1], "prompt_tokens_planned": [1]}),
+            "cfg": {"workload": {"duration_s": 4080}, "verdict": {"recovered_hit_drop": 0.06},
+                    "trigger": {"kind": "burst", "at_s": 900, "duration_s": 180, "prompt_tokens": 2944}}}
+
+
+def test_reg19_drain_time_needs_30_s_inside_the_arrivals():
+    """Review N1: a zero in the last 30 s before 4080 s does not count; one with 30 s of zeros inside does."""
+    assert math.isnan(G.reg19_drain_time(_burst19(lambda t: 0.0 if t >= 4060 else 50.0)))
+    assert G.reg19_drain_time(_burst19(lambda t: 0.0 if 3000 <= t < 3040 else 50.0)) == 3000.0 - 1080.0
+    assert math.isnan(G.reg19_drain_time(_burst19(lambda t: 0.0 if 3000 <= t < 3020 else 50.0)))   # only 20 s
+
+
+def test_reg19_emptyings_lists_every_emptying():
+    """R2-N2: two separate emptyings (the line refilled between them) are both listed; the label uses the first."""
+    q = lambda t: 0.0 if (2000 <= t < 2040 or 3000 <= t < 3040) else 50.0
+    assert G.reg19_emptyings(_burst19(q)) == [2000.0 - 1080.0, 3000.0 - 1080.0]
+    assert G.reg19_drain_time(_burst19(q)) == 2000.0 - 1080.0
+
+
+def test_reg19_after_empty_reads_the_hit_after_the_line_empties(monkeypatch):
+    run = _burst19(lambda t: 50.0)
+    monkeypatch.setattr(G, "verdict", lambda r: {"baseline": {"hit": 0.84}})
+    monkeypatch.setattr(G, "owed_backlog", lambda r, t: 7)
+    run["cfg"]["verdict"]["stuck_hit_drop"] = 0.06
+    seen = []
+
+    def level(hit_of):
+        def f(r, a, b):
+            seen.append((a, b))
+            return {"hit": hit_of(a - 1080.0), "kv": 0.5}
+        return f
+    monkeypatch.setattr(G, "_level", level(lambda x: 0.80))
+    r = G.reg19_after_empty(run, 600.0)
+    assert r["rewarmed"] is True and math.isnan(r["t_recold"])            # 0.80 >= 0.84 - 0.06
+    assert len(r["windows"]) == 11                                         # 0, 60, ..., 600 s after emptying
+    monkeypatch.setattr(G, "_level", level(lambda x: 0.05))
+    assert G.reg19_after_empty(run, 600.0)["rewarmed"] is False           # a cold server with an empty line
+    # R2-N1: a re-warm that comes only after the first 120 s still counts; R2-T1: the re-tip time is read
+    monkeypatch.setattr(G, "_level", level(lambda x: 0.80 if 900 <= x < 1000 else 0.05))
+    r = G.reg19_after_empty(run, 600.0)
+    assert r["rewarmed"] is True and r["t_recold"] == 1020.0
+    monkeypatch.setattr(G, "_level", level(lambda x: math.nan))
+    assert G.reg19_after_empty(run, 600.0)["rewarmed"] is None
+    assert G.reg19_after_empty(run, math.nan)["rewarmed"] is None         # never emptied
+    # R2-T2: windows stop at the end of arrivals (4080 s); one shorter than 60 s is not read
+    seen.clear()
+    monkeypatch.setattr(G, "_level", level(lambda x: 0.80))
+    r = G.reg19_after_empty(run, 2950.0)                                   # emptied at 4030 s
+    assert seen == [] and r["rewarmed"] is None                              # 50 s left: no usable window
+    seen.clear()
+    r = G.reg19_after_empty(run, 2900.0)                                   # emptied at 3980 s
+    assert seen == [(3980.0, 4080.0)] and r["rewarmed"] is True
+
+
+def test_reg19_matrix_counts_new_labels_against():
+    O = lambda labels: G.reg19_outcome(_rows18(labels, ex=()))
+    good = dict.fromkeys(G.REG19["seeds"], "pass_clear")
+    assert O(good)["outcome"] == "supports"
+    r = O({**good, 15: "emptied_cold", 16: "stuck_not_cold"})
+    assert (r["outcome"], r["k"], r["n"], r["n_control_bad"]) == ("supports", 3, 5, 0)
+    r = O({**good, 15: "emptied_retipped", 16: "emptied_unclear", 17: "drains"})
+    assert (r["outcome"], r["k"]) == ("some", 2)
+    assert G.reg18_continue(_rows18({15: "emptied_cold", 16: "drains", 17: "stuck_not_cold"}, ex=()), 2) is False
+
+
+def test_reg19_step_never_skips_a_seed(monkeypatch):
+    import analysis.load as L
+    have = {"*_stage2_control_l1pl350cl_r2.0_w3000_s15", "*_burst_l1pl350cl_r2.0_w3000_s15",
+            "*_burst_l1pl350cl_r2.0_w3000_s17"}
+    monkeypatch.setattr(L, "find_runs", lambda pattern: [object()] if pattern in have else [])
+    with pytest.raises(ValueError):   # seed 16 has no pair, seed 17 has a run
+        G.reg19_step()
+
+
+def test_reg19_pair_refuses_missing_runs(monkeypatch):
+    import analysis.load as L
+    monkeypatch.setattr(L, "find_runs", lambda pattern: [])
+    with pytest.raises(ValueError):
+        G.reg19_pair(15)
+
+
+def test_reg19_cold_side_on_a_synthetic_run(monkeypatch):
+    """Session arrivals at 2.0/s over the window, completions at 1.8/s: holds; at 2.1/s: fails (not below λp 2.0).
+    A quiet span (λp 1.5) inside the window fails that span only, which REG-19 reads but does not decide on."""
+    import numpy as np
+    import pandas as pd
+    end, (a, b) = 1080.0, G.REG19["window"]
+
+    def run(c_rate):
+        tp = np.arange(end + a, end + b, 0.5)                          # 2.0 planned session requests / s
+        tp = tp[~((tp >= end + 900) & (tp < end + 1200) & (np.arange(len(tp)) % 4 == 0))]   # span 2: λp 1.5
+        te = end + a + np.arange(int((b - a) * c_rate)) / c_rate       # c_rate completions / s
+        n = max(len(tp), len(te))
+        req = pd.DataFrame({"t_planned": np.resize(tp, n), "t_end": np.resize(te, n), "turn": 1,
+                            "prompt_tokens_planned": 100})
+        req.loc[len(tp):, "t_planned"] = np.nan
+        req.loc[len(te):, "t_end"] = np.nan
+        met = pd.DataFrame({"t": np.arange(end, end + b), "vllm:num_requests_waiting": 50.0})
+        return {"requests": req, "metrics": met,
+                "cfg": {"trigger": {"kind": "burst", "at_s": 900, "duration_s": 180, "prompt_tokens": 2944}}}
+
+    monkeypatch.setattr(G, "verdict", lambda r: {"end": {"q": 60.0}})
+    cs = G.reg19_cold_side(run(1.8))
+    assert cs["holds"] is True and abs(cs["c"] - 1.8) < 0.01 and 1.9 < cs["lam_p"] < 2.0
+    assert [s["below"] for s in cs["spans"]].count(False) == 1 and cs["spans"][1]["below"] is False
+    assert cs["q_first"] == 50.0 and cs["q_ratio"] == 1.2
+    assert G.reg19_cold_side(run(2.1))["holds"] is False
