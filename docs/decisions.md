@@ -3709,3 +3709,7 @@ Summary:
   - R2-T4: a seed with no valid pair after its reruns stops the queue; `reg18_step` raises if a later seed has a valid run. Tested.
   - R2-N1, N2, N3, N4, N5: in the text. R2-N6: no shares gives `inconclusive`. Tested.
 - **Not covered:** no third review round; the round-2 fixes were checked by tests only. The run waits for the owner's approval of this registration.
+
+## 2026-11-11 · [DECISION] Owner approves REG-18 as drafted
+- **Owner (2026-11-11):** "Approve", in reply to the reviewed registration above (committed in `702bc26`), offered with three options: approve as drafted (order 4, 3, 5, 6, 7 with the futility stop), approve without the futility stop (all five seeds), or change the design first.
+- **Approved:** REG-18 as registered, with the futility stop, and its runs under its stopping rule: per seed in the order 4, 3, 5, 6, 7, the control `configs/stage2_control_l1pl350cl_r2.0_s<s>.yaml`, then the burst run `configs/burst_l1pl350cl_r2.0_s<s>.yaml`; each pair copied to the Mac and checksum-verified, then `python -m analysis.gate reg18_step` once; pre-launch reads in `docs/probe/20261111_reg18/`.
