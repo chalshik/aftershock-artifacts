@@ -1577,18 +1577,226 @@ def reg17_inputs() -> dict:
             "seeds": (c["seed"], b["seed"])}
 
 
+
+# REG-18 (draft, docs/decisions.md 2026-11-11 [REG]): REG-17's pair on seeds 3-7, the only change (REG-17's registered
+# branch under `pass_clear`). Per seed, REG-17's outcome (C1's test, the measured cold side, the control's waiting) with
+# two REG-18 rules (review T1, T3); across seeds, REG-12's count with a futility stop (review T5). A seed whose control
+# schedule reaches a 120 s planned rate >= surge_tip (fixed from the schedule before any run: `reg18_exposed`) and
+# whose control then goes cold after that surge leaves n.
+REG18 = {**REG17, "seeds": (3, 4, 5, 6, 7), "most": 3, "conf": 0.95, "not_counted": (2,),   # REG-17's seed 2
+         "order": (4, 3, 5, 6, 7)}   # review T5 and R2-T1: seed 4 (exposed, the likeliest control failure) first, so
+                                     # the futility stop cannot skip it; then the lowest span λp first
+PASS18 = ("pass_clear", "pass_warm_edge")
+
+
+def reg18_spec(seed: int) -> dict:
+    return {**REG18, "seed": seed, "control": f"*_stage2_control_l1pl350cl_r2.0_s{seed}",
+            "burst": f"*_burst_l1pl350cl_r2.0_s{seed}"}
+
+
+def reg18_exposed(seed: int) -> dict:
+    """Schedule only, fixed before any run: the control's highest 120 s planned session rate from start_s to the end
+    of arrivals, when it occurs, whether it is >= surge_tip (`exposed`), and the first time it reaches surge_tip."""
+    c = _burst_cfg(f"stage2_control_l1pl350cl_r2.0_s{seed}")
+    g, x = schedule_peak_series({"workload": {**c["workload"], "steps": None}}, float(c["workload"]["rate"]),
+                                int(c["seed"]), float(c["workload"]["duration_s"]))
+    i = np.flatnonzero(x >= REG18["surge_tip"])
+    return {"seed": seed, "peak": float(x.max()), "t_peak": float(g[x.argmax()]),
+            "exposed": bool(len(i)), "t_first": float(g[i[0]]) if len(i) else math.nan}
+
+
+def reg18_lull(seed: int) -> dict:
+    """Readout only (review T4), schedule only: the lowest planned session rate λp among REG-8's spans after the
+    burst's end (`span_sensitivity`), and whether it is below REG-14's cold_c_max (1.84, the highest span completion
+    rate of REG-11/12's cold runs). In such a span a cold state completing 1.73-1.84 may complete more than is planned,
+    so the cold side (c < λp in every span) can fail even while a backlog persists. Decides nothing."""
+    lull = min(r["lam_p"] for r in span_sensitivity(REG18["lam"], seed)["spans"])
+    return {"seed": seed, "lull": lull, "lull_below": bool(lull < REG14["cold_c_max"])}
+
+
+def reg18_seed_outcome(cv: str, bv: str, control_surge: dict, control_waiting: list[dict],
+                       cold_side: bool | None, exposure: dict) -> str:
+    """`reg17_outcome` with two REG-18 rules, fixed before any run.
+    Review T1: a control that is not `recovered` on an exposed seed whose KV onset comes at or after the schedule's
+    first surge >= surge_tip (`exposure['t_first']`) is `control_cold_surge`, whatever the lead from that surge (the
+    60-240 s lead of earlier runs is not required). Not applied to `bad_baseline`.
+    Review T3: a `pass_warm_edge` with any NaN (or no) control waiting share is `inconclusive` (an instrument gap is not
+    a pass).
+    Review R2-T2: the control is judged on its own: if the burst run alone has `bad_baseline` and the control is not
+    `recovered`, the control's label is returned (a control failure is not hidden by the burst run's instrument gap)."""
+    out = reg17_outcome(cv, bv, control_surge, control_waiting, cold_side)
+    if out == "bad_baseline" and bv == "bad_baseline" and cv not in ("recovered", "bad_baseline"):
+        out = reg17_outcome(cv, "unclear", control_surge, control_waiting, cold_side)
+    if out.startswith("control_") and exposure.get("exposed") and control_surge.get("tipped"):
+        on = control_surge.get("onset", math.nan)
+        if np.isfinite(on) and on >= exposure["t_first"]:
+            return "control_cold_surge"
+    if out == "pass_warm_edge" and not (control_waiting
+                                        and all(np.isfinite(w["share_waiting"]) for w in control_waiting)):
+        return "inconclusive"
+    return out
+
+
+def reg18_pair(seed: int) -> dict:
+    """One seed: exactly one valid control and burst run with that seed (`reg12_only`), `reg10_gate` with REG-17's
+    settings, REG-17's readouts, `reg18_seed_outcome`, C1's test (`c1`), exposure, lull and `end_window`."""
+    from analysis.load import RUNS, find_runs, load_run
+    if REG18["lam"] != REG17["lam"]:   # reg17_cold_side judges against REG17's λ (review N2)
+        raise ValueError("REG-18's λ must equal REG-17's")
+    spec = reg18_spec(seed)
+    for key in ("control", "burst"):
+        r = reg12_only(find_runs(spec[key]), spec[key])
+        if r["cfg"]["seed"] != seed:
+            raise ValueError(f"{r['dir'].name} has seed {r['cfg']['seed']}, not {seed}")
+    res = reg10_gate(spec)
+    control, burst = (load_run(RUNS / n) for n in res["runs"])
+    end = burst_end(burst)
+    res["seed"] = seed
+    res["post_trigger"] = post_trigger_rate(burst)
+    res["max_holding_c"] = [max_holding_c(spec["lam"], r["lam_p"], r["span"][1] - r["span"][0], REG8["conf"])
+                            for r in res["spans"]]
+    res["release_rate"] = release_rate(burst, REG8["spans"])
+    res["control_waiting"] = control_waiting(control, [(end + a, end + b) for a, b in REG8["spans"]])
+    res["surge_control"], res["surge_burst"] = surge_run(control), surge_run(burst)
+    res["cold_side"], res["drain_time_s"] = reg17_cold_side(burst), drain_time(burst)
+    res["end_window"] = end_window(burst)
+    res["exposure"], res["lull"] = reg18_exposed(seed), reg18_lull(seed)
+    res["exposed"] = res["exposure"]["exposed"]
+    res["c1"] = res["burst_verdict"] == "stuck" and res["control_verdict"] == "recovered"
+    res["outcome"] = reg18_seed_outcome(res["control_verdict"], res["burst_verdict"], res["surge_control"],
+                                        res["control_waiting"], res["cold_side"]["holds"], res["exposure"])
+    # review T4 readout: stuck, cold side failed, yet the line never emptied and the end-window queue still rose
+    cs = res["cold_side"]
+    res["backlog_persists"] = bool(res["outcome"] == "stuck_draining" and not np.isfinite(res["drain_time_s"])
+                                   and np.isfinite(cs["end_q_slope"]) and cs["end_q_slope"] > 0)
+    return res
+
+
+def reg18_outcome(rows: dict[int, dict]) -> dict:
+    """The matrix decision. `rows` maps seed -> {"outcome", "control_verdict", "exposed"}. In this order:
+    a seed leaves n only if it was `exposed` before the run and its outcome is `control_cold_surge`;
+    `surge_reading_wrong` if any seed is `control_cold_no_surge`;
+    `controls_not_healthy` if 2 or more seeds left have a bad control: a `control_*` outcome or a control verdict of
+    `bad_baseline` (review T2: a burst-side `bad_baseline` is an instrument gap, in n, not a bad control);
+    `too_few` if fewer than `most` seeds are left;
+    then, with k_clear = `pass_clear` and k = `pass_clear` or `pass_warm_edge` among the seeds left (review T3):
+    `supports` if k_clear >= most; `supports_edge` if k >= most; `some` if k >= 1; else `none`."""
+    excluded = sorted(s for s, r in rows.items() if r["outcome"] == "control_cold_surge" and r["exposed"])
+    kept = {s: r for s, r in rows.items() if s not in excluded}
+    n = len(kept)
+    k = sum(r["outcome"] in PASS18 for r in kept.values())
+    k_clear = sum(r["outcome"] == "pass_clear" for r in kept.values())
+    bad = sum(r["outcome"].startswith("control_") or r["control_verdict"] == "bad_baseline" for r in kept.values())
+    if any(r["outcome"] == "control_cold_no_surge" for r in rows.values()):
+        out = "surge_reading_wrong"
+    elif bad >= 2:
+        out = "controls_not_healthy"
+    elif n < REG18["most"]:
+        out = "too_few"
+    elif k_clear >= REG18["most"]:
+        out = "supports"
+    else:
+        out = "supports_edge" if k >= REG18["most"] else ("some" if k >= 1 else "none")
+    return {"outcome": out, "k": k, "k_clear": k_clear, "n": n, "excluded": excluded, "n_control_bad": bad}
+
+
+def reg18_continue(rows: dict[int, dict], remaining: int) -> bool:
+    """Review T5, the futility stop: False once no result of the remaining seeds can reach `supports` or
+    `supports_edge` (k + remaining < most), or the seeds so far already give `surge_reading_wrong` or
+    `controls_not_healthy` (the remaining seeds cannot change either)."""
+    d = reg18_outcome(rows)
+    if d["outcome"] in ("surge_reading_wrong", "controls_not_healthy"):
+        return False
+    return d["k"] + remaining >= REG18["most"]
+
+
+def reg18_step() -> dict:
+    """The queue's only look between seeds (review T5): the seeds of REG18's order whose pair is valid (one valid run of
+    each config, `reg12_only`; the first seed in order without both stops the list), and `continue`. Prints no verdict,
+    label, outcome or count: only the seeds done and whether to launch the next seed. Review R2-T4: raises if a later
+    seed in the order has a valid run while an earlier one lacks its pair (a seed with no valid pair after its reruns
+    stops the queue; it is never skipped)."""
+    from analysis.load import find_runs
+    done, gap = [], None
+    for sd in REG18["order"]:
+        sp = reg18_spec(sd)
+        has = (bool(find_runs(sp["control"])), bool(find_runs(sp["burst"])))
+        if gap is not None and any(has):
+            raise ValueError(f"seed {sd} has a valid run but seed {gap} has no valid pair: REG-18 never skips a seed")
+        if gap is None and all(has):
+            done.append(sd)
+        elif gap is None:
+            gap = sd
+    rows = {}
+    for sd in done:
+        r = reg18_pair(sd)
+        rows[sd] = {"outcome": r["outcome"], "control_verdict": r["control_verdict"], "exposed": r["exposed"]}
+    remaining = len(REG18["order"]) - len(done)
+    return {"done": done, "continue": bool(remaining and reg18_continue(rows, remaining))}
+
+
+def reg18_table() -> dict:
+    """REG-18's result on the seeds run, in REG18's order (all five, or fewer after the futility stop): per seed
+    (verdicts, outcome, c1, exposed, the control's tip, cold side, lull, backlog_persists), the matrix decision
+    (`reg18_outcome`), k of n with the one-sided Clopper-Pearson upper bound, and readouts: k_c1 (C1's test alone),
+    counts of each outcome, `lull_agrees` (lull_below and not passing, or not lull_below and passing) and
+    n_backlog_persists. REG-17's seed 2 is not counted."""
+    from analysis.stats import cp_upper
+    done = reg18_step()["done"]
+    rows = [reg18_pair(s) for s in done]
+    dec = reg18_outcome({r["seed"]: {"outcome": r["outcome"], "control_verdict": r["control_verdict"],
+                                     "exposed": r["exposed"]} for r in rows})
+    keys = ("seed", "control_verdict", "burst_verdict", "label", "outcome", "c1", "exposed", "drain_time_s",
+            "backlog_persists", "runs")
+    counts = {}
+    for r in rows:
+        counts[r["outcome"]] = counts.get(r["outcome"], 0) + 1
+    early = len(done) < len(REG18["order"])
+    # review R2-T3: after a futility stop the seeds run were chosen by order and the stop fired on a low k, so no
+    # bound is reported: k of n is then a count on those seeds, not a rate for λ = 2.0
+    return {**dec, "seeds_run": done, "stopped_early": early,
+            "cp_upper": math.nan if early or not dec["n"] else cp_upper(dec["k"], dec["n"], REG18["conf"]),
+            "rows": [{key: r[key] for key in keys} | {"cold_side": r["cold_side"]["holds"],
+                                                       "control_tipped": bool(r["surge_control"]["tipped"]),
+                                                       "lull_below": r["lull"]["lull_below"]} for r in rows],
+            "k_c1": sum(r["c1"] for r in rows), "outcome_counts": counts,
+            "lull_agrees": sum(r["lull"]["lull_below"] != (r["outcome"] in PASS18) for r in rows),
+            "n_backlog_persists": sum(r["backlog_persists"] for r in rows), "details": rows}
+
+
+def reg18_inputs() -> dict:
+    """REG-18's design inputs from the configs alone (no run), per seed: the pair schedule (`pair_schedule` on the
+    seed's own burst config), REG-14's span limits at λ = 2.0, the control's exposure (`reg18_exposed`), whether the
+    control's schedule equals the burst run's session rows, request counts, λ and seed as resolved."""
+    from harness.workload import build_schedule
+    out = []
+    for sd in REG18["seeds"]:
+        c, b = _burst_cfg(f"stage2_control_l1pl350cl_r2.0_s{sd}"), _burst_cfg(f"burst_l1pl350cl_r2.0_s{sd}")
+        sc, _ = build_schedule(c["workload"], c["seed"], c.get("trigger"))
+        sb, _ = build_schedule(b["workload"], b["seed"], b["trigger"])
+        s = sb[~sb.burst].reset_index(drop=True)
+        same = len(s) == len(sc) and bool((s.t_planned.values == sc.t_planned.values).all()
+                                          and (s.prompt_len.values == sc.prompt_len.values).all())
+        out.append({"seed": sd, "pair": pair_schedule(REG18["lam"], sd, f"burst_l1pl350cl_r2.0_s{sd}"),
+                    "lull": reg18_lull(sd),
+                    "spans": span_sensitivity(REG18["lam"], sd)["spans"], "exposure": reg18_exposed(sd),
+                    "control_schedule_same": same, "n_session": len(s), "n_burst": int(sb.burst.sum()),
+                    "lam_cfg": (c["workload"]["rate"], b["workload"]["rate"]), "seeds": (c["seed"], b["seed"])})
+    return {"seeds": out}
+
 if __name__ == "__main__":
     import sys
     if sys.argv[1] in ("reg10", "reg11", "reg11_reference", "reg11_turn0_reference", "reg12", "reg13", "reg13_inputs",
                        "reg14", "reg14_inputs", "reg14_sensitivity",
                        "reg15", "reg15_inputs", "reg16", "reg16_inputs", "reg16_seed_rule",
-                       "surge", "surge_hazard", "surge_pair_inputs", "reg17", "reg17_inputs"):
+                       "surge", "surge_hazard", "surge_pair_inputs", "reg17", "reg17_inputs", "reg18", "reg18_inputs", "reg18_step"):
         print({"reg10": reg10_gate, "reg11": reg11_gate, "reg11_reference": reg11_reference,
                "reg11_turn0_reference": reg11_turn0_reference, "reg12": reg12_table, "reg13": reg13_table,
                "reg13_inputs": reg13_inputs, "reg14": reg14_gate, "reg14_inputs": reg14_inputs,
                "reg14_sensitivity": reg14_sensitivity, "reg15": reg15_table, "reg15_inputs": reg15_inputs,
                "reg16": reg16_table, "reg16_inputs": reg16_inputs, "reg16_seed_rule": reg16_seed_rule,
                "surge": surge_table, "surge_hazard": surge_hazard, "surge_pair_inputs": surge_pair_inputs,
-               "reg17": reg17_gate, "reg17_inputs": reg17_inputs}[sys.argv[1]]())
+               "reg17": reg17_gate, "reg17_inputs": reg17_inputs,
+               "reg18": reg18_table, "reg18_inputs": reg18_inputs, "reg18_step": reg18_step}[sys.argv[1]]())
     else:
         print({"reg7": reg7_zone, "reg8": reg8_zone}[sys.argv[1]]())   # no default: say which registration is computed

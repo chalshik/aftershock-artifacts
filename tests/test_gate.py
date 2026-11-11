@@ -1,4 +1,5 @@
 """analysis/gate.py (REG-7) on synthetic inputs only (no run folders). Includes the adversarial review's traces."""
+import fnmatch
 import math
 from pathlib import Path
 
@@ -1032,3 +1033,115 @@ def test_reg17_span_test_cannot_confirm_the_known_cold_rates():
     cold_c_max (1.84), so REG-14's seed rule finds no seed at 2.0."""
     assert all(r["max_c"] < G.REG14["cold_c_max"] for r in G.span_sensitivity(2.0, 2)["spans"])
     assert G.reg14_seed_rule(2.0) is None
+
+
+def test_reg18_configs_change_only_the_seed():
+    flat = lambda d, p="": {k2: v2 for k, v in d.items()
+                            for k2, v2 in (flat(v, p + k + ".") if isinstance(v, dict) else {p + k: v}).items()}
+    for sd in G.REG18["seeds"]:
+        for new, old in ((f"stage2_control_l1pl350cl_r2.0_s{sd}", "stage2_control_l1pl350cl_r2.0_s2"),
+                         (f"burst_l1pl350cl_r2.0_s{sd}", "burst_l1pl350cl_r2.0_s2")):
+            a, b = flat(G._burst_cfg(new)), flat(G._burst_cfg(old))
+            assert sorted(k for k in a.keys() | b.keys() if a.get(k) != b.get(k)) == ["name", "seed"]
+            assert a["seed"] == sd and a["workload.rate"] == 2.0
+
+
+def test_reg18_inputs_schedule_facts():
+    """Each control's schedule equals its burst run's session rows; only seed 4's control reaches surge_tip (at 2435 s,
+    inside the control's end window [1980, 2580) s)."""
+    rows = {r["seed"]: r for r in G.reg18_inputs()["seeds"]}
+    assert all(r["control_schedule_same"] and r["seeds"] == (s, s) for s, r in rows.items())
+    assert [s for s, r in rows.items() if r["exposure"]["exposed"]] == [4]
+    assert 1980 <= rows[4]["exposure"]["t_first"] < 2580
+    assert [s for s, r in rows.items() if r["lull"]["lull_below"]] == [3, 5, 6]
+
+
+def test_reg18_patterns_never_pick_another_seed():
+    for sd in G.REG18["seeds"]:
+        spec = G.reg18_spec(sd)
+        assert spec["control"].endswith(f"_r2.0_s{sd}") and spec["burst"].endswith(f"_r2.0_s{sd}")
+        assert fnmatch.fnmatch(f"20261111-000000_burst_l1pl350cl_r2.0_s{sd}", spec["burst"])
+        assert not fnmatch.fnmatch("20261110-182920_burst_l1pl350cl_r2.0_s2", spec["burst"])
+        assert not fnmatch.fnmatch(f"20261111-000000_burst_l1pl350cl_r2.0_s{sd}0", spec["burst"])
+
+
+def _rows18(labels, cv=None, ex=(4,)):
+    cv = cv or {}
+    return {s: {"outcome": l, "control_verdict": cv.get(s, "recovered"), "exposed": s in ex} for s, l in labels.items()}
+
+
+def test_reg18_outcome_order_and_counting():
+    O = lambda labels, cv=None: G.reg18_outcome(_rows18(labels, cv))
+    good = dict.fromkeys((3, 4, 5, 6, 7), "pass_clear")
+    r = O(good)
+    assert (r["outcome"], r["k"], r["n"], r["k_clear"]) == ("supports", 5, 5, 5)
+    # review T3: supports needs k_clear >= 3; warm-edge passes count in k only
+    edge = {**good, 3: "pass_warm_edge", 4: "pass_warm_edge", 5: "pass_warm_edge"}
+    r = O(edge)
+    assert (r["outcome"], r["k"], r["k_clear"]) == ("supports_edge", 5, 2)
+    # an exposed seed whose control went cold after its surge leaves n; an unexposed one stays as a bad control
+    r = O({**good, 4: "control_cold_surge"})
+    assert (r["outcome"], r["n"], r["k"], r["excluded"]) == ("supports", 4, 4, [4])
+    r = O({**good, 3: "control_cold_surge"})
+    assert (r["n"], r["k"], r["excluded"], r["n_control_bad"]) == (5, 4, [], 1)
+    # any control that tipped without a surge stops the line, whatever k is
+    assert O({**good, 5: "control_cold_no_surge"})["outcome"] == "surge_reading_wrong"
+    # two bad controls among the seeds left: no count is read
+    assert O({**good, 3: "control_warm_queue", 5: "control_unclear"})["outcome"] == "controls_not_healthy"
+    assert O({**good, 3: "control_unclear", 4: "control_cold_surge"})["outcome"] == "supports"   # 4 left n
+    # review T2: bad_baseline on the burst side is not a bad control; on the control side it is
+    two_bb = {**good, 3: "bad_baseline", 5: "bad_baseline"}
+    assert O(two_bb)["n_control_bad"] == 0 and O(two_bb)["outcome"] == "supports"
+    assert O(two_bb, {3: "bad_baseline", 5: "bad_baseline"})["outcome"] == "controls_not_healthy"
+    # k bands
+    assert O({**good, 3: "drains", 5: "stuck_draining"})["outcome"] == "supports"
+    assert O({**good, 3: "drains", 5: "stuck_draining", 6: "unclear"})["outcome"] == "some"
+    assert O(dict.fromkeys(good, "drains"))["outcome"] == "none"
+
+
+def test_reg18_seed_outcome_rules():
+    calm, nan = [{"share_waiting": 0.0}] * 3, [{"share_waiting": 0.0}] * 2 + [{"share_waiting": math.nan}]
+    ex4, ex_none = {"exposed": True, "t_first": 2435.0}, {"exposed": False, "t_first": math.nan}
+    late = {"tipped": True, "onset": 2700.0, "peak_tip": 2.85}   # review T1's trace
+    S = G.reg18_seed_outcome
+    assert S("stuck", "stuck", late, calm, True, ex4) == "control_cold_surge"
+    assert S("stuck", "stuck", late, calm, True, ex_none) == "control_cold_no_surge"
+    early = {"tipped": True, "onset": 2000.0, "peak_tip": 2.85}   # cold before the surge: not excused
+    assert S("stuck", "stuck", early, calm, True, ex4) == "control_cold_no_surge"
+    assert S("bad_baseline", "stuck", late, calm, True, ex4) == "bad_baseline"
+    # review T3: NaN waiting is inconclusive, not a pass
+    assert S("recovered", "stuck", {}, nan, True, ex_none) == "inconclusive"
+    assert S("recovered", "stuck", {}, calm[:2] + [{"share_waiting": 0.6}], True, ex_none) == "pass_warm_edge"
+    assert S("recovered", "stuck", {}, calm, True, ex_none) == "pass_clear"
+    assert S("recovered", "stuck", {}, [], True, ex_none) == "inconclusive"   # review R2-N6: no shares is no pass
+    # review R2-T2: a burst-side bad_baseline does not hide a control that tipped without a surge
+    mid = {"tipped": True, "onset": 1500.0, "peak_tip": 2.4}
+    assert S("stuck", "bad_baseline", mid, calm, True, ex_none) == "control_cold_no_surge"
+    assert S("slow_drain", "bad_baseline", {"tipped": False}, calm, True, ex_none) == "control_warm_queue"
+    assert S("recovered", "bad_baseline", {}, calm, True, ex_none) == "bad_baseline"
+    assert S("bad_baseline", "bad_baseline", mid, calm, True, ex_none) == "bad_baseline"
+
+
+def test_reg18_futility_stop():
+    C = lambda labels, remaining: G.reg18_continue(_rows18(labels), remaining)
+    assert C({3: "stuck_draining", 5: "drains"}, 3) is True            # k 0 + 3 left can still reach 3
+    assert C({3: "stuck_draining", 5: "drains", 6: "pass_clear"}, 2) is True
+    assert C({3: "stuck_draining", 5: "drains", 6: "unclear"}, 2) is False
+    assert C({3: "control_cold_no_surge"}, 4) is False
+    assert C({3: "control_warm_queue", 5: "control_unclear"}, 3) is False
+    assert G.REG18["order"][0] == 4 and sorted(G.REG18["order"]) == list(G.REG18["seeds"])   # review R2-T1
+
+
+def test_reg18_step_never_skips_a_seed(monkeypatch):
+    import analysis.load as L
+    have = {"*_stage2_control_l1pl350cl_r2.0_s4", "*_burst_l1pl350cl_r2.0_s4", "*_stage2_control_l1pl350cl_r2.0_s5"}
+    monkeypatch.setattr(L, "find_runs", lambda pattern: [object()] if pattern in have else [])
+    with pytest.raises(ValueError):   # seed 3 has no pair, seed 5 has a run
+        G.reg18_step()
+
+
+def test_reg18_pair_refuses_missing_runs(monkeypatch):
+    import analysis.load as L
+    monkeypatch.setattr(L, "find_runs", lambda pattern: [])
+    with pytest.raises(ValueError):
+        G.reg18_pair(3)

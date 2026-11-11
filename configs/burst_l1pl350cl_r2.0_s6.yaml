@@ -1,0 +1,6 @@
+# REG-18 (draft, docs/decisions.md 2026-11-11 [REG]): REG-17's burst run at seed 6, the only change.
+# Same seed and duration as its control, so the same session schedule; the burst draws from its own generator
+# (seeded by [seed, 1]). Needs the owner's approval to run.
+extends: burst_l1pl350cl_r2.0_s2.yaml
+name: burst_l1pl350cl_r2.0_s6
+seed: 6
