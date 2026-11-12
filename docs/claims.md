@@ -28,7 +28,7 @@ The study's claims, each with its test, what would support it, what would refute
 - **Status (2026-11-04):** untestable so far: there is no stuck run. Related evidence, not a test of C2: during bursts KV reached 1.00, and in the first 60 s after each burst the counter hit rate was 0.11–0.35 (a counter that includes the burst requests, which never hit, so it overstates how cold the sessions' cache was; decisions.md 2026-11-05 [CORR]), and every run then recovered within about 5 minutes (decisions.md 2026-11-02, 2026-11-03). The caching-off control has no defined form yet, and the protected-prefixes control (S4) was not investigated; it is replaced by the session-cap arm (2026-11-12).
 
 ## Status of C1 and C2 after 2026-11-04
-The two status lines above are dated 2026-11-04 and describe the open-loop setups. Later results are in `docs/status.md` and decisions.md: with closed-loop turns at setup L1 (350 W), single-seed pairs stuck with a recovered control at λ = 2.2 and 2.0 (decisions.md 2026-11-10 [RESULT] REG-14, REG-17), and the registered matrix at λ = 2.0 gave 1 of 4 (decisions.md 2026-11-11 [RESULT] REG-18). C1 is still not supported by its own test; REG-19 is under way.
+The two status lines above are dated 2026-11-04 and describe the open-loop setups. Later results are in `docs/status.md` and decisions.md: with closed-loop turns at setup L1 (350 W), single-seed pairs stuck with a recovered control at λ = 2.2 and 2.0 (decisions.md 2026-11-10 [RESULT] REG-14, REG-17), and the registered matrix at λ = 2.0 gave 1 of 4 (decisions.md 2026-11-11 [RESULT] REG-18). C1 is still not supported by its own test; REG-19 is under way. **C2 is no longer "untestable":** stuck runs exist, but condition 4 has not been computed on them, no loop figure exists, and neither control that cuts a link has been run, so C2 is untested.
 
 # Paper claims K1–K5 (since 2026-11-12)
 
@@ -41,6 +41,7 @@ Each is stated for the cells tested only. None has a registered test yet; every 
 - **Test:** one cell, the same seeds and the same burst, two arms that differ only in `workload.sessions.closed_loop`.
 - **Supports:** the closed-loop arm passes C1's per-seed test in most seeds while the open-loop arm is `recovered`, and most open-loop session hits are served while the previous turn runs (`gate.overlap_share`).
 - **Refutes:** the open-loop arm stuck at the matched cell.
+- **Caution (2026-11-12 audit):** latency is measured from the planned time with open-loop turns and from the release time with closed-loop turns (`docs/definitions.md`, percent fast), so percent fast and `load.verdict` are not the same quantity in the two arms. The K1 test must be registered on readouts defined alike in both arms: hit rate, KV usage, the server's waiting line, completions per second.
 - **Status (2026-11-12):** not tested at a clean load. Related evidence: with open-loop turns, stuck in 0 of 3 in each of 10 cells (FILE(PROTOCOL.md:105)). One matched pair at L1, λ = 2.4, one seed: the open-loop burst run drained with `overlap_share` 0.608 and the closed-loop one stuck (decisions.md 2026-11-09 [RESULT] REG-10 and REG-11); λ = 2.4 is at the closed-loop warm capacity, so overload explains the closed-loop arm as well (decisions.md 2026-11-10 [RESULT] REG-13).
 
 ## K2. Cost gap and reuse structure
@@ -52,6 +53,7 @@ Each is stated for the cells tested only. None has a registered test yet; every 
 - **Test:** setups that differ only in the turns per session (8 at L1, then 16, then 4; decisions.md 2026-11-12 [DECISION], design choices), under closed-loop turns, each with its cold floor and warm capacity measured under closed-loop turns and a paired shock matrix; and one shared-only setup at matched cache gain: M tenant prefixes of 2576 tokens, every turn one tenant's prefix plus 496 fresh tokens, M set so that M × 2576 equals L1's warm working set at the test load (`derived.working_set` on the L1 control). **A single shared prefix is not used:** every request would hold it, so it could never be evicted and the arm could not fail (decisions.md 2026-11-12 [CORR], second review). Prompt length per turn, uncached tokens per turn, output tokens, M and the popularity law are registered with it.
 - **Supports:** range width and stuck share rise with context; no stuck run in the shared-only setup at matched cache gain.
 - **Refutes:** no trend with context, or a stuck state in the shared-only setup.
+- **Open weakness (2026-11-12 audit):** with about 12 tenant prefixes and a cold running batch of about 65 requests, every prefix is almost always held by a running request and so cannot be evicted (DERIVED: (11/12)^65 ≈ 0.004), which makes "no stuck run" close to certain by the engine's rule. As designed the shared-only arm is a demonstration, not a test that could refute K2. It needs a design that can fail before it is registered (`docs/experiment-plan.md`, step E).
 - **Status (2026-11-12):** untested. The 512-token setups were shocked with open-loop turns only, so they say nothing here. The system prompt is drawn per session (FILE(harness/workload.py:97)); a shared prompt needs a harness change (owner).
 
 ## K3. Model transfer
@@ -69,7 +71,7 @@ Each is stated for the cells tested only. None has a registered test yet; every 
 - **Test:** a surge threshold fixed beforehand, then no-burst runs on new schedules chosen on both sides of it (`gate.surge_hazard` gives the schedule side).
 - **Supports:** runs tip where the schedule crosses the threshold and stay warm where it does not.
 - **Refutes:** tips without a surge, or surges above the threshold without a tip.
-- **Status (2026-11-12):** exploratory. Every no-burst collapse so far followed a 120 s surge of 3.24–3.49 req/s (decisions.md 2026-11-10 [CORR]); that readout was found in the data and has not judged any new run.
+- **Status (2026-11-12):** exploratory. Every no-burst collapse so far followed a 120 s surge of 3.24–3.49 req/s (decisions.md 2026-11-10 [CORR]); that readout was found in the data and has not judged any new run. Prior work (BELIEF): Valse and Jannesari have a heuristic for the edge at which a healthy run tips by itself, with misses they report; their tests sit at 0.41–0.51 of the warm peak, ours at 0.83–1.0.
 
 ## K5. Detection lead time (optional)
 **Claim:** recomputed prefill tokens per second and the hit rate change before latency and queue length do; the contribution is the measured lead time.

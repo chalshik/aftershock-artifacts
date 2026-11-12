@@ -208,6 +208,34 @@ The original code, recovered verbatim from session transcripts, is in `analysis/
 - **Text:** the first scrape time whose trailing 60 s mean KV usage is ≥ 0.9 (at least 30 scrapes in the window); NaN if never. Marks a tip into the cold state; warm time ends 60 s before it.
 - **Code:** `gate.kv_onset`.
 
+## Terms of the revised Stage 2 (added 2026-11-12, decisions.md [DECISION] of that date)
+
+None has code yet; each gets its code when the run or analysis that uses it is registered.
+
+### cold floor (all-miss capacity)
+- **Text:** the same quantity as μ_sat,off above: the completion rate of the saturated server with caching off. The preprints call it the all-miss capacity. The value on record for L1, 1.681 req/s, was measured with open-loop turns; a closed-loop value is not yet measured.
+- **Code:** `gate.cold_floor`.
+
+### margin
+- **Text:** the load divided by the cold floor. L1 at λ = 2.0: 2.0 / 1.681 = 1.19 (DERIVED).
+- **Code:** none.
+
+### open-loop turns / closed-loop turns
+- **Text:** open-loop: each turn is sent at its planned time, the gaps counted from the previous turn's planned time. Closed-loop: a later turn is released at the previous turn's end plus the planned gap (`workload.sessions.closed_loop: true`; FILE(configs/burst_l1pl350cl_r2.4_s1.yaml:6)). Latency is measured from the planned time in the first case and from the release time in the second (percent fast, above), so latency-based readouts are not comparable between the two.
+- **Code:** `harness/workload.py`, `harness/loadgen.py`.
+
+### cache gain
+- **Text:** the counter hit rate (`load._level` `"hit"`) of a setup's no-trigger control in its warm state.
+- **Code:** `load._level`.
+
+### shared-only workload, matched cache gain
+- **Text:** shared-only: every reusable token lies in one of a fixed set of prefixes shared across sessions, the set's total size does not change with load or backlog, and no request reuses tokens of its own session's earlier turns. Matched cache gain: two setups' cache gains agree within a tolerance registered beforehand. (`docs/claims.md`, K2.)
+- **Code:** none; needs a harness change.
+
+### session cap, sessions in service
+- **Text:** a session is in service from its first turn sent to its last reply received. The session cap is a limit on the number of sessions in service, held at the load generator; a session beyond it waits to start. Its value per seed is the highest number of sessions in service at once in the same seed's no-trigger control (decisions.md 2026-11-12 [DECISION], design choices).
+- **Code:** none; needs a load-generator change.
+
 ## Used configs that cannot be fixed (rule 5)
 
 Used configs are never edited. Their known defects are recorded here instead.

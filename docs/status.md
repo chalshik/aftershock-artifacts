@@ -74,7 +74,7 @@ Steps:
 
 - **Triggers:** cache wipe in `preempt` mode at t = 900 s; burst of +3 req/s of one-off 1408-token requests for 120 s from t = 900 s. Seeds 1–3. Verdict rule: decisions.md 2026-11-01 ("Stuck" redefined), with the baseline-window correction of 2026-11-02.
 - **Stopped early by decision:** the wipe matrix at λ = 2.5 and 1.5 and the `idle` wipe comparison.
-- **Not yet done:** triggers 3–5 (power cap, engine restart, popularity shift), bigger bursts, the ramp at the smaller pool, 60 s gaps, the caching-off control and the session-cap arm (in place of protected prefixes, 2026-11-12), and the plan's four Stage 2 figures (danger-zone map, loop figure, ramp figure, control figure).
+- **Not yet done (list revised 2026-11-12 with the plan, decisions.md [DECISION]):** the K1 matched arm with open-loop turns, the session-cap arm and the caching-off control, the K2 setups (shared prefixes, 16 turns), the registered comparison with the published models (K3), conditions 4–6 for C1, and the revised plan's four figures (boundary map, matched-arm figure, model against measurement, loop-cut figure). No longer planned: triggers 3–5 (power cap kept as a stretch item), bigger bursts, the ramp at the smaller pool, 60 s gaps, the protected-prefixes control, the danger-zone map.
 
 ## Stage 1 run steps
 
@@ -112,7 +112,9 @@ Steps:
 
 **Stage 1:** all six boxes done (decisions.md, steps 3–6 results and SLO).
 
-**Stage 2** (from the plan):
+**Stage 2, revised list (2026-11-12; `docs/experiment-plan.md`, "Stage 2, revised", Outputs and done criteria):** P0, REG-19 reported and the cell chosen: open (REG-19 under way). K1 matched arm: open. C2 loop-cut controls: open. K2 setups: open. K3 predictions compared: open. Preprint statements checked: partly (open-questions A16).
+
+**Stage 2** (the original list, kept for the record; superseded by the list above):
 - [ ] At least one load inside the danger zone gets stuck in most repeats, while its no-trigger control stays healthy. **Not met:** REG-11 stuck in one seed; REG-12 (λ = 2.4, closed-loop turns) stuck with a recovered control in 2 of 5 seeds, and 3 of 5 controls did not stay healthy (`controls_not_healthy`).
 - [ ] Stuck runs show the loop metrics in the expected order. Not applicable yet. The "few preemptions" part was replaced by a comparison with controls (decisions.md, 2026-11-01).
 - [ ] With prefix caching off, the same setup does not get stuck. Not run; needs a defined form (decisions.md, 2026-11-01).

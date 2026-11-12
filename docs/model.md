@@ -62,6 +62,24 @@ Every model used to choose a run or read a result, with its equations, the evide
 - μ is the highest swept λ whose 900 s run keeps up by the rule. It is a property of one arrival realization: every sweep used seed 0, and the planned request rate rises through the measured window in every sweep, from 0.67–0.97 λ in 240–390 s to 1.05–1.34 λ in 750–900 s (`schedule.parquet` of every sweep; 2026-11-04 audit). For λ = 3: 2.49 req/s in 240–390 s and 3.52 req/s in 750–900 s.
 - So μ_off = 2 may be low: the cache-off λ = 3 run failed on queue slope (0.0130 against 0.01, RUN(20261030-161749_sweep_pc_off_r3, load.summarize)) while its last 150 s carried 3.52 req/s of planned load, against a cache-off saturation of about 3.5 (above). BELIEF until tested: open-questions.md A1.
 
+## M5. Published trapped-state model (model F of Valse and Jannesari), evaluated for L1
+
+**Use:** the predictions K3 will register (docs/claims.md). Added 2026-11-12 (decisions.md [CORR], fifth of that date). **Not this study's model and not evidence:** everything about the model is BELIEF, read from arXiv 2611.08902v1 §3 by the agent. It has predicted no run of this study yet, so it has no ledger row.
+
+- Model: a single first-come-first-served server on which every turn misses; a session of T turns rejoins the queue after each turn; turn k costs c_k. With G_k = P(T ≥ k) and ω_k = c_k G_k / Σ c_j G_j, the root z > 1 of ρ Σ_k ω_k z^(−k) = 1 (ρ = load over all-miss capacity) gives: sessions completed over all-miss capacity D / λ_miss = ρ E[z^(−T)]; session backlog growth over excess load ρ (1 − E[z^(−T)]) / (ρ − 1); served-turn mix proportional to G_k z^(−k).
+- Inputs for L1: T = 8 for every session; prompts 2176 + 256 (k − 1) tokens (FILE(configs/l1_base.yaml:9), FILE(PROTOCOL.md:54)); c_k taken as proportional to prompt length (an assumption; a cost with a fixed part per turn changes the values below by less than 0.02); ρ against the open-loop cold floor 1.681 req/s (REG-8 row of M2).
+- Computed by `docs/paper/modelf_l1.py` (local, git-ignored; to move into `analysis/` with tests when step B is registered), DERIVED:
+
+| λ (req/s) | ρ | Sessions / all-miss capacity | Session backlog growth / excess load | Mean served prompt / schedule mean | Requests / all-miss request rate |
+|---|---|---|---|---|---|
+| 2.0 | 1.19 | 0.89 | 1.56 | 0.984 | 1.016 (1.71 req/s) |
+| 2.2 | 1.31 | 0.83 | 1.53 | 0.975 | 1.025 (1.72 req/s) |
+| 2.4 | 1.43 | 0.78 | 1.51 | 0.967 | 1.034 (1.74 req/s) |
+
+- These are long-run values. The model's authors report their own engine runs about 10 % from them in their judged window (BELIEF).
+- Against runs on record (retrospective, not a test): the span completion rates of REG-17 (1.73–1.77 req/s at λ = 2.0) and REG-14 (1.73–1.81 at 2.2) lie 1–5 % above the model's request rates. Two explanations: the open-loop floor is a few percent low for closed-loop cells, or the runs are in a transient the model does not describe. The session completion rate and the session backlog slope have not been computed from any run.
+- With a fixed turn count the model predicts fewer sessions than the all-miss capacity, the opposite of its authors' standard workload (geometric turn count), and matches their fixed-length test.
+
 ## Prediction ledger
 
 | # | Date | Model | Prediction (registered before the run) | Observed | Hit / miss | Runs |

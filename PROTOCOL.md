@@ -46,6 +46,8 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
 
 ## 4. System setup
 
+**[note 2026-11-12]** The table below describes the setups of the runs up to 2026-11-04. The cells in use since REG-11 (2026-11-09) differ in four settings, each set in config and logged in decisions.md: a 2048-token system prompt (setup L1, FILE(configs/l1_base.yaml:9)), 5 s turn gaps, a 350 W power limit (FILE(configs/l1_pl350_base.yaml:7)), and closed-loop turns (FILE(configs/burst_l1pl350cl_r2.4_s1.yaml:6)). This table has not been rewritten; that is the owner's.
+
 | Item | Value |
 |---|---|
 | Hardware | One RTX 3090, 24 GB (Gigabyte AORUS Xtreme, backplate fan since 2026-11-02), power limit 420 W (350 W for setup L1 from REG-8, decisions.md 2026-11-06); Proxmox VM, Ubuntu 24.04, 8 cores, 31 GB RAM; GPU shared with another user |
@@ -60,6 +62,8 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
 | Config | Every setting lives in `configs/*.yaml`. Each run saves its resolved config, `env.json` (versions, git commit, dirty flag) and checks |
 
 ## 5. Procedure
+
+**[note 2026-11-12]** Steps 3 and 4 describe the shock runs and ramps up to 2026-11-04. The L1 cells use a burst of 2.4 req/s of one-off 2944-token prompts for 180 s from t = 900 s (FILE(configs/burst_l1pl350_r2.4_s1.yaml:8)), runs of 2580 s (FILE(configs/stage2_l1_base.yaml:5)) or 4080 s with a 3000 s watch (REG-19), and per-registration seeds and tests (decisions.md, the `[REG]` entries REG-11 to REG-19). The steps planned next are in `docs/experiment-plan.md`, "Stage 2, revised 2026-11-12".
 
 1. **Capacity per setup:** 900 s sweeps with caching on and off, seed 0. μ is the highest λ with a valid run, throughput ≥ 0.95 λ and waiting slope ≤ 0.01 req/s (written "req/s²" before 2026-11-04; the number is unchanged). Every sweep shares seed 0's arrival pattern, whose planned load rises through the measured window (`docs/model.md` M4). **[new 2026-11-05]** Sweeps whose config has a `capacity:` block (from REG-7 on) compare throughput with the realized planned rate in the window instead of λ (item 42, decisions.md 2026-11-04). With `monotone: true`, μ is the highest rate that passes along with every lower swept rate (REG-7, decisions.md 2026-11-05). Past μ values stand as judged.
 2. **Test loads:** λ inside μ_off < λ < μ_warm whose no-trigger control is `recovered`.
@@ -103,6 +107,8 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
 | L1 measured at a 350 W power limit, not 420 W | SW-thermal slowdown invalidated every cache-off L1 run at 420 W | 2026-11-06 (REG-8) |
 
 ## 7. Current result (details in `docs/status.md`)
+
+**[note 2026-11-12]** The paragraph below is the result for the open-loop setups as of 2026-11-04 and still stands for them. For the closed-loop L1 cells the current result is in `docs/status.md` (headline) and decisions.md 2026-11-11 [RESULT] REG-18: 1 of 4 seeds on the registered test at λ = 2.0, with every control warm and every burst run cold and backlogged; REG-19 is under way. The "Untested" list is superseded by the revised plan.
 
 Stuck in 0 of 3 in each of 10 cells (setup × trigger × load), each with a one-sided 95 % upper bound of 0.63 on the stuck probability; no ramp gap at the default pool. Pooled, 0 of 30 bounds a common probability at 0.095, only under the assumption that all cells share one (`docs/process.md` §5). Whether these loads could get stuck at all is untested (`docs/model.md` M2). Untested:
 - triggers 3–5 (power cap, engine restart, popularity shift)

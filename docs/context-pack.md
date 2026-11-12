@@ -82,7 +82,7 @@ Steps:
 
 - **Triggers:** cache wipe in `preempt` mode at t = 900 s; burst of +3 req/s of one-off 1408-token requests for 120 s from t = 900 s. Seeds 1–3. Verdict rule: decisions.md 2026-11-01 ("Stuck" redefined), with the baseline-window correction of 2026-11-02.
 - **Stopped early by decision:** the wipe matrix at λ = 2.5 and 1.5 and the `idle` wipe comparison.
-- **Not yet done:** triggers 3–5 (power cap, engine restart, popularity shift), bigger bursts, the ramp at the smaller pool, 60 s gaps, the caching-off control and the session-cap arm (in place of protected prefixes, 2026-11-12), and the plan's four Stage 2 figures (danger-zone map, loop figure, ramp figure, control figure).
+- **Not yet done (list revised 2026-11-12 with the plan, decisions.md [DECISION]):** the K1 matched arm with open-loop turns, the session-cap arm and the caching-off control, the K2 setups (shared prefixes, 16 turns), the registered comparison with the published models (K3), conditions 4–6 for C1, and the revised plan's four figures (boundary map, matched-arm figure, model against measurement, loop-cut figure). No longer planned: triggers 3–5 (power cap kept as a stretch item), bigger bursts, the ramp at the smaller pool, 60 s gaps, the protected-prefixes control, the danger-zone map.
 
 ## Stage 1 run steps
 
@@ -120,7 +120,9 @@ Steps:
 
 **Stage 1:** all six boxes done (decisions.md, steps 3–6 results and SLO).
 
-**Stage 2** (from the plan):
+**Stage 2, revised list (2026-11-12; `docs/experiment-plan.md`, "Stage 2, revised", Outputs and done criteria):** P0, REG-19 reported and the cell chosen: open (REG-19 under way). K1 matched arm: open. C2 loop-cut controls: open. K2 setups: open. K3 predictions compared: open. Preprint statements checked: partly (open-questions A16).
+
+**Stage 2** (the original list, kept for the record; superseded by the list above):
 - [ ] At least one load inside the danger zone gets stuck in most repeats, while its no-trigger control stays healthy. **Not met:** REG-11 stuck in one seed; REG-12 (λ = 2.4, closed-loop turns) stuck with a recovered control in 2 of 5 seeds, and 3 of 5 controls did not stay healthy (`controls_not_healthy`).
 - [ ] Stuck runs show the loop metrics in the expected order. Not applicable yet. The "few preemptions" part was replaced by a comparison with controls (decisions.md, 2026-11-01).
 - [ ] With prefix caching off, the same setup does not get stuck. Not run; needs a defined form (decisions.md, 2026-11-01).
@@ -203,6 +205,8 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
 
 ## 4. System setup
 
+**[note 2026-11-12]** The table below describes the setups of the runs up to 2026-11-04. The cells in use since REG-11 (2026-11-09) differ in four settings, each set in config and logged in decisions.md: a 2048-token system prompt (setup L1, FILE(configs/l1_base.yaml:9)), 5 s turn gaps, a 350 W power limit (FILE(configs/l1_pl350_base.yaml:7)), and closed-loop turns (FILE(configs/burst_l1pl350cl_r2.4_s1.yaml:6)). This table has not been rewritten; that is the owner's.
+
 | Item | Value |
 |---|---|
 | Hardware | One RTX 3090, 24 GB (Gigabyte AORUS Xtreme, backplate fan since 2026-11-02), power limit 420 W (350 W for setup L1 from REG-8, decisions.md 2026-11-06); Proxmox VM, Ubuntu 24.04, 8 cores, 31 GB RAM; GPU shared with another user |
@@ -217,6 +221,8 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
 | Config | Every setting lives in `configs/*.yaml`. Each run saves its resolved config, `env.json` (versions, git commit, dirty flag) and checks |
 
 ## 5. Procedure
+
+**[note 2026-11-12]** Steps 3 and 4 describe the shock runs and ramps up to 2026-11-04. The L1 cells use a burst of 2.4 req/s of one-off 2944-token prompts for 180 s from t = 900 s (FILE(configs/burst_l1pl350_r2.4_s1.yaml:8)), runs of 2580 s (FILE(configs/stage2_l1_base.yaml:5)) or 4080 s with a 3000 s watch (REG-19), and per-registration seeds and tests (decisions.md, the `[REG]` entries REG-11 to REG-19). The steps planned next are in `docs/experiment-plan.md`, "Stage 2, revised 2026-11-12".
 
 1. **Capacity per setup:** 900 s sweeps with caching on and off, seed 0. μ is the highest λ with a valid run, throughput ≥ 0.95 λ and waiting slope ≤ 0.01 req/s (written "req/s²" before 2026-11-04; the number is unchanged). Every sweep shares seed 0's arrival pattern, whose planned load rises through the measured window (`docs/model.md` M4). **[new 2026-11-05]** Sweeps whose config has a `capacity:` block (from REG-7 on) compare throughput with the realized planned rate in the window instead of λ (item 42, decisions.md 2026-11-04). With `monotone: true`, μ is the highest rate that passes along with every lower swept rate (REG-7, decisions.md 2026-11-05). Past μ values stand as judged.
 2. **Test loads:** λ inside μ_off < λ < μ_warm whose no-trigger control is `recovered`.
@@ -260,6 +266,8 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
 | L1 measured at a 350 W power limit, not 420 W | SW-thermal slowdown invalidated every cache-off L1 run at 420 W | 2026-11-06 (REG-8) |
 
 ## 7. Current result (details in `docs/status.md`)
+
+**[note 2026-11-12]** The paragraph below is the result for the open-loop setups as of 2026-11-04 and still stands for them. For the closed-loop L1 cells the current result is in `docs/status.md` (headline) and decisions.md 2026-11-11 [RESULT] REG-18: 1 of 4 seeds on the registered test at λ = 2.0, with every control warm and every burst run cold and backlogged; REG-19 is under way. The "Untested" list is superseded by the revised plan.
 
 Stuck in 0 of 3 in each of 10 cells (setup × trigger × load), each with a one-sided 95 % upper bound of 0.63 on the stuck probability; no ramp gap at the default pool. Pooled, 0 of 30 bounds a common probability at 0.095, only under the assumption that all cells share one (`docs/process.md` §5). Whether these loads could get stuck at all is untested (`docs/model.md` M2). Untested:
 - triggers 3–5 (power cap, engine restart, popularity shift)
@@ -482,6 +490,34 @@ The original code, recovered verbatim from session transcripts, is in `analysis/
 - **Text:** the first scrape time whose trailing 60 s mean KV usage is ≥ 0.9 (at least 30 scrapes in the window); NaN if never. Marks a tip into the cold state; warm time ends 60 s before it.
 - **Code:** `gate.kv_onset`.
 
+## Terms of the revised Stage 2 (added 2026-11-12, decisions.md [DECISION] of that date)
+
+None has code yet; each gets its code when the run or analysis that uses it is registered.
+
+### cold floor (all-miss capacity)
+- **Text:** the same quantity as μ_sat,off above: the completion rate of the saturated server with caching off. The preprints call it the all-miss capacity. The value on record for L1, 1.681 req/s, was measured with open-loop turns; a closed-loop value is not yet measured.
+- **Code:** `gate.cold_floor`.
+
+### margin
+- **Text:** the load divided by the cold floor. L1 at λ = 2.0: 2.0 / 1.681 = 1.19 (DERIVED).
+- **Code:** none.
+
+### open-loop turns / closed-loop turns
+- **Text:** open-loop: each turn is sent at its planned time, the gaps counted from the previous turn's planned time. Closed-loop: a later turn is released at the previous turn's end plus the planned gap (`workload.sessions.closed_loop: true`; FILE(configs/burst_l1pl350cl_r2.4_s1.yaml:6)). Latency is measured from the planned time in the first case and from the release time in the second (percent fast, above), so latency-based readouts are not comparable between the two.
+- **Code:** `harness/workload.py`, `harness/loadgen.py`.
+
+### cache gain
+- **Text:** the counter hit rate (`load._level` `"hit"`) of a setup's no-trigger control in its warm state.
+- **Code:** `load._level`.
+
+### shared-only workload, matched cache gain
+- **Text:** shared-only: every reusable token lies in one of a fixed set of prefixes shared across sessions, the set's total size does not change with load or backlog, and no request reuses tokens of its own session's earlier turns. Matched cache gain: two setups' cache gains agree within a tolerance registered beforehand. (`docs/claims.md`, K2.)
+- **Code:** none; needs a harness change.
+
+### session cap, sessions in service
+- **Text:** a session is in service from its first turn sent to its last reply received. The session cap is a limit on the number of sessions in service, held at the load generator; a session beyond it waits to start. Its value per seed is the highest number of sessions in service at once in the same seed's no-trigger control (decisions.md 2026-11-12 [DECISION], design choices).
+- **Code:** none; needs a load-generator change.
+
 ## Used configs that cannot be fixed (rule 5)
 
 Used configs are never edited. Their known defects are recorded here instead.
@@ -560,6 +596,24 @@ Every model used to choose a run or read a result, with its equations, the evide
 - μ is the highest swept λ whose 900 s run keeps up by the rule. It is a property of one arrival realization: every sweep used seed 0, and the planned request rate rises through the measured window in every sweep, from 0.67–0.97 λ in 240–390 s to 1.05–1.34 λ in 750–900 s (`schedule.parquet` of every sweep; 2026-11-04 audit). For λ = 3: 2.49 req/s in 240–390 s and 3.52 req/s in 750–900 s.
 - So μ_off = 2 may be low: the cache-off λ = 3 run failed on queue slope (0.0130 against 0.01, RUN(20261030-161749_sweep_pc_off_r3, load.summarize)) while its last 150 s carried 3.52 req/s of planned load, against a cache-off saturation of about 3.5 (above). BELIEF until tested: open-questions.md A1.
 
+## M5. Published trapped-state model (model F of Valse and Jannesari), evaluated for L1
+
+**Use:** the predictions K3 will register (docs/claims.md). Added 2026-11-12 (decisions.md [CORR], fifth of that date). **Not this study's model and not evidence:** everything about the model is BELIEF, read from arXiv 2611.08902v1 §3 by the agent. It has predicted no run of this study yet, so it has no ledger row.
+
+- Model: a single first-come-first-served server on which every turn misses; a session of T turns rejoins the queue after each turn; turn k costs c_k. With G_k = P(T ≥ k) and ω_k = c_k G_k / Σ c_j G_j, the root z > 1 of ρ Σ_k ω_k z^(−k) = 1 (ρ = load over all-miss capacity) gives: sessions completed over all-miss capacity D / λ_miss = ρ E[z^(−T)]; session backlog growth over excess load ρ (1 − E[z^(−T)]) / (ρ − 1); served-turn mix proportional to G_k z^(−k).
+- Inputs for L1: T = 8 for every session; prompts 2176 + 256 (k − 1) tokens (FILE(configs/l1_base.yaml:9), FILE(PROTOCOL.md:54)); c_k taken as proportional to prompt length (an assumption; a cost with a fixed part per turn changes the values below by less than 0.02); ρ against the open-loop cold floor 1.681 req/s (REG-8 row of M2).
+- Computed by `docs/paper/modelf_l1.py` (local, git-ignored; to move into `analysis/` with tests when step B is registered), DERIVED:
+
+| λ (req/s) | ρ | Sessions / all-miss capacity | Session backlog growth / excess load | Mean served prompt / schedule mean | Requests / all-miss request rate |
+|---|---|---|---|---|---|
+| 2.0 | 1.19 | 0.89 | 1.56 | 0.984 | 1.016 (1.71 req/s) |
+| 2.2 | 1.31 | 0.83 | 1.53 | 0.975 | 1.025 (1.72 req/s) |
+| 2.4 | 1.43 | 0.78 | 1.51 | 0.967 | 1.034 (1.74 req/s) |
+
+- These are long-run values. The model's authors report their own engine runs about 10 % from them in their judged window (BELIEF).
+- Against runs on record (retrospective, not a test): the span completion rates of REG-17 (1.73–1.77 req/s at λ = 2.0) and REG-14 (1.73–1.81 at 2.2) lie 1–5 % above the model's request rates. Two explanations: the open-loop floor is a few percent low for closed-loop cells, or the runs are in a transient the model does not describe. The session completion rate and the session backlog slope have not been computed from any run.
+- With a fixed turn count the model predicts fewer sessions than the all-miss capacity, the opposite of its authors' standard workload (geometric turn count), and matches their fixed-length test.
+
 ## Prediction ledger
 
 | # | Date | Model | Prediction (registered before the run) | Observed | Hit / miss | Runs |
@@ -610,24 +664,13 @@ Every model used to choose a run or read a result, with its equations, the evide
 | A11 | What is the completion rate c_b in the cold backlog after the existing bursts (default, 72k and 5 s-gap setups)? BELIEF from the audit's inline reading (every burst backlog drained within minutes): c_b is near the warm peak at the default pool, which would explain every `recovered` | **Open.** Needs its own `[REG]` before it is computed (its outcome is not foregone across the 72k and 5 s-gap bursts); 0 GPU h | decisions.md 2026-11-05 [DECISION] audit; `analysis/gate.py` `burst_backlog` can compute it |
 | A12 | Does the GPU power limit change the balance between warm and cold capacity? Cold turns spend more time in compute-bound prefill, so a lower clock may cost them more than warm turns (BELIEF), which would widen the capacity loss that M2 needs | **Open.** REG-8 measures L1 at 350 W only; at 420 W the cache-off sweep has no valid run and the cache-on chain is cut by heat, so no comparison is possible (REG-8 review, T7). Needs cache-on and cache-off runs at matched rates at both limits (GPU, owner). REG-9 rests on the same question in one direction (assumption P: capacity at 420 W without slowdown ≥ capacity at 350 W), with two points against P: microk8s, active in the 420 W runs and not in REG-9 (direction unfavourable to P, size unknown), and a different chunked-prefill/decode mix per step at a lower clock | decisions.md 2026-11-06 [REG] REG-8; decisions.md 2026-11-07 [REG] REG-9 |
 | A14 | Why did the recorder stop at t = 213 s in `20261109-134250_stage2_control_l1pl350cl_r2.4_s6` with no error line in `metrics.jsonl`? BELIEF: `LagTail.recent_max` (harness/recorder.py) parses a half-written line of `requests.jsonl` and the uncaught `JSONDecodeError` ends the process. Also: `gpu_steady` and `recorder` both passed on that run | **Open.** The console log with any traceback was overwritten (decisions.md 2026-11-09 [CORR]). A fix (catch and skip a partial line; `recorder` to check coverage up to `load_end`; `gpu_steady` to fail with 0 busy samples) needs the owner (checks) | FILE(runs/20261109-134250_stage2_control_l1pl350cl_r2.4_s6/gpu.jsonl), `events.jsonl` |
-| A16 | Do the three preprints say what the 2026-11-12 decision and `docs/claims.md` take from them (arXiv 2611.02543, 2611.08902, 2611.13412): setups, loads relative to the cold capacity, closed turns only, the drain threshold and model F, the published controllers, their stated limits? | **Open; two items checked 2026-11-12** through a fetch agent's verbatim quotes (decisions.md 2026-11-12 [CORR]): (1) Valse and Jannesari's lowest burst test is 1.35 λ_ref, the registered rates run to 4.0, CUT-A held an existing trap at a realized 1.12–1.20, and the (1, 1.3) window on the H200 at 300k had no test; (2) Huang and Liu's sessions share a 2K system prompt, never varied or removed. (3) Lu et al. §1–§7.1 (decisions.md 2026-11-12 [CORR], second review): loads are given against the warm overload rate only (a +300 % surge traps from 0.46–0.70 of it), turns are closed, no shared prefix is described; §7.2–§10 were then checked the same way (2026-11-12, later): hardware runs on SGLang only, no vLLM; closed-loop sessions are named as a premise of the feedback and no open-loop arm is run; sessions are independent, and shared pages and colocated serving are left unevaluated; no artifact statement seen. Lu et al. was then read directly from the PDF by the agent (19 pages, figures and references; decisions.md 2026-11-12 [CORR], third). Huang and Liu was then read directly in full, and Valse and Jannesari's main body (pp. 1–12) with appendix pp. 35–37 and 63–64 (decisions.md 2026-11-12 [CORR], fourth). The rest of Valse and Jannesari's appendix (pp. 21–64, as text) and the four earlier systems (KAIROS, Metronome, MISA-T in full as text; VAMP without its design-detail sections) were then read by the agent (decisions.md 2026-11-12 [DECISION], prior-work reading). **Still open:** Valse and Jannesari's proofs and reference list (pp. 13–20), VAMP §IV-C–§V, AgentKV, and every figure outside the three preprints' main bodies are unread; the owner has read none of the papers. The rest is unchecked. The agent read them through automated summaries: no figures, Lu et al. §5–10 not verbatim, appendix parts of Valse and Jannesari not read. Every statement about them is BELIEF until checked against the papers; anything cited in the paper must be checked first | decisions.md 2026-11-12 [DECISION] |
+| A16 | Do the preprints and the earlier systems say what the 2026-11-12 decisions and `docs/claims.md` take from them? | **Partly answered; all of it BELIEF (a paper is not rule-B evidence).** Read by the agent from the PDFs on 2026-11-12: Lu et al. (arXiv 2611.02543) and Huang and Liu (arXiv 2611.13412) in full with figures; Valse and Jannesari (arXiv 2611.08902) main body with figures and appendix pp. 21–64 as text; KAIROS (arXiv 2604.16682), Metronome (arXiv 2607.02640) and MISA-T (arXiv 2608.11152) as text to the conclusion; VAMP (arXiv 2609.13537) without §IV-C–§V. Confirmed in those reads: closed turns in every experiment of the three preprints; Huang and Liu's shared 2K system prompt, never varied; Valse and Jannesari's lowest burst test at 1.35 λ_ref, CUT-A at 1.12–1.20, and narrow windows with no test on the H200 at 300k and the A100 at 150k; Lu et al.'s loads given only against the warm overload rate, their map reaching it in simulation; no test of persistence after a removed trigger in the four earlier systems. **Open:** Valse and Jannesari's proofs and reference list (pp. 13–20) and their appendix figures; VAMP §IV-C–§V; AgentKV (not opened); Schroeder et al. 2006 (not opened); the owner has read none of the papers, and anything cited in the paper must be checked by the owner first | decisions.md 2026-11-12, the five [CORR] entries and the [DECISION] on prior-work reading; working notes in `docs/paper/reading-notes.md` (local) |
 
 ---
 
 <!-- source: docs/decisions.md, last 5 entries -->
 
 ## Last decisions
-
-### 2026-11-12 · [CORR] Second review of Paper Plan v3: the single-prefix shared-only arm could not fail (now M tenant prefixes); P0's novelty sentence rewritten and Lu et al.'s loads checked; units no longer mixed; the related-work sentence overclaimed absence; the reading caveat was stale
-- **Source:** a second review of `docs/paper/paper-plan-v3.md`, passed on by the owner on 2026-11-12, and one more targeted re-read of Lu et al. through a fetch agent (verbatim for its abstract to §7.1; §7.2–§10 summary only). The errors are the agent's.
-  1. **The shared-only arm as designed earlier today could not come out negative** (decisions entry "Design choices", item 3: one 2576-token prefix shared by all sessions). Every request would read that prefix, so some running request always holds it; a held block is not in the free queue and cannot be evicted (SOURCE(vLLM 0.32.0 v1/core/block_pool.py:get_new_blocks), open-questions S9). "No stuck run" would follow from the construction. **Replaced by:** M tenant prefixes of 2576 tokens each, every turn one tenant's prefix plus 496 fresh tokens, M set so that M × 2576 equals L1's warm working set at the test load (`derived.working_set` on the L1 control), popularity uniform, with a skewed variant as a harsher second case. Any tenant's prefix can then be evicted, so the arm can fail; what still differs from L1 is that a backlog adds no prefixes and waiting does not lengthen a prefix's idle time. The mean prompt (3072), mean uncached tokens (496), hit rate (0.8385) and output tokens (128) stay matched; the per-turn spread does not, and it is registered as a difference together with M and the popularity law. K2's claim wording follows: "a fixed set of prefixes shared across sessions" in place of "one system prompt shared by all sessions". M and the popularity law are not fixed here; they are for the registration.
-  2. **P0's sentence on what is new did not parse and claimed more than was checked.** It read as if the stricter test applied to persistence, and "no burst test starts below 1.35" covered only two of the three papers. Checked now (BELIEF, fetch agent's verbatim quotes): Lu et al. give loads only against the warm overload rate, a +300 % surge trapping from 0.46–0.70 of it (their §4.1), and no all-miss capacity in session units, so they cannot be placed on the all-miss scale. The plan now states the comparison per paper in its own units and keeps only the two-sided statement: this study's cell is nearer the warm capacity (2.0 / 2.4 = 0.83, DERIVED, against at most 0.70) than any burst test in the three, and nearer the cold floor (1.19 against at least 1.35) than any that reports it.
-  3. **Units were mixed in one sentence:** Huang and Liu's 2.7–3.1 is relative to their drain break-even, not to an all-miss capacity. Now stated apart.
-  4. **"None reports the conditions under which the failure does not occur" was an overclaim.** Huang and Liu report no second state with caching off and none under a session cap; Valse and Jannesari report bursts of 25 and 40 sessions absorbed and a window too narrow to test; Lu et al. report a +33 % surge absorbed. The plan's sentence now lists these and limits the gap to: no paper varies turn semantics or reuse structure, or tests inside a narrow window. The earlier chat summaries that said "nobody says when it does not happen" were wrong in the same way.
-  5. **Stale text in the plan:** the reading caveat (now says what was checked and how), three [VERIFY] tags on items since checked, and "loads well above the cold capacity". The review's item on step 4 ("one setup with a shared system prompt") had already been changed.
-  6. **Ranges without their runs:** 1.03–1.08 times the floor covers REG-14 (λ = 2.2, 1.73–1.81 req/s) and REG-17 (λ = 2.0, 1.73–1.77); the shortfall is 11.5–13.5 % at 2.0 and 18–21 % at 2.2 (DERIVED: 1 − 1.81 / 2.2 = 0.177, 1 − 1.73 / 2.2 = 0.214). The review's 9.2–13.5 % applies REG-14's 1.81 to λ = 2.0, which is not a measured pair.
-  7. **Unsourced sentence:** "a shared prompt is how many deployments get their hits" is now marked as needing a source.
-- **Changed:** `docs/paper/paper-plan-v3.md` (caveat, P0, K2, K3 status, adopt list, Lu et al. row, related-work sentence); `docs/claims.md` (K2 claim, definition, test); `docs/experiment-plan.md` (key word, step E.1, the answered question on the shared-only workload); `docs/open-questions.md` (A16). Earlier entries are left as written; item 3 of "Design choices" is superseded by item 1 here.
 
 ### 2026-11-12 · [CORR] Lu et al. read directly: their simulated map reaches the warm overload rate, so "nearer the warm capacity than any burst test in the three" was wrong; their two unidentified references are identified
 - **What was done:** the owner installed a PDF tool, and the agent read arXiv 2611.02543v1 itself, all 19 pages with figures and the reference list. It is the first of the three preprints read without a fetch agent in between. Statements about it are still BELIEF in rule B's sense (a paper is not one of the evidence tags), but they no longer rest on relayed quotes.
@@ -664,3 +707,20 @@ Every model used to choose a run or read a result, with its equations, the evide
   3. **Narrow windows without a burst test exist in Valse and Jannesari's own data** besides the H200 at 300k: the A100 at a 150k pool has a from-empty edge of 1.2–1.3 times the all-miss rate against a peak ratio of 1.68. Collapses with no burst are on record there from 1.4. This supports the statement that burst entry inside a narrow window is untested, and it does not change it.
 - **For the owner, a wording choice:** Valse and Jannesari call the stuck regime "metastable rather than bistable", because the backlog keeps growing and it is "not a second stationary state" (App. E.4). The owner's related-work text says "bistable", and condition 6 of PROTOCOL §3 speaks of "two states at one load". This study's stuck runs also have a growing waiting line (decisions.md 2026-11-10 [RESULT] REG-17: 76 → 120). Which word the paper uses, and in what sense the second state is a state, is the owner's decision; nothing is changed here.
 - **Changed:** `docs/claims.md` (K1), `docs/open-questions.md` (A16), and the local `docs/paper/` files (plan: reading caveat, K1, K2, the earlier-systems section, a wording section; the related-work draft).
+
+### 2026-11-12 · [CORR] Audit of today's documents: two design flaws in the revised plan (caching-off control load, shared-only arm), one missing caution for K1, stale lines brought up to date; items left for the owner
+- **Owner (2026-11-12):** asked for a sceptical check of all documents and of the experiment plan. 0 GPU h; no run data read; no run, config, code, check or threshold changed.
+- **Flaws found in the plan the agent wrote today, and corrected in the text:**
+  1. **Caching-off control, wrong load.** "The same share of the cache-off capacity" was ambiguous, and with the saturation floor (1.681 req/s) it gives about 1.40 req/s, above the caching-off keep-up capacity at L1, μ_off = 1.0 req/s (`docs/model.md` M2, REG-8 row). Such a control would start with an unhealthy baseline. The plan now says the keep-up capacity is meant, about 0.83 req/s (DERIVED: 2.0 / 2.4 × 1.0), and that the registration must fix it.
+  2. **Shared-only arm, still close to unfalsifiable.** The M-tenant design of the second [CORR] has about 12 prefixes (L1's warm working set over 2576 tokens; the working set itself is an estimate, BELIEF). In the cold state about 65 requests run (open-questions S7), so a given prefix is unheld with probability (11/12)^65 ≈ 0.004 (DERIVED) and cannot be evicted (SOURCE(vLLM 0.32.0 v1/core/block_pool.py:get_new_blocks)). "No stuck run" is then nearly certain by the engine's rule. The plan, `docs/claims.md` K2 and the paper plan now carry this as an open weakness: before registration the arm needs a design that can fail, or it is a demonstration and K2's risky test is the turn-count arm.
+  3. **K1, missing caution.** Latency is measured from the planned time with open-loop turns and from the release time with closed-loop turns (`docs/definitions.md`, percent fast), so percent fast and `load.verdict` are different quantities in the two arms. The K1 test must be registered on hit rate, KV usage, the server's waiting line and completions per second. Added to the plan and to K1.
+  4. **Step B lacked the discriminating readouts** found later the same day (session completion rate, session backlog slope). Added.
+- **Stale text brought up to date:** `docs/status.md` (the "Not yet done" list and the Stage 2 done list, both replaced by the revised plan's; the original done list kept below it); `docs/claims.md` (C2 is untested, no longer "untestable"; K4 notes the prior heuristic); `docs/open-questions.md` A16 rewritten as its current state; `PROTOCOL.md` §4, §5 and §7 each get a dated note saying what the L1 cells use and where the current result is (the old tables are left as they are); `docs/model.md` gets M5, the published model evaluated for L1; `docs/definitions.md` gets the new terms (cold floor, margin, open- and closed-loop turns, cache gain, shared-only, session cap). The local paper files: a leftover [VERIFY], two lines that still offered to register predictions before REG-19, the "until the backlog is empty" wording of the confirmation run (a schedule is fixed beforehand, rule 6), and the four earlier systems added to the references.
+- **Checked and found in order:** every function the new text names exists (`gate.overlap_share`, `gate.surge_hazard`, `gate.cold_floor`, `derived.working_set`); the burst (2.4 req/s, 2944 tokens, 180 s from 900 s) and run lengths match the configs; today's numbers trace to status.md, model.md or decisions entries; `tools/check_docs.py` passes tags, file references, append-only and the context pack.
+- **Left for the owner or the session running REG-19 (not changed):**
+  - `CLAUDE.md` still says "`docs/claims.md` the claims C1–C2 and their tests" and "Stage 2 (reproducing the failure)"; it is the owner's instruction file.
+  - `PROTOCOL.md` §4, §5 and §7: the tables themselves, behind today's notes.
+  - `docs/status.md`: the run inventory (176 folders against 180 on disk, REG-18 and REG-19 runs not listed), the three different run counts, the "420 W" line, and REG-19's progress (seeds 15 and 16 are on the Mac). `tools/check_docs.py` fails `inventory` and `manifest` for this reason only.
+  - **Mac and VM heads now differ.** The VM ran REG-19's seeds 15 and 16 at `a7bb77a` (FILE(docs/probe/20261111_reg19/prelaunch_reg19_burst_l1pl350cl_r2.0_w3000_s16_attempt1.txt:7)); the Mac's `main` has two later commits of this session, documents only. The VM must not pull during the sweep (status.md, Sync); if a pre-launch check compares the two heads, the difference is these two commits and touches no code or config.
+  - The word for the stuck regime, "bistable" or "metastable" (previous entry).
+  - Whether K2 keeps a shared-only arm at all.
