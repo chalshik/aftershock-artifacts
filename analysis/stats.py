@@ -26,6 +26,15 @@ def cell(k: int, n: int) -> str:
     return f"{k} of {n} (≤ {cp_upper(k, n):.2f}, one-sided 95 %)"
 
 
+def fisher_one_sided(k1: int, n1: int, k2: int, n2: int) -> float:
+    """One-sided Fisher exact p for 'group 1 has the higher share': P(X >= k1), X hypergeometric, n1 draws from
+    n1 + n2 items of which k1 + k2 are successes. Stdlib only (REG-20 draft, decisions.md 2026-11-12)."""
+    if not (0 <= k1 <= n1 and 0 <= k2 <= n2) or n1 < 1 or n2 < 1:
+        raise ValueError(f"need 0 <= k <= n and n >= 1, got {k1}/{n1}, {k2}/{n2}")
+    n, k = n1 + n2, k1 + k2
+    return sum(comb(k, x) * comb(n - k, n1 - x) for x in range(k1, min(n1, k) + 1)) / comb(n, n1)
+
+
 def _poisson_cdf(k: int, mu: float) -> float:
     """P(X <= k) for X ~ Poisson(mu), summed in log space so that exp(-mu) cannot underflow for large mu."""
     from math import exp, lgamma, log

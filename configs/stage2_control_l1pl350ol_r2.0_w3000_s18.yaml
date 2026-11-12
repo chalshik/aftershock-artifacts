@@ -1,0 +1,7 @@
+# REG-20 (draft, docs/decisions.md 2026-11-12 [REG]), K1 open arm A: REG-19's control for seed 18 with open-loop turns,
+# the only change. Runs only if its burst partner ends cold-backlogged (analysis/k1.py). Needs the owner's approval to run.
+extends: stage2_control_l1pl350cl_r2.0_w3000_s18.yaml
+name: stage2_control_l1pl350ol_r2.0_w3000_s18
+workload:
+  sessions:
+    closed_loop: false    # each turn is sent at its planned time (harness/loadgen.py)

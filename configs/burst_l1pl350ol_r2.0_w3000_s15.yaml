@@ -1,0 +1,8 @@
+# REG-20 (draft, docs/decisions.md 2026-11-12 [REG]), K1 open arm A: REG-19's burst run for seed 15 with open-loop turns,
+# the only change. Same seed, rate and duration (4080 s), so the same planned schedule as its closed-loop partner.
+# Needs the owner's approval to run.
+extends: burst_l1pl350cl_r2.0_w3000_s15.yaml
+name: burst_l1pl350ol_r2.0_w3000_s15
+workload:
+  sessions:
+    closed_loop: false    # each turn is sent at its planned time (harness/loadgen.py)

@@ -1,0 +1,7 @@
+# REG-20 (draft, docs/decisions.md 2026-11-12 [REG]), K1 open arm B (headroom check): arm A's burst run for seed 16 at
+# λ = 2.5 (= 0.83 x the open-loop warm capacity 3.0), the only change; the burst itself is unchanged. Runs only if
+# k1.b_may_start. Needs the owner's approval to run.
+extends: burst_l1pl350ol_r2.0_w3000_s16.yaml
+name: burst_l1pl350ol_r2.5_w3000_s16
+workload:
+  rate: 2.5

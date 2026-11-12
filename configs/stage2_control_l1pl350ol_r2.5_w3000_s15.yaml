@@ -1,0 +1,6 @@
+# REG-20 (draft, docs/decisions.md 2026-11-12 [REG]), K1 open arm B: arm A's control for seed 15 at λ = 2.5, the only
+# change. Runs only if its burst partner ends cold-backlogged (analysis/k1.py). Needs the owner's approval to run.
+extends: stage2_control_l1pl350ol_r2.0_w3000_s15.yaml
+name: stage2_control_l1pl350ol_r2.5_w3000_s15
+workload:
+  rate: 2.5
