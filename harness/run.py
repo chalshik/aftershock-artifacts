@@ -21,6 +21,7 @@ from pathlib import Path
 import yaml
 
 from harness import checks, env_snapshot, trigger, workload
+from harness import loadgen as loadgen_mod  # session_cap(): validated before the server starts
 from harness.config import _merge, load_config, with_defaults  # noqa: F401  (load_config is imported from here by tests)
 from harness.recorder import scrape
 
@@ -120,6 +121,10 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
         raise SystemExit(f"{cfg['name']}: workload.rate is not set")
     if cfg.get("trigger") is not None:
         trigger.validate(cfg)
+    try:
+        loadgen_mod.session_cap(cfg)  # a bad session cap stops here, before the server starts
+    except ValueError as e:
+        raise SystemExit(f"{cfg['name']}: {e}")
 
     env = env_snapshot.snapshot()
     if env["git_dirty"] and cfg["checks"]["require_clean_git"] and not allow_dirty:
@@ -166,9 +171,11 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
         ev.t0 = t0
         recording = cfg["recorder"].get("enabled", True)  # configs from before this switch have no key
         if recording:
-            recorder = subprocess.Popen(_pin(cfg["cpus"]["recorder"]) + py +
-                                        ["harness.recorder", str(run_dir), repr(t0)],
-                                        start_new_session=True, env=child_env, cwd=REPO)
+            with open(run_dir / "recorder.log", "w") as rlog:  # its stderr survives the console (A14)
+                recorder = subprocess.Popen(_pin(cfg["cpus"]["recorder"]) + py +
+                                            ["harness.recorder", str(run_dir), repr(t0)],
+                                            stderr=rlog,  # stdout (the status line) stays on the console
+                                            start_new_session=True, env=child_env, cwd=REPO)
         else:
             _scrape_once(run_dir, base, time.monotonic() - t0, cfg["recorder"]["scrape_timeout_s"])
         if (cfg.get("trigger") or {}).get("kind") == "cache_wipe":  # a burst is already in the schedule
@@ -180,10 +187,14 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
                                    start_new_session=True, env=child_env, cwd=REPO)
         ev("load_t0_planned", t0_mono=t0, wall_at_t0=time.time() + (t0 - time.monotonic()))
         warm_logged = wl["warmup_s"] <= 0
+        recorder_dead = False
         while loadgen.poll() is None:
             if server.poll() is not None:
                 ev("server_died", returncode=server.returncode)
                 break
+            if recorder is not None and not recorder_dead and recorder.poll() is not None:
+                ev("recorder_died", returncode=recorder.returncode)  # the `recorder` check fails the run on this
+                recorder_dead = True
             if not warm_logged and time.monotonic() >= t0 + wl["warmup_s"]:
                 ev("warmup_end")
                 warm_logged = True

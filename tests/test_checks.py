@@ -289,3 +289,74 @@ def test_manipulation_burst(tmp_path):
     cfg["trigger"].update(at_s=60, duration_s=10)  # KV stays at 0.5 in this burst
     (d / "config.yaml").write_text(yaml.safe_dump(cfg))
     assert "manipulation" in failed(d)
+
+
+# ---- coverage (open question A14; owner, 2026-11-12): a recorder that stops early must fail the run
+
+def with_events(d, *events):
+    (d / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events))
+    return d
+
+
+def cut_scrapes_after(d, t_max):
+    recs = [json.loads(l) for l in (d / "metrics.jsonl").read_text().splitlines()]
+    (d / "metrics.jsonl").write_text("".join(json.dumps(r) + "\n" for r in recs if r["t"] <= t_max))
+    return d
+
+
+def test_recorder_stopping_early_fails(tmp_path):
+    d = make_run(tmp_path)                                   # load runs to t = 100
+    assert "recorder" in failed(cut_scrapes_after(d, 60.0))
+
+
+def test_recorder_must_reach_the_load_end_event(tmp_path):
+    d = with_events(make_run(tmp_path), {"t": 300.0, "event": "load_end"})   # drain ran on past the scrapes
+    r = checks.run_checks(d)
+    assert "recorder" in r["failed"]
+    det = next(x for x in r["checks"] if x["name"] == "recorder")["detail"]
+    assert det["end_ref"] == "load_end" and det["end_ref_t"] == 300.0
+
+
+def test_recorder_covering_the_load_end_passes(tmp_path):
+    d = with_events(make_run(tmp_path), {"t": 100.5, "event": "load_end"})
+    assert failed(d) == []
+
+
+def test_recorder_died_event_fails(tmp_path):
+    d = with_events(make_run(tmp_path), {"t": 50.0, "event": "recorder_died", "returncode": 1})
+    assert "recorder" in failed(d)
+
+
+def test_recorder_starting_late_fails(tmp_path):
+    d = make_run(tmp_path)
+    recs = [json.loads(l) for l in (d / "metrics.jsonl").read_text().splitlines()]
+    (d / "metrics.jsonl").write_text("".join(json.dumps(r) + "\n" for r in recs if r["t"] >= 5.0))
+    assert "recorder" in failed(d)
+
+
+def test_recorder_off_needs_no_coverage(tmp_path):
+    d = recorder_off(cut_scrapes_after(make_run(tmp_path), 60.0))
+    assert "recorder" not in failed(d)
+
+
+def test_gpu_samples_ending_early_fail(tmp_path):
+    assert "gpu_steady" in failed(with_gpu(make_run(tmp_path), [0] * 50))        # samples stop at t = 49 of 100
+
+
+def test_gpu_window_empty_fails(tmp_path):
+    d = make_run(tmp_path)
+    cfg = yaml.safe_load((d / "config.yaml").read_text())
+    cfg["workload"]["warmup_s"] = 60                                              # samples stop before the window
+    (d / "config.yaml").write_text(yaml.safe_dump(cfg))
+    assert "gpu_steady" in failed(with_gpu(d, [0] * 50))
+
+
+def test_gpu_gap_inside_the_window_fails(tmp_path):
+    d = with_gpu(make_run(tmp_path), [0] * 100)
+    recs = [json.loads(l) for l in (d / "gpu.jsonl").read_text().splitlines()]
+    (d / "gpu.jsonl").write_text("".join(json.dumps(r) + "\n" for r in recs if not 40 <= r["t"] <= 45))
+    assert "gpu_steady" in failed(d)
+
+
+def test_gpu_no_busy_sample_fails(tmp_path):
+    assert "gpu_steady" in failed(with_gpu(make_run(tmp_path), [0] * 100, util=0))

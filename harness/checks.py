@@ -92,8 +92,22 @@ def run_checks(run_dir: Path) -> dict:
     max_gap = float(np.max(np.diff(ts))) if len(ts) >= 2 else math.inf
     n_fail = len(scrapes) - len(ok_scrapes)
     gap_ok = max_gap <= c["max_scrape_gap_s"] or not recording
-    out.append(check("recorder", not decreases and gap_ok and n_fail == 0,
-                     {"counter_decreases": decreases[:10], "max_gap_s": max_gap, "failed_scrapes": n_fail}))
+    # Coverage (open question A14; owner, 2026-11-12): gaps are measured only between scrapes that exist, so a recorder
+    # that stops early left none. With the recorder on, the good scrapes must also reach from the load's start (t = 0)
+    # to its end (the `load_end` event; `duration_s` for a run folder without one), each within max_scrape_gap_s, and
+    # the recorder must not have exited during the load (`recorder_died`, logged by run.py). No new threshold.
+    events = _jsonl(run_dir / "events.jsonl")
+    died = [e for e in events if e.get("event") == "recorder_died"]
+    load_end = next((e["t"] for e in events if e.get("event") == "load_end" and e.get("t") is not None), None)
+    end_ref = float(load_end) if load_end is not None else float(wl["duration_s"])
+    ok_ts = [s["t"] for s in ok_scrapes]
+    first, last = (min(ok_ts), max(ok_ts)) if ok_ts else (math.inf, -math.inf)
+    covered = (first <= c["max_scrape_gap_s"] and last >= end_ref - c["max_scrape_gap_s"]) or not recording
+    out.append(check("recorder", not decreases and gap_ok and n_fail == 0 and covered and not died,
+                     {"counter_decreases": decreases[:10], "max_gap_s": max_gap, "failed_scrapes": n_fail,
+                      "first_ok_scrape_t": first if ok_ts else None, "last_ok_scrape_t": last if ok_ts else None,
+                      "end_ref_t": end_ref, "end_ref": "load_end" if load_end is not None else "duration_s",
+                      "recorder_died": died[0] if died else None}))
 
     # 5. GPU: SM clock steady and no thermal throttling during the measured window.
     if cfg["server"]["kind"] == "fake":
@@ -103,23 +117,39 @@ def run_checks(run_dir: Path) -> dict:
     elif gpu.empty:
         out.append(check("gpu_steady", False, "no gpu.jsonl data"))
     else:
-        w = gpu[(gpu.t >= wl["warmup_s"]) & (gpu.t <= wl["duration_s"])]
+        lo, hi = wl["warmup_s"], wl["duration_s"]
+        w = gpu[(gpu.t >= lo) & (gpu.t <= hi)]
         busy = w[w.util_pct >= c["gpu_busy_util_pct"]]  # idle clocks are not throttling
         cv = float(busy.sm_clock_mhz.std() / busy.sm_clock_mhz.mean()) if len(busy) > 1 else 0.0
         reasons = w.throttle_reasons.astype(int)
         hw = int(((reasons & HW_THROTTLE_MASK) != 0).sum())
         sw_frac = float(((reasons & SW_THERMAL_BIT) != 0).mean()) if len(w) else 0.0
+        # Coverage (A14; owner, 2026-11-12): an empty or partly sampled window used to pass (no sample can fail). The
+        # samples must cover [warmup_s, duration_s] with no gap above max_scrape_gap_s, ends included, and at least one
+        # must be busy, or nothing here was measured. No new threshold.
+        g = c["max_scrape_gap_s"]
+        wt = np.sort(w.t.to_numpy(float))
+        w_gap = float(np.max(np.diff(np.concatenate(([lo], wt, [hi]))))) if len(wt) else math.inf
+        covered = w_gap <= g
         out.append(check("gpu_steady",
-                         cv <= c["max_sm_clock_cv"] and hw == 0 and sw_frac <= c["max_sw_thermal_frac"],
+                         cv <= c["max_sm_clock_cv"] and hw == 0 and sw_frac <= c["max_sw_thermal_frac"]
+                         and covered and len(busy) >= 1,
                          {"busy_sm_clock_cv": cv, "busy_samples": len(busy), "hw_throttle_samples": hw,
-                          "sw_thermal_frac": sw_frac, "max_temp_c": float(w.temp_c.max()) if len(w) else None}))
+                          "sw_thermal_frac": sw_frac, "max_temp_c": float(w.temp_c.max()) if len(w) else None,
+                          "window_samples": len(w), "window_max_gap_s": w_gap}))
 
     # 6. Measured arrival rate matches lambda (Poisson-aware tolerance). With closed-loop turns only the open-loop
     #    arrivals are the generator's: session starts (turn 0, at lambda / turns) and burst requests. Later turns follow
     #    the server, so counting them would fail a run for being slow (REG-11 draft).
     t_lo, t_hi = wl["warmup_s"], wl["duration_s"]
     arr = sent_df[sent_df.turn == 0] if closed and len(sent_df) else sent_df
-    n = int(((arr.t_sent >= t_lo) & (arr.t_sent < t_hi)).sum()) if len(arr) else 0
+    t_arr = arr.t_sent if len(arr) else None
+    if closed and len(reqs) and "t_arrived" in reqs:
+        # With a session cap (step D, owner 2026-11-12) a session start waits for a slot, so the generator's arrival
+        # is when the session reached the cap (`t_arrived`), sent or not; burst requests count by t_sent as before.
+        arr = reqs[(reqs.turn == 0) & (reqs.t_arrived.notna() | reqs.t_sent.notna())]
+        t_arr = arr.t_arrived.fillna(arr.t_sent)
+    n = int(((t_arr >= t_lo) & (t_arr < t_hi)).sum()) if len(arr) else 0
     per = 1 / wl["sessions"]["turns"] if closed else 1.0
     expected = expected_requests(wl, t_lo, t_hi) * per + burst_requests(cfg.get("trigger"), t_lo, t_hi)
     tol = max(c["rate_rel_tolerance"] * expected, c["rate_sigma"] * math.sqrt(expected))

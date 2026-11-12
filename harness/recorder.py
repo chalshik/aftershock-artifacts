@@ -73,19 +73,37 @@ class Gpu:
 
 
 class LagTail:
-    """Reads new lines of requests.jsonl to report recent client lag (actual - planned send)."""
+    """Reads new lines of requests.jsonl to report recent client lag (actual - planned send).
+
+    The load generator may be partway through writing a line when this reads (open question A14: a half-written line
+    is the likely cause of the recorder's exit at t = 213 s in a REG-12 control). So only complete lines, up to the last
+    newline, are consumed; a partial tail is left for the next call, and a complete line that does not parse is
+    skipped and counted in `bad_lines`."""
 
     def __init__(self, path: Path):
-        self.path, self.pos = path, 0
+        self.path, self.pos, self.bad_lines = path, 0, 0
 
     def recent_max(self) -> float | None:
         if not self.path.exists():
             return None
-        with open(self.path) as f:
+        with open(self.path, "rb") as f:
             f.seek(self.pos)
-            lines = f.readlines()
-            self.pos = f.tell()
-        lags = [r["t_sent"] - r["t_planned"] for r in map(json.loads, lines) if r.get("t_sent") is not None]
+            chunk = f.read()
+        end = chunk.rfind(b"\n")
+        if end < 0:
+            return None
+        self.pos += end + 1
+        lags = []
+        for line in chunk[:end].splitlines():
+            if not line.strip():
+                continue
+            try:
+                r = json.loads(line)
+            except ValueError:
+                self.bad_lines += 1
+                continue
+            if r.get("t_sent") is not None and r.get("t_planned") is not None:
+                lags.append(r["t_sent"] - r["t_planned"])
         return max(lags) if lags else None
 
 
@@ -108,12 +126,22 @@ def main(run_dir: Path, t0: float):
             except Exception as e:
                 sample = None
                 fm.write(json.dumps({"t": t, "error": f"{type(e).__name__}: {e}"[:200]}) + "\n")
-            g = gpu.read()
-            if g:
-                fg.write(json.dumps({"t": t, **g}) + "\n")
-                fg.flush()
+                fm.flush()
+            # Nothing below may end the process (A14): a failed GPU read or status line is logged and the loop goes on.
+            g = None
+            try:
+                g = gpu.read()
+                if g:
+                    fg.write(json.dumps({"t": t, **g}) + "\n")
+                    fg.flush()
+            except Exception as e:
+                print(f"[recorder] t={t:.1f}s gpu read failed: {type(e).__name__}: {e}"[:300], file=sys.stderr, flush=True)
             if sample:
-                print(status_line(t, prev, sample, g, lag.recent_max()), flush=True)
+                try:
+                    print(status_line(t, prev, sample, g, lag.recent_max()), flush=True)
+                except Exception as e:
+                    print(f"[recorder] t={t:.1f}s status line failed: {type(e).__name__}: {e}"[:300], file=sys.stderr,
+                          flush=True)
                 prev = sample
             next_tick += interval  # fixed grid: a slow scrape does not shift later ones
             time.sleep(max(0.0, next_tick - time.monotonic()))

@@ -75,8 +75,8 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
    - client lag p99 ≤ 50 ms
    - no errors, and accounting matches vLLM's counters
    - recorder intact
-   - recorder: no counter decrease, no failed scrape, scrape gap ≤ 2 s
-   - GPU steady: no HW throttle sample, SW thermal ≤ 5 %, busy SM-clock CV ≤ 5 %
+   - recorder: no counter decrease, no failed scrape, scrape gap ≤ 2 s; from 2026-11-12 (A14, owner) also: good scrapes from t = 0 to the `load_end` event, each end within 2 s, and no `recorder_died` event
+   - GPU steady: no HW throttle sample, SW thermal ≤ 5 %, busy SM-clock CV ≤ 5 %; from 2026-11-12 (A14, owner) also: samples cover the measured window with no gap > 2 s, and at least one is busy
    - arrival rate within tolerance
    - clean git
    - the trigger fired as specified
