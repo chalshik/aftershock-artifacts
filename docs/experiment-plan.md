@@ -402,7 +402,7 @@ Each step names what it needs before it can start. GPU hours are rough (BELIEF, 
 
 **A. P0: finish REG-19 as registered.** Under way; nothing in it changes. Its outcome picks the cell for steps C and D: a cell where the closed-loop arm passes its test, or, if REG-19 does not reach 3 of 5, the owner chooses between λ = 2.1 and reporting λ = 2.0 as a cell where the zone is too narrow to hold.
 
-**B. K3 on the runs already made (0 GPU h, retrospective).** One registered analysis of the closed-loop cold runs (REG-12, REG-14 to REG-18, and REG-19 once reported). Needs first: the model code moved into `analysis/` with tests (the equations were read in the paper on 2026-11-12; `docs/model.md` M5 holds the values computed for L1), and a cold-turn cost by prompt length from the cache-off sweeps. Readouts, each with a tolerance fixed before it is computed:
+**B. K3 on the runs already made (0 GPU h, retrospective).** One registered analysis of the closed-loop cold runs (REG-12, REG-14 to REG-18, and REG-19 once reported). Needs first: the model code moved into `analysis/` with tests (done 2026-11-12: `analysis/modelf.py`, `tests/test_modelf.py`) (the equations were read in the paper on 2026-11-12; `docs/model.md` M5 holds the values computed for L1), and a cold-turn cost by prompt length from the cache-off sweeps. Readouts, each with a tolerance fixed before it is computed:
 - the drain threshold: is the backlog slope's sign set by the span's planned load against the cold floor?
 - the backlog slope against the model's value;
 - the mean prompt length of the turns served while cold, against the schedule's mix (the published model says shorter);
