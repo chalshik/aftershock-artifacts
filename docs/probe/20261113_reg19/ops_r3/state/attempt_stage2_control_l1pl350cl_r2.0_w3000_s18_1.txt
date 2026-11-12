@@ -1,0 +1,6 @@
+attempt 1 of stage2_control_l1pl350cl_r2.0_w3000_s18
+time 2026-11-12T15:10:30Z
+scripts docs/probe/20261111_reg19/ops/queue_reg19d.sh with launch6.sh
+probe ../20261111_reg19/prelaunch_reg19_stage2_control_l1pl350cl_r2.0_w3000_s18_attempt1.txt
+rid 20261112-151030_stage2_control_l1pl350cl_r2.0_w3000_s18
+lost: the VM went off during the run and the folder has no checks.json (docs/probe/20261111_reg19/ops/RESUME.md). Record written by hand on 2026-11-13 from the folder's name and RESUME.md, so that the rerun counts as attempt 2.
