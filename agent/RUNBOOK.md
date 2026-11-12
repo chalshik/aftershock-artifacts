@@ -1,0 +1,82 @@
+# RUNBOOK: how a GPU item is run
+
+Written 2026-11-13, before any GPU run of this session. Read with `agent/DECISION_TREE.md`. Nothing here overrides a registration: where they differ, the registration rules and this file is wrong (fix it and log a [CORR]).
+
+## 0. Before anything
+
+1. `git log -5`, `git status` on the Mac. If HEAD moved by a commit not in `agent/LOG.md`, read it first.
+2. The item must be registered **and** approved (owner, or a `[DECISION] (delegate)` entry written after the rule F and owner-proxy reviews). An item that is only drafted does not run.
+3. `agent/STOP` absent; `docs/decisions.md` has no entry ending the delegation.
+4. The watcher says `up_idle` (`cat agent/run/gpu_watch.last`). `up_busy` (a compute process that is not ours) or `up_nogpu`: do nothing, log the state change, keep doing zero-GPU work.
+
+## 1. Host
+
+- VM `inference-vm`: `chalshik@100.83.53.50` (Tailscale), `chalshik@192.168.3.249` (home LAN); key `~/.ssh/id_ed25519_vllm`; always `-o BatchMode=yes -o ConnectTimeout=10`. An SSH timeout is not evidence that a run died: retry over the other address and re-check `checks.json` for about two minutes before concluding anything (the false "TMUX GONE" of 2026-11-12).
+- Repo on the VM: `~/aftershock-artifacts`, whose `origin` is the bare repo `~/repos/aftershock-artifacts.git`. Over SSH `uv` is `~/.local/bin/uv`.
+- The GPU is shared and the VM can be powered off from outside at any time. A reboot resets the power limit to 420 W.
+
+## 2. Preflight (every launch; the launch script does it and writes the read to `docs/probe/<date>_<item>/`)
+
+| Check | Rule | On failure |
+|---|---|---|
+| Power limit | `ssh … sudo -n nvidia-smi -pl 350`, then `nvidia-smi --query-gpu=power.limit --format=csv` reads `350.00 W` | If `sudo -n` fails: no 350 W run starts; write it at the top of `agent/FOR_AUTHOR.md`; keep doing zero-GPU work |
+| Temperature | ≤ 45 °C (wait up to 30 min) | stop the launch |
+| Other processes | `nvidia-smi --query-compute-apps` empty; no tmux session `run` | stop; never kill another process |
+| VM tree | `git log -1 --format=%h` equals the item's pinned commit; `git status --short` empty | stop |
+| Disk | free space ≥ 4 × the item's expected size (≈ 240 MB per 4080 s run) | stop |
+| The registration's own start rule | as written in its [REG] | stop |
+| Open-loop arms only (REG-20) | `ulimit -n` ≥ 4096 in the shell that starts the harness | stop (REG-20's rule) |
+
+No root command other than `sudo -n nvidia-smi -pl 350`. No `git pull` on the VM while a run is in progress.
+
+## 3. REG-19, seeds 18 and 19 (blocked until the resume decision is approved)
+
+Decision draft: `docs/drafts/reg19_resume_decision_draft1.md`. Scripts: `docs/probe/20261113_reg19/ops/launch7.sh`, `queue_reg19e.sh`. Worktree at `a7bb77a`: `/Users/chalshik/Projects/aftershock-reg19-pin` (run folders linked into its `runs/`).
+
+1. VM stays at `a7bb77a`; do **not** push or pull.
+2. From the repo root on the Mac, in the background:
+   `SEEDS="18 19" ATTEMPT_SEED=18 ATTEMPT=2 zsh docs/probe/20261113_reg19/ops/queue_reg19e.sh > docs/probe/20261113_reg19/ops/queue_run5_output.txt 2>&1`
+3. The queue prints only `RUN … VALID/INVALID`, `COPIED …`, `STEP after seed N: 'done': […] 'continue': …`. Read nothing else of a run. A stop (`QUEUE STOP …`) is handled by its cause:
+   - invalid run: read its `checks.json` only; rerun unchanged if the registration's stopping rule allows (at most twice per run; heat once after cooling); `client_error`, a burst that did not fill the pool, a wrong limit: the queue stays stopped;
+   - VM off: record a partial matrix, never pool it, wait for the watcher;
+   - `sudo -n` failed: FOR_AUTHOR, no run.
+4. After `QUEUE DONE` or `QUEUE END`: once, from the worktree,
+   `cd /Users/chalshik/Projects/aftershock-reg19-pin && /Users/chalshik/Projects/aftershock-artifacts/.venv/bin/python -m analysis.gate reg19 > /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_reg19/reg19_table.txt`
+5. Then, in this order: the [OPS] entry (the four queue stops of 2026-11-12 from RESUME.md, the interim look it records, this session's stops, per-run launch reads); the [RESULT] (k of n, bound, `k_18`, the registered wording; alternatives; the decision taken from `agent/DECISION_TREE.md`); `docs/model.md` ledger row 24; `docs/status.md`; `docs/claims.md` status lines; `python3 tools/context_pack.py`; `python3 tools/check_docs.py`; commit (manifest, probes, entries).
+6. After the [RESULT]: copy the lost seed-18 folder from the VM (`rsync`, checksum, `tools/manifest.py update`, status.md "No checks" list); then deploy HEAD (§4); then `uv run python -m analysis.recheck '*_w3000_s1[5-9]'` and report it beside the result.
+
+## 4. Deploying `main` to the VM (only between items, never during a run, never before REG-19's [RESULT])
+
+1. `git push chalshik@100.83.53.50:repos/aftershock-artifacts.git main` (the `vm` remote points at the LAN address; use it at home).
+2. `ssh … 'cd ~/aftershock-artifacts && git pull origin main && git log -1 --format=%h && git status --short | wc -l'`: the hash equals the Mac's, 0 dirty files.
+3. `ssh … 'cd ~/aftershock-artifacts && ~/.local/bin/uv sync --frozen --extra server --dry-run'` makes no change (`uv.lock` is never touched).
+4. Record the hash as the item's pin in its probe folder. A run from a dirty tree is invalid (rule 6).
+
+## 5. Items after REG-19
+
+For each item: a worktree at the commit that holds its approval (`git worktree add --detach ../aftershock-<item>-pin <commit>`, run folders linked into its `runs/`), so that the registered computation runs from the registered code whatever `main` has become. Launch and queue scripts are written per item as new files under `docs/probe/<date>_<item>/ops/`, derived from `launch7.sh` (single runs) or from the sweep form below; each is reviewed with its registration.
+
+| Order | Item | Command(s) on the VM | Registered computation (once) | Seal lifted by |
+|---|---|---|---|---|
+| 2 | REG-20 gate | none | `AFTERSHOCK_UNSEAL=REG-20 uv run python -m analysis.k1 reg20_a_may_start` after REG-19's [RESULT] | — |
+| 2a | REG-20 arm A | `configs/burst_l1pl350ol_r2.0_w3000_s{15..19}.yaml`, drift rerun after the third; a control only for an open run that ends cold | `AFTERSHOCK_UNSEAL=REG-20 … analysis.k1 reg20` | [RESULT] REG-20 |
+| 3 | REG-21 batch 2 | none | `uv run python -m analysis.k3w reg21 2` | — |
+| 4 | E1 | `uv run python -m harness.run configs/sweep_l1pl350cl_pc_off.yaml` (one invocation; rerun configs list one rate, same `name`) | `AFTERSHOCK_UNSEAL=E1 uv run python -m analysis.e1 floor` | [RESULT] E1 |
+| 4a | E2 | cache-off sweep, then **only** `AFTERSHOCK_UNSEAL=E0 … analysis.e1 status sweep_l1t16pl350cl_pc_off`; if "ok" or "tail_ok", the cache-on sweep | `AFTERSHOCK_UNSEAL=E0 uv run python -m analysis.k2 observed` | [RESULT] E0 |
+| 5 | D1, D2 | not registered | — | — |
+| 6 | Confirmation run | not registered | — | — |
+| 7 | K4 | not registered | — | — |
+
+Sweep form: a sweep is one `harness.run` invocation that writes one run folder per rate; the launch script waits for the tmux session to end, lists the run ids from the log, and requires a `checks.json` for each before anything is copied.
+
+## 6. After every run (the queue script does 1–3)
+
+1. `rsync` the run folder to the Mac's `runs/`; compare the sha256 of every file with the VM's; a mismatch stops the queue.
+2. `python3 tools/manifest.py update` (append-only).
+3. Link the folder into the item's worktree.
+4. The verdict or table is computed only if the registration allows it at that point (REG-19: only `reg19_step`'s flag between pairs).
+5. Update the results entry, the paper's pending block, `agent/REPORT.md`'s GPU-hour ledger; commit.
+
+## 7. If the VM goes off mid-queue
+
+Kill nothing on the Mac that is not the queue script. Record what ran (`RUN …` lines), which run was in progress (it will have no `checks.json`; it is kept on the VM and copied later "for the record", after the item's result if its folder matches the item's glob). Never pool a partial cell. Resume through the watcher with the same pinned commit; a lost run is rerun unchanged as the next attempt under the registration's stopping rule.
