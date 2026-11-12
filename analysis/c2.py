@@ -152,7 +152,83 @@ def condition4(run: dict) -> dict:
     else:
         label = "loop" if su["ok"] else "not_sustained"
     return {"run": run["dir"].name, "baseline": base, "levels": lv, "sustain": su, "onsets": onsets(run, base),
-            "label": label}
+            "evictions": eviction_readout(run), "label": label}
+
+
+
+# ---------------------------------------------------------------- the eviction link, read directly (reported only)
+
+HIST = {"idle": "vllm:kv_block_idle_before_evict_seconds", "lifetime": "vllm:kv_block_lifetime_seconds",
+        "reuse_gap": "vllm:kv_block_reuse_gap_seconds"}
+
+
+def _buckets(values: dict, name: str) -> dict[float, float]:
+    """Cumulative bucket counts of one histogram in one scrape, summed over label sets: upper edge -> count."""
+    out: dict[float, float] = {}
+    pre = name + "_bucket{"
+    for k, v in values.items():
+        if k.startswith(pre):
+            le = k.split('le="', 1)[1].split('"', 1)[0]
+            e = math.inf if le == "+Inf" else float(le)
+            out[e] = out.get(e, 0.0) + v
+    return out
+
+
+def histogram_delta(metrics_jsonl, name: str, a: float, b: float) -> dict:
+    """What a sampled residency histogram gained in [a, b): from the first scrape at or after a to the last before b
+    (raw metrics.jsonl; `load.metrics_wide` drops the buckets). Returns the count, the upper edge of the bucket that
+    holds the median, and the shares at or below 5 s (the mean turn gap) and 30 s. NaN where nothing was sampled.
+    SOURCE(vLLM 0.32.0 v1/core/kv_cache_metrics.py:KVCacheMetricsCollector.on_block_evicted): for a sampled block
+    `idle` is the time from its last access (its allocation, or a later cache hit) to its eviction, so it includes
+    the time the block was held by the request that computed it; `reuse_gap` is the time between two cache hits."""
+    import json
+    first = last = None
+    with open(metrics_jsonl) as f:
+        for line in f:
+            if not line.strip():
+                continue
+            s = json.loads(line)
+            if "values" not in s or s["t"] < a:
+                continue
+            if s["t"] >= b:
+                break
+            if first is None:
+                first = _buckets(s["values"], name)
+            last = _buckets(s["values"], name)
+    nan = {"count": 0.0, "median_le_s": math.nan, "share_le_5s": math.nan, "share_le_30s": math.nan}
+    if not first or not last:
+        return nan
+    d = {e: last.get(e, 0.0) - first.get(e, 0.0) for e in sorted(last)}
+    total = d.get(math.inf, 0.0)
+    if total <= 0 or any(v < 0 for v in d.values()):      # nothing sampled, or a counter reset
+        return nan
+    med = next(e for e in sorted(d) if d[e] >= total / 2)
+    return {"count": total, "median_le_s": med, "share_le_5s": d.get(5.0, math.nan) / total,
+            "share_le_30s": d.get(30.0, math.nan) / total}
+
+
+def turn_spacing(run: dict, a: float, b: float) -> float:
+    """Median time between the first tokens of consecutive turns of a session, over later turns whose first token
+    falls in [a, b): how long a prefix has to survive to be reused."""
+    q = run["requests"]
+    q = q[~is_burst_request(run) & (q.status == "ok")].sort_values(["session_id", "turn"])
+    prev = q.groupby("session_id").t_first_token.shift()
+    w = q[(q.turn > 0) & (q.t_first_token >= a) & (q.t_first_token < b)]
+    gaps = (w.t_first_token - prev[w.index]).dropna()
+    return float(gaps.median()) if len(gaps) else math.nan
+
+
+def eviction_readout(run: dict) -> dict:
+    """Reported, never judged: the three residency histograms and the turn spacing in the baseline and in the stretch
+    from the last burst request's end (or the burst's end, if that is NaN) to the end of the watch."""
+    w, path = windows(run), run["dir"] / "metrics.jsonl"
+    tb = last_burst_end(run)
+    after = (w["end"] if math.isnan(tb) else max(tb, w["end"]), w["watch_end"])
+    out = {}
+    for label, (a, b) in (("baseline", w["base"]), ("after", after)):
+        out[label] = {"span": (a, b), "turn_spacing_s": turn_spacing(run, a, b),
+                      **{k: histogram_delta(path, name, a, b) for k, name in HIST.items()}} if path.exists() else None
+    return out
 
 
 REG22 = {

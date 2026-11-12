@@ -1,4 +1,5 @@
 """C2 condition 4 (analysis/c2.py, draft for REG-22) on hand-made runs: no run folder is read."""
+import json
 import math
 from pathlib import Path
 
@@ -110,3 +111,38 @@ def test_table_judges_only_stuck_runs(monkeypatch, tmp_path):
     t = C.reg22_table()
     assert [r["run"] for r in t["rows"]] == ["a_stuck"] and t["counts"]["loop"] == 1 and t["n_stuck"] == 1
     assert t["left_out"] == [{"run": "b_recovered", "why": "verdict recovered"}, {"run": "c_missing", "why": "missing"}]
+
+
+def _scrape(t, idle):
+    """One metrics.jsonl line with a cumulative idle-before-evict histogram: `idle` maps upper edge -> count."""
+    vals = {f'vllm:kv_block_idle_before_evict_seconds_bucket{{engine="0",le="{le}"}}': c for le, c in idle.items()}
+    vals["vllm:num_requests_running"] = 1.0
+    return json.dumps({"t": t, "values": vals})
+
+
+def test_histogram_delta_reads_what_a_window_gained(tmp_path):
+    f = tmp_path / "metrics.jsonl"
+    f.write_text("\n".join([
+        _scrape(0.0, {"5.0": 0, "30.0": 0, "120.0": 0, "+Inf": 0}),
+        _scrape(300.0, {"5.0": 1, "30.0": 2, "120.0": 10, "+Inf": 10}),        # warm: evicted after a long idle time
+        _scrape(900.0, {"5.0": 1, "30.0": 4, "120.0": 110, "+Inf": 110}),
+        _scrape(1500.0, {"5.0": 31, "30.0": 394, "120.0": 510, "+Inf": 510}),   # cold: evicted within 30 s
+        json.dumps({"t": 1600.0, "error": "scrape failed"}),
+    ]) + "\n")
+    warm = C.histogram_delta(f, C.HIST["idle"], 300.0, 901.0)
+    assert warm["count"] == 100 and warm["median_le_s"] == 120.0 and warm["share_le_30s"] == pytest.approx(0.02)
+    cold = C.histogram_delta(f, C.HIST["idle"], 900.0, 1501.0)
+    assert cold["count"] == 400 and cold["median_le_s"] == 30.0 and cold["share_le_5s"] == pytest.approx(0.075)
+    assert C.histogram_delta(f, C.HIST["idle"], 2000.0, 3000.0)["count"] == 0.0            # no scrape there
+    assert math.isnan(C.histogram_delta(f, C.HIST["reuse_gap"], 0.0, 1501.0)["median_le_s"])   # histogram absent
+
+
+def test_turn_spacing_is_the_gap_between_a_sessions_first_tokens():
+    run = fake_run()
+    assert C.turn_spacing(run, 300.0, 900.0) == pytest.approx(0.5)      # the fake sends a session's turns 0.5 s apart
+    assert math.isnan(C.turn_spacing(run, 9000.0, 9100.0))
+
+
+def test_eviction_readout_without_a_metrics_file_is_none():
+    r = C.condition4(fake_run())
+    assert r["evictions"] == {"baseline": None, "after": None}
