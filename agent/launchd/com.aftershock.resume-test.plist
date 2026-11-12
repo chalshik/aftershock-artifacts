@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.aftershock.resume-test</string>
+  <key>ProgramArguments</key>
+  <array><string>/bin/zsh</string><string>/Users/chalshik/Projects/aftershock-artifacts/agent/bin/resume.sh</string><string>launchd-test</string></array>
+  <key>EnvironmentVariables</key><dict><key>RESUME_TEST</key><string>1</string></dict>
+  <key>RunAtLoad</key><true/>
+  <key>StandardOutPath</key><string>/Users/chalshik/Projects/aftershock-artifacts/agent/run/launchd-resume-test.out</string>
+  <key>StandardErrorPath</key><string>/Users/chalshik/Projects/aftershock-artifacts/agent/run/launchd-resume-test.err</string>
+</dict>
+</plist>

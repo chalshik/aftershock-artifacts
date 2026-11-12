@@ -1,0 +1,4 @@
+# volatile watcher and resume state; never committed
+run/
+GPU_AVAILABLE
+STOP

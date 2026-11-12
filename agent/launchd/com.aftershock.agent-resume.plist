@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.aftershock.agent-resume</string>
+  <key>ProgramArguments</key>
+  <array><string>/bin/zsh</string><string>/Users/chalshik/Projects/aftershock-artifacts/agent/bin/resume.sh</string></array>
+  <key>StartInterval</key><integer>1200</integer>
+  <key>RunAtLoad</key><true/>
+  <key>ProcessType</key><string>Background</string>
+  <key>StandardOutPath</key><string>/Users/chalshik/Projects/aftershock-artifacts/agent/run/launchd-agent-resume.out</string>
+  <key>StandardErrorPath</key><string>/Users/chalshik/Projects/aftershock-artifacts/agent/run/launchd-agent-resume.err</string>
+</dict>
+</plist>
