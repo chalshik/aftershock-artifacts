@@ -1,0 +1,102 @@
+# diff launch6.sh -> launch7.sh
+--- docs/probe/20261111_reg19/ops/launch6.sh	2026-11-12 21:53:11
++++ docs/probe/20261113_reg19/ops/launch7.sh	2026-11-13 00:41:07
+@@ -1,29 +1,34 @@
+ #!/bin/zsh
+-# Pre-launch checks (REG-9/REG-10 Operations) and launch of one config on the VM; then wait for its checks.json.
+-# Usage: launch.sh <config-name-without-.yaml> <probe-file-name>
+-# Waits (up to 30 min) for the GPU to be idle at <= 45 C; refuses on any other failed check. Writes the read to the probe.
++# Pre-launch checks and launch of one REG-19 config on the VM; then wait for its checks.json.
++# Usage: PROBE_DIR=<dir> zsh launch7.sh <config-name-without-.yaml> <probe-file-name>
++# launch7 (decisions.md 2026-11-13 [DECISION] (delegate), REG-19 resume) = launch6 with three changes:
++#  1. Pin rule. The VM must be clean at PIN, as before. The Mac-side rule of launch6 (what may differ between PIN and
++#     the Mac's HEAD) is replaced: every REG-19 computation on the Mac (reg19_step, reg19) runs from a git worktree
++#     checked out at PIN, so the Mac's HEAD no longer enters REG-19. Checked here: the worktree is at PIN and clean,
++#     PIN is an ancestor of HEAD, and tools/manifest.py (used from HEAD for the checksum manifest) is unchanged since PIN.
++#  2. Power limit. The agent sets 350 W itself (sudo -n nvidia-smi -pl 350, the one root command the owner allowed,
++#     decisions.md 2026-11-13 [DECISION]) and reads it back. If sudo -n fails, STOP (exit 4).
++#  3. The read is written to PROBE_DIR (docs/probe/20261113_reg19/).
+ set -e
+ cd /Users/chalshik/Projects/aftershock-artifacts
+-K=(-i $HOME/.ssh/id_ed25519_vllm -o ConnectTimeout=10)
+-H=chalshik@100.83.53.50
++K=(-i $HOME/.ssh/id_ed25519_vllm -o BatchMode=yes -o ConnectTimeout=10)
++H=chalshik@${VM_HOST:-100.83.53.50}
++W=${REG19_WORKTREE:-/Users/chalshik/Projects/aftershock-reg19-pin}
+ CFG=$1; PROBE=${PROBE_DIR}/$2; mkdir -p ${PROBE_DIR}; LOG="~/${CFG}_$(date -u +%Y%m%dT%H%M%SZ).log"
+ MAC=$(git rev-parse --short HEAD)
+-# launch6 = launch5 with the additions-only rule below; launch5 = launch4 + recheck checks.json for ~2 min before declaring a run lost (2026-11-12 race over a slow link).
+-# launch4 (owner 2026-11-12): the VM stays pinned at PIN (no pull); the Mac may be ahead of PIN only in docs/, PROTOCOL.md and (owner, 2026-11-12) CLAUDE.md.
+ PIN=${PIN:-a7bb77a}
+-# launch6 (proposed 2026-11-12, needs the owner): outside docs/, PROTOCOL.md and CLAUDE.md the Mac may only ADD:
+-# new files, or lines appended to existing files outside harness/, pyproject.toml, uv.lock. Any deletion, rename or removed line stops it.
+-BAD=$(git diff --name-only --diff-filter=DRTUX $PIN HEAD | grep -v '^docs/' | grep -v '^PROTOCOL.md$' | grep -v '^CLAUDE.md$' || true)
+-BAD+=$(git diff --name-only --diff-filter=M $PIN HEAD | grep -E '^harness/|^pyproject.toml$|^uv.lock$' || true)
+-BAD+=$(git diff --numstat --diff-filter=M $PIN HEAD | awk '$2 != 0 {print $3}' | grep -v '^docs/' | grep -v '^PROTOCOL.md$' | grep -v '^CLAUDE.md$' || true)
+-[[ -z $BAD ]] || { echo "STOP: Mac changed files REG-19 may use since $PIN: $BAD"; exit 2; }
++[[ $(git -C $W rev-parse --short HEAD) == $PIN ]] || { echo "STOP: worktree $W is not at $PIN"; exit 2; }
++[[ -z $(git -C $W status --short) ]] || { echo "STOP: worktree $W is dirty"; exit 2; }
+ git merge-base --is-ancestor $PIN HEAD || { echo "STOP: $PIN is not an ancestor of the Mac HEAD"; exit 2; }
++git diff --quiet $PIN HEAD -- tools/manifest.py || { echo "STOP: tools/manifest.py changed since $PIN"; exit 2; }
++[[ -f $W/configs/$CFG.yaml ]] || { echo "STOP: no config $CFG at $PIN"; exit 2; }
++ssh $K $H "sudo -n nvidia-smi -pl 350 >/dev/null" || { echo "STOP: sudo -n nvidia-smi -pl 350 failed"; exit 4; }
+ for i in $(seq 1 60); do
+   T=$(ssh $K $H "nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader")
+   (( T <= 45 )) && break
+   sleep 30
+ done
+-ssh $K $H "echo '# pre-launch read for $CFG (agent, read-only)'; date -Is; nvidia-smi --query-gpu=power.limit,temperature.gpu,utilization.gpu,memory.used --format=csv; echo '# compute apps:'; nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv,noheader; echo '# tree:'; cd ~/aftershock-artifacts && git log -1 --format=%h && git status --short | wc -l; df -h ~ | tail -1; tmux ls 2>&1 || true" > $PROBE
++ssh $K $H "echo '# pre-launch read for $CFG (agent; power limit set by the agent with sudo -n nvidia-smi -pl 350)'; date -Is; nvidia-smi --query-gpu=power.limit,temperature.gpu,utilization.gpu,memory.used --format=csv; echo '# compute apps:'; nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv,noheader; echo '# tree:'; cd ~/aftershock-artifacts && git log -1 --format=%h && git status --short | wc -l; df -h ~ | tail -1; tmux ls 2>&1 || true" > $PROBE
+ cat $PROBE
+ LIM=$(sed -n 4p $PROBE | cut -d, -f1 | tr -d ' W'); TEMP=$(sed -n 4p $PROBE | cut -d, -f2 | tr -d ' ')
+ APPS=$(sed -n '/# compute apps:/,/# tree:/p' $PROBE | grep -vc '^#' || true)
+
+# diff queue_reg19d.sh -> queue_reg19e.sh
+--- docs/probe/20261111_reg19/ops/queue_reg19d.sh	2026-11-12 21:53:11
++++ docs/probe/20261113_reg19/ops/queue_reg19e.sh	2026-11-13 00:41:07
+@@ -1,13 +1,18 @@
+ #!/bin/zsh
+-# REG-19 queue: per seed in the registered order, control then burst (launch6.sh: pre-launch checks, launch, wait for
+-# checks.json); stops at the first launch STOP, lost tmux or invalid run (the rerun is decided by hand from checks.json).
+-# After each valid pair: copy both to the Mac, verify every file's sha256 against the VM, update the manifest, then
+-# `analysis.gate reg19_step` once; only its `continue` flag is printed (no verdict, label or count).
+-S=/Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261111_reg19/ops
++# REG-19 queue, resume (decisions.md 2026-11-13 [DECISION] (delegate)): per seed in the registered order, control then
++# burst (launch7.sh: pre-launch checks, launch, wait for checks.json); stops at the first launch STOP, lost tmux or
++# invalid run (the rerun is decided from checks.json only). After each valid pair: copy both to the Mac, verify every
++# file's sha256 against the VM, update the manifest, link the run folders into the pinned worktree, then
++# `analysis.gate reg19_step` once FROM THE WORKTREE AT a7bb77a; only its `done` list and `continue` flag are printed.
++# queue_reg19e = queue_reg19d with launch7.sh, the probe folder of 2026-11-13, and reg19_step run from the worktree.
++# Usage (repo root, background): SEEDS="18 19" ATTEMPT_SEED=18 ATTEMPT=2 zsh docs/probe/20261113_reg19/ops/queue_reg19e.sh
++S=/Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_reg19/ops
+ R=/Users/chalshik/Projects/aftershock-artifacts
+-K=(-i $HOME/.ssh/id_ed25519_vllm -o ConnectTimeout=10); H=chalshik@100.83.53.50
++W=${REG19_WORKTREE:-/Users/chalshik/Projects/aftershock-reg19-pin}
++PY=$R/.venv/bin/python
++K=(-i $HOME/.ssh/id_ed25519_vllm -o BatchMode=yes -o ConnectTimeout=10); H=chalshik@${VM_HOST:-100.83.53.50}
+ cd $R
+-for sd in ${=SEEDS:-15 16 17 18 19}; do
++for sd in ${=SEEDS:-18 19}; do
+   rids=()
+   for kind in stage2_control burst; do
+     cfg=${kind}_l1pl350cl_r2.0_w3000_s$sd
+@@ -15,7 +20,7 @@
+       rid=$ADOPT_RID; v=$(ssh $K $H "python3 -c \"import json;print(json.load(open('aftershock-artifacts/runs/$rid/checks.json'))['valid'])\"")
+       [[ $v == True ]] || { echo "QUEUE STOP adopted $rid not valid ($v)"; exit 1; }
+       echo "RUN $cfg $rid VALID (adopted)"; rids+=($rid); continue; fi
+-    out=$(PROBE_DIR=${PROBE_DIR19:-docs/probe/20261111_reg19} zsh $S/launch6.sh $cfg prelaunch_reg19_${cfg}_attempt$( [[ $sd == ${ATTEMPT_SEED:-none} ]] && echo ${ATTEMPT:-1} || echo 1 ).txt 2>&1); rc=$?
++    out=$(PROBE_DIR=${PROBE_DIR19:-docs/probe/20261113_reg19} zsh $S/launch7.sh $cfg prelaunch_reg19_${cfg}_attempt$( [[ $sd == ${ATTEMPT_SEED:-none} && $kind == ${ATTEMPT_KIND:-stage2_control} ]] && echo ${ATTEMPT:-1} || echo 1 ).txt 2>&1); rc=$?
+     echo "$out" > $S/queue19_$cfg.out
+     rid=$(echo "$out" | sed -n 's/^LAUNCHED //p')
+     chk=$(echo "$out" | grep "\[run\] checks" | tail -1)
+@@ -31,7 +36,9 @@
+     echo "COPIED $rid sha-of-sums $a"
+   done
+   python3 tools/manifest.py update > /dev/null || { echo "QUEUE STOP manifest update failed"; exit 1; }
+-  step=$(uv run python -m analysis.gate reg19_step 2>$S/reg19_step_err_s$sd.txt | tail -1)
++  for d in $R/runs/*(/); do n=${d:t}; [[ -e $W/runs/$n ]] || ln -s $d $W/runs/$n; done
++  [[ $(git -C $W rev-parse --short HEAD) == ${PIN:-a7bb77a} && -z $(git -C $W status --short) ]] || { echo "QUEUE STOP worktree not clean at pin"; exit 1; }
++  step=$(cd $W && $PY -m analysis.gate reg19_step 2>$S/reg19_step_err_s$sd.txt | tail -1)
+   cont=$(echo "$step" | grep -o "'continue': [A-Za-z]*")
+   echo "STEP after seed $sd: $(echo "$step" | grep -o "'done': \[[^]]*\]") $cont"
+   [[ $cont == "'continue': True" ]] || { echo "QUEUE END (futility stop or all seeds done)"; exit 0; }

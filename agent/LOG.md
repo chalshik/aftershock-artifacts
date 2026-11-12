@@ -22,3 +22,26 @@ One block per work block: what was done, what was found, the commit.
 - `check_docs` failed at session start only on the stale context pack (the uncommitted delegation text); passes after regeneration.
 
 **Commit:** `c94a77d` (main repo); `3e41741` (docs/paper inner repo).
+
+## 2026-11-13, block 2 (session 8c5f8396): seal, A17, three drafts; stopped on the usage limit
+
+**Done**
+- S6/S7: `agent/bin/gpu_watch.sh` (7 faked states tested; real read `down`) and `agent/bin/resume.sh` (launchd → `claude -p` tested with a one-off job, `RESUME_TEST_OK`; dry-run decisions right). The install of the recurring launchd jobs was refused by Claude Code's permission classifier; not worked around. In-session GPU watcher loop started (background shell, 15 min).
+- S8: `analysis/withheld.py` and its hooks; `tests/test_withheld.py` (12).
+- A17 from `vllm-0.32.0/vllm/v1/core/sched/scheduler.py` (tarball at `~/.claude/jobs/c075c1a8/tmp/vllm_src/`, sha256 verified): no skip; decisions.md 2026-11-13 [DECISION].
+- [CORR] for the owner's four unlogged choices (E1 "Floor only", E0 "Add 2.2", REG-21 "Register now, mix primary" and "Rebuild around per-run sim").
+- Z6b draft: VM stays at `a7bb77a`; REG-19's Mac-side analysis from a worktree at `a7bb77a`; agent sets 350 W; the lost seed-18 folder copied only after the [RESULT].
+- Z1 draft 3: judged J1 (|median r − 1| ≤ 0.05) and J2 (spread of load-group medians ≤ 0.05) on r = U_W / U_off, the uncached-token work rate; everything about the mix is reported only.
+- Z2c draft 3 written.
+- L2 answered; `agent/lit/verify_quotes.py`: 26 of 26 cited quotes found in the PDFs.
+- Full suite: 443 passed (before `tests/test_k3w.py`, whose 18 pass).
+
+**Found**
+- `k3.reg21_table`'s batch-1 finder globbed `*_l1pl350cl_*`, which would have loaded REG-19's withheld runs; the seal now prevents that.
+- KAIROS Fig. 11 has no frequency trace for the run without thrashing avoidance, and its text assigns panel (c) to that run while the panel's title says "With".
+
+**Not finished (stopped by the usage limit)**
+- The three reviews (briefs: rule F for the resume decision asked for traces where the procedure starts a wrong run, breaks REG-19's stopping rule or computes from other code, the strongest alternative for a seeds 15–17 vs 18–19 difference, and whether it changes REG-19; the owner-proxy asked scope, fidelity, the pin rule, the undeployed check changes; rule F for REG-21 asked for synthetic traces with a wrong J1/J2 label, code against text, alternatives, and whether any outcome changes a decision). Inputs in `docs/drafts/review_bundles/`.
+- Not read by this session: decisions.md lines 1–3910 in full (the pack's indexes were used), the three preprints end to end, `docs/paper/paper-plan-v3.md`, `related-work-approach-v3.md`, `reading-notes.md`.
+
+**Commit:** `72fafb5`, then this block's commit.

@@ -4,6 +4,7 @@ What you should know or may want to overrule. The agent never waits on this file
 
 ## Top
 
+-1. **The session stopped on 2026-11-13 because your usage limit was reached.** Three reviews were cut off unfinished, so nothing is registered or approved yet and **REG-19 cannot resume until the resume decision is reviewed** (`agent/STATE.md`, "Next three"). The 30-minute heartbeat is cancelled. To continue: start `claude` in this repo and give it `agent/RESUME_PROMPT.md`.
 0. **The agent cannot restart itself after a crash or reboot unless you run three commands.** I wrote and tested the watcher and the resume launcher (launchd can start a headless session; proof in `agent/launchd/README.md`), but Claude Code's permission classifier refused to let me install recurring launchd jobs, and I did not work around it. Until you run the commands in `agent/launchd/README.md`, the study advances only while this interactive session stays open (it has a 30-minute heartbeat and a 15-minute GPU check inside it). Kill switch once installed: `touch agent/STOP`. Also: the Mac has no auto-login, so after a reboot nothing starts until you log in.
 1. **No off-machine backup.** No external volume was mounted on 2026-11-13. `runs/` (182 folders, 19 GB) is copied to `/Users/chalshik/aftershock-backups/runs-2026-11-13` on the same disk; that guards against deletion, not against losing the Mac. Verified against the manifest on 2026-11-13: 1831 files listed, 0 missing, 0 different.
 2. **The delegation entry was not committed.** Your start prompt says you committed it. It was in the working copy only, and its heading had no `## `. I added the marker and line breaks, changed no word, and committed it (`c94a77d`, decisions.md 2026-11-13 [OPS]). I treat it as in force. If you did not write those seven lines, void it with one entry and tell me to stop.
@@ -13,7 +14,9 @@ What you should know or may want to overrule. The agent never waits on this file
 
 ## Decisions you may want to overrule
 
-(none yet)
+- **REG-21 no longer has the mix as its primary readout** (your choice of 2026-11-12, "Register now, mix primary"). Draft 3 judges the stuck server's uncached-token work rate against the cache-off sweeps; the mix is reported only. Reason: both review rounds showed the mix follows from queue kinematics and the time in the running batch. Not registered yet.
+- **REG-19's analysis will run from a git worktree at `a7bb77a`** (`/Users/chalshik/Projects/aftershock-reg19-pin`), not from `main`, and the VM stays at `a7bb77a` until its [RESULT]. Draft, in review.
+- **A new folder outside the repo:** that worktree, and `/Users/chalshik/aftershock-backups/`.
 
 ## Things left uncommitted on purpose
 

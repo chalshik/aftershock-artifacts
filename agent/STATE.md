@@ -3,29 +3,34 @@
 Any fresh session resumes from this file alone. Read it, then `agent/PLAN.md`, then the last block of `agent/LOG.md`.
 Rules: `docs/FABLE_PROMPT.md` (the start prompt), `CLAUDE.md`, `PROTOCOL.md`, `docs/process.md`.
 
-Last updated: 2026-11-13 (session 8c5f8396, first block).
+Last updated: 2026-11-13 (session 8c5f8396, block 2; stopped on the usage limit).
 
 ## Phase
 
-**Phase 0, setup and ingest.** No GPU. No registration written by this agent yet.
+**Phase 0/2: setup done; three registrations drafted and waiting for their reviews.** The session stopped on 2026-11-13 because the owner's usage limit was reached. No GPU. Nothing registered or approved by the delegate yet.
 
 ## Current task
 
-S5: finish the ingest (`agent/INGEST.md`), then S6/S7 (self-resume, GPU watcher), then the zero-GPU queue in `PLAN.md`.
+Interrupted mid-review. Three subagent reviews were running and were **stopped unfinished** (no output kept):
+- rule F and owner-proxy on the REG-19 resume decision (`docs/drafts/reg19_resume_decision_draft1.md`);
+- rule F on REG-21 draft 3 (`docs/drafts/reg21_draft3.md`).
+Their input bundles are saved in `docs/drafts/review_bundles/` (the briefs are in block 2 of `agent/LOG.md`). **Re-run them first.**
 
 ## Last completed
 
-- S1: drafts saved from the earlier session's scratchpad to `docs/drafts/scratchpad-2026-11-12/` (commit `c94a77d`).
-- S2: `docs/paper/` has its own git history (inner repo, first commit `3e41741`); PDFs in `docs/paper/pdfs/` are ignored there.
-- Delegation entry committed (`c94a77d`), see below.
-- S6/S7: GPU watcher and self-resume built and tested; launchd install refused by the permission classifier (see below).
-- S3: `runs/` backup on the same disk, verified against the manifest (1831 listed, 0 missing, 0 different).
+- S1–S3, S6/S7 (see LOG block 1). S8: `analysis/withheld.py` seals REG-19's and REG-20's runs (12 tests; commit `72fafb5`).
+- A17 answered from the pinned source (no skip); [CORR] logging the owner's four choices of 2026-11-12.
+- REG-19 resume: draft decision; `docs/probe/20261113_reg19/ops/launch7.sh`, `queue_reg19e.sh`; a git worktree at `a7bb77a` in `/Users/chalshik/Projects/aftershock-reg19-pin` with all 182 run folders linked into its `runs/` (tested with `reg19_inputs`, schedule only).
+- REG-21 draft 3 (work rate) with `analysis/k3w.py`, `modelf_sim.simulate(decode_s=)` and 18 synthetic tests.
+- E0/E1/E2 draft 3 (`docs/drafts/e0_e1_draft3.md`), not yet reviewed.
+- KAIROS Fig. 10–11 check answered (`agent/LITERATURE.md`): the paper shows no frequency trace for that run.
 
 ## Next three
 
-1. S5: finish `agent/INGEST.md` (decisions.md 2026-11-12 entries, pack §6.21–6.24, §9, §12.C; the paper layer; the PDFs).
-2. S8: exclusion of withheld runs in the glob-based tools, with tests, before any such tool is run.
-3. L1/L2: read the PDFs, `agent/LITERATURE.md`, the KAIROS Fig. 10–11 check.
+1. **Z6b:** re-run rule F and the owner-proxy on the REG-19 resume decision, revise, then write the [DECISION] (delegate). This is what blocks the GPU queue.
+2. **Z1:** re-run rule F on REG-21 draft 3, revise, owner-proxy, [REG] + [DECISION] (delegate), then `uv run python -m analysis.k3w reg21` once and the [RESULT].
+3. **Z2c:** rule F round 2 and owner-proxy on E0/E1/E2 draft 3; add the E1/E2 seals to `analysis/withheld.py`, an `e1` command-line entry (`python -m analysis.e1 floor`) and `k2 observed`; register and approve.
+Then: `agent/RUNBOOK.md` and `agent/DECISION_TREE.md` (before any GPU run), Z6a stale docs (incl. the KAIROS wording in related work), Z9, Z3–Z5, Z7, Z8, Z10.
 
 ## Blockers
 
@@ -58,7 +63,7 @@ OBSERVED: the entry was in the working copy, uncommitted and without its `## ` m
 ## Self-resume mechanism (tested 2026-11-13)
 
 What works now, while the interactive session `8c5f8396` is alive:
-- **Heartbeat:** a session cron job (`CronCreate`, id `933698ad`, minutes 17 and 47 of every hour) enqueues a "continue the loop" prompt whenever the session is idle. Session-only; it expires after 7 days (re-create it before 2026-11-20).
+- **Heartbeat:** none now. The session cron job was cancelled on 2026-11-13 when the usage limit was reached; re-create it (`CronCreate`, e.g. `17,47 * * * *`, prompt: continue the loop from STATE.md) when work resumes.
 - **GPU watcher:** a background loop in the session runs `agent/bin/gpu_watch.sh` every 15 min and exits, which notifies the session, when `agent/GPU_AVAILABLE` appears. States and the last read: `agent/run/gpu_watch.state`, `agent/run/gpu_watch.last`; changes only in `agent/run/gpu_watch.log`. If the loop is gone, restart it:
   `while true; do zsh agent/bin/gpu_watch.sh; [[ -f agent/GPU_AVAILABLE ]] && break; sleep 900; done` (in the background).
 
