@@ -13,6 +13,8 @@ After a short shock to a healthy vLLM server with prefix caching, at the same lo
 - **C1, the symptom:** at some load λ between μ_off and μ_warm, percent fast stays low after the trigger has ended, while the same load without a trigger stays healthy. (plan)
 - **C2, the cause:** a sustaining loop. Cache lost → slow requests → big running batch → KV memory full → cached prefixes evicted before their session's next turn → cache stays lost. (plan)
 
+- **[new 2026-11-12]** C1 and C2 are now the paper's premise, cited from three preprints and replicated here; the paper's own claims are K1–K5 (`docs/claims.md`; decisions.md 2026-11-12 [DECISION]). The tests in §3 are unchanged and still judge every run registered against C1. The control that cuts C2's loop is a session-cap arm at the load generator, in place of protected prefixes; it is not yet registered.
+
 ## 3. What counts for and against
 
 **A run's verdict** (`analysis/load.py`, `verdict`; decisions.md 2026-11-01 "Stuck" redefined, and 2026-11-02 baseline correction):
@@ -107,4 +109,4 @@ Stuck in 0 of 3 in each of 10 cells (setup × trigger × load), each with a one-
 - larger bursts
 - 60 s turn gaps
 - the ramp at the smaller pool
-- the caching-off and protected-prefixes controls
+- the caching-off control and the session-cap arm (which replaced the protected-prefixes control on 2026-11-12)

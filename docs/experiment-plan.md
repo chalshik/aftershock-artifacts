@@ -346,3 +346,129 @@ The first one blocks the first trigger, so check it before anything else.
 - [ ] Is there any way to protect cached prefixes from eviction in vLLM, or does the protected-prefixes control need a code change?
 - [ ] K, the watch window length, the stuck thresholds and the number of repeats per cell: fix them from Stage 1 numbers before the first Stage 2 run.
 - [ ] Does turn spacing matter? If sessions come back very quickly, their prefixes may survive even a big batch. Try at least two turn gaps.
+
+# Stage 2, revised 2026-11-12 — From reproducing the failure to mapping its boundary
+
+Added at the end so that the text above keeps its line numbers (other docs cite them). Where this section and the text above differ, this section rules; the change is logged in decisions.md 2026-11-12 [DECISION]. Nothing here is a registration: every run and every analysis below still needs its own `[REG]`, a rule F review and the owner's approval, and the numbers given are planning estimates.
+
+## Why the plan changed
+
+Three preprints (arXiv 2611.02543, 2611.08902, 2611.13412) now report the stuck state on real engines, one of them on the vLLM version pinned here. Showing that the failure exists is no longer the goal. Stage 2 now asks where it does and does not happen, and whether the published models put that boundary in the right place. The method stays the same:
+
+> **Start healthy → push briefly → stop pushing → see whether it comes back.**
+
+What changes is what is compared: not only "burst against no burst", but the same burst under two kinds of client, two kinds of reuse, and several context lengths.
+
+## Claims this stage serves (full text: `docs/claims.md`)
+
+| Claim | Question in one line |
+| --- | --- |
+| **P0** (C1 and C2, now a cited premise) | Does the stuck state appear here too, at chat-sized contexts and close to the cold capacity? |
+| **K1** | Does it need turns that wait for the previous reply? |
+| **K2** | Does the danger zone widen with context, and vanish when all reuse comes from one shared prompt? |
+| **K3** | Do the published models predict our numbers? |
+| **K4** | Near the warm capacity, does the healthy state end at an arrival surge? |
+| **K5** (optional) | Do cache signals warn before latency does? |
+
+## Key words added
+
+| Word | Meaning |
+| --- | --- |
+| **Cold floor** | Completions per second of the saturated server with caching off (μ\_sat,off in `docs/definitions.md`). The other papers call this the all-miss capacity |
+| **Margin** | Load divided by the cold floor. Setup L1 at λ = 2.0: 2.0 / 1.681 = 1.19. Reported for every cell so that cells compare across papers |
+| **Open-loop turns** | Each turn is sent at its scheduled time, whether or not the previous reply has arrived |
+| **Closed-loop turns** | The next turn is sent a think time after the previous reply (`workload.sessions.closed_loop`) |
+| **Cache gain** | The warm hit rate of the no-trigger control |
+| **Shared-only workload** | Every reusable token is in one of a fixed set of prefixes shared across sessions (tenants); the set's total size does not change with load or backlog; no request reuses its own session's earlier turns |
+| **Session cap** | A limit on how many sessions are in service at once, held at the load generator. The gateway stays off |
+
+## What stays, what is replaced
+
+| Part of the plan above | Now |
+| --- | --- |
+| Fixed choices, run checks, one run step by step | Unchanged |
+| Verdict rules and the six conditions (PROTOCOL §3) | Unchanged; they judge every P0 run |
+| Triggers, in order | The burst is the only trigger used. The cache wipe is reported as a weak trigger (no stuck run). Power cap, restart and popularity shift are not planned; the power cap is a stretch item |
+| Control: no trigger | Unchanged, at every cell |
+| Control: prefix caching off | Given a form: same share of the cache-off capacity as the test load has of the warm capacity, same absolute burst (step D) |
+| Control: prefixes protected | Replaced by the session-cap arm (step D) |
+| The danger-zone map (load × trigger size) | Replaced by the boundary map below |
+| Up-then-down ramp | Not repeated; the ramps run so far used open-loop turns and showed no gap |
+| The four figures and the done list | Replaced below |
+
+## Steps, in order
+
+Each step names what it needs before it can start. GPU hours are rough (BELIEF, from the cost of REG-8 and REG-19) and are fixed only at registration.
+
+**A. P0: finish REG-19 as registered.** Under way; nothing in it changes. Its outcome picks the cell for steps C and D: a cell where the closed-loop arm passes its test, or, if REG-19 does not reach 3 of 5, the owner chooses between λ = 2.1 and reporting λ = 2.0 as a cell where the zone is too narrow to hold.
+
+**B. K3 on the runs already made (0 GPU h, retrospective).** One registered analysis of the closed-loop cold runs (REG-12, REG-14 to REG-18, and REG-19 once reported). Needs first: the models' equations checked against the papers (open-questions A16), and a cold-turn cost by prompt length from the cache-off sweeps. Readouts, each with a tolerance fixed before it is computed:
+- the drain threshold: is the backlog slope's sign set by the span's planned load against the cold floor?
+- the backlog slope against the model's value;
+- the mean prompt length of the turns served while cold, against the schedule's mix (the published model says shorter);
+- uncached prefill tokens per second against the cache-off rate (a cold test that does not depend on the mix of turns);
+- the 5-minute hit-ratio rule of Huang and Liu, as a second reading beside our verdict.
+
+These runs have been seen, so this is a consistency check, never a blind test. The blind test is step C onward, where the predictions are registered before the runs.
+
+**C. K1: the matched arm (about 11 to 12 GPU h for five pairs).** The cell chosen in step A, with the same seeds and the same burst, and one change: open-loop turns. Control and burst run per seed, as in REG-19.
+- Supports K1: the open-loop arm `recovered` while the closed-loop arm passed, with most open-loop session hits served while the previous turn runs (`gate.overlap_share`).
+- Refutes K1: the open-loop arm stuck.
+- Known confound to state in the registration: the warm capacity differs between the two arms (3.0 open-loop against about 2.4 closed-loop at L1), so the same λ is a different share of it; the cold floor is the same.
+- Registered with it: the K3 predictions for both arms.
+
+**D. C2: cut the loop (about 4 to 6 GPU h).** Two controls on the cell from step A.
+- *Session-cap arm:* the burst run repeated with the session cap on. Needs a load-generator change and tests on `tests/fake_vllm.py` (the owner's approval, as a workload change), and a rule for the cap's value fixed beforehand. Expected if the loop is the cause: `recovered`, with the waiting moved to the load generator.
+- *Caching off, matched on utilization:* caching disabled, the load at the same share of the cache-off capacity, the same absolute burst. Expected: one level only, and the backlog drains.
+
+**E. K2: reuse structure and context (about 12 to 17 GPU h per setup).** Each new setup needs its own cold floor and warm capacity (sweeps with caching off and on, closed-loop turns) before any shock run, as the feasibility gate requires.
+1. *Shared-only setup first,* at a cache gain matched to L1's (warm hit about 0.84). Needs a harness change: M tenant prefixes shared across sessions and no reuse of a session's own turns (details in the answered questions below). Expected under K2: no stuck run. The setup is built so that it can fail: any tenant's prefix can be evicted.
+2. *One further context size,* under closed-loop turns: 16 turns per session instead of 8, the system prompt unchanged (see the answered questions below for why turns and not `system_tokens`). Expected under K2: a wider zone and a higher stuck share than at 8 turns. Four turns is the next point if GPU time remains.
+The one shared GPU decides how far this goes; one setup of each kind is the minimum for K2 to be stated at all.
+
+**F. K4: lifetime of the warm state (only after C to E).** A surge threshold fixed from the schedule alone, then no-burst runs on new schedules on both sides of it. Long runs (REG-16 took 16,080 s), so few of them.
+
+**G. K5: lead times (0 GPU h, optional).** A registered onset rule per signal, applied to the stuck runs on record.
+
+## The boundary map
+
+The main result is a table, each cell "passes in k of n seeds" with its one-sided 95 % bound, its margin, and its no-trigger controls:
+
+| Vary | Values | Learn |
+| --- | --- | --- |
+| Turn semantics | Open-loop, closed-loop | Whether idle, evictable prefixes are needed (K1) |
+| Reuse structure | Per-session context, shared-only | Whether reuse that does not grow with load is safe (K2) |
+| Context per session | 8 turns (L1), 16 turns, then 4; the 512-token setups on record are open-loop only | Whether the zone widens with the cold-to-warm cost gap (K2) |
+| Margin | The loads on record at L1 (2.0, 2.2, 2.4), in units of the cold floor | How close to the floor the state can be entered |
+
+The open-loop runs already on record (no stuck run in any of 10 cells) fill the first row; they are reported as they were judged.
+
+## Outputs and done criteria
+
+Four figures, all from run folders through `analysis/`:
+
+1. **The boundary map** above.
+2. **The matched-arm figure:** one seed, open-loop against closed-loop, hit rate, KV usage and waiting line on one time axis with the burst at t = 0.
+3. **Model against measurement:** the registered predictions beside the measured values, per quantity.
+4. **The loop-cut figure:** the same cell with the burst, with the burst under the session cap, and with caching off.
+
+Stage 2 is done when:
+
+- [ ] P0: REG-19 is reported, pass or not, and the cell for the later steps is chosen
+- [ ] K1: the matched arm is run and judged
+- [ ] C2: the session-cap arm and the caching-off control are run and judged
+- [ ] K2: a shared-only setup and one further context size (16 turns) are measured and shocked, or the owner records that the GPU budget ends K2 earlier
+- [ ] K3: every registered prediction is compared once, inside or outside its tolerance
+- [ ] Every statement taken from the three preprints is checked against the papers (open-questions A16)
+
+A result against a claim counts as done: an open-loop arm that gets stuck, a shared-only setup that gets stuck, or a model that misses its tolerance is written up as such.
+
+## Open questions for this revision, answered 2026-11-12
+
+The owner left these to the agent ("do whatever leads to correct results"); the reasoning is in decisions.md 2026-11-12 [DECISION] (design choices). Each choice still enters a `[REG]` before any run, where the owner can change it.
+
+- [x] **Conditions 5 and 6 of PROTOCOL §3 stay required for P0.** What the preprints show about persistence is not evidence about this setup, and condition 6 (warm again after a load drop, at the same load) is the one test that separates two states from plain overload; it has not yet been passed after a burst. The drop is sized beforehand from the expected backlog and the cold floor, with a factor of two; 1800 s was too short (REG-15), 9000 s was enough (REG-16).
+- [x] **Session cap value:** per seed, the highest number of sessions in service at once in that seed's no-trigger control (in service: from a session's first turn sent to its last reply). Computed from the control before the capped run, no tuning, no extra GPU time. With this value the cap never binds on the control's own schedule, so it changes nothing in a healthy run. Burst requests are one-off and pass the cap, so the trigger is identical in both arms. The capped arm is judged on the server's hit rate and waiting line; time spent waiting at the cap is reported separately.
+- [x] **Shared-only workload at a matched cache gain:** the same sessions as L1 (8 turns, closed-loop, 5 s gaps, 128 output tokens), with only the token content changed: every turn is one of M tenant prefixes of 2576 tokens plus 496 fresh tokens, 3072 in all. This matches L1's mean prompt (3072), its mean uncached tokens per turn (496) and its hit rate (2576 / 3072 = 0.8385, against L1's 20608 / 24576 = 0.8385 by design and 0.838 measured). M is set so that M × 2576 equals L1's warm working set at the test load, so the pool is as full when warm and each prefix sits idle for about as long as an L1 session's prefix does; a skewed popularity is a harsher second variant. **Not one prefix for everyone** (corrected the same day after review): every request would hold it, it could never be evicted, and "no stuck run" would follow from the design, not from K2. What cannot be matched is the spread: L1's uncached part is 2176 tokens on a session's first turn and 256 afterwards, and L1's prompts run from 2176 to 3968 tokens. Both are registered as differences.
+- [x] **Second point for K2: turns per session, not system-prompt length; 16 turns first.** With a system prompt that is unique per session, a longer prompt also makes the first turn dearer, so the cold-to-warm cost gap hardly moves (512 → 3072 tokens changes the token ratio from 5.1 to 6.6), and beyond about 3072 tokens a first turn alone takes most of the 1.0 s limit. Doubling the turns to 16 widens the gap more (6.2 → 10.9), leaves the first turn as it is, and fits the pool. Halving to 4 turns (ratio 3.5) is the second point if GPU time remains. A 16-turn cell should also hold a stuck state more firmly than L1, which steps C and D need if REG-19 does not pass.
+- [x] **Cold floor for closed-loop cells: not assumed, measured.** First, in step B, the uncached prefill tokens per second of the closed-loop cold spans are compared with the cache-off sweep's (0 GPU h). From step E on, every new setup's cache-off sweep uses closed-loop turns. For L1 a closed-loop cache-off sweep is registered before step C if the step B comparison is outside its tolerance. Until then 1.681 is written as "the open-loop floor".

@@ -21,7 +21,7 @@ One entry per term: one text definition, its source, and the code that computes 
 ### goodput ⚠ two meanings
 - **Text:** "Share of requests that met the speed limit (SLO); the goodput measure from Stage 1". `docs/experiment-plan.md:205`. In this repo it is a synonym of percent fast.
 - **Other meaning:** completions per second, used outside this repo (the owner's paper notes; not checkable here, BELIEF). The C1 metric, percent fast or completions/s, is the owner's decision (`docs/claims.md`).
-- **Code:** none of its own; see percent fast and throughput. Until the owner decides, write "percent fast" or "completions/s", never "goodput".
+- **Code:** none of its own; see percent fast and throughput. **Decided 2026-11-12 (owner):** the paper states C1 in hit rate and percent fast, not completions/s (decisions.md 2026-11-12 [DECISION]). Still write "percent fast" or "completions/s", never "goodput".
 
 ### throughput (completion rate c)
 - **Text:** "completions per second inside the measured window, the plan's definition". `docs/decisions.md:97`. Written c(s) in `docs/model.md` M2.
