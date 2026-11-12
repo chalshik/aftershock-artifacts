@@ -21,16 +21,25 @@ def test_fit_recovers_a_line_and_its_se():
     assert math.isnan(e1.fit(r, "throughput", 4.0)["slope"])
 
 
-def test_tilt_judge_and_unresolved():
+def test_tilt_over_the_rates_both_sweeps_have():
     cl = rows([2, 2.5, 3, 3.5, 4], [1.70] * 5, kbar=[4.3, 4.1, 3.9, 3.7, 3.5])
     ol = rows([2, 2.5, 3, 3.5, 4], [1.68] * 5, kbar=[4.5] * 5)
-    t = e1.tilt(cl, ol, "kbar", 2.0)
-    assert t["d"] == pytest.approx(-0.4)
-    assert e1.judge(t, -0.2) == "tilted"
-    assert e1.judge({"d": -0.05, "se": 0.0}, -0.2) == "flat"
-    assert e1.judge({"d": -0.18, "se": 0.02}, -0.2) == "unresolved"
-    assert e1.judge({"d": 0.05, "se": 0.0}, 0.02) == "tilted" and e1.judge({"d": 0.0, "se": 0.0}, 0.02) == "flat"
-    assert e1.judge({"d": math.nan, "se": 0.0}, 0.02) == "nan"
+    assert e1.tilt(cl, ol, "kbar", 2.0)["d"] == pytest.approx(-0.4)
+    t = e1.tilt(cl, ol.iloc[[0, 1, 2]], "kbar", 2.0)          # open loop lacks 3.5 and 4: both fits use 2-3
+    assert t["cl"]["n"] == t["ol"]["n"] == 3
+    assert not hasattr(e1, "judge")                          # owner 2026-11-12: the tilt is never judged
+
+
+def test_floor_is_cold_floor_or_the_registered_tail_fallback():
+    ok = rows([1.5, 2, 2.5, 3], [1.40, 1.70, 1.72, 1.74], kv=[0.5, 0.9, 0.9, 0.9])
+    assert e1.floor(ok)["status"] == "ok" and e1.floor(ok)["lam_sat"] == 2.0
+    # 1.5 is full (KV 0.9) but kept up (1.55 >= 0.95 x 1.575): cold_floor says not_monotone; the tail starts at 2.0
+    nm = rows([1.5, 2, 2.5, 3], [1.55, 1.70, 1.72, 1.74], kv=[0.9, 0.9, 0.9, 0.9])
+    assert e1.saturated(nm)["status"] == "not_monotone"
+    f = e1.floor(nm)
+    assert f["status"] == "tail_ok" and f["lam_sat"] == 2.0 and f["mu_sat_off"] == pytest.approx(1.72)
+    short = rows([1.5, 2, 2.5, 3], [1.40, 1.70, 1.72, 3.1], kv=[0.9, 0.9, 0.9, 0.9])   # top row kept up
+    assert e1.floor(short)["status"] == "tail_unsaturated"
 
 
 def test_onset_is_the_later_of_the_two_sweeps():

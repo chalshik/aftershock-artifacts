@@ -25,7 +25,8 @@ E0 = {
     "warm_best_8": 4.047,    # req/s, REG-8's best cache-on completion rate (M2; RUN(..._pc_on_r4.5, load.summarize))
     "warm_cl_8": 2.4,        # req/s, REG-13's closed-loop warm capacity by the configs' rule (M2; decisions [RESULT])
     "warm_grid_8": (2.0, 2.4, 2.6, 2.8, 3.0),            # REG-13's rates (configs/sweep_l1pl350cl_pc_on.yaml)
-    "warm_grid_16": (2.0, 2.4, 2.6, 2.8, 3.0, 3.2),      # E2 (configs/sweep_l1t16pl350cl_pc_on.yaml)
+    "warm_grid_16": (2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2),  # E2 (configs/sweep_l1t16pl350cl_pc_on.yaml); 2.2 added
+                                                          # after the E0/E1 review (owner, 2026-11-12)
 }
 
 
@@ -73,7 +74,8 @@ def gate_factor(c8: float | None = None, grid8: tuple | None = None) -> float:
     """g: the measured R must reach it before the 16-turn matrix runs. A capacity read by the configs' rule is the
     highest passing grid rate, so the true 8-turn capacity may lie up to one grid step above the measured one; a
     measured R >= 1 + step / c8 then still implies a true R >= 1. The 16-turn capacity is rounded down the same way,
-    which can only lower the measured R (conservative). Floors are means of saturated runs, not rounded."""
+    which can only lower the measured R (conservative). Floors are means of saturated runs, not rounded. Not covered:
+    a lucky pass at one grid rate (REG-13's 2.4 passed at 0.9503 against 0.95) and noise in the floors."""
     c8, grid8 = c8 or E0["warm_cl_8"], grid8 or E0["warm_grid_8"]
     above = [r for r in grid8 if r > c8 + 1e-9]
     if not above:
@@ -81,9 +83,39 @@ def gate_factor(c8: float | None = None, grid8: tuple | None = None) -> float:
     return 1 + (min(above) - c8) / c8
 
 
+def decide(warm8: float, f8: float, warm16: float, f16: float, low16_measured: bool = True,
+           grid8: tuple | None = None, grid16: tuple | None = None) -> dict:
+    """The E0 gate. Labels:
+      'widens'          R >= g and warm16 > warm8: the 16-turn shock matrix may be registered;
+      'floor_only'      R >= g but warm16 <= warm8: the window widened only because the floor fell; no matrix
+                        (E0/E1 review, recommendation 2: the warm side must gain too);
+      'does_not_widen'  R <= 1: K2's first half refuted for L1 at sweep cost; no matrix;
+      'unresolved'      1 < R < g; no matrix, the owner decides;
+      'missing'         an input is undefined for want of data (no valid run where one is needed, or a floor the
+                        rules leave undefined); no matrix, reported, the owner decides.
+    A 16-turn capacity below its grid (the lowest rate measured and failed, `low16_measured`) bounds R above by its
+    value at that rate (`R_upper`): 'does_not_widen' if that bound is <= 1, else 'unresolved'."""
+    grid16 = grid16 or E0["warm_grid_16"]
+    g = gate_factor(warm8, grid8)
+    out = {"g": g, "warm_ratio": warm16 / warm8 if warm8 else math.nan,
+           "floor_ratio": f16 / f8 if f8 else math.nan}
+    if any(math.isnan(x) for x in (warm8, f8, f16)):
+        return {**out, "R": math.nan, "label": "missing"}
+    if math.isnan(warm16):
+        if not low16_measured:
+            return {**out, "R": math.nan, "label": "missing"}
+        R_up = measured_R(warm8, f8, min(grid16), f16)
+        return {**out, "R": math.nan, "R_upper": R_up, "label": "does_not_widen" if R_up <= 1 else "unresolved"}
+    R = measured_R(warm8, f8, warm16, f16)
+    if R >= g:
+        lab = "widens" if warm16 > warm8 + 1e-9 else "floor_only"
+    else:
+        lab = "does_not_widen" if R <= 1 else "unresolved"
+    return {**out, "R": R, "label": lab}
+
+
 def gate(R: float, g: float | None = None) -> str:
-    """'widens' (R >= g: the 16-turn matrix runs), 'does_not_widen' (R <= 1: K2's first half refuted at sweep cost),
-    else 'unresolved' (the matrix does not run; the owner decides)."""
+    """R alone against g (no warm-side condition): kept for the prediction table; the registered rule is `decide`."""
     g = gate_factor() if g is None else g
     if math.isnan(R):
         return "nan"
@@ -122,20 +154,31 @@ E0_PARENTS = {"warm_8": "sweep_l1pl350cl_pc_on", "off_8": "sweep_l1pl350cl_pc_of
               "warm_16": "sweep_l1t16pl350cl_pc_on", "off_16": "sweep_l1t16pl350cl_pc_off"}
 
 
-def observed() -> dict:
-    """The measured R and the gate, from the four closed-loop sweeps (valid runs only): warm capacities by the configs'
-    rule (`tables.sweep_capacity`), floors by `gate.cold_floor` (REG-8's settings). Never call before E1 and E2 have
-    run under approved registrations."""
-    from analysis.gate import REG8, cold_floor, sweep_rows
-    from analysis.tables import sweep_capacity
-    warm = {k: sweep_capacity(E0_PARENTS[k]) for k in ("warm_8", "warm_16")}
-    floor = {k: cold_floor(sweep_rows(E0_PARENTS[k]), REG8["floor_min_kv"], REG8["floor_min_runs"], REG8["sat_frac"])
-             for k in ("off_8", "off_16")}
-    f8, f16 = floor["off_8"]["mu_sat_off"], floor["off_16"]["mu_sat_off"]
-    R = measured_R(warm["warm_8"], f8, warm["warm_16"], f16)
-    out = {"warm": warm, "floor": floor, "R": R, "gate_factor": gate_factor(), "label": gate(R)}
-    if math.isnan(warm["warm_16"]) and not any(math.isnan(x) for x in (warm["warm_8"], f8, f16)):
-        # The lowest 16-turn rate failed: the capacity is below the grid, so R is at most its value there.
-        R_up = measured_R(warm["warm_8"], f8, min(E0["warm_grid_16"]), f16)
-        out.update(R_upper=R_up, label="does_not_widen" if R_up <= 1 else "unresolved")
+def predict_measured(s: dict, turns: int = 16) -> dict:
+    """The prediction on the gate's own scale (E0/E1 review: the table gave the true R): each model's 16-turn warm
+    capacity (2.4 x its warm ratio) rounded down onto E2's grid, as the configs' rule would read it, with model F's
+    closed-loop floors; then `decide`."""
+    base, fl, out = predict(s, turns), closed_loop_floors(s, turns), {}
+    for name in base:
+        c16 = base[name]["warm_cl_T"]
+        read = max([r for r in E0["warm_grid_16"] if r <= c16 + 1e-9], default=math.nan)
+        d = decide(E0["warm_cl_8"], fl[name]["floor_cl_8"], read, fl[name]["floor_cl_16"])
+        out[name] = {"warm_cl_16_true": c16, "warm_cl_16_read": read, **d}
     return out
+
+
+def observed() -> dict:
+    """The measured gate, from the four closed-loop sweeps (valid runs only): warm capacities by the configs' rule
+    (`tables.sweep_capacity`), floors by `e1.floor` (`gate.cold_floor`, REG-8's settings, with the registered tail
+    fallback). Never call before E1 and E2 have run under approved registrations."""
+    from analysis import e1
+    from analysis.gate import sweep_rows
+    from analysis.tables import sweep_capacity, sweep_table
+    sw = sweep_table()
+    warm = {k: sweep_capacity(E0_PARENTS[k], sw) for k in ("warm_8", "warm_16")}
+    floor = {k: e1.floor(sweep_rows(E0_PARENTS[k])) for k in ("off_8", "off_16")}
+    mine = sw[(sw.parent == E0_PARENTS["warm_16"]) & sw.valid.astype(bool)]
+    low16_measured = bool((mine.rate == min(E0["warm_grid_16"])).any())
+    d = decide(warm["warm_8"], floor["off_8"]["mu_sat_off"], warm["warm_16"], floor["off_16"]["mu_sat_off"],
+               low16_measured)
+    return {"warm": warm, "floor": floor, "low16_measured": low16_measured, **d}

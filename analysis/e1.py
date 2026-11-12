@@ -1,17 +1,17 @@
-"""E1 (draft, not registered): the closed-loop cache-off sweep of setup L1 (configs/sweep_l1pl350cl_pc_off.yaml), and
-the blind K3 test it carries (REG-21 round-2 review, recommendation 3: J4 as drafted could not change a decision).
+"""E1 (draft, not registered): the closed-loop cache-off sweep of setup L1 (configs/sweep_l1pl350cl_pc_off.yaml).
 
-Model F (Valse and Jannesari §3; BELIEF as to the model) says a saturated all-miss server with closed-loop turns serves a
-mix tilted toward a session's early, short turns, and the tilt grows with the backlog, so its completion rate rises
-with the offered rate; with open-loop turns the server serves the planned mix whatever the backlog, so its rate is
-flat. The test statistic is the *tilt* d = slope(closed loop) - slope(open loop), each the least-squares slope of
-throughput on rate over the rows `gate.cold_floor` counts as saturated: E1's own rows against REG-8's open-loop
-cache-off rows at the same rates and seed. Engine effects that change throughput with the rate (batch size,
-preemption) enter both slopes and cancel to the extent they act alike in the two loops.
+Judged: nothing. E1 *measures* K2's 8-turn closed-loop cold floor (`floor`, `gate.cold_floor` with REG-8's settings,
+with the registered fallback `floor_tail` when that rule returns "not_monotone"). Owner, 2026-11-12: "Floor only".
 
-The prediction is the replay of the two sweeps' own configs through model F's server (`analysis/modelf_sim.py`) at
-the open-loop floor mu = 1.681: d_F on seed 0 (the runs' seed), and the spread of d over replay seeds. No run folder
-is read by the prediction; `observed` reads E1's and REG-8's rows through `gate.sweep_rows`, after E1 has run.
+Reported only, never judged: the served-mix tilt. Model F (Valse and Jannesari §3; BELIEF as to the model) says a
+saturated all-miss server with closed-loop turns serves a mix tilted toward a session's early turns, more so as the
+load rises; with open-loop turns it serves the planned mix. The E0/E1 rule F review showed (synthetic replays) that the
+tilt follows from within-session precedence and work conservation alone, for FIFO, many slots, residence, superlinear
+cost and LIFO alike (d_k -0.36 to -0.39 per req/s against model F's -0.39), so it cannot tell model F from other
+servers and no decision may rest on it. `tilt` and `prediction` stay for the description: d = slope(closed) -
+slope(open) of k-bar or throughput on rate, over the rates both sweeps have from the common onset up, E1's rows against
+REG-8's open-loop cache-off rows at the same rates and seed; the prediction is the replay of both configs through
+model F's server (`analysis/modelf_sim.py`) at mu = 1.681. No run folder is read by the prediction.
 """
 from __future__ import annotations
 
@@ -90,7 +90,10 @@ def fit(rows: pd.DataFrame, col: str, lo: float) -> dict:
 
 
 def tilt(cl: pd.DataFrame, ol: pd.DataFrame, col: str, lo: float) -> dict:
-    """d = slope(closed) - slope(open) of `col` over rates >= lo; se combines the two fits' residual SEs."""
+    """d = slope(closed) - slope(open) of `col` over the rates >= lo that both sweeps have (a rate valid in one sweep
+    only is left out of both); se combines the two fits' residual SEs. Reported only."""
+    common = set(cl.rate) & set(ol.rate)
+    cl, ol = cl[cl.rate.isin(common)], ol[ol.rate.isin(common)]
     a, b = fit(cl, col, lo), fit(ol, col, lo)
     return {"d": a["slope"] - b["slope"], "se": math.hypot(a["se"], b["se"]), "cl": a, "ol": b}
 
@@ -100,8 +103,8 @@ READOUTS = ("kbar", "throughput")   # kbar first: the served mix, which no token
 
 def prediction(seeds: tuple | None = None) -> dict:
     """For each cost model and each possible onset (every grid rate from REG-8's onset 2.0 up to the third-highest, so
-    at least three rows remain): d_F of each readout on seed 0, and the SD of d over replay seeds. The threshold between
-    'tilted' (as model F) and 'flat' is half of the d_F nearer zero of the two cost models."""
+    at least three rows remain): d_F of each readout on seed 0, and the SD of d over replay seeds. Reported only; the
+    `threshold` (half the d_F nearer zero) is kept as a description of where model F sits, not as a decision rule."""
     seeds = E1["replay_seeds"] if seeds is None else seeds
     reps = {name: {s: (replay_rows(E1["configs"]["cl"], E1["mu"], cost, s),
                        replay_rows(E1["configs"]["ol"], E1["mu"], cost, s)) for s in {0, *seeds}}
@@ -123,32 +126,41 @@ def prediction(seeds: tuple | None = None) -> dict:
                                             for n in reps}}
 
 
-def judge(t: dict, threshold: float) -> str:
-    """'tilted' or 'flat' by the side of the threshold d falls on; 'unresolved' if it lies within 2 SE of it (the SE
-    from the two fits' residuals, so the engine's own run-to-run noise sets it, not the replay's)."""
-    d, se = t["d"], t["se"]
-    if math.isnan(d):
-        return "nan"
-    if not math.isnan(se) and abs(d - threshold) < 2 * se:
-        return "unresolved"
-    sign = 1 if threshold > 0 else -1
-    return "tilted" if sign * (d - threshold) >= 0 else "flat"
+def floor_tail(rows: pd.DataFrame) -> dict:
+    """Registered fallback for `gate.cold_floor`'s "not_monotone" (a row at or above its lam_sat kept up or was not
+    full): lam_sat becomes the lowest rate from which *every* row is saturated (KV >= min_kv and throughput < sat_frac
+    x planned), and the floor is their mean, with at least min_runs rows ("too_few" otherwise). Its status carries the
+    prefix "tail_" so a fallback floor is never mistaken for cold_floor's own."""
+    s = rows[np.isfinite(rows[["rate", "throughput", "planned_rate", "kv_mean"]]).all(axis=1)].sort_values("rate")
+    sat = ((s.kv_mean >= E1["floor_min_kv"]) & (s.throughput < E1["sat_frac"] * s.planned_rate)).to_numpy()
+    out = {"mu_sat_off": math.nan, "lam_sat": math.nan, "n": 0}
+    k = len(sat)
+    while k > 0 and sat[k - 1]:
+        k -= 1                                        # rows k.. are the saturated tail
+    tail = s.iloc[k:]
+    if not len(tail):
+        return {**out, "status": "tail_unsaturated"}
+    out.update(lam_sat=float(tail.rate.min()), n=len(tail))
+    if len(tail) < E1["floor_min_runs"]:
+        return {**out, "status": "tail_too_few"}
+    return {**out, "mu_sat_off": float(tail.throughput.mean()), "status": "tail_ok"}
 
 
-def observed(pred: dict) -> dict:
-    """E1's and REG-8's real rows (valid runs only) judged against the registered prediction. Never call before E1
-    has run under an approved [REG]."""
+def floor(rows: pd.DataFrame) -> dict:
+    """E1's floor: `gate.cold_floor`; if and only if that returns "not_monotone", `floor_tail`."""
+    f = saturated(rows)
+    return floor_tail(rows) if f["status"] == "not_monotone" else f
+
+
+def observed() -> dict:
+    """E1's floor (judged as a measurement, feeds E0) and the reported tilt against REG-8 (valid runs only). Never
+    call before E1 has run under an approved [REG]."""
     cl, ol = sweep_rows(E1["sweeps"]["cl"]), sweep_rows(E1["sweeps"]["ol"])
     cl, ol = cl.assign(kbar=[_kbar(r) for r in cl.run]), ol.assign(kbar=[_kbar(r) for r in ol.run])
-    lo = onset(cl, ol)
-    res = {"floor_cl": saturated(cl), "floor_ol": saturated(ol), "onset": lo}
-    if math.isnan(lo) or lo not in pred["by_onset"]:
-        return {**res, "status": "no_prediction_for_this_onset"}
-    for col in READOUTS:
-        t = tilt(cl, ol, col, lo)
-        res[col] = {**t, "threshold": pred["by_onset"][lo][col]["threshold"],
-                    "label": judge(t, pred["by_onset"][lo][col]["threshold"])}
-    return {**res, "status": "ok"}
+    res = {"floor": floor(cl), "floor_ol": saturated(ol), "onset": onset(cl, ol)}
+    if not math.isnan(res["onset"]):
+        res["tilt_reported"] = {col: tilt(cl, ol, col, res["onset"]) for col in READOUTS}
+    return res
 
 
 def _kbar(run_name: str) -> float:

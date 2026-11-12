@@ -33,6 +33,29 @@ def test_prediction_at_16_turns():
     assert k2.predict(S, 8)["fixed"]["R"] == pytest.approx(1.0)
 
 
+def test_decide_labels():
+    g = k2.gate_factor()
+    assert k2.decide(2.4, 1.744, 2.6, 1.431)["label"] == "widens"
+    assert k2.decide(2.4, 1.744, 2.4, 1.431)["label"] == "floor_only"          # R 1.22 >= g, warm side flat
+    assert k2.decide(2.4, 1.744, 2.0, 1.431)["label"] == "unresolved"          # R 1.016
+    assert k2.decide(2.4, 1.70, 2.0, 1.70)["label"] == "does_not_widen"
+    below = k2.decide(2.4, 1.744, math.nan, 1.431)
+    assert below["label"] == "unresolved" and below["R_upper"] == pytest.approx((2.0 / 1.431) / (2.4 / 1.744))
+    assert k2.decide(2.4, 1.70, math.nan, 1.70)["label"] == "does_not_widen"   # R_upper 0.83
+    assert k2.decide(2.4, 1.744, math.nan, 1.431, low16_measured=False)["label"] == "missing"
+    assert k2.decide(2.4, math.nan, 2.6, 1.431)["label"] == "missing"
+    d = k2.decide(2.4, 1.744, 2.6, 1.431)
+    assert d["warm_ratio"] == pytest.approx(2.6 / 2.4) and d["floor_ratio"] == pytest.approx(1.431 / 1.744)
+    assert d["g"] == pytest.approx(g)
+
+
+def test_prediction_on_the_gates_scale():
+    p = k2.predict_measured(S)
+    assert p["fixed"]["warm_cl_16_read"] == 2.4 and p["fixed"]["label"] == "floor_only"
+    assert p["fixed"]["R"] == pytest.approx(1.219, abs=0.002)
+    assert p["prop"]["warm_cl_16_read"] == 3.0 and p["prop"]["label"] == "widens"
+
+
 def test_gate_factor_and_labels():
     assert k2.gate_factor() == pytest.approx(1 + 0.2 / 2.4)
     assert k2.gate_factor(3.0, (2.0, 3.0)) == math.inf
