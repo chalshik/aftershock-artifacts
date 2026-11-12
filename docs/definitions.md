@@ -237,6 +237,19 @@ None has code yet; each gets its code when the run or analysis that uses it is r
 - **Text:** a session is in service from its first turn sent to its last reply received. The session cap is a limit on the number of sessions in service, held at the load generator; a session beyond it waits to start. Its value per seed is the highest number of sessions in service at once in the same seed's no-trigger control (decisions.md 2026-11-12 [DECISION], design choices).
 - **Code:** none; needs a load-generator change.
 
+### cold-backlogged (K1 readout)
+- **Text:** a burst run is cold-backlogged when, in its end window [burst end + watch − end_s, burst end + watch), against its own baseline [trigger start − baseline_s, trigger start): reuse ≤ baseline − `stuck_hit_drop`; mean waiting > baseline + `recovered_q_excess` (`load._level`); mean KV ≥ 0.9 (`gate.SURGE["kv_onset"]`, there on a 60 s rolling mean, here on the window's mean). *Recovered* (K1 sense): reuse ≥ baseline − `recovered_hit_drop` and waiting ≤ baseline + `recovered_q_excess`. Undefined (None) when any input is NaN. No latency and no request mix enter, so it means the same with open- and closed-loop turns. A control is read over its burst partner's windows. Added 2026-11-12 with REG-20 (draft; decisions.md 2026-11-12 [REG]).
+- **Code:** `k1.cold_backlogged`, `k1.windows` (`analysis/k1.py`).
+- **Related, not the same:** the `stuck` verdict (`load.verdict`) also needs percent fast to fall and no sign of recovery, and uses the server hit rate; cold-backlogged needs neither and uses reuse.
+
+### reuse (prefix reuse of later turns)
+- **Text:** Σ cached tokens (capped at the previous prompt) ÷ Σ previous-turn prompt tokens, over ok later session turns (turn > 0, previous turn present) whose first token falls in the window. A turn's reusable prefix is its previous prompt. Unlike the hit rate it does not fall when the served mix shifts to first turns, which can never hit (REG-20 review, T1). Added 2026-11-12.
+- **Code:** `k1.reuse`, `k1.later_turns`.
+
+### sessions in service (count)
+- **Text:** the mean, on a 10 s grid, of the sessions in service (see session cap: first turn sent to last reply; a session with an unfinished or unsent turn stays in service). A readout of REG-20 only.
+- **Code:** `k1.sessions_in_service`.
+
 ## Used configs that cannot be fixed (rule 5)
 
 Used configs are never edited. Their known defects are recorded here instead.
