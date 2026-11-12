@@ -45,3 +45,22 @@ One block per work block: what was done, what was found, the commit.
 - Not read by this session: decisions.md lines 1–3910 in full (the pack's indexes were used), the three preprints end to end, `docs/paper/paper-plan-v3.md`, `related-work-approach-v3.md`, `reading-notes.md`.
 
 **Commit:** `72fafb5`, then this block's commit.
+
+## 2026-11-13, block 3 (session 8c5f8396): resumed; VM check; reviews restarted; decision tree, runbook, literature
+
+**Done**
+- Owner asked whether the VM is back: no (Tailscale "offline, last seen 3h ago"; SSH timeout on both addresses; LAN ping 100 % loss; watcher `down` at 2026-11-12 19:22 UTC).
+- Restarted the three reviews stopped in block 2, and started rule F round 2 on E0/E1/E2 draft 3. Heartbeat cron re-created (`3ca81824`).
+- `analysis/withheld.py`: seals for E1 (`*_sweep_l1pl350cl_pc_off_r*`) and E2 (`*_sweep_l1t16pl350cl_pc_o*_r*`); `python -m analysis.e1 floor | status <parent>`, `python -m analysis.k2 observed`; tests.
+- `agent/DECISION_TREE.md`, `agent/RUNBOOK.md`.
+- `docs/status.md`: session paragraph; REG-20 approval line; the lost seed-18 folder.
+- Local paper files (inner repo): K1 status and cost, K4's 0.43–0.52 against 3.15, KAIROS wording, "four things untested", P0 "close to the cold capacity", the 350 W sentence, 2.4 as a 900 s rule on one seed.
+- Literature read by this session and recorded with anchors: Huang and Liu (whole text), Lu et al. (§1–§6.2, §7.1–7.2, §9), Valse and Jannesari (§1–§4).
+
+**Found**
+- Valse and Jannesari's registered trap rule has REG-21's statistic as its first half: "uncached prefill token rate within ±15% of the all-miss rate" (Table 1), and their measured token-rate ratios over 57 stuck runs were 0.95–1.12 (§4). Huang and Liu report the degraded regime's turn throughput equal to the cache-disabled engine's (§3). Lu et al. report uncached prefill "near the saturated" prefill throughput in their trapped run (§3). So REG-21's J1 tests, on this setup, a statement all three make.
+- Lu et al. call the workload "partly-open" themselves (§2). Their hardware comparison's surge lasts 20 minutes (minutes 15–35), the §3 surges ten.
+- Huang and Liu's abstract says the admission-only cap recovered "1 of 7 matched" runs, the text also "2 of 8" (unmatched): cite with the denominator named.
+- Condition 4's "the traces follow the plan's order" was written for a wipe; a burst fills KV before the hit rate falls. The registration must define the order for a burst (STATE, next three).
+
+**Commits:** `ef4dc4e`, `ea03d73`, the runbook commit, then this block's.

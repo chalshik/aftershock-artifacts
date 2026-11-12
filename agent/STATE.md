@@ -3,34 +3,30 @@
 Any fresh session resumes from this file alone. Read it, then `agent/PLAN.md`, then the last block of `agent/LOG.md`.
 Rules: `docs/FABLE_PROMPT.md` (the start prompt), `CLAUDE.md`, `PROTOCOL.md`, `docs/process.md`.
 
-Last updated: 2026-11-13 (session 8c5f8396, block 2; stopped on the usage limit).
+Last updated: 2026-11-13 (session 8c5f8396, block 3).
 
 ## Phase
 
-**Phase 0/2: setup done; three registrations drafted and waiting for their reviews.** The session stopped on 2026-11-13 because the owner's usage limit was reached. No GPU. Nothing registered or approved by the delegate yet.
+**Phase 2: zero-GPU work; four reviews running; nothing registered or approved by the delegate yet.** VM still off (read 2026-11-12 19:22 UTC).
 
 ## Current task
 
-Interrupted mid-review. Three subagent reviews were running and were **stopped unfinished** (no output kept):
-- rule F and owner-proxy on the REG-19 resume decision (`docs/drafts/reg19_resume_decision_draft1.md`);
-- rule F on REG-21 draft 3 (`docs/drafts/reg21_draft3.md`).
-Their input bundles are saved in `docs/drafts/review_bundles/` (the briefs are in block 2 of `agent/LOG.md`). **Re-run them first.**
+Waiting for four subagent reviews (started 2026-11-13 ≈ 01:25 local; inputs in `docs/drafts/review_bundles/`):
+- `rulef-reg19-resume-2` and `proxy-reg19-resume-2` on the REG-19 resume decision (`docs/drafts/reg19_resume_decision_draft1.md`);
+- `rulef-reg21-v3-2` on REG-21 draft 3 (`docs/drafts/reg21_draft3.md`);
+- `rulef-e0e1-r2` on E0/E1/E2 draft 3 (`docs/drafts/e0_e1_draft3.md`).
+If a session finds no result of these in `agent/LOG.md`, they did not finish: re-run them from the bundles (briefs in LOG block 2).
 
 ## Last completed
 
-- S1–S3, S6/S7 (see LOG block 1). S8: `analysis/withheld.py` seals REG-19's and REG-20's runs (12 tests; commit `72fafb5`).
-- A17 answered from the pinned source (no skip); [CORR] logging the owner's four choices of 2026-11-12.
-- REG-19 resume: draft decision; `docs/probe/20261113_reg19/ops/launch7.sh`, `queue_reg19e.sh`; a git worktree at `a7bb77a` in `/Users/chalshik/Projects/aftershock-reg19-pin` with all 182 run folders linked into its `runs/` (tested with `reg19_inputs`, schedule only).
-- REG-21 draft 3 (work rate) with `analysis/k3w.py`, `modelf_sim.simulate(decode_s=)` and 18 synthetic tests.
-- E0/E1/E2 draft 3 (`docs/drafts/e0_e1_draft3.md`), not yet reviewed.
-- KAIROS Fig. 10–11 check answered (`agent/LITERATURE.md`): the paper shows no frequency trace for that run.
+- Block 1–2: S1–S3, S6–S8, A17, [CORR] owner's choices, drafts (see LOG).
+- Block 3: `agent/DECISION_TREE.md` and `agent/RUNBOOK.md` (both written before any GPU run); seals and command lines for E1/E2; `docs/status.md` updated; the three preprints read by this session (`agent/LITERATURE.md`: Huang and Liu end to end, Lu et al. §1–§6.2, §7.1–7.2, §9, Valse and Jannesari §1–§4); local paper files corrected (paper-plan, related-work; inner repo `docs/paper`).
 
 ## Next three
 
-1. **Z6b:** re-run rule F and the owner-proxy on the REG-19 resume decision, revise, then write the [DECISION] (delegate). This is what blocks the GPU queue.
-2. **Z1:** re-run rule F on REG-21 draft 3, revise, owner-proxy, [REG] + [DECISION] (delegate), then `uv run python -m analysis.k3w reg21` once and the [RESULT].
-3. **Z2c:** rule F round 2 and owner-proxy on E0/E1/E2 draft 3; add the E1/E2 seals to `analysis/withheld.py`, an `e1` command-line entry (`python -m analysis.e1 floor`) and `k2 observed`; register and approve.
-Then: `agent/RUNBOOK.md` and `agent/DECISION_TREE.md` (before any GPU run), Z6a stale docs (incl. the KAIROS wording in related work), Z9, Z3–Z5, Z7, Z8, Z10.
+1. Process the four reviews: revise each draft, run the owner-proxy on REG-21 and on E0/E1/E2, write the [REG] and [DECISION] (delegate) entries. Add to REG-21 before registering: Valse and Jannesari's own trap rule as a reported per-run reading (uncached token rate within ±15 % of the all-miss rate; backlog slope above 0.5 × the excess), since its token half is REG-21's statistic (LITERATURE.md).
+2. After REG-21 is approved: `uv run python -m analysis.k3w reg21` once, [RESULT].
+3. Z3: register condition 4 with an executable trace-order test. Design note: the plan's order (hit rate first) is a wipe trigger's; for a burst the entry order is KV full, then reuse falls, then uncached prefill rises, and the test that matters is that all four links hold in every span after the last burst request has left. Then Z4 (K5), Z6a (PROTOCOL and claims.md notes need an owner-proxy pass), Z9, Z7, Z8, Z10.
 
 ## Blockers
 
@@ -63,7 +59,7 @@ OBSERVED: the entry was in the working copy, uncommitted and without its `## ` m
 ## Self-resume mechanism (tested 2026-11-13)
 
 What works now, while the interactive session `8c5f8396` is alive:
-- **Heartbeat:** none now. The session cron job was cancelled on 2026-11-13 when the usage limit was reached; re-create it (`CronCreate`, e.g. `17,47 * * * *`, prompt: continue the loop from STATE.md) when work resumes.
+- **Heartbeat:** a session cron job (`CronCreate`, id `3ca81824`, minutes 17 and 47 of every hour) enqueues a "continue the loop" prompt whenever the session is idle. Session-only; expires after 7 days (re-create before 2026-11-20).
 - **GPU watcher:** a background loop in the session runs `agent/bin/gpu_watch.sh` every 15 min and exits, which notifies the session, when `agent/GPU_AVAILABLE` appears. States and the last read: `agent/run/gpu_watch.state`, `agent/run/gpu_watch.last`; changes only in `agent/run/gpu_watch.log`. If the loop is gone, restart it:
   `while true; do zsh agent/bin/gpu_watch.sh; [[ -f agent/GPU_AVAILABLE ]] && break; sleep 900; done` (in the background).
 
