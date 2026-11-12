@@ -37,7 +37,7 @@ Each is stated for the cells tested only. None has a registered test yet; every 
 ## K1. Turn semantics
 **Claim:** whether a turn waits for the previous reply decides the outcome. With open-loop turns (each turn sent at its scheduled time) a slow server makes the next turn arrive while the previous one still runs, so its prefix is held and cannot be evicted. With closed-loop turns (the next turn sent a think time after the reply) every prefix has an idle, evictable interval, and the stuck state can hold.
 
-- **Prior statement (BELIEF, open-questions A16):** Lu et al. name closed-loop sessions as a premise of the feedback (their §9), and Huang and Liu contrast agent sessions with "open-loop chat traffic" (their §2); neither tests an open-loop arm. K1 is the test of that stated premise, not a new idea.
+- **Prior statement (BELIEF, open-questions A16):** Lu et al. name closed-loop sessions as a premise of the feedback (their §9), and Huang and Liu contrast agent sessions with "open-loop chat traffic" (their §2); neither tests an open-loop arm. K1 is the test of that stated premise, not a new idea. Valse and Jannesari's congestion bound assumes that each session "has at most one outstanding request" and that "sessions share no cached tokens" (their assumption A1, App. E.14); K1 relaxes the first clause and K2 the second.
 - **Test:** one cell, the same seeds and the same burst, two arms that differ only in `workload.sessions.closed_loop`.
 - **Supports:** the closed-loop arm passes C1's per-seed test in most seeds while the open-loop arm is `recovered`, and most open-loop session hits are served while the previous turn runs (`gate.overlap_share`).
 - **Refutes:** the open-loop arm stuck at the matched cell.
