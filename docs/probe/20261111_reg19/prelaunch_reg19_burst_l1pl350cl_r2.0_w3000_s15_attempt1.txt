@@ -1,0 +1,10 @@
+# pre-launch read for burst_l1pl350cl_r2.0_w3000_s15 (agent, read-only)
+2026-11-12T06:19:48+00:00
+power.limit [W], temperature.gpu, utilization.gpu [%], memory.used [MiB]
+350.00 W, 38, 0 %, 1 MiB
+# compute apps:
+# tree:
+a7bb77a
+0
+/dev/mapper/ubuntu--vg-ubuntu--lv   62G   52G  6.9G  89% /
+no server running on /tmp/tmux-1000/default

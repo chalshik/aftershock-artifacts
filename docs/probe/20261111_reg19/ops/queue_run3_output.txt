@@ -1,0 +1,4 @@
+RUN stage2_control_l1pl350cl_r2.0_w3000_s17 20261112-103423_stage2_control_l1pl350cl_r2.0_w3000_s17 VALID (adopted)
+QUEUE STOP burst_l1pl350cl_r2.0_w3000_s17 rc=2 rid=: STOP: Mac differs from a7bb77a outside docs: CLAUDE.md
+
+[exited with code 1]

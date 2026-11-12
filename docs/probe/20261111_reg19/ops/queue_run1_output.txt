@@ -1,0 +1,13 @@
+RUN stage2_control_l1pl350cl_r2.0_w3000_s15 20261112-050920_stage2_control_l1pl350cl_r2.0_w3000_s15 VALID
+RUN burst_l1pl350cl_r2.0_w3000_s15 20261112-061951_burst_l1pl350cl_r2.0_w3000_s15 VALID
+COPIED 20261112-050920_stage2_control_l1pl350cl_r2.0_w3000_s15 sha-of-sums d521204ced466179
+COPIED 20261112-061951_burst_l1pl350cl_r2.0_w3000_s15 sha-of-sums 6d377d813c658546
+STEP after seed 15: 'done': [15] 'continue': True
+RUN stage2_control_l1pl350cl_r2.0_w3000_s16 20261112-073516_stage2_control_l1pl350cl_r2.0_w3000_s16 VALID
+RUN burst_l1pl350cl_r2.0_w3000_s16 20261112-084533_burst_l1pl350cl_r2.0_w3000_s16 VALID
+COPIED 20261112-073516_stage2_control_l1pl350cl_r2.0_w3000_s16 sha-of-sums 5f75b483cb6c6e01
+COPIED 20261112-084533_burst_l1pl350cl_r2.0_w3000_s16 sha-of-sums 9057b2fd32e81c8a
+STEP after seed 16: 'done': [15, 16] 'continue': True
+QUEUE STOP stage2_control_l1pl350cl_r2.0_w3000_s17 rc=2 rid=: STOP: VM tree a7bb77a dirty=0, Mac 9576b42
+
+[exited with code 1]

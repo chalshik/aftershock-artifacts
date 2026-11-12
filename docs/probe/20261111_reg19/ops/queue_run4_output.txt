@@ -1,0 +1,7 @@
+RUN stage2_control_l1pl350cl_r2.0_w3000_s17 20261112-103423_stage2_control_l1pl350cl_r2.0_w3000_s17 VALID (adopted)
+RUN burst_l1pl350cl_r2.0_w3000_s17 20261112-135538_burst_l1pl350cl_r2.0_w3000_s17 VALID
+COPIED 20261112-103423_stage2_control_l1pl350cl_r2.0_w3000_s17 sha-of-sums 00facbc721f772de
+COPIED 20261112-135538_burst_l1pl350cl_r2.0_w3000_s17 sha-of-sums 2640e173e2315ce4
+STEP after seed 17: 'done': [15, 16, 17] 'continue': True
+
+[exited with code 144]
