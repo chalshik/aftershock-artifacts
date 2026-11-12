@@ -25,7 +25,7 @@ Written 2026-11-13, before any GPU run of this session. Read with `agent/DECISIO
 | VM tree | `git log -1 --format=%h` equals the item's pinned commit; `git status --short` empty | stop |
 | Disk | free space ≥ 4 × the item's expected size (≈ 240 MB per 4080 s run) | stop |
 | The registration's own start rule | as written in its [REG] | stop |
-| Open-loop arms only (REG-20) | `ulimit -n` ≥ 4096 in the shell that starts the harness | stop (REG-20's rule) |
+| Open-loop arms only (REG-20) | `ulimit -n` ≥ 4096 in the shell that starts the harness. Read 2026-11-12: soft limit 1024, hard limit 1,048,576, so the launch command sets `ulimit -n 65536` first and the read must show it | stop (REG-20's rule) |
 
 No root command other than `sudo -n nvidia-smi -pl 350`. No `git pull` on the VM while a run is in progress.
 
