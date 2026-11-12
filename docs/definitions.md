@@ -134,6 +134,7 @@ All five come from one rule, `docs/decisions.md:272-277`, restated at `PROTOCOL.
 - **Code:** `load.verdict`.
 
 ### metastable failure
+- **Wording (2026-11-12, decisions.md [DECISION], wording and K2):** the stuck regime is called *metastable*, not *bistable*. "Two states at one load" (condition 6) means a healthy steady state and a degraded regime that sustains itself while its waiting line grows; the degraded regime is not a second steady state (the line rose 76 → 120 in REG-17, decisions.md 2026-11-10 [RESULT]). "Bistable" is used only for cited systems with two steady states.
 - **Text:** six conditions at one load: trigger over at the same load; control `recovered`; `stuck` in most seeds; a memory-limited loop; persistence over a 4500 s watch; two states at one load. `docs/decisions.md:281-287`, restated at `PROTOCOL.md:30-36`.
 - **Code:** none. Only the per-run verdict is coded.
 - **Other text:** three conditions (`docs/experiment-plan.md:265`, superseded); "Stuck ... The metastable failure" (`:207`).
@@ -230,7 +231,7 @@ None has code yet; each gets its code when the run or analysis that uses it is r
 
 ### shared-only workload, matched cache gain
 - **Text:** shared-only: every reusable token lies in one of a fixed set of prefixes shared across sessions, the set's total size does not change with load or backlog, and no request reuses tokens of its own session's earlier turns. Matched cache gain: two setups' cache gains agree within a tolerance registered beforehand. (`docs/claims.md`, K2.)
-- **Code:** none; needs a harness change.
+- **Code:** none. **Not used by any planned run since 2026-11-12:** the shared-only arm was dropped from K2 (decisions.md 2026-11-12 [DECISION], wording and K2); the definition is kept for the record.
 
 ### session cap, sessions in service
 - **Text:** a session is in service from its first turn sent to its last reply received. The session cap is a limit on the number of sessions in service, held at the load generator; a session beyond it waits to start. Its value per seed is the highest number of sessions in service at once in the same seed's no-trigger control (decisions.md 2026-11-12 [DECISION], design choices).
