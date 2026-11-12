@@ -97,3 +97,10 @@ Read as text (`docs/paper/paper-text/v_main.txt`, lines of 60+ characters, so se
 - **Their retrospective check (§4, Fig. 2).** Composition: "the trapped engine serves turns 9–41% shorter than the stationary mix"; the mean served prompt matches the tilted mix "to within −6.6% and +7.7%"; completions "on average 1.055 times D (0.90–1.21)"; backlog slope over α "has mean 0.99". "Retrospective: the theory was derived after these runs were read."
 - **MIRROR (§1).** "a step-capped workload for which the theory predicts completions below the all-miss capacity, passed at both rates: all six trapped runs completed 0.50–0.845 λ_ref over [6600, 8700) s".
 - **Limits they state (§1).** "Model F is an idealization, and we do not prove that the engine converges to it."
+
+## Further checks made while drafting the preprint (2026-11-13)
+
+- Valse and Jannesari, p. 1: "In our workload a hit prefills 551 tokens and a miss about 11,100, … and a session's prefill work with every turn missing is about 16 times that with every follow-up hitting." p. 3: "A session has T = min(Geometric(1/15),60) turns (E[T] = 14.76). Turn k sends a prompt of 2000 + 650(k − 1) tokens, the previous prompt plus 100 decoded tokens and 550 tokens of tool output". SUPPORTED.
+- Valse and Jannesari, Table 1 (p. 4) and p. 8: SHED "600s stuck 2/2 (56–59 sessions refused); 3600s good 2/2 (355–378 refused)"; rescue "Rescued 9/9, no relapse, no session shed; stayed good after release"; "rule met at 9 of 10 rates (Llama 1.35 failed)". SUPPORTED.
+- Lu et al., p. 1: "reducing prefill work by up to 50× when the prefix is available". Their reference [70] is "SCHROEDER, B., WIERMAN, A., AND HARCHOL-BALTER, M. Open versus closed: A cautionary tale. In 3rd USENIX Symposium on Networked Systems Design and Implementation" (p. 18), which gives the venue of Schroeder et al. from a second source. SUPPORTED.
+- Session lengths across the three (for "15 to 42 calls"): Valse and Jannesari E[T] = 14.76; Huang and Liu 25 turns (synthetic) and "a median of 42 calls" (their trace analysis, §2); Lu et al. 7,108 calls over 216 trajectories, 32.9 per session (DERIVED). SUPPORTED / DERIVED.
