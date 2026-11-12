@@ -9,13 +9,14 @@ from __future__ import annotations
 import json
 import sys
 
+from analysis import withheld
 from analysis.load import RUNS
 from harness.checks import run_checks
 
 
 def recheck(pattern: str = "*") -> list[dict]:
     rows = []
-    for d in sorted(RUNS.glob(pattern)):
+    for d in withheld.keep(sorted(RUNS.glob(pattern)), "recheck"):   # sealed runs are not rechecked
         if not (d / "config.yaml").exists():
             continue
         stored_p = d / "checks.json"

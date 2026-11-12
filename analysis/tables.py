@@ -149,7 +149,7 @@ def arrival_table() -> pd.DataFrame:
     """`arrival_profile` of every capacity sweep's written schedule (an input, not an outcome). Capacity sweeps are the
     900 s runs whose parent config is a `sweep_*` file; no-trigger control sweeps and `recorder_off` are left out."""
     rows = []
-    for d in sorted(L.RUNS.glob("*")):
+    for d in L.withheld.keep(sorted(L.RUNS.glob("*")), "arrival_table"):
         if not (d / "config.yaml").exists() or not (d / "schedule.parquet").exists():
             continue
         cfg = yaml.safe_load((d / "config.yaml").read_text())

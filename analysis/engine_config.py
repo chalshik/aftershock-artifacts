@@ -61,7 +61,9 @@ def engine_settings(run_dir: Path) -> dict:
 
 def scan(runs: Path = RUNS) -> pd.DataFrame:
     """engine_settings for every run folder under runs/, sorted by run id."""
-    return pd.DataFrame([engine_settings(d) for d in sorted(p for p in Path(runs).iterdir() if p.is_dir())])
+    from analysis import withheld
+    dirs = withheld.keep(sorted(p for p in Path(runs).iterdir() if p.is_dir()), "engine_config.scan")
+    return pd.DataFrame([engine_settings(d) for d in dirs])
 
 
 def a10_table(runs: Path = RUNS) -> pd.DataFrame:

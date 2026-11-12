@@ -43,11 +43,13 @@ def _cost_fn(mu: float, cost: tuple[float, float]):
 
 
 def simulate(cfg: dict, mu: float, cost: tuple[float, float] = (0.0, 1.0), sched: pd.DataFrame | None = None,
-             all_miss_from: float | None = None) -> pd.DataFrame:
+             all_miss_from: float | None = None, decode_s: float = 0.0) -> pd.DataFrame:
     """One model-F trajectory on the run's schedule. Returns one row per request served, with the columns the k3
     readouts use (session_id, turn, t_planned, t_sent, t_first_token, t_end, status, prompt_tokens,
     prompt_tokens_planned, cached_tokens). `all_miss_from` defaults to the burst's start, or 0 with caching off, or
-    never when there is neither."""
+    never when there is neither. `decode_s` (REG-21, 2026-11-13; not part of model F) is a residence after the
+    server has finished a request's prefill: the reply ends, and a closed-loop next turn's gap starts, `decode_s`
+    later, while the server is already free for the next request. With 0 the trajectory is model F's."""
     sched = schedule(cfg) if sched is None else sched
     wl = cfg["workload"]
     closed = bool((wl.get("sessions") or {}).get("closed_loop"))
@@ -78,10 +80,11 @@ def simulate(cfg: dict, mu: float, cost: tuple[float, float] = (0.0, 1.0), sched
         miss = st >= all_miss_from
         hit = 0.0 if (miss or turn[i] == 0 or burst[i]) else prev_len[i]
         t_free = st + c(L[i] - hit)
-        rel[i], start[i], end[i], cached[i] = r, st, t_free, hit
+        first = t_free if decode_s else st     # with a residence, the first token marks the end of the prefill
+        rel[i], start[i], end[i], cached[i] = r, first, t_free + decode_s, hit
         j = nxt[i]
         if closed and j >= 0 and not burst[i]:
-            heapq.heappush(heap, (t_free + tp[j] - tp[i], j))
+            heapq.heappush(heap, (end[i] + tp[j] - tp[i], j))
     out = pd.DataFrame({"session_id": sid, "turn": turn, "t_planned": tp, "t_sent": rel, "t_first_token": start,
                         "t_end": end, "prompt_tokens": L.astype(int), "prompt_tokens_planned": L.astype(int),
                         "cached_tokens": cached.astype(int), "burst": burst})

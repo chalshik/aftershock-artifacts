@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from analysis import withheld
+
 RUNS = Path(__file__).resolve().parent.parent / "runs"
 
 
@@ -15,6 +17,7 @@ def _jsonl(path: Path) -> list[dict]:
 
 def load_run(run_dir: Path | str) -> dict:
     d = Path(run_dir)
+    withheld.guard(d.name)   # a run sealed by a pending registration is not read (analysis/withheld.py)
     cfg = yaml.safe_load((d / "config.yaml").read_text())
     reqs = pd.DataFrame(_jsonl(d / "requests.jsonl"))
     if len(reqs):
@@ -36,7 +39,8 @@ def load_run(run_dir: Path | str) -> dict:
 
 
 def find_runs(pattern: str = "*", valid_only: bool = True) -> list[dict]:
-    out = [load_run(p) for p in sorted(RUNS.glob(pattern)) if (p / "config.yaml").exists()]
+    out = [load_run(p) for p in withheld.keep(sorted(RUNS.glob(pattern)), f"find_runs({pattern!r})")
+           if (p / "config.yaml").exists()]
     return [r for r in out if not valid_only or (r["checks"] and r["checks"]["valid"])]
 
 
