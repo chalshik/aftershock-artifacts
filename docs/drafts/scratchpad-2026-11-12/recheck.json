@@ -1,0 +1,239 @@
+{
+ "n_runs": 182,
+ "n_changed": 9,
+ "changed": [
+  {
+   "run": "20261023-145613_smoke",
+   "stored_valid": false,
+   "now_valid": null,
+   "error": "KeyError: 'gpu_busy_util_pct'"
+  },
+  {
+   "run": "20261030-114021_first_real",
+   "stored_valid": null,
+   "now_valid": null,
+   "error": "AttributeError: 'DataFrame' object has no attribute 't_planned'"
+  },
+  {
+   "run": "20261030-145339_sweep_pc_on_r8",
+   "stored_valid": false,
+   "now_valid": true,
+   "stored_failed": [
+    "accounting"
+   ],
+   "now_failed": [],
+   "recorder": {
+    "counter_decreases": [],
+    "max_gap_s": 1.148400682999636,
+    "failed_scrapes": 0,
+    "first_ok_scrape_t": -2.9001985939994483,
+    "last_ok_scrape_t": 1202.0999566090013,
+    "end_ref_t": 1200.3105121930002,
+    "end_ref": "load_end",
+    "recorder_died": null
+   },
+   "gpu_steady": {
+    "busy_sm_clock_cv": 0.006225344776433955,
+    "busy_samples": 660,
+    "hw_throttle_samples": 0,
+    "sw_thermal_frac": 0.0,
+    "max_temp_c": 82.0,
+    "window_samples": 660,
+    "window_max_gap_s": 1.0972608590000164
+   }
+  },
+  {
+   "run": "20261031-025032_tau",
+   "stored_valid": null,
+   "now_valid": false,
+   "stored_failed": null,
+   "now_failed": [
+    "accounting",
+    "recorder",
+    "gpu_steady",
+    "arrival_rate"
+   ],
+   "recorder": {
+    "counter_decreases": [],
+    "max_gap_s": 1.002726769002038,
+    "failed_scrapes": 0,
+    "first_ok_scrape_t": -2.8994013750052545,
+    "last_ok_scrape_t": 139.1006844980002,
+    "end_ref_t": 3300.0,
+    "end_ref": "duration_s",
+    "recorder_died": null
+   },
+   "gpu_steady": {
+    "busy_sm_clock_cv": 0.0,
+    "busy_samples": 0,
+    "hw_throttle_samples": 0,
+    "sw_thermal_frac": 0.0,
+    "max_temp_c": null,
+    "window_samples": 0,
+    "window_max_gap_s": Infinity
+   }
+  },
+  {
+   "run": "20261101-151707_stage2_control_r1.5",
+   "stored_valid": false,
+   "now_valid": false,
+   "stored_failed": [
+    "accounting",
+    "arrival_rate"
+   ],
+   "now_failed": [
+    "accounting",
+    "recorder",
+    "gpu_steady",
+    "arrival_rate"
+   ],
+   "recorder": {
+    "counter_decreases": [],
+    "max_gap_s": 1.003051042000152,
+    "failed_scrapes": 0,
+    "first_ok_scrape_t": -2.9003428810001424,
+    "last_ok_scrape_t": 1047.099780697,
+    "end_ref_t": 2400.0,
+    "end_ref": "duration_s",
+    "recorder_died": null
+   },
+   "gpu_steady": {
+    "busy_sm_clock_cv": 0.008589972473227054,
+    "busy_samples": 737,
+    "hw_throttle_samples": 0,
+    "sw_thermal_frac": 0.03712871287128713,
+    "max_temp_c": 83.0,
+    "window_samples": 808,
+    "window_max_gap_s": 1352.900219303
+   }
+  },
+  {
+   "run": "20261102-093229_wipe_preempt_r3_s3",
+   "stored_valid": false,
+   "now_valid": false,
+   "stored_failed": [
+    "accounting",
+    "gpu_steady",
+    "arrival_rate"
+   ],
+   "now_failed": [
+    "accounting",
+    "recorder",
+    "gpu_steady",
+    "arrival_rate"
+   ],
+   "recorder": {
+    "counter_decreases": [],
+    "max_gap_s": 1.001934510000865,
+    "failed_scrapes": 0,
+    "first_ok_scrape_t": -2.843494359003671,
+    "last_ok_scrape_t": 1619.1566033199997,
+    "end_ref_t": 2400.0,
+    "end_ref": "duration_s",
+    "recorder_died": null
+   },
+   "gpu_steady": {
+    "busy_sm_clock_cv": 0.009345946647975912,
+    "busy_samples": 1367,
+    "hw_throttle_samples": 1,
+    "sw_thermal_frac": 0.034782608695652174,
+    "max_temp_c": 83.0,
+    "window_samples": 1380,
+    "window_max_gap_s": 780.8433966800003
+   }
+  },
+  {
+   "run": "20261104-134159_long_pc_off_r3_s0",
+   "stored_valid": null,
+   "now_valid": false,
+   "stored_failed": null,
+   "now_failed": [
+    "accounting",
+    "recorder",
+    "gpu_steady"
+   ],
+   "recorder": {
+    "counter_decreases": [],
+    "max_gap_s": 1.2212169239937793,
+    "failed_scrapes": 0,
+    "first_ok_scrape_t": -2.901137003005715,
+    "last_ok_scrape_t": 3168.098955630994,
+    "end_ref_t": 3600.0,
+    "end_ref": "duration_s",
+    "recorder_died": null
+   },
+   "gpu_steady": {
+    "busy_sm_clock_cv": 0.012418415075248952,
+    "busy_samples": 2922,
+    "hw_throttle_samples": 2,
+    "sw_thermal_frac": 0.30180949129395696,
+    "max_temp_c": 82.0,
+    "window_samples": 2929,
+    "window_max_gap_s": 431.90104436900583
+   }
+  },
+  {
+   "run": "20261105-181511_sweep_l1_pc_off_r2",
+   "stored_valid": null,
+   "now_valid": false,
+   "stored_failed": null,
+   "now_failed": [
+    "accounting",
+    "recorder",
+    "gpu_steady",
+    "arrival_rate"
+   ],
+   "recorder": {
+    "counter_decreases": [],
+    "max_gap_s": 1.0002835209998011,
+    "failed_scrapes": 0,
+    "first_ok_scrape_t": -2.9001567859995703,
+    "last_ok_scrape_t": 246.09999025999787,
+    "end_ref_t": 900.0,
+    "end_ref": "duration_s",
+    "recorder_died": null
+   },
+   "gpu_steady": {
+    "busy_sm_clock_cv": 0.006429106936438787,
+    "busy_samples": 7,
+    "hw_throttle_samples": 0,
+    "sw_thermal_frac": 0.14285714285714285,
+    "max_temp_c": 82.0,
+    "window_samples": 7,
+    "window_max_gap_s": 653.9000097400021
+   }
+  },
+  {
+   "run": "20261109-134250_stage2_control_l1pl350cl_r2.4_s6",
+   "stored_valid": false,
+   "now_valid": false,
+   "stored_failed": [
+    "accounting"
+   ],
+   "now_failed": [
+    "accounting",
+    "recorder",
+    "gpu_steady"
+   ],
+   "recorder": {
+    "counter_decreases": [],
+    "max_gap_s": 1.0005926640005782,
+    "failed_scrapes": 0,
+    "first_ok_scrape_t": -2.8987175119982567,
+    "last_ok_scrape_t": 213.10146235399588,
+    "end_ref_t": 2612.4615328920045,
+    "end_ref": "load_end",
+    "recorder_died": null
+   },
+   "gpu_steady": {
+    "busy_sm_clock_cv": 0.0,
+    "busy_samples": 0,
+    "hw_throttle_samples": 0,
+    "sw_thermal_frac": 0.0,
+    "max_temp_c": null,
+    "window_samples": 0,
+    "window_max_gap_s": Infinity
+   }
+  }
+ ]
+}
