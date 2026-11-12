@@ -1,0 +1,10 @@
+# E2 (draft, not registered; step E2, K2): the closed-loop cache-off sweep of setup L1 with 16 turns per session (E1's
+# sweep_l1pl350cl_pc_off.yaml otherwise). The predicted floor is 1.26-1.36 req/s (E0 draft), so 1.0 is below it and
+# 1.5-3.0 give gate.cold_floor at least four saturated rows. Needs the owner's approval to run.
+extends: sweep_l1pl350cl_pc_off.yaml
+name: sweep_l1t16pl350cl_pc_off
+workload:
+  sessions:
+    turns: 16
+sweep:
+  rates: [1.0, 1.5, 2.0, 2.5, 3.0]
