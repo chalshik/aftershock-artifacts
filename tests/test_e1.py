@@ -1,4 +1,5 @@
-"""analysis/e1.py: E1's blind K3 test (draft). The prediction is model F's replay of E1's and REG-8's configs."""
+"""analysis/e1.py: E1's floor rule and its reported tilt. The prediction is model F's replay of E1's and REG-8's
+configs. No run folder is read."""
 import math
 
 import numpy as np
@@ -81,6 +82,38 @@ def test_floor_status_is_the_only_thing_the_flag_returns(monkeypatch):
     rows = pd.DataFrame({"run": ["a", "b", "c"], "rate": [1.0, 1.5, 2.0], "throughput": [1.0, 1.3, 1.31],
                          "planned_rate": [1.05, 1.6, 2.1], "kv_mean": [0.3, 0.9, 0.95], "pf": [float("nan")] * 3})
     monkeypatch.setattr(E, "sweep_rows", lambda parent: rows)
+    monkeypatch.setattr(E, "swept_rates", lambda parent: (1.0, 1.5, 2.0))
     assert E.floor_status("any") == "ok"
     monkeypatch.setattr(E, "sweep_rows", lambda parent: rows.assign(kv_mean=[0.3, 0.4, 0.5]))
     assert E.floor_status("any") == "unsaturated"
+    monkeypatch.setattr(E, "sweep_rows", lambda parent: rows.iloc[:0])
+    with pytest.raises(RuntimeError):
+        E.floor_status("any")                               # nothing to read is an error, not a status
+
+
+def test_floor_no_rows_and_holes():
+    import analysis.e1 as E
+    full = rows([1.5, 2.0, 2.5, 3.0, 3.5, 4.0], [1.45, 1.70, 1.72, 1.73, 1.74, 1.75], kv=[0.6, 0.9, 0.95, 0.95, 0.95, 0.95])
+    grid = (1.5, 2.0, 2.5, 3.0, 3.5, 4.0)
+    f = E.floor(full, grid)
+    assert f["status"] == "ok" and f["lam_sat"] == 2.0 and f["n"] == 5
+    assert E.floor(full.iloc[:0], grid)["status"] == "no_rows"
+    gap = E.floor(full[full.rate != 3.0], grid)             # a swept rate above lam_sat has no valid run
+    assert gap["status"] == "holes" and gap["missing_rates"] == [3.0] and math.isnan(gap["mu_sat_off"])
+    low = E.floor(full[full.rate != 1.5], grid)             # a hole below lam_sat does not matter
+    assert low["status"] == "ok" and low["n"] == 5
+    assert E.floor(full[full.rate != 3.0])["status"] == "ok"   # without the swept rates the old behaviour
+
+
+def test_swept_rates_are_read_from_the_sweeps_own_config():
+    import analysis.e1 as E
+    assert E.swept_rates("sweep_l1pl350cl_pc_off") == (1.5, 2.0, 2.5, 3.0, 3.5, 4.0)
+    assert E.swept_rates("sweep_l1t16pl350cl_pc_off") == (1.0, 1.5, 2.0, 2.5, 3.0)
+
+
+def test_the_earliest_of_two_valid_runs_at_a_rate_counts():
+    import analysis.e1 as E
+    r = pd.DataFrame({"run": ["20261114-10_x_r2", "20261114-09_x_r2", "20261114-08_x_r1.5"], "rate": [2.0, 2.0, 1.5],
+                      "throughput": [1.7, 1.6, 1.4], "planned_rate": [2.1, 2.1, 1.6], "kv_mean": [0.9, 0.9, 0.5]})
+    keep, dropped = E.first_valid(r)
+    assert list(keep.run) == ["20261114-08_x_r1.5", "20261114-09_x_r2"] and dropped == ["20261114-10_x_r2"]

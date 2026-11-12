@@ -8,6 +8,7 @@ import pytest
 import analysis.load as L
 import analysis.recheck as R
 from analysis import withheld as W
+from harness.run import load_config
 
 CONFIGS = Path(__file__).resolve().parent.parent / "configs"
 REG19 = [f"{k}_l1pl350cl_r2.0_w3000_s{s}" for s in (15, 16, 17, 18, 19) for k in ("stage2_control", "burst")]
@@ -107,7 +108,10 @@ def test_the_repo_state_today():
 
 
 def test_e1_and_e2_seals_cover_exactly_their_sweeps(no_result):
-    sealed = {c.stem: W.sealed_by(f"20261114-000000_{c.stem}_r2") for c in CONFIGS.glob("sweep_*.yaml")}
+    # A run folder is named after the config's `name`, which a rerun config keeps (it lists one rate under the same
+    # name), so the seal is checked on names, not on config file stems.
+    names = {load_config(c)["name"] for c in CONFIGS.glob("sweep_*.yaml")}
+    sealed = {n: W.sealed_by(f"20261114-000000_{n}_r2") for n in names}
     assert {k for k, v in sealed.items() if v == "E1"} == {"sweep_l1pl350cl_pc_off"}
     assert {k for k, v in sealed.items() if v == "E0"} == {"sweep_l1t16pl350cl_pc_on", "sweep_l1t16pl350cl_pc_off"}
     assert all(v in (None, "E1", "E0") for v in sealed.values())

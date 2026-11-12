@@ -1,4 +1,5 @@
-"""E1 (draft, not registered): the closed-loop cache-off sweep of setup L1 (configs/sweep_l1pl350cl_pc_off.yaml).
+"""E1 (registration: docs/decisions.md 2026-11-13 [REG] E1): the closed-loop cache-off sweep of setup L1
+(configs/sweep_l1pl350cl_pc_off.yaml).
 
 Judged: nothing. E1 *measures* K2's 8-turn closed-loop cold floor (`floor`, `gate.cold_floor` with REG-8's settings,
 with the registered fallback `floor_tail` when that rule returns "not_monotone"). Owner, 2026-11-12: "Floor only".
@@ -146,18 +147,48 @@ def floor_tail(rows: pd.DataFrame) -> dict:
     return {**out, "mu_sat_off": float(tail.throughput.mean()), "status": "tail_ok"}
 
 
-def floor(rows: pd.DataFrame) -> dict:
-    """E1's floor: `gate.cold_floor`; if and only if that returns "not_monotone", `floor_tail`."""
+def floor(rows: pd.DataFrame, swept: tuple | list | None = None) -> dict:
+    """E1's floor: `gate.cold_floor`; if and only if that returns "not_monotone", `floor_tail`. Two statuses of its
+    own, neither a floor: "no_rows" when the sweep has no valid run at all (a sweep that was not read is not a sweep
+    that did not saturate), and, when the swept rates are given, "holes" when a swept rate at or above the floor's
+    lam_sat has no valid run (the floor would average over a gap)."""
+    if not len(rows):
+        return {"mu_sat_off": math.nan, "lam_sat": math.nan, "n": 0, "status": "no_rows"}
     f = saturated(rows)
-    return floor_tail(rows) if f["status"] == "not_monotone" else f
+    f = floor_tail(rows) if f["status"] == "not_monotone" else f
+    if swept is not None and f["status"] in ("ok", "tail_ok"):
+        have = set(np.round(rows.rate.to_numpy(float), 6))
+        missing = [float(x) for x in swept if x >= f["lam_sat"] - 1e-9 and round(float(x), 6) not in have]
+        if missing:
+            return {**f, "mu_sat_off": math.nan, "status": "holes", "missing_rates": missing}
+    return f
+
+
+def first_valid(rows: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
+    """Registered rule for two valid runs at one rate (a rate launched again by mistake): the earliest run counts
+    (run ids start with their launch time); the later ones are returned by name and reported."""
+    s = rows.sort_values("run")
+    keep = s.drop_duplicates("rate", keep="first")
+    return keep.sort_values("rate").reset_index(drop=True), sorted(set(s.run) - set(keep.run))
+
+
+def swept_rates(parent: str) -> tuple:
+    """The rates the sweep's own config lists (`sweep.rates`), read from configs/<parent>.yaml."""
+    from harness.run import load_config
+    return tuple(float(x) for x in load_config(REPO / "configs" / f"{parent}.yaml")["sweep"]["rates"])
 
 
 def observed() -> dict:
     """E1's floor (judged as a measurement, feeds E0) and the reported tilt against REG-8 (valid runs only). Never
     call before E1 has run under an approved [REG]."""
     cl, ol = sweep_rows(E1["sweeps"]["cl"]), sweep_rows(E1["sweeps"]["ol"])
+    if not len(cl) or not len(ol):
+        raise RuntimeError(f"no valid run of {E1['sweeps']['cl'] if not len(cl) else E1['sweeps']['ol']} can be read "
+                           "(not run yet, or still sealed: set AFTERSHOCK_UNSEAL=E1)")
+    cl, dropped = first_valid(cl)
     cl, ol = cl.assign(kbar=[_kbar(r) for r in cl.run]), ol.assign(kbar=[_kbar(r) for r in ol.run])
-    res = {"floor": floor(cl), "floor_ol": saturated(ol), "onset": onset(cl, ol)}
+    res = {"floor": floor(cl, swept_rates(E1["sweeps"]["cl"])), "floor_ol": saturated(ol), "onset": onset(cl, ol),
+           "rows_cl": cl.to_dict("records"), "later_valid_runs_not_counted": dropped}
     if not math.isnan(res["onset"]):
         res["tilt_reported"] = {col: tilt(cl, ol, col, res["onset"]) for col in READOUTS}
     return res
@@ -188,8 +219,12 @@ def work_rates(rows: pd.DataFrame, lam_sat: float) -> dict:
 
 
 def floor_status(parent: str) -> str:
-    """Only the status of `floor` on one sweep parent: the one flag E2 reads between its two sweeps."""
-    return floor(sweep_rows(parent))["status"]
+    """Only the status of `floor` on one sweep parent: the one flag E2 reads between its two sweeps. Raises when no
+    valid run of the parent can be read, so that a forgotten AFTERSHOCK_UNSEAL is an error and not a status."""
+    rows = sweep_rows(parent)
+    if not len(rows):
+        raise RuntimeError(f"no valid run of {parent} can be read (not run yet, or still sealed)")
+    return floor(first_valid(rows)[0], swept_rates(parent))["status"]
 
 
 def report() -> dict:
