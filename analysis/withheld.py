@@ -26,6 +26,8 @@ SEALS: tuple[tuple[str, str, str], ...] = (
     ("REG-19", "*_l1pl350cl_r2.0_w3000_s1[5-9]", "[RESULT] REG-19"),
     ("REG-20", "*_l1pl350ol_r2.[05]_w3000_s1[5-9]", "[RESULT] REG-20"),
     ("REG-20", "*_burst_l1pl350cl_r2.0_w3000_s15_drift", "[RESULT] REG-20"),
+    ("E1", "*_sweep_l1pl350cl_pc_off_r*", "[RESULT] E1"),            # the closed-loop cache-off sweep at 8 turns
+    ("E0", "*_sweep_l1t16pl350cl_pc_o*_r*", "[RESULT] E0"),          # E2: both 16-turn sweeps, until the gate
 )
 
 

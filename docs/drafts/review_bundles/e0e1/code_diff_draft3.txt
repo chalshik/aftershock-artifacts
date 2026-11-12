@@ -1,0 +1,123 @@
+# git diff HEAD -- analysis/e1.py analysis/k2.py analysis/withheld.py tests/test_e1.py tests/test_withheld.py (changes made for draft 3)
+diff --git a/analysis/e1.py b/analysis/e1.py
+index ba26ca1..7952024 100644
+--- a/analysis/e1.py
++++ b/analysis/e1.py
+@@ -170,3 +170,44 @@ def _kbar(run_name: str) -> float:
+     q, wl = r["requests"], r["cfg"]["workload"]
+     done = q[(q.status == "ok") & (q.t_end >= wl["warmup_s"]) & (q.t_end < wl["duration_s"])]
+     return float((done.turn + 1).mean()) if len(done) else math.nan
++
++
++def work_rates(rows: pd.DataFrame, lam_sat: float) -> dict:
++    """Reported only: REG-21's statistic U (`k3w.work_rate`, uncached prompt tokens per second by first token) of each
++    row at rate >= lam_sat, over its measured window [warm-up, end of arrivals)."""
++    from analysis import k3w
++    from analysis.load import RUNS, load_run
++    out = {}
++    if math.isnan(lam_sat):
++        return out
++    for name in rows[rows.rate >= lam_sat - 1e-9].run:
++        r = load_run(RUNS / name)
++        wl = r["cfg"]["workload"]
++        out[name] = k3w.work_rate(r, wl["warmup_s"], wl["duration_s"])
++    return out
++
++
++def floor_status(parent: str) -> str:
++    """Only the status of `floor` on one sweep parent: the one flag E2 reads between its two sweeps."""
++    return floor(sweep_rows(parent))["status"]
++
++
++def report() -> dict:
++    """E1's registered result: `observed`, plus the work rates of both sweeps' saturated rows (reported only)."""
++    res = observed()
++    cl, ol = sweep_rows(E1["sweeps"]["cl"]), sweep_rows(E1["sweeps"]["ol"])
++    res["work_cl"] = work_rates(cl, res["floor"]["lam_sat"])
++    res["work_ol"] = work_rates(ol, res["floor_ol"]["lam_sat"])
++    return res
++
++
++if __name__ == "__main__":
++    import json
++    import sys
++
++    if len(sys.argv) == 2 and sys.argv[1] == "floor":
++        print(json.dumps(report(), indent=1, default=str))
++    elif len(sys.argv) == 3 and sys.argv[1] == "status":
++        print(json.dumps({"parent": sys.argv[2], "status": floor_status(sys.argv[2])}))
++    else:
++        raise SystemExit("usage: python -m analysis.e1 floor | status <sweep parent>")
+diff --git a/analysis/k2.py b/analysis/k2.py
+index 5d1d09a..b468ec1 100644
+--- a/analysis/k2.py
++++ b/analysis/k2.py
+@@ -182,3 +182,13 @@ def observed() -> dict:
+     d = decide(warm["warm_8"], floor["off_8"]["mu_sat_off"], warm["warm_16"], floor["off_16"]["mu_sat_off"],
+                low16_measured)
+     return {"warm": warm, "floor": floor, "low16_measured": low16_measured, **d}
++
++
++if __name__ == "__main__":
++    import json
++    import sys
++
++    if len(sys.argv) == 2 and sys.argv[1] == "observed":
++        print(json.dumps(observed(), indent=1, default=str))
++    else:
++        raise SystemExit("usage: python -m analysis.k2 observed")
+diff --git a/analysis/withheld.py b/analysis/withheld.py
+index 0d65fe5..7ed0bc3 100644
+--- a/analysis/withheld.py
++++ b/analysis/withheld.py
+@@ -26,6 +26,8 @@ SEALS: tuple[tuple[str, str, str], ...] = (
+     ("REG-19", "*_l1pl350cl_r2.0_w3000_s1[5-9]", "[RESULT] REG-19"),
+     ("REG-20", "*_l1pl350ol_r2.[05]_w3000_s1[5-9]", "[RESULT] REG-20"),
+     ("REG-20", "*_burst_l1pl350cl_r2.0_w3000_s15_drift", "[RESULT] REG-20"),
++    ("E1", "*_sweep_l1pl350cl_pc_off_r*", "[RESULT] E1"),            # the closed-loop cache-off sweep at 8 turns
++    ("E0", "*_sweep_l1t16pl350cl_pc_o*_r*", "[RESULT] E0"),          # E2: both 16-turn sweeps, until the gate
+ )
+ 
+ 
+diff --git a/tests/test_e1.py b/tests/test_e1.py
+index ffdbed2..e2f2b52 100644
+--- a/tests/test_e1.py
++++ b/tests/test_e1.py
+@@ -73,3 +73,14 @@ def test_e1_schedules_equal_reg8_part_b_at_every_rate():
+     assert [c["workload"]["rate"] for c in cl] == [c["workload"]["rate"] for c in ol]
+     for x, y in zip(cl, ol):
+         assert build_schedule(x["workload"], x["seed"], None)[0].equals(build_schedule(y["workload"], y["seed"], None)[0])
++
++
++def test_floor_status_is_the_only_thing_the_flag_returns(monkeypatch):
++    import pandas as pd
++    import analysis.e1 as E
++    rows = pd.DataFrame({"run": ["a", "b", "c"], "rate": [1.0, 1.5, 2.0], "throughput": [1.0, 1.3, 1.31],
++                         "planned_rate": [1.05, 1.6, 2.1], "kv_mean": [0.3, 0.9, 0.95], "pf": [float("nan")] * 3})
++    monkeypatch.setattr(E, "sweep_rows", lambda parent: rows)
++    assert E.floor_status("any") == "ok"
++    monkeypatch.setattr(E, "sweep_rows", lambda parent: rows.assign(kv_mean=[0.3, 0.4, 0.5]))
++    assert E.floor_status("any") == "unsaturated"
+diff --git a/tests/test_withheld.py b/tests/test_withheld.py
+index 1dd82ec..56e3e88 100644
+--- a/tests/test_withheld.py
++++ b/tests/test_withheld.py
+@@ -104,3 +104,18 @@ def test_the_repo_state_today():
+     want = None if W.lifted("[RESULT] REG-19") else "REG-19"
+     assert W.sealed_by("20261112-135538_burst_l1pl350cl_r2.0_w3000_s17") == want
+     assert fnmatch.fnmatchcase("20261112-135538_burst_l1pl350cl_r2.0_w3000_s17", W.SEALS[0][1])
++
++
++def test_e1_and_e2_seals_cover_exactly_their_sweeps(no_result):
++    sealed = {c.stem: W.sealed_by(f"20261114-000000_{c.stem}_r2") for c in CONFIGS.glob("sweep_*.yaml")}
++    assert {k for k, v in sealed.items() if v == "E1"} == {"sweep_l1pl350cl_pc_off"}
++    assert {k for k, v in sealed.items() if v == "E0"} == {"sweep_l1t16pl350cl_pc_on", "sweep_l1t16pl350cl_pc_off"}
++    assert all(v in (None, "E1", "E0") for v in sealed.values())
++    assert W.sealed_by("20261109-190221_sweep_l1pl350cl_pc_on_r2") is None        # REG-13's sweep stays readable
++    assert W.sealed_by("20261107-083730_sweep_l1pl350_pc_off_r2") is None         # REG-8's too
++
++
++def test_e1_seal_lifts_alone(no_result):
++    no_result.write_text("## 2026-11-15 · [RESULT] E1: floor 1.75\n")
++    assert W.sealed_by("20261114-000000_sweep_l1pl350cl_pc_off_r2") is None
++    assert W.sealed_by("20261115-000000_sweep_l1t16pl350cl_pc_off_r2") == "E0"

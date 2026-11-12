@@ -73,3 +73,14 @@ def test_e1_schedules_equal_reg8_part_b_at_every_rate():
     assert [c["workload"]["rate"] for c in cl] == [c["workload"]["rate"] for c in ol]
     for x, y in zip(cl, ol):
         assert build_schedule(x["workload"], x["seed"], None)[0].equals(build_schedule(y["workload"], y["seed"], None)[0])
+
+
+def test_floor_status_is_the_only_thing_the_flag_returns(monkeypatch):
+    import pandas as pd
+    import analysis.e1 as E
+    rows = pd.DataFrame({"run": ["a", "b", "c"], "rate": [1.0, 1.5, 2.0], "throughput": [1.0, 1.3, 1.31],
+                         "planned_rate": [1.05, 1.6, 2.1], "kv_mean": [0.3, 0.9, 0.95], "pf": [float("nan")] * 3})
+    monkeypatch.setattr(E, "sweep_rows", lambda parent: rows)
+    assert E.floor_status("any") == "ok"
+    monkeypatch.setattr(E, "sweep_rows", lambda parent: rows.assign(kv_mean=[0.3, 0.4, 0.5]))
+    assert E.floor_status("any") == "unsaturated"

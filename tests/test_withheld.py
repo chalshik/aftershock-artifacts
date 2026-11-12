@@ -104,3 +104,18 @@ def test_the_repo_state_today():
     want = None if W.lifted("[RESULT] REG-19") else "REG-19"
     assert W.sealed_by("20261112-135538_burst_l1pl350cl_r2.0_w3000_s17") == want
     assert fnmatch.fnmatchcase("20261112-135538_burst_l1pl350cl_r2.0_w3000_s17", W.SEALS[0][1])
+
+
+def test_e1_and_e2_seals_cover_exactly_their_sweeps(no_result):
+    sealed = {c.stem: W.sealed_by(f"20261114-000000_{c.stem}_r2") for c in CONFIGS.glob("sweep_*.yaml")}
+    assert {k for k, v in sealed.items() if v == "E1"} == {"sweep_l1pl350cl_pc_off"}
+    assert {k for k, v in sealed.items() if v == "E0"} == {"sweep_l1t16pl350cl_pc_on", "sweep_l1t16pl350cl_pc_off"}
+    assert all(v in (None, "E1", "E0") for v in sealed.values())
+    assert W.sealed_by("20261109-190221_sweep_l1pl350cl_pc_on_r2") is None        # REG-13's sweep stays readable
+    assert W.sealed_by("20261107-083730_sweep_l1pl350_pc_off_r2") is None         # REG-8's too
+
+
+def test_e1_seal_lifts_alone(no_result):
+    no_result.write_text("## 2026-11-15 · [RESULT] E1: floor 1.75\n")
+    assert W.sealed_by("20261114-000000_sweep_l1pl350cl_pc_off_r2") is None
+    assert W.sealed_by("20261115-000000_sweep_l1t16pl350cl_pc_off_r2") == "E0"

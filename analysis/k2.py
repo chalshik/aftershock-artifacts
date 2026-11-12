@@ -182,3 +182,13 @@ def observed() -> dict:
     d = decide(warm["warm_8"], floor["off_8"]["mu_sat_off"], warm["warm_16"], floor["off_16"]["mu_sat_off"],
                low16_measured)
     return {"warm": warm, "floor": floor, "low16_measured": low16_measured, **d}
+
+
+if __name__ == "__main__":
+    import json
+    import sys
+
+    if len(sys.argv) == 2 and sys.argv[1] == "observed":
+        print(json.dumps(observed(), indent=1, default=str))
+    else:
+        raise SystemExit("usage: python -m analysis.k2 observed")

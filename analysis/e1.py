@@ -170,3 +170,44 @@ def _kbar(run_name: str) -> float:
     q, wl = r["requests"], r["cfg"]["workload"]
     done = q[(q.status == "ok") & (q.t_end >= wl["warmup_s"]) & (q.t_end < wl["duration_s"])]
     return float((done.turn + 1).mean()) if len(done) else math.nan
+
+
+def work_rates(rows: pd.DataFrame, lam_sat: float) -> dict:
+    """Reported only: REG-21's statistic U (`k3w.work_rate`, uncached prompt tokens per second by first token) of each
+    row at rate >= lam_sat, over its measured window [warm-up, end of arrivals)."""
+    from analysis import k3w
+    from analysis.load import RUNS, load_run
+    out = {}
+    if math.isnan(lam_sat):
+        return out
+    for name in rows[rows.rate >= lam_sat - 1e-9].run:
+        r = load_run(RUNS / name)
+        wl = r["cfg"]["workload"]
+        out[name] = k3w.work_rate(r, wl["warmup_s"], wl["duration_s"])
+    return out
+
+
+def floor_status(parent: str) -> str:
+    """Only the status of `floor` on one sweep parent: the one flag E2 reads between its two sweeps."""
+    return floor(sweep_rows(parent))["status"]
+
+
+def report() -> dict:
+    """E1's registered result: `observed`, plus the work rates of both sweeps' saturated rows (reported only)."""
+    res = observed()
+    cl, ol = sweep_rows(E1["sweeps"]["cl"]), sweep_rows(E1["sweeps"]["ol"])
+    res["work_cl"] = work_rates(cl, res["floor"]["lam_sat"])
+    res["work_ol"] = work_rates(ol, res["floor_ol"]["lam_sat"])
+    return res
+
+
+if __name__ == "__main__":
+    import json
+    import sys
+
+    if len(sys.argv) == 2 and sys.argv[1] == "floor":
+        print(json.dumps(report(), indent=1, default=str))
+    elif len(sys.argv) == 3 and sys.argv[1] == "status":
+        print(json.dumps({"parent": sys.argv[2], "status": floor_status(sys.argv[2])}))
+    else:
+        raise SystemExit("usage: python -m analysis.e1 floor | status <sweep parent>")
