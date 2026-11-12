@@ -19,13 +19,27 @@ CONFIGS = Path(__file__).resolve().parent.parent / "configs"
 MU = 1.681
 
 
-def cfg(lam=2.0, seed=2, path="burst_l1pl350cl_r2.0_s2.yaml"):
+def cfg(lam=2.0, seed=2, path="burst_l1pl350cl_r2.0_s2.yaml", steps=None):
     c = copy.deepcopy(load_config(CONFIGS / path))
     c["workload"]["rate"], c["seed"] = lam, seed
+    if steps:
+        c["workload"]["steps"] = steps
     return c
 
 
-def truth(c, mu, servers=1, hit_frac=0.0, cost=(0.0, 1.0), gap_scale=1.0):
+def with_metrics(run):
+    """A scrape per second with the number of requests waiting (sent and not yet in service), so that the busy
+    precondition reads the synthetic run as it reads a real one."""
+    q = run["requests"]
+    q = q[q.status == "ok"]
+    t = np.arange(0.0, float(q.t_end.max()) + 1.0, 1.0)
+    sent, first = np.sort(q.t_sent.to_numpy(float)), np.sort(q.t_first_token.to_numpy(float))
+    wait = np.searchsorted(sent, t, side="right") - np.searchsorted(first, t, side="right")
+    run["metrics"] = pd.DataFrame({"t": t, "vllm:num_requests_waiting": wait.astype(float)})
+    return run
+
+
+def truth(c, mu, servers=1, hit_frac=0.0, cost=(0.0, 1.0), gap_scale=1.0, name=None):
     """A closed-loop server on the config's own schedule: `servers` first-come-first-served slots, each at speed
     1/servers (a running batch: the total work rate is the same, a request stays `servers` times longer); warm until
     the burst starts, then every later turn finds `hit_frac` of its previous prompt cached."""
@@ -74,17 +88,26 @@ def truth(c, mu, servers=1, hit_frac=0.0, cost=(0.0, 1.0), gap_scale=1.0):
                         "t_end": end, "prompt_tokens": L.astype(int), "prompt_tokens_planned": L.astype(int),
                         "cached_tokens": cached.astype(int), "burst": burst})
     out["status"] = np.where(np.isnan(end), "unsent", "ok")
-    return S.as_run(c, out, name=f"sim_r{c['workload']['rate']}_s{c['seed']}")
+    return with_metrics(S.as_run(c, out, name=name or f"20261110-000000_sim_r{c['workload']['rate']}_s{c['seed']}"))
+
+
+def ref_run(rate=3.0, mu=MU, name=None):
+    c = copy.deepcopy(load_config(CONFIGS / "sweep_l1pl350_pc_off.yaml"))
+    c["workload"]["rate"] = rate
+    return with_metrics(S.as_run(c, S.simulate(c, mu), name=name or f"20261107-000000_sweep_l1pl350_pc_off_r{rate:g}"))
 
 
 @pytest.fixture(scope="module")
-def u_off():
-    """The reference as REG-21 reads it, on model F's own cache-off server: a saturated open-loop cache-off run."""
-    c = copy.deepcopy(load_config(CONFIGS / "sweep_l1pl350_pc_off.yaml"))
-    c["workload"]["rate"] = 3.0
-    run = S.as_run(c, S.simulate(c, MU))
-    return W.work_rate(run, c["workload"]["warmup_s"], c["workload"]["duration_s"])
+def ref():
+    """The reference as REG-21 reads it, on model F's own cache-off server: saturated open-loop cache-off runs."""
+    return W.reference([ref_run(r) for r in (2.0, 2.5, 3.0, 3.5, 4.0)])
 
+
+def R(run, ref):
+    return W.row(run, ref, with_readouts=False)
+
+
+# ---------------------------------------------------------------- the statistic
 
 def test_work_rate_counts_uncached_tokens_of_ok_requests_by_first_token():
     q = pd.DataFrame({"status": ["ok", "ok", "ok", "error", "ok"], "t_first_token": [10.0, 19.9, 20.0, 12.0, 5.0],
@@ -96,21 +119,51 @@ def test_work_rate_counts_uncached_tokens_of_ok_requests_by_first_token():
     assert math.isnan(W.work_rate(run, 100.0, 110.0))
 
 
-def test_the_reference_is_the_all_miss_token_rate(u_off):
-    assert u_off == pytest.approx(MU * S.LBAR, rel=0.01)       # 1.681 req/s x 3072 tokens: a saturated server's rate
+def test_work_rate_raises_on_an_ok_request_it_cannot_place():
+    q = pd.DataFrame({"status": ["ok", "ok"], "t_first_token": [10.0, np.nan], "t_end": [30.0, 40.0],
+                      "prompt_tokens": [3000, 2000], "cached_tokens": [0, 0]})
+    with pytest.raises(ValueError):
+        W.work_rate({"requests": q}, 0.0, 50.0)
+    q2 = q.assign(t_first_token=[10.0, 11.0], prompt_tokens=[3000, np.nan])
+    with pytest.raises(ValueError):
+        W.work_rate({"requests": q2}, 0.0, 50.0)
+    q3 = q.assign(status=["ok", "unfinished"])                 # an unfinished request may lack a first token
+    assert W.work_rate({"requests": q3}, 0.0, 50.0) == pytest.approx(3000 / 50.0)
+
+
+def test_the_reference_is_the_all_miss_token_rate(ref):
+    assert ref["n"] == 5 and ref["mean"] == pytest.approx(MU * S.LBAR, rel=0.01)   # 1.681 req/s x 3072 tokens
+    assert ref["spread"] < 0.01 and ref["mean_without_2.0"] == pytest.approx(ref["mean"], rel=0.005)
+    one = next(iter(ref["runs"].values()))
+    assert {"rate", "U", "U_by_end", "busy", "running", "waiting", "kv", "preempt_per_s", "redo_share"} <= set(one)
+    assert one["busy"] > 0.99
+
+
+def test_reference_from_run_folders_needs_exactly_the_five_pinned_runs(monkeypatch):
+    five = [ref_run(r, name=n) for r, n in zip((2.0, 2.5, 3.0, 3.5, 4.0), W.REG21["ref_runs"])]
+    low = ref_run(1.5, name="20261107-082035_sweep_l1pl350_pc_off_r1.5")
+    monkeypatch.setattr(W, "find_runs", lambda pattern: five + [low])
+    assert W.reference()["n"] == 5                                          # a lower rate is not part of it
+    monkeypatch.setattr(W, "find_runs", lambda pattern: five[:4] + [low])
+    with pytest.raises(ValueError):
+        W.reference()                                                       # one of the five is missing
+    again = ref_run(3.0, name="20261108-000000_sweep_l1pl350_pc_off_r3")
+    monkeypatch.setattr(W, "find_runs", lambda pattern: five + [again])
+    with pytest.raises(ValueError):
+        W.reference()                                                       # a second valid run at a rate
 
 
 @pytest.mark.parametrize("lam", [2.0, 2.4])
-def test_an_all_miss_fifo_trap_reads_r_one(u_off, lam):
-    r = W.row(truth(cfg(lam), MU), u_off, with_readouts=False)
-    assert r["allmiss"] and r["r"] == pytest.approx(1.0, abs=0.02)
+def test_an_all_miss_fifo_trap_reads_r_one(ref, lam):
+    r = R(truth(cfg(lam), MU), ref)
+    assert r["allmiss"] and r["busy"] and r["why_not"] is None and r["r"] == pytest.approx(1.0, abs=0.02)
 
 
 @pytest.mark.parametrize("servers", [16, 64])
-def test_a_running_batch_does_not_move_r(u_off, servers):
+def test_a_running_batch_does_not_move_r(ref, servers):
     """Round 2's confound: a request that stays in a running batch delays its session's next turn, which moves the
     served-turn mix (and the capacities draft 2 fitted to it). The work rate does not move."""
-    assert W.row(truth(cfg(2.0), MU, servers=servers), u_off, with_readouts=False)["r"] == pytest.approx(1.0, abs=0.02)
+    assert R(truth(cfg(2.0), MU, servers=servers), ref)["r"] == pytest.approx(1.0, abs=0.02)
 
 
 def test_a_running_batch_of_64_does_move_the_mix():
@@ -123,58 +176,106 @@ def test_a_running_batch_of_64_does_move_the_mix():
     assert abs(K3.kbar_obs(many, a, b) - K3.kbar_obs(one, a, b)) > 0.03
 
 
-def test_longer_think_times_do_not_move_r(u_off):
-    assert W.row(truth(cfg(2.0), MU, gap_scale=6.0), u_off, with_readouts=False)["r"] == pytest.approx(1.0, abs=0.02)
+def test_longer_think_times_do_not_move_r(ref):
+    assert R(truth(cfg(2.0), MU, gap_scale=6.0), ref)["r"] == pytest.approx(1.0, abs=0.02)
 
 
-def test_a_fixed_cost_per_turn_moves_r_by_under_two_percent(u_off):
-    """With 0.18 s + 0.135 ms per token the token rate depends a little on the mean served prompt."""
-    r = W.row(truth(cfg(2.0), MU, cost=(0.18, 0.000135)), u_off, with_readouts=False)["r"]
-    assert abs(r - 1.0) < 0.02
+def test_a_fixed_cost_per_turn_moves_r_by_under_two_percent(ref):
+    assert abs(R(truth(cfg(2.0), MU, cost=(0.18, 0.000135)), ref)["r"] - 1.0) < 0.02
 
 
 @pytest.mark.parametrize("mu, side", [(1.85, "high"), (1.55, "low")])
-def test_a_trap_faster_or_slower_than_the_cache_off_server_is_outside(u_off, mu, side):
-    rows = [W.row(truth(cfg(2.0, sd), mu), u_off, with_readouts=False) for sd in (2, 3, 4)]
+def test_a_trap_faster_or_slower_than_the_cache_off_server_is_outside(ref, mu, side):
+    rows = [R(truth(cfg(2.0, sd), mu), ref) for sd in (2, 3, 4)]
     j = W.judge(rows, loads=False)
-    assert j["J1"] == "outside" and j["J1_side"] == side
-    assert j["median_r"] == pytest.approx(mu / MU, abs=0.02)
+    assert j["J1"] == "outside" and j["J1_side"] == side and j["median_r"] == pytest.approx(mu / MU, abs=0.02)
 
 
-def test_a_work_rate_that_depends_on_load_fails_J2_alone(u_off):
-    rows = [W.row(truth(cfg(2.0, sd), 1.64), u_off, with_readouts=False) for sd in (2, 3)]
-    rows += [W.row(truth(cfg(2.4, sd), 1.75), u_off, with_readouts=False) for sd in (2, 3)]
-    j = W.judge(rows)
-    assert j["J1"] == "inside" and j["J2"] == "outside"
-    assert j["spread"] == pytest.approx((1.75 - 1.64) / MU, abs=0.02)
-
-
-def test_partial_hits_fail_the_all_miss_precondition(u_off):
-    r = W.row(truth(cfg(2.0), MU, hit_frac=0.3), u_off, with_readouts=False)
-    assert r["reuse_W"] == pytest.approx(0.3, abs=0.02) and not r["allmiss"]
+def test_partial_hits_fail_the_all_miss_precondition(ref):
+    r = R(truth(cfg(2.0), MU, hit_frac=0.3), ref)
+    assert r["reuse_W"] == pytest.approx(0.3, abs=0.02) and r["why_not"] == "not all-miss in W"
     j = W.judge([r] * 3, loads=False)
     assert j["n"] == 0 and j["J1"] == "undefined" and len(j["left_out"]) == 3
 
 
-def _r(lam, r, allmiss=True, name=None):
-    return {"run": name or f"x_r{lam}_{r}", "lam": lam, "reuse_W": 0.0, "allmiss": allmiss, "U": 1.0, "r": r}
+def test_a_server_that_idles_in_W_is_not_judged(ref):
+    """The review's trace: an all-miss server at exactly the cache-off rate whose load falls for a while empties its
+    line, does less work, and would read as a slower server. The busy precondition leaves it out."""
+    lull = [{"at_s": 1200, "rate": 0.5}, {"at_s": 2050, "rate": 2.0}]
+    r = R(truth(cfg(2.0, steps=lull), MU), ref)
+    assert r["allmiss"] and r["busy_W"] < 0.99 and r["why_not"] == "idle in W" and r["r"] < 0.9
 
 
-def test_judge_labels_and_what_it_leaves_out():
-    j = W.judge([_r(2.0, 1.03), _r(2.0, 1.05), _r(2.4, 1.01), _r(2.4, 1.02), _r(2.2, 1.30)])
-    assert j["J1"] == "inside" and j["median_r"] == pytest.approx(1.03)
-    assert j["group_medians"] == {"2.0": pytest.approx(1.04), "2.4": pytest.approx(1.015)}   # 2.2 has one run: unused
-    assert j["J2"] == "inside" and j["spread"] == pytest.approx(0.025)
-    assert W.judge([_r(2.0, 1.0), _r(2.0, 1.2)])["J1"] == "undefined"                        # fewer than 3 runs
-    assert W.judge([_r(2.0, 1.0), _r(2.0, 1.0), _r(2.0, 1.0)])["J2"] == "undefined"          # one load group
-    j = W.judge([_r(2.0, 1.06), _r(2.0, 1.07), _r(2.4, 1.08), _r(2.4, math.nan), _r(2.4, 0.5, allmiss=False)])
-    assert j["J1"] == "outside" and j["J1_side"] == "high" and j["n"] == 3 and len(j["left_out"]) == 2
-    assert "J2" not in W.judge([_r(2.0, 1.0)] * 3, loads=False)
+# ---------------------------------------------------------------- the judge
+
+def _r(lam, r, why=None, name=None, date="20261109"):
+    return {"run": name or f"x_r{lam}_{r}", "date": date, "lam": lam, "r": r, "why_not": why}
+
+
+def test_J2_uses_only_groups_of_three_and_J1_pools_only_when_J2_is_inside():
+    rows = [_r(2.0, 1.03), _r(2.0, 1.05), _r(2.0, 1.04), _r(2.4, 1.01), _r(2.4, 1.02), _r(2.4, 1.02),
+            _r(2.2, 1.30), _r(2.2, 0.70)]
+    j = W.judge(rows)
+    assert j["judged_groups"] == ["2.0", "2.4"] and j["J2"] == "inside" and j["spread"] == pytest.approx(0.02)
+    assert j["J1"] == "inside" and j["median_r"] == pytest.approx(1.025)      # pooled over all eight judged runs
+    assert j["groups"]["2.2"]["n"] == 2 and j["groups"]["2.2"]["min"] == 0.70 and "slope_r_per_reqs" in j
+    far = [_r(2.0, 1.00), _r(2.0, 1.00), _r(2.0, 1.01), _r(2.4, 1.07), _r(2.4, 1.08), _r(2.4, 1.09)]
+    j = W.judge(far)
+    assert j["J2"] == "outside" and j["J1"] == "not_pooled" and math.isnan(j["median_r"])
+    assert j["groups"]["2.0"]["J1"] == "inside" and j["groups"]["2.4"]["J1"] == "outside"
+    one = W.judge([_r(2.0, 1.0)] * 4)
+    assert one["J2"] == "undefined" and one["J1"] == "not_pooled"            # one load group: nothing to pool over
+
+
+def test_a_load_dependent_work_rate_fails_J2(ref):
+    rows = [R(truth(cfg(2.0, sd), 1.62), ref) for sd in (2, 3, 4)] + [R(truth(cfg(2.4, sd), 1.75), ref) for sd in (2, 3, 4)]
+    j = W.judge(rows)
+    assert j["J2"] == "outside" and j["spread"] == pytest.approx((1.75 - 1.62) / MU, abs=0.02)
+
+
+def test_judge_without_loads_and_what_it_leaves_out():
+    j = W.judge([_r(2.0, 1.06), _r(2.0, 1.07), _r(2.0, 1.08), _r(2.0, math.nan, why="no work rate"),
+                 _r(2.0, 0.5, why="idle in W")], loads=False)
+    assert j["J1"] == "outside" and j["J1_side"] == "high" and j["n"] == 3
+    assert [x["why"] for x in j["left_out"]] == ["no work rate", "idle in W"] and "J2" not in j
+    assert W.judge([_r(2.0, 1.0), _r(2.0, 1.2)], loads=False)["J1"] == "undefined"
 
 
 def test_exactly_at_the_tolerance_is_inside():
     assert W.judge([_r(2.0, 1.05)] * 3, loads=False)["J1"] == "inside"
     assert W.judge([_r(2.0, 0.9499)] * 3, loads=False)["J1"] == "outside"
+
+
+# ---------------------------------------------------------------- batches, readouts
+
+def test_batch2_waits_for_reg19s_result_and_needs_one_run_per_seed(monkeypatch, tmp_path):
+    d = tmp_path / "decisions.md"
+    d.write_text("## 2026-11-11 · [REG] REG-19\n")
+    monkeypatch.setattr(W.withheld, "DECISIONS", d)
+    with pytest.raises(RuntimeError):
+        W.batch2_runs()
+    d.write_text("## 2026-11-14 · [RESULT] REG-19: some\n")
+    mk = lambda sd, n: {"cfg": {"seed": sd}, "dir": Path(f"2026111{n}-000000_burst_l1pl350cl_r2.0_w3000_s{sd}")}
+    monkeypatch.setattr(W, "find_runs", lambda pattern: [mk(15, 2), mk(16, 2), mk(17, 2)])
+    assert [r["cfg"]["seed"] for r in W.batch2_runs()] == [15, 16, 17]
+    monkeypatch.setattr(W, "find_runs", lambda pattern: [mk(15, 2), mk(17, 2)])
+    with pytest.raises(ValueError):
+        W.batch2_runs()                                                     # a gap in the seeds
+    monkeypatch.setattr(W, "find_runs", lambda pattern: [mk(15, 2), mk(15, 3), mk(16, 2)])
+    with pytest.raises(ValueError):
+        W.batch2_runs()                                                     # two valid runs of one seed
+    monkeypatch.setattr(W, "find_runs", lambda pattern: [])
+    with pytest.raises(ValueError):
+        W.batch2_runs()
+
+
+def test_valse_and_jannesaris_rule_read_on_a_trap(ref):
+    run = truth(cfg(2.4), MU)
+    a, b = W.window(run)
+    v = W.vj_rule(run, R(run, ref)["r"], a, b)
+    assert v["token_part"] is True and v["slope_part"] is True and v["trapped"] is True
+    assert v["backlog_slope"] > v["slope_needed"] > 0
+    assert W.vj_rule(run, 1.20, a, b)["token_part"] is False                # outside their 15 percent
 
 
 def test_decode_residence_in_the_replay_keeps_the_work_and_shifts_the_mix():
@@ -188,27 +289,36 @@ def test_decode_residence_in_the_replay_keeps_the_work_and_shifts_the_mix():
     assert K3.kbar_obs(rd, a, b) != pytest.approx(K3.kbar_obs(rp, a, b), abs=0.02)
 
 
-def test_table_on_fake_runs(monkeypatch, u_off):
-    runs = {f"2026-fake_burst_l1pl350cl_r{lam}_s{sd}": truth(cfg(lam, sd), MU) for lam in (2.0, 2.4) for sd in (2, 3)}
-    for n, r in runs.items():
-        r["dir"] = Path(n)
-    monkeypatch.setitem(W.REG21, "batch1", tuple(runs) + ("2026-fake_missing",))
-    monkeypatch.setattr(W, "find_runs", lambda pattern: list(runs.values()))
-    monkeypatch.setattr(W, "reference", lambda: {"mean": u_off, "n": 5})
-    monkeypatch.setattr(W, "select", lambda rs: (rs[:-1], [{"run": rs[-1]["dir"].name, "cold_backlogged": False}]))
-    monkeypatch.setattr(W, "readouts", lambda run: {"stub": True})
-    t = W.reg21_table(1)
-    assert t["missing_or_invalid"] == ["2026-fake_missing"] and len(t["rows"]) == 3
-    assert t["not_cold_backlogged"][0]["cold_backlogged"] is False
-    assert t["judged"]["J1"] == "inside" and t["judged"]["J2"] == "undefined"     # 2.4 is left with one run
-    assert "J2" not in W.reg21_table(2)["judged"]
+def test_a_failing_readout_does_not_take_the_judged_values_with_it(ref, monkeypatch):
+    monkeypatch.setattr(W, "readouts", lambda run: 1 / 0)
+    r = W.row(truth(cfg(2.0), MU), ref)
+    assert r["r"] == pytest.approx(1.0, abs=0.02) and "ZeroDivisionError" in r["readouts"]["error"]
+    assert r["vj_rule"]["token_part"] is True
 
 
-def test_readouts_on_a_run_without_metrics(u_off):
-    """Every reported readout is computed, or NaN / None where the run has no scrapes; nothing raises."""
-    r = W.row(truth(cfg(2.0), MU, servers=64), u_off)
+def test_readouts_on_a_synthetic_run(ref):
+    r = W.row(truth(cfg(2.0), MU, servers=64), ref)
     ro = r["readouts"]
-    assert ro["residence_s"] > 30 and math.isnan(ro["running"]) and ro["shock"] is None
+    assert "error" not in ro and ro["residence_s"] > 30
     assert ro["X_all"] == pytest.approx(ro["X_session"], abs=0.2) and 3.5 < ro["kbar"] < 4.6
     assert set(ro["replay_at_floor"]) == {"prop_plain", "prop_residence", "fixed_plain", "fixed_residence"}
     assert ro["replay_at_floor"]["prop_residence"]["U"] == pytest.approx(MU * S.LBAR, rel=0.02)
+
+
+def test_table_on_fake_runs(monkeypatch, ref):
+    runs = {}
+    for lam in (2.0, 2.4):
+        for sd in (2, 3, 4):
+            n = f"20261109-00000{sd}_burst_l1pl350cl_r{lam}_s{sd}"
+            runs[n] = truth(cfg(lam, sd), MU, name=n)
+    monkeypatch.setitem(W.REG21, "batch1", tuple(runs) + ("20261109-999999_missing",))
+    monkeypatch.setattr(W, "find_runs", lambda pattern: list(runs.values()))
+    monkeypatch.setattr(W, "reference", lambda: ref)
+    monkeypatch.setattr(W, "select", lambda rs: (rs[:-1], [{"run": rs[-1]["dir"].name, "cold_backlogged": False}]))
+    monkeypatch.setattr(W, "readouts", lambda run: {"stub": True})
+    t = W.reg21_table(1)
+    assert t["missing_or_invalid"] == ["20261109-999999_missing"] and len(t["rows"]) == 5
+    assert t["not_cold_backlogged"][0]["cold_backlogged"] is False
+    assert t["judged"]["judged_groups"] == ["2.0"] and t["judged"]["J2"] == "undefined"   # 2.4 is left with two runs
+    assert t["judged"]["J1"] == "not_pooled" and t["judged"]["groups"]["2.0"]["J1"] == "inside"
+    assert all(r["readouts"] == {"stub": True} and r["date"] == "20261109" for r in t["rows"])
