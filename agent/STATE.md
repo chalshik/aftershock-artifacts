@@ -35,9 +35,10 @@ If a session finds no result of these in `agent/LOG.md`, they did not finish: re
 
 ## GPU status
 
-- VM `inference-vm` 100.83.53.50: **offline** at session start. Nothing running. Code on the VM: `a7bb77a` (status.md; not re-read, the VM is unreachable).
-- REG-19: seeds 15, 16, 17 done and withheld; seed 18 control lost; seed 18 burst and seed 19 not run.
-- Power limit after a reboot is 420 W; the queue needs `sudo -n nvidia-smi -pl 350` first.
+- **VM up since 2026-11-12 ≈ 19:48 UTC**, read 19:52 UTC: RTX 3090 idle, 39 °C, no compute process, no tmux session, tree `a7bb77a` clean, 5.4 GB free, **power limit 420 W**.
+- **Blocker: `sudo -n nvidia-smi -pl 350` fails ("a password is required"; no rule in `/etc/sudoers.d/`).** No 350 W run starts until the owner sets 350 W. A background loop in the session reads the limit every 2 minutes and exits when it is 350.00 W or when the VM's state changes.
+- REG-19: seeds 15, 16, 17 done and withheld; seed 18's lost control folder is on the VM (no `checks.json`, as expected); seed 18 burst and seed 19 not run. The resume decision is in review.
+- `ulimit -n` on the VM is 1024 (REG-20's open arm needs ≥ 4096).
 
 ## Withheld data (hard rule, start prompt §3)
 

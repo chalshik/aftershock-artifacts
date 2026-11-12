@@ -64,3 +64,5 @@ One block per work block: what was done, what was found, the commit.
 - Condition 4's "the traces follow the plan's order" was written for a wipe; a burst fills KV before the hit rate falls. The registration must define the order for a burst (STATE, next three).
 
 **Commits:** `ef4dc4e`, `ea03d73`, the runbook commit, then this block's.
+
+**Block 3, later (2026-11-12 19:52 UTC): the VM came back.** Watcher `down -> up_idle` at 19:51:46 UTC. Read-only state: idle GPU, 420 W, tree `a7bb77a` clean, the lost seed-18 folder present without `checks.json`. `sudo -n nvidia-smi -pl 350` and the same with `/usr/bin/nvidia-smi` both fail with "a password is required"; `/etc/sudoers.d/` holds only README. Per the start prompt §7: logged in FOR_AUTHOR, no 350 W run started. A 2-minute loop now waits for 350.00 W.
