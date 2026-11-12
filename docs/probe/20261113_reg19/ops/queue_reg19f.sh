@@ -60,11 +60,12 @@ for sd in ${=SEEDS:-18 19}; do
   (( rc == 0 )) || { echo "QUEUE STOP reg19_step failed (rc $rc; see $errf)"; exit 1; }
   step=$(echo "$step" | tail -1)
   dn=$(echo "$step" | grep -o "'done': \[[^]]*\]"); cont=$(echo "$step" | grep -o "'continue': [A-Za-z]*")
-  want="'done': [$(seq -s ', ' 15 $sd)]"
-  [[ $dn == $want ]] || { echo "QUEUE STOP after seed $sd the step's done list is not 15..$sd: [$dn]"; exit 1; }
-  [[ $cont == "'continue': True" || $cont == "'continue': False" ]] || { echo "QUEUE STOP reg19_step printed no continue flag"; exit 1; }
+  seeds_done=(); for x in {15..$sd}; do seeds_done+=($x); done
+  want="'done': [${(j:, :)seeds_done}]"
+  [[ "$dn" == "$want" ]] || { echo "QUEUE STOP after seed $sd the step's done list is not 15..$sd: [$dn]"; exit 1; }
+  [[ "$cont" == "'continue': True" || "$cont" == "'continue': False" ]] || { echo "QUEUE STOP reg19_step printed no continue flag"; exit 1; }
   echo "STEP after seed $sd: $dn $cont"
-  if [[ $cont == "'continue': False" ]]; then
+  if [[ "$cont" == "'continue': False" ]]; then
     if [[ $sd == 19 ]]; then echo "QUEUE DONE (all five seeds run)"; else echo "QUEUE END futility stop ('continue': False after seed $sd)"; fi
     exit 0
   fi

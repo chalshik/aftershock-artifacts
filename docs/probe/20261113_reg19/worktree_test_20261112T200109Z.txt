@@ -1,0 +1,42 @@
+# REG-19 resume: test of the pinned worktree (agent; schedule only, no run read)
+2026-11-12T20:01:09Z
+# worktree: /Users/chalshik/Projects/aftershock-reg19-pin
+commit a7bb77abc863adcaad9d4516815a5ddddf2908e9
+dirty 0
+# entries in its runs/ (names only):
+20261112-050920_stage2_control_l1pl350cl_r2.0_w3000_s15
+20261112-061951_burst_l1pl350cl_r2.0_w3000_s15
+20261112-073516_stage2_control_l1pl350cl_r2.0_w3000_s16
+20261112-084533_burst_l1pl350cl_r2.0_w3000_s16
+20261112-103423_stage2_control_l1pl350cl_r2.0_w3000_s17
+20261112-135538_burst_l1pl350cl_r2.0_w3000_s17
+# resolved module files (cd $W && .venv/bin/python):
+analysis.gate /Users/chalshik/Projects/aftershock-reg19-pin/analysis/gate.py
+analysis.load /Users/chalshik/Projects/aftershock-reg19-pin/analysis/load.py
+analysis.derived /Users/chalshik/Projects/aftershock-reg19-pin/analysis/derived.py
+analysis.margin /Users/chalshik/Projects/aftershock-reg19-pin/analysis/margin.py
+analysis.floor /Users/chalshik/Projects/aftershock-reg19-pin/analysis/floor.py
+analysis.stats /Users/chalshik/Projects/aftershock-reg19-pin/analysis/stats.py
+analysis.tables /Users/chalshik/Projects/aftershock-reg19-pin/analysis/tables.py
+harness.workload /Users/chalshik/Projects/aftershock-reg19-pin/harness/workload.py
+harness.config /Users/chalshik/Projects/aftershock-reg19-pin/harness/config.py
+harness.run /Users/chalshik/Projects/aftershock-reg19-pin/harness/run.py
+python 3.12.13
+# git diff --stat a7bb77a..(main working tree) for the import closure and lock files:
+ analysis/load.py   |  6 +++++-
+ analysis/stats.py  |  9 +++++++++
+ analysis/tables.py |  2 +-
+ harness/run.py     | 17 ++++++++++++++---
+ 4 files changed, 29 insertions(+), 5 deletions(-)
+# commits after a7bb77a touching analysis/ harness/ tools/ configs/ tests/ pyproject.toml uv.lock (hash, committer date UTC, subject):
+1cface7 2026-11-12 15:33:58 [REG] REG-20 code and configs: analysis/k1.py (readout, gate, paired decision), stats.fisher_one_sided, tests/test_k1.py (
+d80b955 2026-11-12 16:19:45 [CORR] Model M5's sensitivity line (backlog growth moves about 0.04 under the fixed-cost model, not < 0.02); model F moved
+5ee6e38 2026-11-12 17:12:47 [DECISION] A14 fixed (owner-approved): recorder survives a half-written line and logs its death; `recorder` and `gpu_stead
+1325011 2026-11-12 17:12:47 [OPS] E0/E1 draft code and configs, not registered: analysis/e1.py (E1's blind K3 test, model F's served-mix tilt with loa
+9958414 2026-11-12 17:49:18 [CORR] Valse and Jannesari and Huang and Liu in the local paper documents (base loads called burst rates, 3.26 for 3.15, "
+72fafb5 2026-11-12 19:00:16 [DECISION] A17 answered from the pinned source (no skip of a head request that does not fit); analysis/withheld.py seals r
+ef4dc4e 2026-11-12 19:28:47 [OPS] agent/DECISION_TREE.md (every pending outcome with its next action and paper text, delegate's choices fixed before a
+44ca82a 2026-11-12 19:36:02 [OPS] Draft code, not registered: analysis/c2.py (condition 4 as levels at the end plus the loop's four links in every spa
+47cb342 2026-11-12 19:49:26 [OPS] Draft, not registered: c2.py reads the engine's block-eviction histograms (reported readout with a prediction from t
+# python -m analysis.gate reg19_inputs (from the worktree):
+{'seeds': [{'seed': 15, 'n_session': 8253, 'n_burst': 425, 'lam_p_baseline': 1.9583333333333333, 'lam_p_window': 2.0770833333333334, 'lam_p_spans': [2.33, 1.71, 2.486666666666667, 2.31, 1.9233333333333333, 1.8733333333333333, 2.08, 1.9033333333333333], 'lowest_span': 1.71, 'exposure': {'seed': 15, 'peak': 3.091666666666667, 't_peak': 2635.0, 'exposed': False, 't_first': nan}, 'control_schedule_same': True, 'lam_cfg': (2.0, 2.0), 'seeds': (15, 15), 'watch': (3000, 3000), 'duration': (4080, 4080)}, {'seed': 16, 'n_session': 8160, 'n_burst': 466, 'lam_p_baseline': 1.97, 'lam_p_window': 2.0375, 'lam_p_spans': [1.9266666666666667, 1.81, 1.85, 2.2733333333333334, 1.9766666666666666, 2.4566666666666666, 1.7466666666666666, 2.26], 'lowest_span': 1.7466666666666666, 'exposure': {'seed': 16, 'peak': 2.875, 't_peak': 3465.0, 'exposed': False, 't_first': nan}, 'control_schedule_same': True, 'lam_cfg': (2.0, 2.0), 'seeds': (16, 16), 'watch': (3000, 3000), 'duration': (4080, 4080)}, {'seed': 17, 'n_session': 8420, 'n_burst': 441, 'lam_p_baseline': 1.9716666666666667, 'lam_p_window': 2.04125, 'lam_p_spans': [1.85, 1.89, 2.4366666666666665, 2.33, 1.81, 2.21, 1.7166666666666666, 2.0866666666666664], 'lowest_span': 1.7166666666666666, 'exposure': {'seed': 17, 'peak': 3.0166666666666666, 't_peak': 2930.0, 'exposed': False, 't_first': nan}, 'control_schedule_same': True, 'lam_cfg': (2.0, 2.0), 'seeds': (17, 17), 'watch': (3000, 3000), 'duration': (4080, 4080)}, {'seed': 18, 'n_session': 8048, 'n_burst': 438, 'lam_p_baseline': 2.216666666666667, 'lam_p_window': 1.9225, 'lam_p_spans': [1.32, 1.8466666666666667, 2.23, 2.1433333333333335, 1.9433333333333334, 2.066666666666667, 1.7733333333333334, 2.0566666666666666], 'lowest_span': 1.32, 'exposure': {'seed': 18, 'peak': 2.908333333333333, 't_peak': 385.0, 'exposed': False, 't_first': nan}, 'control_schedule_same': True, 'lam_cfg': (2.0, 2.0), 'seeds': (18, 18), 'watch': (3000, 3000), 'duration': (4080, 4080)}, {'seed': 19, 'n_session': 8082, 'n_burst': 431, 'lam_p_baseline': 2.2066666666666666, 'lam_p_window': 2.0520833333333335, 'lam_p_spans': [2.0433333333333334, 2.15, 2.0166666666666666, 1.7066666666666668, 2.2533333333333334, 1.8333333333333333, 2.3133333333333335, 2.1], 'lowest_span': 1.7066666666666668, 'exposure': {'seed': 19, 'peak': 2.8333333333333335, 't_peak': 3085.0, 'exposed': False, 't_first': nan}, 'control_schedule_same': True, 'lam_cfg': (2.0, 2.0), 'seeds': (19, 19), 'watch': (3000, 3000), 'duration': (4080, 4080)}], 'order': (15, 16, 17, 18, 19)}

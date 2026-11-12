@@ -32,11 +32,12 @@ mac_checks() {
 
 # Every REG-19 run folder on the Mac is linked into the worktree, resolves to the Mac's folder, and nothing else is there.
 links_ok() {
-  local ids n_w=0 id
+  local ids n_w=0 id lw lr
   ids=($R/runs/${~CONTROL_PAT}(N/:t) $R/runs/${~BURST_PAT}(N/:t))
   for id in $ids; do
     [[ -L $W/runs/$id ]] || ln -s $R/runs/$id $W/runs/$id || { echo "STOP: could not link $id"; return 2; }
-    [[ $W/runs/$id(:A) == $R/runs/$id(:A) ]] || { echo "STOP: $W/runs/$id does not resolve to $R/runs/$id"; return 2; }
+    lw=$W/runs/$id; lr=$R/runs/$id
+    [[ ${lw:A} == ${lr:A} ]] || { echo "STOP: $W/runs/$id does not resolve to $R/runs/$id"; return 2; }
   done
   for id in $W/runs/*(N:t); do
     n_w=$((n_w + 1))
