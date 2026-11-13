@@ -5,6 +5,7 @@
 # Usage: zsh docs/probe/20261113_reg19/ops_r3/test_sandbox.sh      (exit 0 if every case passes)
 SRC=${0:A:h}
 T=$(mktemp -d ${TMPDIR:-/tmp}/reg19_sandbox3.XXXXXX) || exit 99
+T=${T:A}                                    # one spelling of the path: a TMPDIR ending in "/" gave "//", which a shell's $PWD does not keep
 [[ $T == *reg19_sandbox3.* ]] || exit 99
 VM=$T/vmhome/aftershock-artifacts
 PD=$T/repo/docs/probe/20261113_reg19
