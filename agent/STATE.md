@@ -5,6 +5,13 @@ Rules: `docs/FABLE_PROMPT.md` (the start prompt), `CLAUDE.md`, `PROTOCOL.md`, `d
 
 Last updated: 2026-11-13 (session 8c5f8396, block 3).
 
+## ⚠⚠ UPDATE 2026-11-13 05:15 UTC: the VM went off again (≈ 04:40 UTC), ~61 min into seed 18's control attempt 2
+
+- Logged: decisions.md 2026-11-13 [OPS] "the VM went off again…"; probe `docs/probe/20261113_reg19/vm_down_*.txt`. Cause unknown (journal unread). Outside the quiet hours.
+- **Attempt 2 is spent; one remains. No `lost_ok` record exists for this run, so no rerun is allowed** (draft 5 item 1). The queue was left to stop by itself (exit 7 at ≈ 05:39 UTC, or TMUX GONE if the VM returns). Save its output file and stop line, then commit the state files (`attempt_…_2.txt`, `session_boot_id.txt`, the prelaunch probe, the queue output).
+- **When the VM is back:** read-only first: is there a `checks.json` in the new seed-18 folder (allowed read), the journal for the boot's end (as `poweroff_*.txt` on 2026-11-12), the limit (likely 420 W). **Then stop for the owner:** attempt 3 needs the owner's decision, 350 W, and a `RENEW=1` session probe. Do not launch.
+- The block below is the earlier handoff; its "queue is RUNNING" no longer holds.
+
 ## ⚠ READ FIRST: what happened while you were stopped (2026-11-13 ≈ 03:30–03:40 UTC, an owner-attended Opus session, not you)
 
 - **The owner set the VM to 350 W by hand** (read 350.00 W at 03:34:45 UTC) and **approved the REG-19 resume directly**: decisions.md 2026-11-13 `[DECISION] (owner) REG-19 resumes for seeds 18 and 19` (commit `7bbb134`). It adopts your draft 5 as written. It is an owner decision, so rule F/owner-proxy no longer gate it. **Do not re-run the round-4 reviews of the REG-19 resume.** (All four round-4 subagents had died on the usage limit with no verdict.)
