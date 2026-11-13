@@ -1,0 +1,16 @@
+# pre-launch read for stage2_control_l1pl350cl_r2.0_w3000_s19 attempt 1 (agent, read-only; scripts fb0608878e8e909418d773e0bc769ad97cc841fd)
+2026-11-13T19:21:08+00:00
+power.limit [W], temperature.gpu, utilization.gpu [%], memory.used [MiB]
+350.00 W, 37, 0 %, 1 MiB
+# compute apps:
+# tree:
+a7bb77abc863adcaad9d4516815a5ddddf2908e9
+0
+# boot:
+06d8b294-9c8a-4aed-a31a-417b16ff2f48
+# free_kb:
+4694720
+# tmux:
+no server running on /tmp/tmux-1000/default
+LAUNCHED 20261113-192110_stage2_control_l1pl350cl_r2.0_w3000_s19 (attempt 1)
+DONE 20261113-192110_stage2_control_l1pl350cl_r2.0_w3000_s19

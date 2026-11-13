@@ -1,0 +1,6 @@
+attempt 1 of burst_l1pl350cl_r2.0_w3000_s19
+time 2026-11-13T20:31:06Z
+scripts fb0608878e8e909418d773e0bc769ad97cc841fd
+probe prelaunch_reg19_burst_l1pl350cl_r2.0_w3000_s19_20261113T203105Z_25690_1.txt
+boot 06d8b294-9c8a-4aed-a31a-417b16ff2f48
+rid 20261113-203108_burst_l1pl350cl_r2.0_w3000_s19
