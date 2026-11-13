@@ -17,19 +17,15 @@ fi
 [[ -n $why ]] || { echo "STOP: no table. The step records do not show all five seeds run or a futility stop; after an operational stop the owner decides (REG-19)"; exit 2; }
 prev=($ST/reg19_final_*.txt(N))
 (( ${#prev} == 0 )) || { echo "STOP: the table was already computed or tried: ${prev[*]:t}"; exit 2; }
-ts=$(stamp); out=$ST/reg19_final_$ts.txt; err=$ST/reg19_final_err_$ts.txt
-# Validity first, blind to the outcome: the checks in force since 2026-11-12 (A14), applied read-only by
-# analysis.recheck to REG-19's runs on the Mac. Only n_runs, n_changed and the changed runs' check fields are printed.
-# If any run's validity differs from its stored checks.json, the table is NOT computed: the owner decides.
-cd $R || exit 2
-git diff --quiet $CHECKS_COMMIT -- harness/checks.py && git diff --quiet $RECHECK_COMMIT -- analysis/recheck.py || { echo "STOP: harness/checks.py or analysis/recheck.py differ in the working tree from the commits named for the recheck"; exit 2; }
-rk=$ST/reg19_recheck_$ts.json; rkerr=$ST/reg19_recheck_err_$ts.txt
-[[ ! -e $rk ]] || { echo "STOP: $rk exists"; exit 2; }
-AFTERSHOCK_UNSEAL=REG-19 $PY -m analysis.recheck "$RECHECK_PAT" > $rk 2> $rkerr || { echo "STOP: analysis.recheck failed (see $rkerr); no table"; exit 1; }
-counts=$(python3 -c 'import json, sys; d = json.load(open(sys.argv[1])); print(d["n_runs"], d["n_changed"])' $rk) || { echo "STOP: the recheck output cannot be read; no table"; exit 1; }
+stamp; ts=$REPLY; out=$ST/reg19_final_$ts.txt; err=$ST/reg19_final_err_$ts.txt
+# Validity first: the checks in force since 2026-11-12 (A14), applied read-only to REG-19's runs on the Mac
+# (common.sh `recheck_ok`; the queue has done the same before each step). If any run's validity differs from its
+# stored checks.json, or the number of runs is not the number of valid pairs, the table is NOT computed.
 want_n=10; [[ $why == "futility stop after seed 18" ]] && want_n=8
-echo "RECHECK n_runs n_changed: $counts (expected $want_n 0); ${rk:t}"
-[[ $counts == "$want_n 0" ]] || { echo "STOP: operational stop. The recheck does not show $want_n runs with unchanged validity (see $rk: validity fields only). REG-19's table is not computed; the delegate marks, reruns and counts nothing; the owner decides"; exit 3; }
+recheck_ok $want_n; rc=$?
+(( rc != 3 )) || { echo "STOP: operational stop. $MSG. REG-19's table is not computed; the delegate marks, reruns and counts nothing; the owner decides"; exit 3; }
+(( rc == 0 )) || { echo "STOP: the recheck could not be run: $MSG; no table"; exit $rc; }
+echo "RECHECK runs and changed: $RECHECK_COUNTS (expected $want_n 0); ${RK:t}; Mac HEAD $(git -C $R rev-parse HEAD)"
 (cd $W && $PY -m analysis.gate reg19 > $out 2> $err); rc=$?
 echo "FINAL ($why); rc $rc; scripts $SC; pin $PIN; worktree $W; output ${out:t}; stderr_lines $(wc -l < $err | tr -d ' ') ${err:t}"
 (( rc == 0 )) || { echo "STOP: reg19 failed (see $err). A second try is an operational step with its own [OPS] entry: the file $out must first be set aside by hand"; exit 1; }

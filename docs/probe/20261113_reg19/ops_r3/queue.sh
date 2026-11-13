@@ -10,9 +10,22 @@
 # two fields, the `done` list and the `continue` flag, are written to state/reg19_step_s<seed>.txt. A seed with that
 # record is never launched, copied or stepped again; seed 19 is reached only through seed 18's record saying
 # 'continue': True. Every stop exits non-zero. "QUEUE END futility stop" needs 'continue': False in the record.
+# Since round 3: one queue at a time (a lock); no start before the decision is in the committed log; and the checks
+# in force are applied to REG-19's runs on the Mac BEFORE each step (common.sh `recheck_ok`), so that the futility
+# flag never counts a run those checks would fail: a changed run stops the queue with no step, for the owner.
 source ${0:A:h}/common.sh
 mac_checks || exit 2
+decision_in_log || { echo "QUEUE STOP $MSG"; exit 2; }
+[[ ${WAIT_MIN:-120} == <-> ]] || { echo "QUEUE STOP WAIT_MIN is not a number"; exit 2; }
 mkdir -p $ST
+LOCK=$ST/queue.lock
+if ! mkdir $LOCK 2> /dev/null; then
+  pid=$(cat $LOCK/pid 2> /dev/null)
+  if [[ -n $pid ]] && kill -0 $pid 2> /dev/null; then echo "QUEUE STOP another queue is running (pid $pid)"; exit 1; fi
+  stamp; mv $LOCK $ST/queue.lock.stale_$REPLY && mkdir $LOCK || { echo "QUEUE STOP the lock could not be taken"; exit 1; }
+fi
+print -r -- $$ > $LOCK/pid
+trap 'stamp; mv $LOCK $ST/queue.lock.ended_$REPLY 2> /dev/null' EXIT
 stop() { echo "QUEUE STOP $*"; exit 1; }
 echo "QUEUE START seeds ${SEEDS[*]}; scripts $SC; pin $PIN; $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 cd $R || stop "no repo"
@@ -26,18 +39,19 @@ for sd in $SEEDS; do
       cfg=${kind}_l1pl350cl_r2.0_w3000_s$sd
       decide $cfg || stop "$cfg: $MSG"
       if [[ -n $RID ]]; then echo "RUN $cfg $RID VALID (found on the VM; not launched)"; rids+=($RID); continue; fi
-      ts=$(stamp); outf=$ST/launch_${cfg}_$ts.out
+      stamp; ts=$REPLY; outf=$ST/launch_${cfg}_$ts.out
       [[ ! -e $outf ]] || stop "$outf exists"
       out=$(zsh $S/launch.sh $cfg 2>&1); rc=$?
       print -r -- "$out" > $outf
       rid=$(print -r -- "$out" | sed -n 's/^LAUNCHED \([^ ]*\).*/\1/p')
       (( rc == 0 )) || stop "$cfg launch rc=$rc rid=$rid: $(print -r -- "$out" | grep -E 'STOP|TMUX GONE|STILL RUNNING|VM NOT REACHABLE' | tail -1)"
       [[ -n $rid ]] || stop "$cfg: launch.sh ended with rc 0 and no run id"
-      vm_state $cfg || stop "$cfg: the VM's run folders could not be read after the run; $rid is not judged. Start the queue again"
-      state=""; failed=""
-      for line in $VMS; do parts=(${=line}); if [[ $parts[1] == $rid ]]; then state=$parts[2]; failed=$parts[3]; fi; done
+      vm_state || stop "$cfg: the VM's run folders could not be read after the run; $rid is not judged. Start the queue again"
+      state=""; failed=""; commit=""
+      for line in $VMS; do parts=(${=line}); if [[ $parts[1] == $rid ]]; then state=$parts[2]; failed=$parts[3]; commit=$parts[4]; fi; done
       case $state in
-        valid) echo "RUN $cfg $rid VALID"; rids+=($rid);;
+        valid) [[ $commit == $PIN ]] || stop "$cfg: $rid is valid but was made at commit '$commit', not at the pin: the owner decides"
+               echo "RUN $cfg $rid VALID"; rids+=($rid);;
         invalid) echo "RUN $cfg $rid INVALID failed=$failed"; stop "after an invalid run. Starting the queue again applies REG-19's rerun rule from checks.json alone";;
         *) stop "$cfg: checks.json of $rid could not be read after the run (state '$state')";;
       esac
@@ -54,7 +68,11 @@ for sd in $SEEDS; do
     python3 tools/manifest.py update > /dev/null || stop "manifest update failed"
     mac_checks || stop "a Mac-side check failed before the step"
     links_ok || stop "the worktree's links are not as required"
-    ts=$(stamp); errf=$ST/reg19_step_err_s${sd}_$ts.txt; outf=$ST/reg19_step_out_s${sd}_$ts.txt
+    recheck_ok $((2 * (sd - 14))); rc=$?
+    (( rc != 3 )) || stop "operational stop before the step of seed $sd: $MSG. No step is computed; the delegate marks, reruns and counts nothing; the owner decides"
+    (( rc == 0 )) || stop "the recheck before the step of seed $sd could not be run: $MSG"
+    echo "RECHECK before the step of seed $sd: runs and changed $RECHECK_COUNTS; ${RK:t}"
+    stamp; ts=$REPLY; errf=$ST/reg19_step_err_s${sd}_$ts.txt; outf=$ST/reg19_step_out_s${sd}_$ts.txt
     [[ ! -e $errf && ! -e $outf ]] || stop "$outf exists"
     (cd $W && $PY -m analysis.gate reg19_step > $outf 2> $errf); rc=$?
     (( rc == 0 )) || stop "reg19_step failed (rc $rc; see $errf); no step is recorded"

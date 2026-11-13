@@ -1,7 +1,11 @@
 #!/bin/zsh
 # Pre-launch checks and launch of one REG-19 config on the VM; then wait for its checks.json.
-# Usage: zsh launch.sh <config-name-without-.yaml>      (called by queue.sh; safe by hand: it applies the same rule)
-# It asks `decide` (common.sh) which attempt this is and refuses when a valid run exists or REG-19 allows no rerun.
+# Usage: zsh launch.sh <config-name-without-.yaml>      (called by queue.sh)
+# By hand it applies the queue's own rules and no fewer: `gate` (common.sh) accepts only the four configs of seeds
+# 18 and 19, nothing of a seed that has a step record, seed 19 only after seed 18's record says 'continue': True,
+# and a burst run only after a valid control; `decide` says which attempt this is and refuses when a valid run
+# exists or REG-19 allows no rerun. What it does not do by hand is copy, verify or step: only the queue does.
+# No launch before the decision is in the committed log, and none in the hours in which the VM has been powered off.
 # It only reads the power limit (a limit other than 350.00 W stops, as REG-19 registers). The pre-launch read goes to
 # a time-stamped probe file; a stop before the launch spends no attempt. The attempt record state/attempt_<config>_<n>.txt
 # is written immediately before the launch command, so from that line on the attempt is spent whatever happens.
@@ -11,12 +15,16 @@
 source ${0:A:h}/common.sh
 mac_checks || exit 2
 CFG=$1
-[[ -n $CFG && -f $W/configs/$CFG.yaml ]] || { echo "STOP: no config '$CFG' at the pin"; exit 2; }
+decision_in_log || { echo "STOP: $MSG"; exit 2; }
+gate "$CFG" || { echo "STOP: $MSG"; exit 2; }
+[[ -f $W/configs/$CFG.yaml ]] || { echo "STOP: no config '$CFG' at the pin"; exit 2; }
+[[ ${WAIT_MIN:-120} == <-> ]] || { echo "STOP: WAIT_MIN is not a number"; exit 2; }
 [[ -s $ST/session_boot_id.txt ]] || { echo "STOP: no session probe (run session_probe.sh first)"; exit 2; }
 decide $CFG || { echo "STOP: $MSG"; exit 2; }
 [[ -z $RID ]] || { echo "STOP: $RID is a valid run of $CFG: nothing to launch"; exit 2; }
+quiet_now $CFG && { echo "STOP: no launch of $CFG between $QUIET_CONTROL_FROM (a control) or $QUIET_BURST_FROM (a burst run) and $QUIET_TO UTC: the run would last into the hours in which the VM has been powered off. Start the queue again after $QUIET_TO UTC"; exit 2; }
 ATT=$LAUNCH; MARK=$ST/attempt_${CFG}_$ATT.txt
-ts=$(stamp)
+stamp; ts=$REPLY
 PROBE=$PROBE_DIR/prelaunch_reg19_${CFG}_$ts.txt; LOG="~/${CFG}_$ts.log"
 [[ ! -e $PROBE ]] || { echo "STOP: probe $PROBE exists"; exit 2; }
 for i in $(seq 1 60); do
@@ -39,7 +47,7 @@ BOOT=$(sed -n '/# boot:/{n;p;}' $PROBE); FREE=$(sed -n '/# free_kb:/{n;p;}' $PRO
 [[ $FREE == <-> ]] && (( FREE >= MIN_FREE_KB )) || { echo "STOP: only '$FREE' kB free on the VM"; exit 2; }
 sed -n '/# tmux:/,$p' $PROBE | grep -q "no server running\|No such file or directory\|error connecting" || { echo "STOP: a tmux session exists"; exit 2; }
 [[ ! -e $MARK ]] || { echo "STOP: $MARK exists"; exit 2; }
-print -r -l -- "attempt $ATT of $CFG" "time $(date -u +%Y-%m-%dT%H:%M:%SZ)" "scripts $SC" "probe ${PROBE:t}" > $MARK || { echo "STOP: the attempt record could not be written; nothing launched"; exit 2; }
+print -r -l -- "attempt $ATT of $CFG" "time $(date -u +%Y-%m-%dT%H:%M:%SZ)" "scripts $SC" "probe ${PROBE:t}" "boot $BOOT" > $MARK || { echo "STOP: the attempt record could not be written; nothing launched"; exit 2; }
 ssh $K $H "cd ~/aftershock-artifacts && tmux new-session -d -s run \"~/.local/bin/uv run python -m harness.run configs/$CFG.yaml > $LOG 2>&1\"" || { echo "launch_command_failed" >> $MARK; echo "STOP: the launch command failed; attempt $ATT of $CFG is recorded as spent. $ALLOWED"; exit 2; }
 RID=""
 for i in $(seq 1 24); do

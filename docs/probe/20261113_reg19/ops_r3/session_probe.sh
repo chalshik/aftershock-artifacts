@@ -5,13 +5,14 @@
 # limit before and after is written to the probe. Writes state/session_boot_id.txt, which every launch compares with
 # the VM's boot id: a reboot between runs stops the queue. A second probe replaces that tripwire, so it is refused
 # unless RENEW=1 (after a reboot or another limit REG-19 stops the queue: a renewal needs a decisions.md entry); the
-# replaced file is kept under another name.
+# replaced file is kept under another name. The kernel and the NVIDIA module of the boot before this one, read from
+# the journal, are recorded beside this boot's, so that a change across the reboot is on file before any run.
 source ${0:A:h}/common.sh
 mac_checks || exit 2
 mkdir -p $ST
 cur=$ST/session_boot_id.txt
 [[ ! -e $cur || -n $RENEW ]] || { echo "STOP: a session probe exists ($cur); RENEW=1 replaces it, and only with a decisions.md entry"; exit 2; }
-ts=$(stamp)
+stamp; ts=$REPLY
 out=$PROBE_DIR/session_$ts.txt
 [[ ! -e $out ]] || { echo "STOP: $out exists"; exit 2; }
 dry=$(cd $R && uv sync --frozen --dry-run --offline 2>&1) || { echo "STOP: the dry-run sync of the Mac's environment failed"; exit 2; }
@@ -23,7 +24,10 @@ n_add=$(print -r -- "$dry" | grep -c '^ [+~] '); n_extra=$(print -r -- "$dry" | 
     echo "driver $(nvidia-smi --query-gpu=driver_version --format=csv,noheader)";
     echo "governor $(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo n/a)";
     echo "limit_before $(nvidia-smi --query-gpu=power.limit --format=csv,noheader)";
-    echo "apps $(nvidia-smi --query-compute-apps=pid --format=csv,noheader | wc -l)"'
+    echo "apps $(nvidia-smi --query-compute-apps=pid --format=csv,noheader | wc -l)";
+    echo "boots $(journalctl --list-boots 2>/dev/null | tail -3 | tr -s " " | tr "\n" ";")";
+    echo "prev_boot_kernel $(journalctl -b -1 -k --no-pager 2>/dev/null | grep -m1 -o "Linux version [^ ]*")";
+    echo "prev_boot_nvidia $(journalctl -b -1 -k --no-pager 2>/dev/null | grep -m1 -o "NVIDIA UNIX.*Kernel Module  *[0-9.]*")"'
 } > $out || { echo "STOP: the VM could not be read"; exit 3; }
 if [[ -n $SET ]]; then
   if [[ $(grep '^apps ' $out | awk '{print $2}') == 0 ]]; then
