@@ -46,6 +46,7 @@ Moved on 2026-11-13 with `git mv` (history kept), same relative path under `_to_
 - `docs/drafts/reg23_k5_draft1.md`, `reg23_k5_draft2.md` (draft 3 is current).
 - `agent/notes/k5_design.md` (became the REG-23 drafts).
 - `docs/probe/20261113_reg19/ops/` (launch7/8, queue_reg19e/f, common, session_probe, test_sandbox, scripts_commit): drafts superseded by `ops_r3/` before any run used them.
+- `agent/STATE.md`'s update blocks of 05:15 to 12:10 UTC on 2026-11-13, as `_to_delete/agent/STATE_blocks_to_2026-11-13.md` (superseded; their content is in LOG.md and decisions.md).
 - Next, after the REG-21/22 entries are appended: the superseded `reg21_draft*.md` and `reg22_draft*.md` that nothing cites with a line number (drafts 4, 10 and 19 of REG-21 and 4 and 12 of REG-22 stay).
 
 ## Backup

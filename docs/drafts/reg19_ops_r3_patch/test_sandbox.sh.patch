@@ -1,0 +1,29 @@
+--- a/docs/probe/20261113_reg19/ops_r3/test_sandbox.sh
++++ b/docs/probe/20261113_reg19/ops_r3/test_sandbox.sh
+@@ -40,7 +40,7 @@
+ EOS
+ cat > $T/bin/date <<'EOS'
+ #!/bin/sh
+-if [ "$*" = "-u +%H%M" ]; then echo "${FAKE_HHMM:-0300}"; else exec /bin/date "$@"; fi
++if [ "$*" = "-u +%H%M" ]; then echo "${FAKE_HHMM:-0600}"; else exec /bin/date "$@"; fi
+ EOS
+ cat > $T/bin/uv <<'EOS'
+ #!/bin/sh
+@@ -367,6 +367,17 @@
+ reset; steps $S18T $S19F
+ case_ "at 18:00 UTC the queue runs again" "QUEUE DONE" 0 FAKE_HHMM=1800 zsh $Q
+ chk "the attempt record names the boot of its run" grep -q "^boot $BOOTA" $S/state/attempt_${C18}_2.txt
++reset
++case_ "morning window: no control is started at 03:00 UTC" "no launch of $C18" 1 FAKE_HHMM=0300 zsh $Q
++case_ "nor at 00:00 UTC: its burst run would last past 02:30" "no launch of $C18" 1 FAKE_HHMM=0000 zsh $Q
++case_ "nor at 04:59 UTC" "no launch of $C18" 1 FAKE_HHMM=0459 zsh $Q
++chk "none of the three spent an attempt" test ! -e $S/state/attempt_${C18}_2.txt
++reset; env PATH=$T/bin:$PATH FAKE_FAILED=client_lag FAKE_FAILED_KIND=burst zsh $Q > /dev/null 2>&1
++case_ "no burst run is started at 01:15 UTC" "no launch of $B18" 1 FAKE_HHMM=0115 zsh $Q
++reset; steps $S18T $S19F
++case_ "at 05:00 UTC the queue runs again" "QUEUE DONE" 0 FAKE_HHMM=0500 zsh $Q
++reset; steps $S18T $S19F
++case_ "a control may still start at 23:59 UTC" "QUEUE DONE" 0 FAKE_HHMM=2359 zsh $Q
+ 
+ echo "--- round 3: the checks in force before each step"
+ reset; steps $S18T $S19F
