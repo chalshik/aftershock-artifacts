@@ -22,12 +22,23 @@ A lead counts only above min_lead_s, the length of the trailing window: two sign
 cross their levels at different times (a level close to the reference mean is crossed sooner), so a lead inside one
 window is not a lead.
 
-Judged per signal and per comparator: "leads" only if at least min_events events have both onsets and every one of
-them has a lead above min_lead_s; "no_lead" if the median lead is <= 0; "within_window" if the median is above 0 and
-not above min_lead_s; "too_few" below min_events; otherwise "mixed". A signal is usable only if it leads both
-latency and the queue and the same rule gives fewer than fa_per_hour_max onsets per hour on the runs that never
-tipped. K5 as a whole holds ("cache_signal_leads") only if H or U is usable
-with a median lead over latency above A's: if watching arrivals warns earlier, the cache signals add nothing.
+Judged per signal and per comparator: "too_few" below min_events events with both onsets (checked first); "leads"
+only if every one of them has a lead above min_lead_s; "no_lead" if the median lead is <= 0; "within_window" if the
+median is above 0 and not above min_lead_s; otherwise "mixed". A signal is usable only if it leads both latency and
+the queue, the one-sided 95 % upper bound of its false alarms per hour on the runs that never tipped is below
+fa_per_hour_max, and those runs spend less than alarm_share_max of their scanned time in alarm.
+
+Latency has two comparators (REG-23 rule F round 1, CA1): L, whose level has the 1.0 s SLO as a floor, and Lr, the
+same series with the relative level mean + max(n_sd SD, l_frac x mean): latency's first move. A lead over L alone is
+a lead over the SLO breach, not over latency's change.
+
+Arrivals are compared per event (CA2, owner-proxy CB3): lead over A = onset(A) - onset(X); when A has no onset in an
+event, X counts as earlier there (+inf). The comparison is made only if A has an onset in at least min_events events,
+and X must beat A by more than arr_roll_s, A's own window (a trailing 120 s rate crosses late).
+
+K5's label: "too_few_events" if H and U each have fewer than min_events events on latency or on the queue;
+"cache_signal_leads" if H or U passes every condition; "leads_slo_only" if one fails only on Lr; otherwise
+"no_usable_cache_lead". For H and U, `reasons` lists each failed condition from REASONS, a fixed list.
 """
 from __future__ import annotations
 
@@ -39,6 +50,7 @@ import pandas as pd
 from analysis.gate import kv_onset
 from analysis.load import find_runs
 from analysis.margin import is_burst_request
+from analysis.stats import cp_upper, poisson_rate_upper
 
 K5 = {
     # Every closed-loop L1 run at 350 W without a trigger made before REG-19 (controls of REG-11, 12, 14, 16, 17, 18
@@ -62,12 +74,15 @@ K5 = {
     "q_min": 1.0,                           # Q at least one request waiting on average
     "n_factor": 2.0,                        # N at least n_factor x mean (C2's factor)
     "ttft_s": 1.0,                          # L above max(mean + n_sd SD, ttft_s)   (the SLO)
+    "l_frac": 0.5,                          # Lr above mean + max(n_sd SD, l_frac x mean)   (U's rule, on latency)
     "arr_tip": 3.2,                         # A at least this (gate.SURGE's tip reading)
     "hold_s": 15.0,                         # an onset holds at every grid time of [t, t + hold_s]
     "min_events": 5,
     "min_lead_s": 30.0,                     # a lead counts only above this (the trailing window: see the docstring)
     "fa_ref": (240.0, 540.0), "fa_from": 540.0,   # never-tipped runs: reference window, and where the scan starts
-    "fa_per_hour_max": 1.0,
+    "fa_per_hour_max": 1.0,                 # judged on the one-sided upper bound (fa_conf) of the rate, not the point
+    "fa_conf": 0.95,
+    "alarm_share_max": 0.05,                # share of the quiet runs' scanned grid time spent in alarm
 }
 COL = {"hits": "vllm:prefix_cache_hits_total", "queries": "vllm:prefix_cache_queries_total",
        "prompt": "vllm:prompt_tokens_total", "cached": "vllm:prompt_tokens_cached_total",
@@ -75,6 +90,11 @@ COL = {"hits": "vllm:prefix_cache_hits_total", "queries": "vllm:prefix_cache_que
        "ttft_sum": "vllm:time_to_first_token_seconds_sum", "ttft_count": "vllm:time_to_first_token_seconds_count"}
 SIGNALS = ("H", "U", "Q", "N", "L", "A")
 WARNERS = ("H", "U", "Q", "N", "A")          # every signal but latency itself
+COLUMN = {"Lr": "L"}                        # Lr is L's series with the relative level
+# Why H or U fails, in the order a limitations sentence picks the first (fixed before any onset is computed).
+REASONS = ("too_few_events", "too_few_quiet_hours", "latency:no_lead", "latency:within_window", "latency:mixed",
+           "queue:no_lead", "queue:within_window", "queue:mixed", "false_alarms", "alarm_share",
+           "arrivals_not_compared", "arrivals_first", "slo_only")
 
 
 def signals(run: dict) -> pd.DataFrame:
@@ -144,16 +164,21 @@ def levels(ref: dict) -> dict:
             "Q": ("at_least", K5["q_min"]),
             "N": ("at_least", K5["n_factor"] * ref["N"][0]),
             "L": ("above", max(ref["L"][0] + sd * ref["L"][1], K5["ttft_s"])),
+            "Lr": ("above", ref["L"][0] + max(sd * ref["L"][1], K5["l_frac"] * ref["L"][0])),
             "A": ("at_least", K5["arr_tip"])}
+
+
+def _beyond(sig: pd.DataFrame, col: str, side: str, level: float) -> np.ndarray:
+    v = sig[COLUMN.get(col, col)].to_numpy(float)
+    with np.errstate(invalid="ignore"):
+        return {"below": v < level, "above": v > level, "at_least": v >= level}[side]
 
 
 def crossings(sig: pd.DataFrame, col: str, side: str, level: float, start: float, stop: float = math.inf) -> list[float]:
     """The onsets in [start, stop): grid times from which the signal stays beyond its level for hold_s (at every grid
     time of [t, t + hold_s]), and from which it did not at the grid time before (or which is the first one scanned).
     A NaN is never beyond a level."""
-    v, t = sig[col].to_numpy(float), sig.t.to_numpy(float)
-    with np.errstate(invalid="ignore"):
-        beyond = {"below": v < level, "above": v > level, "at_least": v >= level}[side]
+    t, beyond = sig.t.to_numpy(float), _beyond(sig, col, side, level)
     held = beyond.copy()
     for j in range(1, int(round(K5["hold_s"] / K5["grid_s"])) + 1):          # beyond at every grid time of [t, t + hold_s]
         held &= np.concatenate([beyond[j:], np.zeros(j, bool)])
@@ -164,9 +189,32 @@ def crossings(sig: pd.DataFrame, col: str, side: str, level: float, start: float
     return [float(x) for x in t[scan & held & ~(held_before & scanned_before)]]
 
 
+def in_alarm(sig: pd.DataFrame, col: str, side: str, level: float, start: float, stop: float) -> tuple[int, int]:
+    """(grid times of [start, stop) inside a stretch beyond the level that lasts at least hold_s, grid times of
+    [start, stop)): the time a lasting alarm holds, which an onset count misses (REG-23 rule F round 1, CA4)."""
+    t, beyond = sig.t.to_numpy(float), _beyond(sig, col, side, level)
+    edges = np.flatnonzero(np.diff(np.concatenate([[0], beyond.astype(int), [0]])))
+    mask, need = np.zeros(len(t), bool), int(round(K5["hold_s"] / K5["grid_s"])) + 1
+    for i, j in zip(edges[0::2], edges[1::2]):
+        if j - i >= need:
+            mask[i:j] = True
+    scan = (t >= start) & (t < stop)
+    return int((mask & scan).sum()), int(scan.sum())
+
+
+def _peak_rate(times: np.ndarray, grid: np.ndarray) -> float:
+    """The highest trailing arr_roll_s rate of `times` at the grid times (NaN if there are none)."""
+    times, w = np.sort(times[~np.isnan(times)]), K5["arr_roll_s"]
+    r = (np.searchsorted(times, grid, side="right") - np.searchsorted(times, grid - w, side="right")) / w
+    return float(r.max()) if len(grid) else math.nan
+
+
 def event(run: dict) -> dict:
     """One run with no trigger: its KV onset, reference window, the first onset of every signal after that window,
-    and each warner's lead over latency. `why` says why it is not an event."""
+    and each warner's lead over latency (L and Lr), over the queue and over arrivals. `why` says why it is not an
+    event. Reported, not judged: which onsets fall on the scan's first grid time (left-censored), which signals are
+    still beyond their level at the KV onset, and the peak 120 s arrival rate over [b, KV onset) by t_sent (A) and
+    by t_planned, of the same requests."""
     out = {"run": run["dir"].name, "lam": float(run["cfg"]["workload"]["rate"]), "kv_onset": kv_onset(run)}
     if math.isnan(out["kv_onset"]):
         return {**out, "why": "never tipped"}
@@ -179,14 +227,30 @@ def event(run: dict) -> dict:
     if ref is None:
         return {**out, "why": "no reference"}
     lv = levels(ref)
-    on = {k: (crossings(sig, k, *lv[k], start=b) or [math.nan])[0] for k in SIGNALS}
+    on = {k: (crossings(sig, k, *lv[k], start=b) or [math.nan])[0] for k in SIGNALS + ("Lr",)}
+    first = float(sig.t[sig.t >= b].min())
+    at_kv = sig.t <= out["kv_onset"]
+    i_kv = int(np.flatnonzero(at_kv.to_numpy())[-1])
+    win = sig[(sig.t >= b) & (sig.t < out["kv_onset"])]
+    q = run["requests"]
+    rows = q[~is_burst_request(run)]
+    planned = rows.t_planned.to_numpy(float) if "t_planned" in rows else np.array([])
+    over_a = {k: (math.nan if math.isnan(on[k]) else math.inf if math.isnan(on["A"]) else on["A"] - on[k])
+              for k in WARNERS if k != "A"}
     return {**out, "why": None, "ref": (a, b), "levels": {k: lv[k][1] for k in lv}, "onsets": on,
             "leads": {k: on["L"] - on[k] for k in WARNERS},
-            "leads_over_queue": {k: on["Q"] - on[k] for k in WARNERS if k != "Q"}}
+            "leads_rel": {k: on["Lr"] - on[k] for k in WARNERS},
+            "leads_over_queue": {k: on["Q"] - on[k] for k in WARNERS if k != "Q"},
+            "lead_over_A": over_a,
+            "at_scan_start": {k: on[k] == first for k in on},
+            "beyond_at_kv": {k: bool(_beyond(sig, k, *lv[k])[i_kv]) for k in on},
+            "a_peak_sent": float(win.A.max()) if len(win) else math.nan,
+            "a_peak_planned": _peak_rate(planned, win.t.to_numpy(float)) if len(planned) else math.nan}
 
 
 def quiet(run: dict) -> dict:
-    """A run that never tipped: how many onsets each rule gives after fa_from, and over how many hours."""
+    """A run that never tipped: how many onsets each rule gives after fa_from, over how many hours, and how much of
+    the scanned grid time each rule spends in a lasting alarm (seconds)."""
     out = {"run": run["dir"].name, "lam": float(run["cfg"]["workload"]["rate"])}
     end = float(run["cfg"]["workload"]["duration_s"])
     try:
@@ -197,48 +261,115 @@ def quiet(run: dict) -> dict:
     if ref is None or end <= K5["fa_from"]:
         return {**out, "why": "no reference"}
     lv = levels(ref)
+    held = {k: in_alarm(sig, k, *lv[k], start=K5["fa_from"], stop=end) for k in SIGNALS}
     return {**out, "why": None, "hours": (end - K5["fa_from"]) / 3600.0,
-            "alarms": {k: len(crossings(sig, k, *lv[k], start=K5["fa_from"], stop=end)) for k in SIGNALS}}
+            "alarms": {k: len(crossings(sig, k, *lv[k], start=K5["fa_from"], stop=end)) for k in SIGNALS},
+            "in_alarm_s": {k: held[k][0] * K5["grid_s"] for k in SIGNALS},
+            "scanned_s": held["H"][1] * K5["grid_s"]}
+
+
+def _cp(k: int, n: int) -> dict:
+    """k of n with its one-sided 95 % Clopper-Pearson bounds (rule H: the upper; the lower, for 'every one')."""
+    if n < 1:
+        return {"k": k, "n": n, "cp_upper": math.nan, "cp_lower": math.nan}
+    return {"k": k, "n": n, "cp_upper": cp_upper(k, n), "cp_lower": 1.0 - cp_upper(n - k, n)}
 
 
 def _lead_label(leads: list[float]) -> dict:
     leads = [x for x in leads if not math.isnan(x)]
     med, least = (float(np.median(leads)) if leads else math.nan), K5["min_lead_s"]
-    if not leads:
+    if len(leads) < K5["min_events"]:
         label = "too_few"
     elif med <= 0:
         label = "no_lead"
     elif med <= least:
         label = "within_window"
-    elif len(leads) < K5["min_events"]:
-        label = "too_few"
     else:
         label = "leads" if all(x > least for x in leads) else "mixed"
     return {"n": len(leads), "k_above_window": sum(x > least for x in leads), "k_positive": sum(x > 0 for x in leads),
+            "above_window": _cp(sum(x > least for x in leads), len(leads)),
             "median_lead_s": med, "min_lead_s": min(leads) if leads else math.nan, "label": label}
 
 
+def _over_arrivals(leads: list[float]) -> dict:
+    """Paired leads over A; +inf where A had no onset (X counts as earlier there), NaN where X had none."""
+    v = [x for x in leads if not math.isnan(x)]
+    return {"n": len(v), "k_a_silent": sum(math.isinf(x) for x in v),
+            "median_lead_s": float(np.median(v)) if v else math.nan, "min_lead_s": min(v) if v else math.nan}
+
+
+def _fa(alarms: int, hours: float) -> dict:
+    up = poisson_rate_upper(alarms, hours, K5["fa_conf"]) if hours > 0 else math.nan
+    return {"alarms": alarms, "hours": hours, "per_hour": alarms / hours if hours > 0 else math.nan, "per_hour_upper": up}
+
+
+def _reasons(s: dict, hours: float, arrivals_compared: bool) -> list[str]:
+    """Each condition H or U fails, from REASONS, in that order."""
+    least, n_min, r = K5["min_lead_s"], K5["min_events"], []
+    if s["over_latency"]["n"] < n_min or s["over_queue"]["n"] < n_min:
+        r.append("too_few_events")
+    short_quiet = hours <= 0 or poisson_rate_upper(0, hours, K5["fa_conf"]) >= K5["fa_per_hour_max"]
+    if short_quiet:
+        r.append("too_few_quiet_hours")
+    for name, key in (("latency", "over_latency"), ("queue", "over_queue")):
+        if s[key]["label"] in ("no_lead", "within_window", "mixed"):
+            r.append(f"{name}:{s[key]['label']}")
+    if not short_quiet and not s["false_alarms"]["per_hour_upper"] < K5["fa_per_hour_max"]:
+        r.append("false_alarms")
+    if not short_quiet and not s["alarm_share"] < K5["alarm_share_max"]:
+        r.append("alarm_share")
+    if not arrivals_compared:
+        r.append("arrivals_not_compared")
+    elif not s["over_arrivals"]["median_lead_s"] > K5["arr_roll_s"]:
+        r.append("arrivals_first")
+    rel = s["over_latency_rel"]
+    if not (rel["n"] >= n_min and rel["median_lead_s"] > least):
+        r.append("slo_only")
+    return r
+
+
 def judge(events: list[dict], quiets: list[dict]) -> dict:
-    """Per warner: its lead over latency and over the queue (n events with both onsets, how many lead, the median
-    and the least lead, the label), the false alarms per hour on the never-tipped runs, and whether it is usable.
-    Then K5's own label."""
+    """Per warner: its lead over latency (L and Lr), over the queue and over arrivals (n events with both onsets, how
+    many lead with their Clopper-Pearson bounds, the median and the least lead, the label), its false alarms on the
+    never-tipped runs (count, per hour, the one-sided upper bound, the share of scanned time in alarm; also per
+    load), and whether it is usable. For H and U, the reasons they fail. Then K5's own label."""
     ev, qu = [e for e in events if e["why"] is None], [x for x in quiets if x["why"] is None]
-    hours = sum(x["hours"] for x in qu)
-    out = {"n_events": len(ev), "quiet_hours": hours, "signals": {}}
+    hours, scanned = sum(x["hours"] for x in qu), sum(x["scanned_s"] for x in qu)
+    n_a = sum(not math.isnan(e["onsets"]["A"]) for e in ev)
+    out = {"n_events": len(ev), "quiet_hours": hours, "n_events_with_A_onset": n_a,
+           "arrivals_compared": n_a >= K5["min_events"], "signals": {}, "false_alarms_by_load": {}}
     for k in WARNERS:
-        s = {"over_latency": _lead_label([e["leads"][k] for e in ev])}
+        s = {"over_latency": _lead_label([e["leads"][k] for e in ev]),
+             "over_latency_rel": _lead_label([e["leads_rel"][k] for e in ev])}
         if k != "Q":
             s["over_queue"] = _lead_label([e["leads_over_queue"][k] for e in ev])
-        fa = sum(x["alarms"][k] for x in qu) / hours if hours > 0 else math.nan
-        s["false_alarms_per_hour"] = fa
+        if k != "A":
+            s["over_arrivals"] = _over_arrivals([e["lead_over_A"][k] for e in ev])
+        s["false_alarms"] = _fa(sum(x["alarms"][k] for x in qu), hours)
+        s["alarm_share"] = sum(x["in_alarm_s"][k] for x in qu) / scanned if scanned > 0 else math.nan
         s["usable"] = (s["over_latency"]["label"] == "leads" and s.get("over_queue", {}).get("label") == "leads"
-                       and not math.isnan(fa) and fa < K5["fa_per_hour_max"])
+                       and s["false_alarms"]["per_hour_upper"] < K5["fa_per_hour_max"]
+                       and s["alarm_share"] < K5["alarm_share_max"])
         out["signals"][k] = s
-    a = out["signals"]["A"]["over_latency"]["median_lead_s"]
-    better = [k for k in ("H", "U") if out["signals"][k]["usable"]
-              and (math.isnan(a) or out["signals"][k]["over_latency"]["median_lead_s"] > a)]
-    out["k5"] = "cache_signal_leads" if better else "no_usable_cache_lead"
-    out["cache_signals_that_lead"] = better
+    for lam in sorted({x["lam"] for x in qu}):
+        at = [x for x in qu if x["lam"] == lam]
+        h = sum(x["hours"] for x in at)
+        out["false_alarms_by_load"][str(lam)] = {"runs": len(at),
+                                                 **{k: _fa(sum(x["alarms"][k] for x in at), h) for k in SIGNALS}}
+    reasons = {k: _reasons(out["signals"][k], hours, out["arrivals_compared"]) for k in ("H", "U")}
+    for k in reasons:
+        out["signals"][k]["reasons"] = reasons[k]
+    passed = [k for k in reasons if not reasons[k]]
+    if all("too_few_events" in reasons[k] for k in reasons):
+        out["k5"] = "too_few_events"
+    elif passed:
+        out["k5"] = "cache_signal_leads"
+    elif any(reasons[k] == ["slo_only"] for k in reasons):
+        out["k5"] = "leads_slo_only"
+    else:
+        out["k5"] = "no_usable_cache_lead"
+    out["cache_signals_that_lead"] = passed
+    out["first_reason"] = {k: (reasons[k][0] if reasons[k] else None) for k in reasons}
     return out
 
 
