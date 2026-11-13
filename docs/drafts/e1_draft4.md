@@ -59,7 +59,7 @@ As REG-19's resume: a session probe once (boot id, driver 595.99.02, the VM's tr
 6 runs × (900 + 300 + about 60 s) ≈ 2.1 GPU h (DERIVED); ≈ 4.2 h with one rerun per rate.
 
 ### Code and tests
-`analysis/e1.py` (`floor`, `floor_tail`, `first_valid`, `swept_rates`, `floor_status`, `saturated`, `onset`, `observed`, `report`; reported only: `tilt`, `fit`, `prediction`, `replay_rows`, `work_rates`); `tests/test_e1.py`, 12 tests; the seal test in `tests/test_withheld.py`. To add before review: preemptions and the mean running batch in `work_rates`; the stale docstrings named by the review.
+`analysis/e1.py` (`floor`, `floor_tail`, `first_valid`, `swept_rates`, `floor_status`, `saturated`, `onset`, `observed`, `report`; reported only: `tilt`, `fit`, `prediction`, `replay_rows`, `work_rates`); `tests/test_e1.py`, 12 tests; the seal test in `tests/test_withheld.py`. `work_rates` gives, beside U, the running batch, waiting line, KV, preemptions per second and the redo proxy of each saturated run.
 
 ### Changed from draft 3 (the E1 items of its rule F review)
 - E1 is registered alone and says first that it changes no decision (item 9).

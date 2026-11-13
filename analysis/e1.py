@@ -205,7 +205,9 @@ def _kbar(run_name: str) -> float:
 
 def work_rates(rows: pd.DataFrame, lam_sat: float) -> dict:
     """Reported only: REG-21's statistic U (`k3w.work_rate`, uncached prompt tokens per second by first token) of each
-    row at rate >= lam_sat, over its measured window [warm-up, end of arrivals)."""
+    row at rate >= lam_sat, over its measured window [warm-up, end of arrivals), with the gauges REG-21 reports for a
+    reference run (running batch, waiting line, KV, preemptions per second, the redo proxy): a closed-loop server
+    may differ from an open-loop one in its running batch and its preemptions, not only in its served mix."""
     from analysis import k3w
     from analysis.load import RUNS, load_run
     out = {}
@@ -214,7 +216,12 @@ def work_rates(rows: pd.DataFrame, lam_sat: float) -> dict:
     for name in rows[rows.rate >= lam_sat - 1e-9].run:
         r = load_run(RUNS / name)
         wl = r["cfg"]["workload"]
-        out[name] = k3w.work_rate(r, wl["warmup_s"], wl["duration_s"])
+        u = k3w.work_rate(r, wl["warmup_s"], wl["duration_s"])
+        out[name] = {"U": u}
+        try:
+            out[name].update(k3w._gauges(r, float(wl["warmup_s"]), float(wl["duration_s"]), u))
+        except Exception as e:   # a reported gauge never takes the work rate with it
+            out[name]["gauges_error"] = f"{type(e).__name__}: {e}"[:200]
     return out
 
 
