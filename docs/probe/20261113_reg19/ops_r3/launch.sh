@@ -22,7 +22,7 @@ gate "$CFG" || { echo "STOP: $MSG"; exit 2; }
 [[ -s $ST/session_boot_id.txt ]] || { echo "STOP: no session probe (run session_probe.sh first)"; exit 2; }
 decide $CFG || { echo "STOP: $MSG"; exit 2; }
 [[ -z $RID ]] || { echo "STOP: $RID is a valid run of $CFG: nothing to launch"; exit 2; }
-quiet_now $CFG && { echo "STOP: no launch of $CFG between $QUIET_CONTROL_FROM (a control) or $QUIET_BURST_FROM (a burst run) and $QUIET_TO UTC: the run would last into the hours in which the VM has been powered off. Start the queue again after $QUIET_TO UTC"; exit 2; }
+quiet_now $CFG && { echo "STOP: no launch of $CFG between $QUIET_CONTROL_FROM (a control) or $QUIET_BURST_FROM (a burst run) and $QUIET_TO UTC, or between $QUIET2_CONTROL_FROM (a control) or $QUIET2_BURST_FROM (a burst run) and $QUIET2_TO UTC: the run would last into the hours in which the VM has been powered off. Start the queue again after the window ends"; exit 2; }
 ATT=$LAUNCH; MARK=$ST/attempt_${CFG}_$ATT.txt
 stamp; ts=$REPLY
 PROBE=$PROBE_DIR/prelaunch_reg19_${CFG}_$ts.txt; LOG="~/${CFG}_$ts.log"

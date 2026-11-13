@@ -18,11 +18,13 @@ SEEDS=(18 19)                            # the seeds left, in the registered ord
 ALLCFG=(); for sd in 15 16 17 18 19; do ALLCFG+=(stage2_control_l1pl350cl_r2.0_w3000_s$sd burst_l1pl350cl_r2.0_w3000_s$sd); done
 LEFT=(${ALLCFG[7,10]})                   # the four configs of seeds 18 and 19: nothing else is ever launched
 DECISION_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[DECISION\] \((delegate|owner)\) REG-19 resumes for seeds 18 and 19'   # (owner) added 2026-11-13: the owner approved the resume directly
-# Hours (UTC, HHMM) in which no run is started because it would run into the time of day at which the VM has been
-# powered off from outside: five of the six recorded power-offs fell between 14:35 and 17:37 UTC (BELIEF as to a
-# pattern; decisions.md 2026-11-05 [OPS] and docs/probe/20261113_reg19/poweroff_20261112_*.txt). A control is not
-# started unless its burst run can also end before that time.
+# Hours (UTC, HHMM) in which no run is started because it would run into a time of day at which the VM has been
+# powered off from outside: of the seven recorded ends of a boot, five fell between 14:35 and 17:37 UTC and two between
+# 02:53 and 04:40 UTC (BELIEF as to a pattern; docs/drafts/reg19_attempt3_decision_draft2.md, item 3). No run may overlap
+# 02:30-05:00 or 14:15-18:00 UTC; a control is not started unless its burst run can also end before the window
+# (2.45 h for a pair, 1.2 h for a run, DERIVED in that draft). Changed with the owner's attempt-3 decision.
 QUIET_CONTROL_FROM=1145; QUIET_BURST_FROM=1300; QUIET_TO=1800
+QUIET2_CONTROL_FROM=0000; QUIET2_BURST_FROM=0115; QUIET2_TO=0500
 DRIVER=595.99.02                         # the pinned driver (PROTOCOL.md, section 4, Software)
 RECHECK_PAT='*_l1pl350cl_r2.0_w3000_s1[5-9]'   # REG-19's runs, both kinds, for analysis.recheck
 CHECKS_COMMIT=5ee6e38d3a15994da8bb6597b9b13ea8be08807c    # harness/checks.py as of this commit (the checks in force, A14)
@@ -76,9 +78,9 @@ decision_in_log() {
 
 # True when a launch of config $1 now would run into the hours in which the VM has been powered off (see above).
 quiet_now() {
-  local now=$(date -u +%H%M) from=$QUIET_BURST_FROM
-  [[ $1 == stage2_control_* ]] && from=$QUIET_CONTROL_FROM
-  (( 10#$now >= from && 10#$now < QUIET_TO ))
+  local now=$(date -u +%H%M) from=$QUIET_BURST_FROM from2=$QUIET2_BURST_FROM
+  [[ $1 == stage2_control_* ]] && { from=$QUIET_CONTROL_FROM; from2=$QUIET2_CONTROL_FROM; }
+  (( (10#$now >= from && 10#$now < QUIET_TO) || (10#$now >= 10#$from2 && 10#$now < 10#$QUIET2_TO) ))
 }
 
 # Every REG-19 run folder on the Mac is linked into the worktree, each link resolves to the Mac's folder, and nothing
