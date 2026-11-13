@@ -40,6 +40,8 @@ What you should know or may want to overrule. The agent never waits on this file
 
 ## Things moved instead of deleted (`_to_delete/`)
 
+- `_to_delete/docs/probe/20261113_reg19/ops_r3/state/scripts_commit.txt` (2026-11-13 ≈ 17:00 UTC): a copy of the scripts commit that the agent wrote into `state/` by mistake; the file the scripts read is `ops_r3/scripts_commit.txt`.
+
 Moved on 2026-11-13 with `git mv` (history kept), same relative path under `_to_delete/`. None is named in decisions.md, status.md, PROTOCOL.md, claims.md, definitions.md, model.md or open-questions.md, and none is cited with a line number by a review that a [REG] will quote. Delete the folder when you wish.
 
 - `docs/drafts/review_bundles/`: 24 superseded reviewer bundles (`e0e1`, `reg19resume`, `reg19resume_r2`, `reg19resume_r3`, `reg21`, `reg21_r2`, `reg21_r4` … `reg21_r14`, `reg22_r1` … `reg22_r7`); 132 of the bundles' files were byte-identical copies, the rest diffs that git can rebuild. Kept: `reg21_r15`, `reg22_r8`, `reg19resume_r4`, and `reg21_r3` (a review cites a line in it).
