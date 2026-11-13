@@ -1,0 +1,187 @@
+--- the sandbox itself
+ok    common.sh differs from the source in R and VM_GIT only
+ok    the real common.sh names the VM and its bare repository (the sandbox replaces both)
+ok    vm_state.py's code (after its docstring) names no file but checks.json and no field but valid and failed
+--- queue: a clean sweep, and starting it again
+ok    a clean sweep: six valid runs, QUEUE DONE
+ok    one launch, of the sweep
+ok    the sweep's attempt record names its log, commit and boot
+ok    its settle record names six runs at the registered commit
+ok    six copies verified
+ok    the end record lists the six rates
+ok    no single-rate attempt
+ok    started again after the end: the same end
+ok    nothing launched or copied again
+ok    no command sent to the VM names a run file other than checks.json
+ok    the launch logs are read only through their run_id lines
+--- a rate the sweep never started
+ok    the sweep ends after 2.5: rates 3, 3.5, 4 follow, each as its first attempt
+ok    the queue said which rates were not started
+ok    attempt 1 of rates 3, 3.5 and 4, from their single-rate configs
+ok    no attempt 2 anywhere
+ok    four launches: the sweep, then three single rates
+ok    the sweep's launch command fails: its attempt is spent
+ok    and the record says so
+ok    started again: no rate was started, so each runs alone as its first attempt
+ok    six single-rate launches, never a second sweep
+ok    each one attempt 1
+--- an invalid rate: rerun unchanged, at most three attempts in all
+ok    an invalid rate in the sweep pauses the queue before the next launch
+ok    the invalid run is named with its failed check
+ok    all six runs copied, the invalid one too
+ok    started again: rate 2 is rerun from its single-rate config and is valid
+ok    as attempt 2 of rate 2
+ok    the end record lists the valid rerun with 2 attempts
+ok    the rerun is invalid again
+ok    attempt 3 invalid too: the rate is spent, no fourth launch; the queue ends with the hole
+ok    three launches, no attempt 4
+ok    the end record says rate 2 has none
+ok    started again: the same end, nothing launched
+ok    still three launches
+ok    a spent rate does not hold back the rates still to run
+ok    rates 2.5 to 4 ran as first attempts: seven launches
+--- heat
+ok    a heat-invalid rate is rerun once; it fails on heat again
+ok    the second heat failure stops E1
+ok    two launches, no attempt 3
+ok    two heat failures in the sweep: no rerun at all
+ok    one launch
+ok    one heat failure: its rerun is valid
+ok    the heat rerun waits for 45 C and stops when the GPU stays hot
+ok    spending no attempt
+--- no_errors and power_limit stop E1
+ok    no_errors: no rerun
+ok    one launch
+ok    power_limit among other failures: no rerun
+ok    no_errors also holds back the rates never started
+ok    rate 3 not launched
+--- a run without checks.json
+ok    the VM goes off during rate 3 of the sweep: E1 stops
+ok    the lost run was settled and named, the finished ones copied
+ok    started again without a decision: the same stop, no launch
+ok    no launch
+ok    with lost_ok: rate 3 runs as attempt 2, then 3.5 and 4 as attempt 1
+ok    attempt 2 of rate 3; attempt 1 of 3.5 and 4
+ok    the lost run is not copied
+ok    a lost run at rate 3 stops E1 before rate 2's rerun
+ok    rate 2 not rerun
+ok    with lost_ok: the paused rerun of rate 2 goes first, in the sweep's order
+ok    rate 2 attempt 2, rate 3 attempt 2, rates 3.5 and 4 attempt 1
+ok    a single-rate run that ends without checks.json stops E1 too
+ok    with lost_ok its third attempt runs
+ok    attempt 3 of rate 4
+--- the registered commit
+ok    e1_commit.txt UNSET: the queue refuses
+ok    launch.sh refuses
+ok    session_probe.sh refuses
+ok    vm_checkout.sh refuses
+ok    nothing launched, the VM's tree not moved
+ok    e1_commit.txt changed and not committed
+ok    a commit without E1's registration
+ok    e1_commit.txt not a full hash
+ok    a script changed after the registered commit
+ok    a script changed and not committed
+ok    no record of REG-19's queue end in the committed log: the queue refuses
+ok    REG-19's [RESULT] in place of the queue-end entry: the gate passes
+ok    a QUEUE STOP entry is not the queue's end: the queue refuses
+ok    uv.lock changed in the Mac's working tree
+ok    REG-19's queue lock exists: the queue refuses
+ok    and launch.sh
+ok    none of these launched anything
+--- pre-launch stops spend no attempt
+ok    a VM tree off the registered commit
+ok    no attempt record, but the probe is kept
+ok    the same command then runs the sweep as attempt 1
+ok    a dirty VM tree
+ok    another uv.lock on the VM
+ok    420 W stops the launch (read, never set)
+ok    a reboot since the session probe
+ok    an empty boot id
+ok    another compute process
+ok    low disk
+ok    a GPU still hot after 30 min
+ok    a temperature that is not a number
+ok    a temperature that cannot be read
+ok    a pre-launch read that fails
+ok    a tmux session in the pre-launch read
+ok    no session probe, no launch
+ok    none of these launched anything or spent an attempt
+--- what a started invocation can leave behind
+ok    no run id within 120 s
+ok    the attempt is spent
+ok    started again: the finished runs are found on the VM and used, not relaunched
+ok    one launch
+ok    still running after the wait
+ok    started again while the session is alive: no decision
+ok    started again after it ended: settled and used
+ok    one launch
+ok    a VM that stops answering during the wait
+ok    the VM's run folders unreadable
+ok    the VM not answering the tmux read
+ok    a launch log that cannot be read: no settle
+ok    and no settle record
+ok    a run made at another commit is not used
+--- folders and records
+ok    an E1 folder on the VM that no launch log names
+ok    nothing launched
+ok    an E1 folder on the Mac that the VM does not list
+ok    a run a launch log names, gone from the VM
+ok    a checks.json that contradicts itself
+ok    attempt records not numbered in order
+ok    a launch log that names a run of another rate
+ok    two valid runs at one rate: both listed, nothing launched
+ok    the earliest is the one counted in the end record
+ok    one launch (the sweep)
+ok    an end record that differs from what the records say
+--- copy and checksums
+ok    a checksum mismatch stops the queue
+ok    no copy record
+ok    started again: copied, verified, done
+ok    one launch
+ok    a failed copy
+ok    the VM's checksums unreadable
+ok    a manifest update that fails
+--- launch.sh by hand, and the queue's own lock
+ok    launch.sh refuses a rate before the sweep
+ok    launch.sh refuses a name that is no rate
+ok    launch.sh launches the sweep by hand when it is its turn
+ok    a second sweep by hand is refused (the first is not settled yet)
+ok    one launch
+ok    a second queue beside a running one is refused
+ok    a lock left by a dead queue is set aside
+ok    the stale lock is kept under another name
+ok    WAIT_MIN that is not a number
+--- session probe
+ok    session probe at 350 W, VM at the registered commit
+ok    it wrote the boot id
+ok    a second probe in the same session is refused
+ok    RENEW=1 replaces it and keeps the old file
+ok    the replaced file is kept
+ok    420 W: no session
+ok    and no boot id file
+ok    another driver: no session
+ok    another uv.lock on the VM: no session
+ok    the VM's tree at REG-19's pin: no session
+ok    a locked package missing on the Mac: no session
+ok    no boot id: no session
+ok    SET=1 runs the one root command when the GPU is idle
+ok    SET=1 does not touch the limit under another process
+--- vm_checkout.sh
+ok    refused while REG-19's queue lock exists
+ok    the VM's tree not moved
+ok    refused while the tmux session 'run' is alive
+ok    refused while a compute process is on the GPU
+ok    refused while E1's own queue lock exists
+ok    refused before REG-19's queue end is recorded
+ok    refused when the VM's tree is dirty
+ok    none of these moved the VM's tree
+ok    moves the VM's tree from REG-19's pin to the registered commit
+ok    the VM is at the registered commit, detached and clean
+ok    the VM's bare repository holds the Mac's main
+ok    everything read is in a probe file
+ok    run again: already there
+ok    refused when the VM's commit is not an ancestor of the registered one
+ok    a dry-run sync that would change packages stops after the move
+--- every stop
+ok    every stop above printed the allowed reads (0 did not: )
+passed 170, failed 0  (sandbox /private/var/folders/06/2vx496992yn_fndhyyjpp2080000gn/T/e1_sandbox.nqSk6H)

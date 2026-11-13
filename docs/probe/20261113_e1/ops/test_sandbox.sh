@@ -33,7 +33,7 @@ print -r -l -- "## 2026-11-14 · [REG] E1: sandbox" "text" "## 2026-11-14 · [DE
 $G add -A && $G commit -q -m "E1 registered and approved, scripts with e1_commit.txt UNSET" || exit 99
 E1H=$(git rev-parse HEAD)
 print -r -- $E1H > $S/e1_commit.txt
-print -r -- "## 2026-11-15 · [RESULT] REG-19: sandbox" >> docs/decisions.md
+print -r -- "## 2026-11-15 · [OPS] REG-19: the queue ended (sandbox)" >> docs/decisions.md
 $G add -A && $G commit -q -m "e1_commit.txt set; REG-19's result" || exit 99
 HEADH=$(git rev-parse HEAD); LOCKB=$(git rev-parse ${E1H}:uv.lock)
 git init -q --bare $BARE && git push -q $BARE ${C0}:refs/heads/main && git clone -q $BARE $VM 2> /dev/null && (cd $VM && git checkout -q --detach $C0) && mkdir -p $VM/runs || exit 99
@@ -278,8 +278,12 @@ reset; gitc sh -c "echo '# y' >> $REL/queue.sh"
 case_ "a script changed after the registered commit" "differs from its text at the registered commit" 2 zsh $Q
 reset; echo '# y' >> $S/launch.sh
 case_ "a script changed and not committed" "differs from its committed text" 2 zsh $Q
-reset; gitc sh -c "grep -v 'RESULT. REG-19' docs/decisions.md > d && mv d docs/decisions.md"
-case_ "no [RESULT] REG-19 in the committed log: the queue refuses" "no '[RESULT] REG-19' heading" 2 zsh $Q
+reset; gitc sh -c "grep -v 'OPS. REG-19: the queue ended' docs/decisions.md > d && mv d docs/decisions.md"
+case_ "no record of REG-19's queue end in the committed log: the queue refuses" "no '[OPS] REG-19: the queue ended' or '[RESULT] REG-19' heading" 2 zsh $Q
+reset; gitc sh -c "grep -v 'OPS. REG-19: the queue ended' docs/decisions.md > d && echo '## 2026-11-15 · [RESULT] REG-19: sandbox' >> d && mv d docs/decisions.md"
+case_ "REG-19's [RESULT] in place of the queue-end entry: the gate passes" "GATE OK" 0 zsh -c "source $S/common.sh; ready_to_run && echo GATE OK"
+reset; gitc sh -c "grep -v 'OPS. REG-19: the queue ended' docs/decisions.md > d && echo '## 2026-11-15 · [OPS] REG-19: the queue stopped (sandbox)' >> d && mv d docs/decisions.md"
+case_ "a QUEUE STOP entry is not the queue's end: the queue refuses" "no '[OPS] REG-19: the queue ended' or '[RESULT] REG-19' heading" 2 zsh $Q
 reset; echo y >> $T/repo/uv.lock
 case_ "uv.lock changed in the Mac's working tree" "differ in the Mac's working tree" 2 zsh $Q
 reset; mkdir -p $R19L
@@ -423,8 +427,8 @@ case_ "refused while the tmux session 'run' is alive" "the tmux session 'run' is
 case_ "refused while a compute process is on the GPU" "a compute process is on the GPU" 2 FAKE_APPS_N=1 zsh $V
 reset; mkdir -p $S/state/queue.lock
 case_ "refused while E1's own queue lock exists" "E1's queue lock exists" 2 zsh $V
-reset; gitc sh -c "grep -v 'RESULT. REG-19' docs/decisions.md > d && mv d docs/decisions.md"
-case_ "refused before REG-19's [RESULT]" "no '[RESULT] REG-19' heading" 2 zsh $V
+reset; gitc sh -c "grep -v 'OPS. REG-19: the queue ended' docs/decisions.md > d && mv d docs/decisions.md"
+case_ "refused before REG-19's queue end is recorded" "no '[OPS] REG-19: the queue ended' or '[RESULT] REG-19' heading" 2 zsh $V
 reset; echo junk > $VM/untracked.txt
 case_ "refused when the VM's tree is dirty" "the VM's tree is dirty" 2 zsh $V
 chk "none of these moved the VM's tree" is "$(git -C $VM rev-parse HEAD)" $C0

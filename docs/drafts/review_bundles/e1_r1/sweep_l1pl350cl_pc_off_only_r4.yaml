@@ -1,0 +1,8 @@
+# E1 (draft, not registered): one rate of the closed-loop cache-off sweep, λ = 4 alone. Used only when E1's stopping
+# rule asks for it: a rate the first invocation never started, or the rerun of an invalid rate (unchanged, at most
+# twice; the same file serves both reruns). Same settings as sweep_l1pl350cl_pc_off.yaml; only the list of rates
+# differs. `name` keeps the sweep parent, so the run is named and sealed as the sweep's own run at this rate.
+extends: sweep_l1pl350cl_pc_off.yaml
+name: sweep_l1pl350cl_pc_off
+sweep:
+  rates: [4]

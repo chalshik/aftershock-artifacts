@@ -33,7 +33,7 @@ MIN_FREE_KB=2097152                            # 2 GB free on the VM (an E1 run 
 DRIVER=595.99.02                               # the pinned driver (PROTOCOL.md, section 4, Software)
 MAX_TURNS=100                                  # turns of the queue's loop (E1 needs at most 6 x 3 x 3 + 2)
 SCRIPTS=(common.sh vm_state.py session_probe.sh launch.sh queue.sh vm_checkout.sh)
-RESULT19_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[RESULT\] REG-19([^0-9]|$)'
+END19_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · (\[RESULT\] REG-19([^0-9]|$)|\[OPS\] REG-19: the queue ended)'   # E1 draft 5: the queue's end, recorded, or REG-19's result
 REG_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[REG\] E1([^0-9]|$)'
 APPROVE_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[DECISION\] \((owner|delegate)\) E1 approved'
 ALLOWED="Allowed reads while diagnosing a stop: 'tmux has-session -t run'; the folder names under runs/; a run's checks.json (valid, failed); in a launch log only the lines holding 'run_id' or '[run] checks'. Nothing else of a log or a run folder (E1: no interim look at any rate's throughput, KV or floor)."
@@ -93,11 +93,12 @@ mac_checks() {
   return 0
 }
 
-# E1 runs after REG-19's queue has ended and its [RESULT] is written (registration, ID line; agent/RUNBOOK.md section 4):
-# the heading is in the committed log, and REG-19's queue lock does not exist.
+# E1 runs after REG-19's queue has ended (registration draft 5, ID line): the committed log holds an [OPS] entry headed
+# 'REG-19: the queue ended' (it quotes the queue's QUEUE DONE or QUEUE END line) or REG-19's [RESULT], and REG-19's queue
+# lock does not exist. A QUEUE STOP leaves no such entry: REG-19 then waits for the owner, and E1 waits too.
 ready_to_run() {
   MSG=""
-  git -C $R grep -q -E "$RESULT19_PAT" HEAD -- docs/decisions.md || { MSG="no '[RESULT] REG-19' heading in the committed docs/decisions.md: E1 runs after REG-19's queue has ended and its [RESULT] is written"; return 2; }
+  git -C $R grep -q -E "$END19_PAT" HEAD -- docs/decisions.md || { MSG="no '[OPS] REG-19: the queue ended' or '[RESULT] REG-19' heading in the committed docs/decisions.md: E1 runs after REG-19's queue has ended"; return 2; }
   [[ ! -e $REG19_LOCK && ! -L $REG19_LOCK ]] || { MSG="REG-19's queue lock exists ($REG19_LOCK; only its existence is tested): REG-19's queue may be running. If it has ended and left its lock, the owner decides"; return 2; }
   return 0
 }

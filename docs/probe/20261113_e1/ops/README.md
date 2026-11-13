@@ -7,7 +7,7 @@ Written 2026-11-13 by a teammate agent from REG-19's reviewed `docs/probe/202611
 - **Nothing here is committed or reviewed.**
 - `DESIGN_NOTES.md` lists every place the draft had to be read and every difference from ops_r3, plus one open point about the harness E1 would run on.
 
-Test, offline, on fakes: `zsh docs/probe/20261113_e1/ops/test_sandbox.sh`. 168 of 168 passed on 2026-11-13. It writes only to a temp folder; set `TMPDIR` to choose where.
+Test, offline, on fakes: `zsh docs/probe/20261113_e1/ops/test_sandbox.sh`. 170 of 170 passed on 2026-11-13 after the queue-end gate (PROBE(docs/probe/20261113_e1/ops/sandbox_20261113T204859Z.txt)); 168 of 168 before it. It writes only to a temp folder; set `TMPDIR` to choose where.
 
 ## Files
 
@@ -34,9 +34,9 @@ Test, offline, on fakes: `zsh docs/probe/20261113_e1/ops/test_sandbox.sh`. 168 o
 3. **Name the commit (A).** `git rev-parse HEAD > docs/probe/20261113_e1/ops/e1_commit.txt`, then commit that file alone. From here on, the scripts refuse if any of them differs from its text at that commit.
 4. **Wait (A).** Both must hold:
    - REG-19's queue has ended: `test -e docs/probe/20261113_reg19/ops_r3/state/queue.lock` is false (existence only);
-   - REG-19's `[RESULT]` is in the committed `docs/decisions.md`.
+   - the committed `docs/decisions.md` holds an `[OPS]` entry headed `REG-19: the queue ended` (it quotes the queue's `QUEUE DONE` or `QUEUE END` line), or REG-19's `[RESULT]`.
 
-   The scripts check both. The second is the draft's rule and is open (DESIGN_NOTES.md, I11).
+   The scripts check both (`END19_PAT` in `common.sh`). Registration draft 5 settles DESIGN_NOTES.md's I11 this way: the owner's entry forbids only a run while REG-19's queue holds the GPU (FILE(docs/decisions.md:4520)). A `QUEUE STOP` leaves no such entry, so E1 waits with REG-19 for the owner.
 5. **Move the VM (O approves; A or O types).** Run `zsh docs/probe/20261113_e1/ops/vm_checkout.sh`. It pushes `main` to the VM's bare repository and checks out the registered commit, detached, on the VM. It writes `docs/probe/20261113_e1/vm_checkout_<stamp>.txt`. Commit that file with an `[OPS]` entry. The VM is left with a detached HEAD, so a later RUNBOOK §4 deploy (`git pull origin main`) needs `git checkout main` first.
 6. **Power (O).** Set 350 W after any reboot: `ssh … 'sudo nvidia-smi -pl 350'`. `SET=1` on the probe works only if the owner allows it and a sudoers rule exists.
 7. **Session probe (A).** Run `zsh docs/probe/20261113_e1/ops/session_probe.sh`. After a reboot, use `RENEW=1 …`, and only with a decisions.md entry. Commit the probe file.
