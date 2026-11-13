@@ -356,28 +356,33 @@ chk "the stale lock is kept under another name" is "$(nfiles "$S/state/queue.loc
 reset
 case_ "WAIT_MIN that is not a number stops before anything" "WAIT_MIN is not a number" 2 WAIT_MIN=abc zsh $Q
 reset
-case_ "no control is started at 15:00 UTC" "no launch of $C18" 1 FAKE_HHMM=1500 zsh $Q
-case_ "nor at 12:00 UTC: its burst run would last into those hours" "no launch of $C18" 1 FAKE_HHMM=1200 zsh $Q
-chk "neither spent an attempt" test ! -e $S/state/attempt_${C18}_2.txt
-reset; steps $S18T $S19F; env PATH=$T/bin:$PATH FAKE_FAILED=client_lag FAKE_FAILED_KIND=burst zsh $Q > /dev/null 2>&1   # control valid, burst invalid
-case_ "a burst run may still start at 12:00 UTC; the next control may not" "no launch of $C19" 1 FAKE_HHMM=1200 zsh $Q
-chk "three launches: control, burst, burst" is "$(launches)" 3
-reset; env PATH=$T/bin:$PATH FAKE_FAILED=client_lag FAKE_FAILED_KIND=burst zsh $Q > /dev/null 2>&1
-case_ "no burst run is started at 13:00 UTC" "no launch of $B18" 1 FAKE_HHMM=1300 zsh $Q
+# The quiet hours were withdrawn by the owner (decisions.md 2026-11-13 [DECISION] (owner), quiet hours withdrawn; common.sh
+# lines 26-27 empty both windows). These cases replace the window cases of ea4a25e: the queue now starts every run at any hour.
 reset; steps $S18T $S19F
-case_ "at 18:00 UTC the queue runs again" "QUEUE DONE" 0 FAKE_HHMM=1800 zsh $Q
+case_ "no quiet hours: the queue runs at 15:00 UTC" "QUEUE DONE" 0 FAKE_HHMM=1500 zsh $Q
 chk "the attempt record names the boot of its run" grep -q "^boot $BOOTA" $S/state/attempt_${C18}_2.txt
-reset
-case_ "morning window: no control is started at 03:00 UTC" "no launch of $C18" 1 FAKE_HHMM=0300 zsh $Q
-case_ "nor at 00:00 UTC: its burst run would last past 02:30" "no launch of $C18" 1 FAKE_HHMM=0000 zsh $Q
-case_ "nor at 04:59 UTC" "no launch of $C18" 1 FAKE_HHMM=0459 zsh $Q
-chk "none of the three spent an attempt" test ! -e $S/state/attempt_${C18}_2.txt
-reset; env PATH=$T/bin:$PATH FAKE_FAILED=client_lag FAKE_FAILED_KIND=burst zsh $Q > /dev/null 2>&1
-case_ "no burst run is started at 01:15 UTC" "no launch of $B18" 1 FAKE_HHMM=0115 zsh $Q
 reset; steps $S18T $S19F
-case_ "at 05:00 UTC the queue runs again" "QUEUE DONE" 0 FAKE_HHMM=0500 zsh $Q
+case_ "no quiet hours: the queue runs at 12:00 UTC" "QUEUE DONE" 0 FAKE_HHMM=1200 zsh $Q
 reset; steps $S18T $S19F
-case_ "a control may still start at 23:59 UTC" "QUEUE DONE" 0 FAKE_HHMM=2359 zsh $Q
+case_ "no quiet hours: the queue runs at 13:00 UTC" "QUEUE DONE" 0 FAKE_HHMM=1300 zsh $Q
+reset; steps $S18T $S19F
+case_ "no quiet hours: the queue runs at 03:00 UTC" "QUEUE DONE" 0 FAKE_HHMM=0300 zsh $Q
+reset; steps $S18T $S19F
+case_ "no quiet hours: the queue runs at 00:00 UTC" "QUEUE DONE" 0 FAKE_HHMM=0000 zsh $Q
+reset; steps $S18T $S19F
+case_ "no quiet hours: the queue runs at 04:59 UTC" "QUEUE DONE" 0 FAKE_HHMM=0459 zsh $Q
+reset; steps $S18T $S19F
+case_ "no quiet hours: the queue runs at 01:15 UTC" "QUEUE DONE" 0 FAKE_HHMM=0115 zsh $Q
+reset; steps $S18T $S19F
+case_ "no quiet hours: the queue runs at 18:00 UTC" "QUEUE DONE" 0 FAKE_HHMM=1800 zsh $Q
+reset; steps $S18T $S19F
+case_ "no quiet hours: the queue runs at 05:00 UTC" "QUEUE DONE" 0 FAKE_HHMM=0500 zsh $Q
+reset; steps $S18T $S19F
+case_ "no quiet hours: the queue runs at 23:59 UTC" "QUEUE DONE" 0 FAKE_HHMM=2359 zsh $Q
+reset; env PATH=$T/bin:$PATH FAKE_FAILED=client_lag FAKE_FAILED_KIND=burst zsh $Q > /dev/null 2>&1   # control valid, burst invalid
+steps $S18T $S19F
+case_ "no quiet hours: a burst rerun starts at 13:00 UTC and the queue ends" "QUEUE DONE" 0 FAKE_HHMM=1300 zsh $Q
+chk "five launches: control, burst, burst again, seed 19's control and burst" is "$(launches)" 5
 
 echo "--- round 3: the checks in force before each step"
 reset; steps $S18T $S19F

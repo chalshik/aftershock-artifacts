@@ -4531,3 +4531,9 @@ Ends when the owner writes an entry ending it.
 - **What happened.** The agent ran `python3 tools/check_docs.py` and `git commit` as two calls in parallel, so the commit did not wait for the check. The check failed on three lines naming `20261113-165516_stage2_control_l1pl350cl_r2.0_w3000_s18`, a run that exists only on the VM (FILE(tools/check_docs.py:82)). The same slip was made once before and corrected the same way (commit b5c29b7).
 - **Fix.** That run id is added to `manifests/pending_copy.txt` (FILE(tools/check_docs.py:69)), as attempt 2's run already was; it is removed once the folder is copied to the Mac and checksum-verified. No entry is edited.
 - **The agent's error, and its rule from now on.** The check runs first and alone. The commit is sent only after it prints PASS, never in the same batch of calls.
+
+## 2026-11-13 · [OPS] ops_r3's sandbox: the quiet-hour cases replaced by any-hour cases, after the owner withdrew the quiet hours; 165 of 165 pass
+
+- The owner's decision withdrawing the quiet hours left `ops_r3/test_sandbox.sh`'s window cases failing, to be updated in a later commit (decisions.md 2026-11-13 [DECISION] (owner), quiet hours withdrawn). They are replaced by eleven cases: the queue runs to its end at 15:00, 12:00, 13:00, 03:00, 00:00, 04:59, 01:15, 18:00, 05:00 and 23:59 UTC, and a burst rerun starts at 13:00 UTC (five launches). The check that an attempt record names its boot is kept.
+- Result: passed 165, failed 0 (PROBE(docs/probe/20261113_reg19/sandbox_ops_r3_noquiet_20261113T171116Z.txt)).
+- The queue's six scripts (FILE(docs/probe/20261113_reg19/ops_r3/common.sh:32)) are unchanged, so `scripts_commit.txt` still matches and the running queue's checks before each launch are not affected. `test_sandbox.sh` is a test the queue does not run.

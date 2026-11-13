@@ -1,0 +1,179 @@
+--- queue: the happy path, and starting it again
+ok    happy path: both seeds, then QUEUE DONE
+ok    four launches
+ok    seed 18's control is attempt 2, with its run id
+ok    no attempt 3 of seed 18's control
+ok    seed 18's burst is attempt 1
+ok    both step records exist
+ok    four run folders copied and linked
+ok    started again after the end: same end
+ok    nothing launched or stepped again
+--- queue: the futility stop and the step
+ok    futility stop after seed 18
+ok    seed 19 not launched
+ok    started again after a futility stop: still the stop
+ok    seed 19 still not launched (N3)
+ok    a crashed step is a stop, not a futility stop
+ok    no step record after a crashed step
+ok    after the fix the queue goes on without relaunching seed 18
+ok    four launches in all
+ok    a step that does not see seed 18 stops the queue
+ok    and leaves no record
+ok    an unknown flag value stops the queue
+ok    'continue': False with an error line on stderr is not a futility stop (N7)
+ok    a warning on stderr does not block, and is counted in the record
+ok    'continue': True after the last seed is a stop
+--- launch: pre-launch stops spend no attempt
+ok    420 W stops the launch
+ok    a pre-launch stop records no attempt (N2)
+ok    but keeps its probe
+ok    the same command then runs, as attempt 2
+ok    attempt 2, not 3
+ok    a reboot since the session probe stops the launch
+ok    an empty boot id stops the launch
+ok    another compute process stops the launch
+ok    a VM tree off the pin stops the launch
+ok    a dirty VM tree stops the launch
+ok    low disk stops the launch
+ok    an unreadable free-disk value stops the launch
+ok    a temperature that is not a number stops the launch
+ok    an existing tmux session stops the launch
+ok    no session probe, no launch
+ok    none of these launched anything
+--- launch: what a started run can leave behind
+ok    no run id within 120 s
+ok    the attempt is spent
+ok    started again: the finished valid run is used, not relaunched (N4)
+ok    tmux gone without checks.json
+ok    a second lost run is not rerun without its own decision
+ok    one launch only
+ok    a run still going after the wait is not called invalid
+ok    a VM that stops answering is reported as such
+ok    the launch command failing spends the attempt
+ok    and says so in the record
+ok    started again: attempt 3 runs
+ok    attempt 3 recorded
+ok    the VM's state unreadable stops the queue
+--- REG-19's rerun rule, from checks.json alone
+ok    an invalid run stops the queue and names the failed check
+ok    the second invalid run of the config
+ok    three attempts spent: no fourth launch
+ok    two launches by these scripts, three attempts with the lost one
+ok    an invalid run, then
+ok    its rerun is valid and the queue goes on
+ok    a client error
+ok    is not rerun (registered stop)
+ok    a burst that did not fill the pool
+ok    is not rerun (registered stop)
+ok    a run at another power limit
+ok    is not rerun (registered stop)
+ok    a heat failure
+ok    is rerun once; a second heat failure
+ok    stops the queue
+ok    a heat failure of the control
+ok    its rerun is valid; then a heat failure of the burst run
+ok    is the second among REG-19's runs: the queue stops (D2)
+ok    three launches: control, control, burst
+ok    an http error is an invalid run like any other
+ok    and is rerun (REG-19 registers the stop for a client error only)
+ok    two valid runs of one config stop the queue
+ok    a checks.json that contradicts itself stops the queue
+ok    without the lost run's attempt record nothing is launched (N1)
+ok    without the decision's record the lost run is not rerun
+ok    a changed state record stops everything
+ok    none of these launched anything
+--- copy, checksums, links
+ok    a checksum mismatch stops the queue
+ok    started again: both runs are used, copied, verified, stepped
+ok    four launches in all
+ok    a failed copy stops the queue
+ok    the VM's checksums unreadable stop the queue
+ok    a link that points elsewhere stops the step
+ok    a real folder where a link belongs stops the step
+ok    and nothing was written into it (N8)
+ok    a foreign entry in the worktree's runs/ stops the step
+--- the Mac-side checks (real git)
+ok    a dirty worktree
+ok    a worktree off the pin
+ok    uv.lock changed in the working tree
+ok    a script changed since its commit
+ok    scripts_commit.txt missing
+ok    scripts_commit.txt naming another commit
+ok    none of these launched anything
+--- launch.sh by hand
+ok    a valid run with no attempt record is a launch outside these scripts: stop
+ok    launch.sh refuses when a valid run exists
+ok    launch.sh refuses a config that exists at the pin but is not one of the four
+ok    launch.sh refuses a name that is no config
+ok    launch.sh by hand takes the next attempt number itself
+--- round 3: the gate, the Mac's folders, the commit, the decision, the lock, the clock
+ok    by hand: seed 19 before seed 18 has a step record is refused (T1)
+ok    by hand: a burst run before a valid control is refused (T1)
+ok    by hand after a futility stop: seed 19 is refused (T1)
+ok    by hand after a futility stop: seed 18 is not launched again (T1)
+ok    nothing beyond seed 18's pair was launched
+ok    a pair on the Mac that the VM no longer lists is not made again (T2)
+ok    no third launch
+ok    a run made at another commit is not counted (T3)
+ok    a valid run found on the VM at another commit is not used (T3)
+ok    no queue before the decision is in the committed log (T5)
+ok    no launch by hand either (T5)
+ok    a second queue beside a running one is refused
+ok    a lock left by a dead queue is set aside and the queue runs
+ok    the stale lock is kept under another name
+ok    WAIT_MIN that is not a number stops before anything
+ok    no quiet hours: the queue runs at 15:00 UTC
+ok    the attempt record names the boot of its run
+ok    no quiet hours: the queue runs at 12:00 UTC
+ok    no quiet hours: the queue runs at 13:00 UTC
+ok    no quiet hours: the queue runs at 03:00 UTC
+ok    no quiet hours: the queue runs at 00:00 UTC
+ok    no quiet hours: the queue runs at 04:59 UTC
+ok    no quiet hours: the queue runs at 01:15 UTC
+ok    no quiet hours: the queue runs at 18:00 UTC
+ok    no quiet hours: the queue runs at 05:00 UTC
+ok    no quiet hours: the queue runs at 23:59 UTC
+ok    no quiet hours: a burst rerun starts at 13:00 UTC and the queue ends
+ok    five launches: control, burst, burst again, seed 19's control and burst
+--- round 3: the checks in force before each step
+ok    a run the checks in force would fail stops the queue before the step (T4)
+ok    no step record
+ok    the saved record keeps validity
+ok    and none of the checks' details
+ok    a recheck that sees another number of runs stops the queue before the step
+--- round 3: stops that had no case
+ok    a GPU still hot after the wait
+ok    a temperature that cannot be read
+ok    a pre-launch read that fails
+ok    none of the three launched
+ok    or spent an attempt
+ok    a manifest update that fails
+ok    checks.json appearing just after tmux ended is found
+ok    and the launch output says so
+--- session probe
+ok    session probe at 350 W
+ok    it wrote the boot id
+ok    a second probe is refused
+ok    RENEW=1 replaces it and keeps the old file
+ok    the replaced file is kept
+ok    420 W: no session
+ok    and no boot id file
+ok    another driver: no session
+ok    another uv.lock on the VM: no session
+ok    a VM tree off the pin: no session
+ok    a locked package missing on the Mac: no session
+ok    an empty boot id: no session
+ok    SET=1 runs the one root command when the GPU is idle
+ok    SET=1 does not touch the limit under another process
+--- the final table
+ok    no table before any step
+ok    all five seeds run: recheck, then the table from the worktree
+ok    the recheck ran with the seal lifted for REG-19 only
+ok    the table is computed once
+ok    after a futility stop: eight runs rechecked, then the table
+ok    a run whose validity the recheck changes: no table
+ok    and no table file
+ok    fewer runs rechecked than made: no table
+ok    after an operational stop between the seeds: no table (N6)
+ok    harness/checks.py changed in the working tree: no recheck, no table
+passed 165, failed 0  (sandbox /private/var/folders/06/2vx496992yn_fndhyyjpp2080000gn/T/reg19_sandbox3.LvEi8J)
