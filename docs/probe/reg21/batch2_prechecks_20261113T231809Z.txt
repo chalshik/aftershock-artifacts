@@ -1,0 +1,176 @@
+# prechecks for REG-21/REG-22 batch 2, 2026-11-13T23:18:09Z; E=d9b324d071284d5f3154ef0defce6b357f349c55 B=ed1a16eb60e69fb352ab6fff0cfae41b8ace9dab
+
+## B and the checkout
+$ git rev-parse HEAD
+ed1a16eb60e69fb352ab6fff0cfae41b8ace9dab
+[exit 0]
+$ git status --porcelain
+ M .gitignore
+ M docs/probe/20261113_reg20/ops/DESIGN_NOTES.md
+ M docs/probe/20261113_reg20/ops/PIN_DECISION_DRAFT.md
+ M docs/probe/20261113_reg20/ops/README.md
+ M docs/probe/20261113_reg20/ops/common.sh
+ M docs/probe/20261113_reg20/ops/final.sh
+ M docs/probe/20261113_reg20/ops/launch.sh
+ M docs/probe/20261113_reg20/ops/queue.sh
+ M docs/probe/20261113_reg20/ops/test_control_due.py
+ M docs/probe/20261113_reg20/ops/test_sandbox.sh
+?? _to_delete/docs/probe/20261113_reg19/ops_r3/
+?? docs/FABLE_PROMPT.md
+?? docs/drafts/e1_r3/
+?? docs/drafts/reg20_ops_decision_draft2.md
+?? docs/drafts/reg21_decision_draft2.md
+?? docs/drafts/reg22_decision_draft2.md
+?? docs/drafts/reviews-2026-11-13/rulef-e1-draft6-r2.md
+?? docs/probe/20261113_reg19/ops_r3/state/attempt_burst_l1pl350cl_r2.0_w3000_s18_1.txt
+?? docs/probe/20261113_reg19/ops_r3/state/attempt_burst_l1pl350cl_r2.0_w3000_s19_1.txt
+?? docs/probe/20261113_reg19/ops_r3/state/attempt_stage2_control_l1pl350cl_r2.0_w3000_s18_3.txt
+?? docs/probe/20261113_reg19/ops_r3/state/attempt_stage2_control_l1pl350cl_r2.0_w3000_s19_1.txt
+?? docs/probe/20261113_reg19/ops_r3/state/launch_burst_l1pl350cl_r2.0_w3000_s18_20261113T180508Z_71631_2.out
+?? docs/probe/20261113_reg19/ops_r3/state/launch_burst_l1pl350cl_r2.0_w3000_s19_20261113T203105Z_71631_6.out
+?? docs/probe/20261113_reg19/ops_r3/state/launch_stage2_control_l1pl350cl_r2.0_w3000_s18_20261113T165512Z_71631_1.out
+?? docs/probe/20261113_reg19/ops_r3/state/launch_stage2_control_l1pl350cl_r2.0_w3000_s19_20261113T192107Z_71631_5.out
+?? docs/probe/20261113_reg19/ops_r3/state/queue.lock.ended_20261113T214627Z_71631_7/
+?? docs/probe/20261113_reg19/ops_r3/state/queue.lock.ended_20261113T214939Z_69257_3/
+?? docs/probe/20261113_reg19/ops_r3/state/reg19_recheck_20261113T192029Z_71631_3.json
+?? docs/probe/20261113_reg19/ops_r3/state/reg19_recheck_20261113T214851Z_69257_1.json
+?? docs/probe/20261113_reg19/ops_r3/state/reg19_recheck_err_20261113T192029Z_71631_3.txt
+?? docs/probe/20261113_reg19/ops_r3/state/reg19_recheck_err_20261113T214851Z_69257_1.txt
+?? docs/probe/20261113_reg19/ops_r3/state/reg19_step_err_s18_20261113T192038Z_71631_4.txt
+?? docs/probe/20261113_reg19/ops_r3/state/reg19_step_err_s19_20261113T214901Z_69257_2.txt
+?? docs/probe/20261113_reg19/ops_r3/state/reg19_step_out_s18_20261113T192038Z_71631_4.txt
+?? docs/probe/20261113_reg19/ops_r3/state/reg19_step_out_s19_20261113T214901Z_69257_2.txt
+?? docs/probe/20261113_reg19/ops_r3/state/reg19_step_s18.txt
+?? docs/probe/20261113_reg19/ops_r3/state/reg19_step_s19.txt
+?? docs/probe/20261113_reg20/ops/owner_rulings.txt
+?? docs/probe/20261113_reg20/ops/recheck_one.py
+[exit 0]
+
+## Fact (1), REG-21 (its 26 frozen files)
+$ git log --full-history --format='%H %ct %s' d9b324d071284d5f3154ef0defce6b357f349c55..ed1a16eb60e69fb352ab6fff0cfae41b8ace9dab -- analysis/__init__.py analysis/derived.py analysis/floor.py analysis/gate.py analysis/k1.py analysis/k3.py analysis/k3w.py analysis/load.py analysis/margin.py analysis/modelf.py analysis/modelf_sim.py analysis/stats.py analysis/tables.py analysis/withheld.py harness/__init__.py harness/checks.py harness/config.py harness/env_snapshot.py harness/loadgen.py harness/recorder.py harness/run.py harness/trigger.py harness/workload.py .python-version pyproject.toml uv.lock
+[exit 0]
+$ git diff --quiet d9b324d071284d5f3154ef0defce6b357f349c55 ed1a16eb60e69fb352ab6fff0cfae41b8ace9dab -- analysis/__init__.py analysis/derived.py analysis/floor.py analysis/gate.py analysis/k1.py analysis/k3.py analysis/k3w.py analysis/load.py analysis/margin.py analysis/modelf.py analysis/modelf_sim.py analysis/stats.py analysis/tables.py analysis/withheld.py harness/__init__.py harness/checks.py harness/config.py harness/env_snapshot.py harness/loadgen.py harness/recorder.py harness/run.py harness/trigger.py harness/workload.py .python-version pyproject.toml uv.lock
+[exit 0]
+$ git status --porcelain -- analysis/__init__.py analysis/derived.py analysis/floor.py analysis/gate.py analysis/k1.py analysis/k3.py analysis/k3w.py analysis/load.py analysis/margin.py analysis/modelf.py analysis/modelf_sim.py analysis/stats.py analysis/tables.py analysis/withheld.py harness/__init__.py harness/checks.py harness/config.py harness/env_snapshot.py harness/loadgen.py harness/recorder.py harness/run.py harness/trigger.py harness/workload.py .python-version pyproject.toml uv.lock
+[exit 0]
+$ git log -m --diff-filter=AR --name-only --format= d9b324d071284d5f3154ef0defce6b357f349c55..ed1a16eb60e69fb352ab6fff0cfae41b8ace9dab | grep -E '^([^/]+\.py|[^/]+/__init__\.py|(analysis|harness)/(derived|floor|gate|k1|k3|k3w|load|margin|modelf|modelf_sim|stats|tables|withheld|checks|config|env_snapshot|loadgen|recorder|run|trigger|workload)/.*)$'
+[exit 1]
+
+## Fact (1), REG-22 (its 27 frozen files), with the two checks beside it
+$ git log --full-history --format='%H %ct %s' d9b324d071284d5f3154ef0defce6b357f349c55..ed1a16eb60e69fb352ab6fff0cfae41b8ace9dab -- analysis/__init__.py analysis/c2.py analysis/derived.py analysis/floor.py analysis/gate.py analysis/k1.py analysis/k3.py analysis/k3w.py analysis/load.py analysis/margin.py analysis/modelf.py analysis/modelf_sim.py analysis/stats.py analysis/tables.py analysis/withheld.py harness/__init__.py harness/checks.py harness/config.py harness/env_snapshot.py harness/loadgen.py harness/recorder.py harness/run.py harness/trigger.py harness/workload.py pyproject.toml uv.lock .python-version
+[exit 0]
+$ git status --porcelain -- analysis/__init__.py analysis/c2.py analysis/derived.py analysis/floor.py analysis/gate.py analysis/k1.py analysis/k3.py analysis/k3w.py analysis/load.py analysis/margin.py analysis/modelf.py analysis/modelf_sim.py analysis/stats.py analysis/tables.py analysis/withheld.py harness/__init__.py harness/checks.py harness/config.py harness/env_snapshot.py harness/loadgen.py harness/recorder.py harness/run.py harness/trigger.py harness/workload.py pyproject.toml uv.lock .python-version
+[exit 0]
+$ git merge-base --is-ancestor d9b324d071284d5f3154ef0defce6b357f349c55 ed1a16eb60e69fb352ab6fff0cfae41b8ace9dab && echo ancestor || echo not_ancestor
+ancestor
+[exit 0]
+$ git diff --stat d9b324d071284d5f3154ef0defce6b357f349c55 ed1a16eb60e69fb352ab6fff0cfae41b8ace9dab -- analysis/__init__.py analysis/c2.py analysis/derived.py analysis/floor.py analysis/gate.py analysis/k1.py analysis/k3.py analysis/k3w.py analysis/load.py analysis/margin.py analysis/modelf.py analysis/modelf_sim.py analysis/stats.py analysis/tables.py analysis/withheld.py harness/__init__.py harness/checks.py harness/config.py harness/env_snapshot.py harness/loadgen.py harness/recorder.py harness/run.py harness/trigger.py harness/workload.py pyproject.toml uv.lock .python-version
+[exit 0]
+
+## Root-level import checks (REG-21 BI-O1; REG-22 CG4)
+$ git diff --quiet d9b324d071284d5f3154ef0defce6b357f349c55 ed1a16eb60e69fb352ab6fff0cfae41b8ace9dab -- ':(glob)*.py' ':(glob)*.pth'
+[exit 0]
+$ git status --porcelain --ignored --untracked-files=all -- ':(glob)*.py' ':(glob)*.pth'
+!! .claude/worktrees/agent-a31d1e17f6b31f54e/
+!! docs/paper/
+[exit 0]
+$ find . -maxdepth 1 \( -name '*.py' -o -name '*.pth' -o -name '*.so' \) -print
+[exit 0]
+$ find . -mindepth 2 -maxdepth 2 -name '__init__.py' -not -path './analysis/*' -not -path './harness/*' -print
+[exit 0]
+$ git status --porcelain --ignored --untracked-files=all -- analysis harness | grep -v '__pycache__' | grep -v '^.. analysis/figures/'
+[exit 1]
+
+## E in the reflog; the stash
+$ git reflog show --date=iso main | grep d9b324d
+d9b324d main@{2026-11-14 04:27:04 +0600}: commit: [REG] REG-22 and REG-21 registered, each with its [DECISION] (delegate) (E): REG-22 [REG] (draft 18 as approved) and [DECISION]; REG-21 [REG] (draft 27 with CK1-CK12 as approved) and [DECISION]; the freeze of each command's imported files runs from this commit. With them: the terms docs/definitions.md gains (rule J) and ledger rows 24 and 25 in docs/model.md, each quote checked against the appended lines (the not-in-force draft of these terms had two errors, both fixed before this commit: the waiting gauge's deferred requests, and row 25's onset and batch-2 predictions); the at-E transcript searches (search, search2, classify2 with 0 unlabelled; noteread: no new first-class hit since 21:49:08 UTC); status, STATE, FOR_AUTHOR and open-questions. Batch 1 of each follows in its own commit
+[exit 0]
+$ git stash list
+[exit 0]
+
+## Fact (2): table files (every worktree; every ref and the reflog; decisions.md quotes)
+$ git worktree list
+/Users/chalshik/Projects/aftershock-artifacts                                           ed1a16e [main]
+/Users/chalshik/Projects/aftershock-artifacts/.claude/worktrees/agent-a31d1e17f6b31f54e a7bb77a [worktree-agent-a31d1e17f6b31f54e] locked
+/Users/chalshik/Projects/aftershock-linktest-pin                                        a7bb77a (detached HEAD)
+/Users/chalshik/Projects/aftershock-reg19-pin                                           a7bb77a (detached HEAD)
+[exit 0]
+$ (cd /Users/chalshik/Projects/aftershock-artifacts && find . -name 'reg19_final_*' -not -path './.git/*' | grep -E '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$')
+./docs/probe/20261113_reg19/ops_r3/state/reg19_final_err_20261113T225441Z_71959_1.txt
+./docs/probe/20261113_reg19/ops_r3/state/reg19_final_20261113T225441Z_71959_1.txt
+[exit 0]
+$ (cd /Users/chalshik/Projects/aftershock-artifacts && find . -name 'reg19_final_*' -not -path './.git/*' | grep -vE '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$' | wc -l)
+      15
+[exit 0]
+$ (cd /Users/chalshik/Projects/aftershock-artifacts/.claude/worktrees/agent-a31d1e17f6b31f54e && find . -name 'reg19_final_*' -not -path './.git/*' | grep -E '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$')
+[exit 1]
+$ (cd /Users/chalshik/Projects/aftershock-artifacts/.claude/worktrees/agent-a31d1e17f6b31f54e && find . -name 'reg19_final_*' -not -path './.git/*' | grep -vE '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$' | wc -l)
+       0
+[exit 0]
+$ (cd /Users/chalshik/Projects/aftershock-linktest-pin && find . -name 'reg19_final_*' -not -path './.git/*' | grep -E '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$')
+[exit 1]
+$ (cd /Users/chalshik/Projects/aftershock-linktest-pin && find . -name 'reg19_final_*' -not -path './.git/*' | grep -vE '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$' | wc -l)
+       0
+[exit 0]
+$ (cd /Users/chalshik/Projects/aftershock-reg19-pin && find . -name 'reg19_final_*' -not -path './.git/*' | grep -E '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$')
+[exit 1]
+$ (cd /Users/chalshik/Projects/aftershock-reg19-pin && find . -name 'reg19_final_*' -not -path './.git/*' | grep -vE '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$' | wc -l)
+       0
+[exit 0]
+$ git log -m --all --reflog --full-history --no-renames --diff-filter=A --name-only --format='%H %ct' -- ':(glob)**/reg19_final_*' | awk '/^[0-9a-f]+ [0-9]+$/ {c=$0; next} NF {print c, $0}' | grep -E ' (.*/)?reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$'
+047b95e5a8c7727224040f79f089ea66b482d623 1794610579 docs/probe/20261113_reg19/ops_r3/state/reg19_final_20261113T225441Z_71959_1.txt
+047b95e5a8c7727224040f79f089ea66b482d623 1794610579 docs/probe/20261113_reg19/ops_r3/state/reg19_final_err_20261113T225441Z_71959_1.txt
+[exit 0]
+$ git log --all --full-history --diff-filter=A --name-only --format='%H %ct' -- ':(glob)**/reg19_final_*' | grep -E '(^|/)reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z|^[0-9a-f]{40} [0-9]+$'
+047b95e5a8c7727224040f79f089ea66b482d623 1794610579
+docs/probe/20261113_reg19/ops_r3/state/reg19_final_20261113T225441Z_71959_1.txt
+docs/probe/20261113_reg19/ops_r3/state/reg19_final_err_20261113T225441Z_71959_1.txt
+ba67e55debb286ff4e34067774e96c05e4b0623c 1794584284
+e062504f777006b6b1e8915447eeadb46ec59246 1794573269
+3e9c73fbd5e7b2bde56887ac272087efd6850ea9 1794572025
+b8ea9158be64554637e96d8b400116dd58ef7a69 1794571329
+346ee6cf29adec7c88d111eba51d20196b847709 1794570652
+2bf6a9085cfe640fad1e38e3e066f7ed5ec9fdf8 1794569631
+4ad587d762aff98fc7a3e495e268a6ca57e0557a 1794569464
+72d488448087df9b0fade97996f692f825f6dcdb 1794568931
+ab6988f49e2ad18c28613c9467aeb9b00d9e28cb 1794568531
+[exit 0]
+$ grep -noE 'reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z' docs/decisions.md
+6900:reg19_final_20261114T010203Z
+6900:reg19_final_20261114T020000Z
+16522:reg19_final_20261113T225441Z
+16522:reg19_final_err_20261113T225441Z
+16524:reg19_final_20261113T225441Z
+[exit 0]
+$ git log -1 --format='%ct %cI' d9b324d071284d5f3154ef0defce6b357f349c55
+1794608824 2026-11-14T04:27:04+06:00
+[exit 0]
+$ TZ=UTC date -j -f '%Y%m%dT%H%M%SZ' 20261113T225441Z +%s
+1794610481
+[exit 0]
+$ git merge-base --is-ancestor 047b95e5a8c7727224040f79f089ea66b482d623 d9b324d071284d5f3154ef0defce6b357f349c55 && echo '047b95e5a8c7727224040f79f089ea66b482d623 is E or an ancestor of E' || echo '047b95e5a8c7727224040f79f089ea66b482d623 not an ancestor of E'
+047b95e5a8c7727224040f79f089ea66b482d623 not an ancestor of E
+[exit 0]
+
+## Runs: REG-21 (a) and (b), REG-22's comparison under 'Runs'
+$ for d in runs/*_burst_l1pl350cl_r2.0_w3000_s1[5-9]; do test -e $d/checks.json && echo "$d checks.json" || echo "$d none"; done
+runs/20261112-061951_burst_l1pl350cl_r2.0_w3000_s15 checks.json
+runs/20261112-084533_burst_l1pl350cl_r2.0_w3000_s16 checks.json
+runs/20261112-135538_burst_l1pl350cl_r2.0_w3000_s17 checks.json
+runs/20261113-180511_burst_l1pl350cl_r2.0_w3000_s18 checks.json
+runs/20261113-203108_burst_l1pl350cl_r2.0_w3000_s19 checks.json
+[exit 0]
+$ for d in runs/*_burst_l1pl350cl_r2.0_w3000_s1[5-9]; do if test -e $d/checks.json; then echo "${d:t} valid=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))[\"valid\"])" $d/checks.json)"; else echo "${d:t} no checks.json"; fi; done
+20261112-061951_burst_l1pl350cl_r2.0_w3000_s15 valid=True
+20261112-084533_burst_l1pl350cl_r2.0_w3000_s16 valid=True
+20261112-135538_burst_l1pl350cl_r2.0_w3000_s17 valid=True
+20261113-180511_burst_l1pl350cl_r2.0_w3000_s18 valid=True
+20261113-203108_burst_l1pl350cl_r2.0_w3000_s19 valid=True
+[exit 0]
+$ PYTHONPATH=/private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad python3 /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad/b2_lists.py
+L1 valid folders 5 ['20261112-061951_burst_l1pl350cl_r2.0_w3000_s15', '20261112-084533_burst_l1pl350cl_r2.0_w3000_s16', '20261112-135538_burst_l1pl350cl_r2.0_w3000_s17', '20261113-180511_burst_l1pl350cl_r2.0_w3000_s18', '20261113-203108_burst_l1pl350cl_r2.0_w3000_s19']
+L2 REG-19 [RESULT] seeds in n 5 ['20261112-061951_burst_l1pl350cl_r2.0_w3000_s15', '20261112-084533_burst_l1pl350cl_r2.0_w3000_s16', '20261112-135538_burst_l1pl350cl_r2.0_w3000_s17', '20261113-180511_burst_l1pl350cl_r2.0_w3000_s18', '20261113-203108_burst_l1pl350cl_r2.0_w3000_s19']
+L3 table file rows less excluded 5 ['20261112-061951_burst_l1pl350cl_r2.0_w3000_s15', '20261112-084533_burst_l1pl350cl_r2.0_w3000_s16', '20261112-135538_burst_l1pl350cl_r2.0_w3000_s17', '20261113-180511_burst_l1pl350cl_r2.0_w3000_s18', '20261113-203108_burst_l1pl350cl_r2.0_w3000_s19']
+REG-19 [RESULT] n: 5 seeds_run: [15, 16, 17, 18, 19] excluded: []
+L1 == L2: True | L1 == L3: True | L2 == L3: True
+[exit 0]

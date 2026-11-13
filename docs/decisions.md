@@ -16567,3 +16567,446 @@ The sentence does not attribute the excess of the completion rate over 1.681 to 
 **What this entry unlocks, in order:** the seal on REG-19's runs (`*_l1pl350cl_r2.0_w3000_s1[5-9]`, FILE(analysis/withheld.py:27)) lifts with this heading; REG-20's gate (`k1.reg20_a_may_start`, once) comes next, before either batch 2; then REG-21's and REG-22's batch 2, each labelled retrospective by design and each under its own git facts. Seed 18's attempt-2 control (`20261113-033842_stage2_control_l1pl350cl_r2.0_w3000_s18`, a control config, lost) is copied from the VM and stays outside every count.
 
 **Not changed by this entry:** any threshold, rule, code or config; PROTOCOL; `docs/claims.md`; REG-17's and REG-18's results (REG-18's seeds are not re-judged by REG-19's test).
+
+## 2026-11-13 · [RESULT] REG-22 batch 2: condition 4's registered levels held at the end of the watch and all four links in every 300 s span after the burst's requests had left, in 5 of 5 stuck runs at λ = 2.0 (REG-19's seeds 15–19); retrospective (by design); both batches meet line a at λ = 2.0; the order clause is not judged
+
+**What was computed.** REG-22's batch 2, once, as registered (decisions.md 2026-11-13 [REG] REG-22, FILE(docs/decisions.md:4616), and its [DECISION] (delegate), FILE(docs/decisions.md:7306)), after REG-19's final [RESULT] (FILE(docs/decisions.md:16517)) and after REG-20's gate (PROBE(docs/probe/reg20/gate_20261113T230307Z.txt), committed in `3c8e5dc`), so the order the registration asks for holds without a statement. 0 GPU h.
+- **The command line** (line 24 of the agent's script `run_batch2.zsh` in its scratchpad, run from the repository root; `$S` is the scratchpad, `$E` the full hash of `d9b324d`, `${F22[@]}` the 27 frozen files), verbatim:
+  ```
+  TS=$(date -u +%Y%m%dT%H%M%SZ); B=$(git rev-parse HEAD); { print -r -- "\$ git log --full-history --format='%H %ct %s' $E..$B -- ${F22[*]}"; git log --full-history --format='%H %ct %s' $E..$B -- ${F22[@]}; print -r -- "[exit $?]"; print -r -- "\$ git status --porcelain -- ${F22[*]}"; git status --porcelain -- ${F22[@]}; print -r -- "[exit $?]"; print -r -- "\$ git merge-base --is-ancestor $E $B && echo ancestor || echo not_ancestor"; git merge-base --is-ancestor $E $B && echo ancestor || echo not_ancestor; print -r -- "\$ git diff --stat $E $B -- ${F22[*]}"; git diff --stat $E $B -- ${F22[@]}; print -r -- "[exit $?]"; print -r -- "\$ git rev-parse HEAD"; git rev-parse HEAD; print -r -- "\$ uv run python -V"; uv run python -V; print -r -- "\$ uv --version"; uv --version; print -r -- "\$ uv run python -c 'import analysis, numpy; print(analysis.__file__, numpy.__version__)'"; uv run python -c 'import analysis, numpy; print(analysis.__file__, numpy.__version__)'; print -r -- "\$ git status --porcelain"; git status --porcelain; print -r -- "[exit $?]"; print -r -- "\$ uv run python -m analysis.c2 reg22 2   (its stdout follows; started $TS UTC)"; } > docs/probe/reg22/batch2_$TS.txt 2>&1; uv run python -m analysis.c2 reg22 2 >> docs/probe/reg22/batch2_$TS.txt 2> $S/reg22_batch2_stderr_$TS.txt; RC=$?
+  ```
+  Started 2026-11-13 23:17:46 UTC (the stamp), exit 0, stderr empty (0 lines), at B = `3c8e5dc` (`3c8e5dc6d87ed7dbf364df49dfa2780282ff4deb`).
+- **The output:** `docs/probe/reg22/batch2_20261113T231746Z.txt`, sha256 `dc03990ab76b887445949c05c38964cd977fa947258d7be90e0196fd5e926ca8`, committed at once and alone in `ed1a16e` (committer time 2026-11-13 23:18:09 UTC, after the stamp, so this is a first run that wrote its file as registered). Lines 1–59 are the registered header (fact (1)'s commands and checks, the environment); the table follows from line 60. Every value below is read from that file by the function named (`c2.condition4`'s rows through `c2.reg22_table`); PROBE(docs/probe/reg22/batch2_20261113T231746Z.txt).
+- **This is batch 2's first run.** No output of `c2` on a REG-19 run was printed before it (REG-22's [REG], FILE(docs/decisions.md:4620); the [DECISION] (delegate)'s searches at E), and the agent ran no `c2` command on real run folders between E and this one other than batch 1 (on the 13 batch-1 runs).
+- **Before it:** `analysis/` and `tests/` clean (the script refuses otherwise); `uv run pytest` passed at `3c8e5dc` (529 passed in 752.68 s, started 2026-11-13 23:04:44 UTC); `python3 tools/check_docs.py` printed OK before that; the hand checks below were run and saved first, at the same B (`docs/probe/reg22/batch2_prechecks_20261113T231745Z.txt`, sha256 `99dc5536c429d79d215b32ba91cc0c49ad5999c6b40537afa3c4a4722ccf3280`, a byte copy of the agent's scratchpad file `prechecks_b2_reg22_20261113T231745Z.txt`, written 2026-11-13 23:17:45 UTC; PROBE(docs/probe/reg22/batch2_prechecks_20261113T231745Z.txt)).
+- **The environment, from the header (its lines 11–16), verbatim:** `Python 3.12.13`; `uv 0.12.1 (329541a50 2026-07-31 aarch64-apple-darwin)`; `<repository>/analysis/__init__.py 2.3.5` (the repository's own `analysis`, numpy 2.3.5). The unrestricted `git status --porcelain` (lines 17–58) lists 10 modified files (`.gitignore`, not committed by rule, and REG-20's operations drafts under `docs/probe/20261113_reg20/ops/`, a teammate's work in progress) and 30 untracked paths (drafts, REG-19's queue records under `ops_r3/state/`, this batch file itself); none is a frozen file or lies under `analysis/` or `tests/`. No breach.
+
+**The seal and the heading.** The heading that lifted REG-19's seal is REG-19's final result, FILE(docs/decisions.md:16517), the only line of `docs/decisions.md` that begins as REG-19's result heading does (DERIVED: `^## <date> · [RESULT] REG-19` matches line 16517 alone); `withheld.lifted('[RESULT] REG-19')` gave True on it before it was committed (REG-19's [RESULT]). `batch_runs(2)` did not raise.
+
+**The two facts of the freeze, verbatim** (E = `d9b324d`, the commit that appended this [REG] and its [DECISION] (delegate); B = `3c8e5dc`).
+- **Fact (1)**, from the batch file's header (its lines 1–8), as the command line wrote it:
+  ```
+  $ git log --full-history --format='%H %ct %s' d9b324d071284d5f3154ef0defce6b357f349c55..3c8e5dc6d87ed7dbf364df49dfa2780282ff4deb -- analysis/__init__.py analysis/c2.py analysis/derived.py analysis/floor.py analysis/gate.py analysis/k1.py analysis/k3.py analysis/k3w.py analysis/load.py analysis/margin.py analysis/modelf.py analysis/modelf_sim.py analysis/stats.py analysis/tables.py analysis/withheld.py harness/__init__.py harness/checks.py harness/config.py harness/env_snapshot.py harness/loadgen.py harness/recorder.py harness/run.py harness/trigger.py harness/workload.py pyproject.toml uv.lock .python-version
+  [exit 0]
+  $ git status --porcelain -- analysis/__init__.py analysis/c2.py analysis/derived.py analysis/floor.py analysis/gate.py analysis/k1.py analysis/k3.py analysis/k3w.py analysis/load.py analysis/margin.py analysis/modelf.py analysis/modelf_sim.py analysis/stats.py analysis/tables.py analysis/withheld.py harness/__init__.py harness/checks.py harness/config.py harness/env_snapshot.py harness/loadgen.py harness/recorder.py harness/run.py harness/trigger.py harness/workload.py pyproject.toml uv.lock .python-version
+  [exit 0]
+  $ git merge-base --is-ancestor d9b324d071284d5f3154ef0defce6b357f349c55 3c8e5dc6d87ed7dbf364df49dfa2780282ff4deb && echo ancestor || echo not_ancestor
+  ancestor
+  $ git diff --stat d9b324d071284d5f3154ef0defce6b357f349c55 3c8e5dc6d87ed7dbf364df49dfa2780282ff4deb -- analysis/__init__.py analysis/c2.py analysis/derived.py analysis/floor.py analysis/gate.py analysis/k1.py analysis/k3.py analysis/k3w.py analysis/load.py analysis/margin.py analysis/modelf.py analysis/modelf_sim.py analysis/stats.py analysis/tables.py analysis/withheld.py harness/__init__.py harness/checks.py harness/config.py harness/env_snapshot.py harness/loadgen.py harness/recorder.py harness/run.py harness/trigger.py harness/workload.py pyproject.toml uv.lock .python-version
+  [exit 0]
+  ```
+  The `git log` printed nothing and `git status --porcelain` printed nothing for the 27 frozen files; B descends from E; the net diff is empty. **Fact (1) holds.** The same two commands and checks, run by hand one second earlier (the prechecks file), printed the same:
+  ```
+  ## Fact (1), REG-22 (its 27 frozen files), with the two checks beside it
+  $ git log --full-history --format='%H %ct %s' d9b324d071284d5f3154ef0defce6b357f349c55..3c8e5dc6d87ed7dbf364df49dfa2780282ff4deb -- analysis/__init__.py analysis/c2.py analysis/derived.py analysis/floor.py analysis/gate.py analysis/k1.py analysis/k3.py analysis/k3w.py analysis/load.py analysis/margin.py analysis/modelf.py analysis/modelf_sim.py analysis/stats.py analysis/tables.py analysis/withheld.py harness/__init__.py harness/checks.py harness/config.py harness/env_snapshot.py harness/loadgen.py harness/recorder.py harness/run.py harness/trigger.py harness/workload.py pyproject.toml uv.lock .python-version
+  [exit 0]
+  $ git status --porcelain -- analysis/__init__.py analysis/c2.py analysis/derived.py analysis/floor.py analysis/gate.py analysis/k1.py analysis/k3.py analysis/k3w.py analysis/load.py analysis/margin.py analysis/modelf.py analysis/modelf_sim.py analysis/stats.py analysis/tables.py analysis/withheld.py harness/__init__.py harness/checks.py harness/config.py harness/env_snapshot.py harness/loadgen.py harness/recorder.py harness/run.py harness/trigger.py harness/workload.py pyproject.toml uv.lock .python-version
+  [exit 0]
+  $ git merge-base --is-ancestor d9b324d071284d5f3154ef0defce6b357f349c55 3c8e5dc6d87ed7dbf364df49dfa2780282ff4deb && echo ancestor || echo not_ancestor
+  ancestor
+  [exit 0]
+  $ git diff --stat d9b324d071284d5f3154ef0defce6b357f349c55 3c8e5dc6d87ed7dbf364df49dfa2780282ff4deb -- analysis/__init__.py analysis/c2.py analysis/derived.py analysis/floor.py analysis/gate.py analysis/k1.py analysis/k3.py analysis/k3w.py analysis/load.py analysis/margin.py analysis/modelf.py analysis/modelf_sim.py analysis/stats.py analysis/tables.py analysis/withheld.py harness/__init__.py harness/checks.py harness/config.py harness/env_snapshot.py harness/loadgen.py harness/recorder.py harness/run.py harness/trigger.py harness/workload.py pyproject.toml uv.lock .python-version
+  [exit 0]
+  ```
+- **Fact (2)**, the whole output of its three commands in every working tree `git worktree list` names, with the committer time of E, S, and the ancestry of each commit that adds a table file (the prechecks file, run at B = `3c8e5dc`; REG-21's prechecks at `ed1a16e` printed the same lines apart from B):
+  ```
+  ## Fact (2): table files (every worktree; every ref and the reflog; decisions.md quotes)
+  $ git worktree list
+  /Users/chalshik/Projects/aftershock-artifacts                                           3c8e5dc [main]
+  /Users/chalshik/Projects/aftershock-artifacts/.claude/worktrees/agent-a31d1e17f6b31f54e a7bb77a [worktree-agent-a31d1e17f6b31f54e] locked
+  /Users/chalshik/Projects/aftershock-linktest-pin                                        a7bb77a (detached HEAD)
+  /Users/chalshik/Projects/aftershock-reg19-pin                                           a7bb77a (detached HEAD)
+  [exit 0]
+  $ (cd /Users/chalshik/Projects/aftershock-artifacts && find . -name 'reg19_final_*' -not -path './.git/*' | grep -E '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$')
+  ./docs/probe/20261113_reg19/ops_r3/state/reg19_final_err_20261113T225441Z_71959_1.txt
+  ./docs/probe/20261113_reg19/ops_r3/state/reg19_final_20261113T225441Z_71959_1.txt
+  [exit 0]
+  $ (cd /Users/chalshik/Projects/aftershock-artifacts && find . -name 'reg19_final_*' -not -path './.git/*' | grep -vE '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$' | wc -l)
+        15
+  [exit 0]
+  $ (cd /Users/chalshik/Projects/aftershock-artifacts/.claude/worktrees/agent-a31d1e17f6b31f54e && find . -name 'reg19_final_*' -not -path './.git/*' | grep -E '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$')
+  [exit 1]
+  $ (cd /Users/chalshik/Projects/aftershock-artifacts/.claude/worktrees/agent-a31d1e17f6b31f54e && find . -name 'reg19_final_*' -not -path './.git/*' | grep -vE '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$' | wc -l)
+         0
+  [exit 0]
+  $ (cd /Users/chalshik/Projects/aftershock-linktest-pin && find . -name 'reg19_final_*' -not -path './.git/*' | grep -E '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$')
+  [exit 1]
+  $ (cd /Users/chalshik/Projects/aftershock-linktest-pin && find . -name 'reg19_final_*' -not -path './.git/*' | grep -vE '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$' | wc -l)
+         0
+  [exit 0]
+  $ (cd /Users/chalshik/Projects/aftershock-reg19-pin && find . -name 'reg19_final_*' -not -path './.git/*' | grep -E '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$')
+  [exit 1]
+  $ (cd /Users/chalshik/Projects/aftershock-reg19-pin && find . -name 'reg19_final_*' -not -path './.git/*' | grep -vE '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$' | wc -l)
+         0
+  [exit 0]
+  $ git log -m --all --reflog --full-history --no-renames --diff-filter=A --name-only --format='%H %ct' -- ':(glob)**/reg19_final_*' | awk '/^[0-9a-f]+ [0-9]+$/ {c=$0; next} NF {print c, $0}' | grep -E ' (.*/)?reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$'
+  047b95e5a8c7727224040f79f089ea66b482d623 1794610579 docs/probe/20261113_reg19/ops_r3/state/reg19_final_20261113T225441Z_71959_1.txt
+  047b95e5a8c7727224040f79f089ea66b482d623 1794610579 docs/probe/20261113_reg19/ops_r3/state/reg19_final_err_20261113T225441Z_71959_1.txt
+  [exit 0]
+  $ git log --all --full-history --diff-filter=A --name-only --format='%H %ct' -- ':(glob)**/reg19_final_*' | grep -E '(^|/)reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z|^[0-9a-f]{40} [0-9]+$'
+  047b95e5a8c7727224040f79f089ea66b482d623 1794610579
+  docs/probe/20261113_reg19/ops_r3/state/reg19_final_20261113T225441Z_71959_1.txt
+  docs/probe/20261113_reg19/ops_r3/state/reg19_final_err_20261113T225441Z_71959_1.txt
+  ba67e55debb286ff4e34067774e96c05e4b0623c 1794584284
+  e062504f777006b6b1e8915447eeadb46ec59246 1794573269
+  3e9c73fbd5e7b2bde56887ac272087efd6850ea9 1794572025
+  b8ea9158be64554637e96d8b400116dd58ef7a69 1794571329
+  346ee6cf29adec7c88d111eba51d20196b847709 1794570652
+  2bf6a9085cfe640fad1e38e3e066f7ed5ec9fdf8 1794569631
+  4ad587d762aff98fc7a3e495e268a6ca57e0557a 1794569464
+  72d488448087df9b0fade97996f692f825f6dcdb 1794568931
+  ab6988f49e2ad18c28613c9467aeb9b00d9e28cb 1794568531
+  [exit 0]
+  $ grep -noE 'reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z' docs/decisions.md
+  6900:reg19_final_20261114T010203Z
+  6900:reg19_final_20261114T020000Z
+  16522:reg19_final_20261113T225441Z
+  16522:reg19_final_err_20261113T225441Z
+  16524:reg19_final_20261113T225441Z
+  [exit 0]
+  $ git log -1 --format='%ct %cI' d9b324d071284d5f3154ef0defce6b357f349c55
+  1794608824 2026-11-14T04:27:04+06:00
+  [exit 0]
+  $ TZ=UTC date -j -f '%Y%m%dT%H%M%SZ' 20261113T225441Z +%s
+  1794610481
+  [exit 0]
+  $ git merge-base --is-ancestor 047b95e5a8c7727224040f79f089ea66b482d623 d9b324d071284d5f3154ef0defce6b357f349c55 && echo '047b95e5a8c7727224040f79f089ea66b482d623 is E or an ancestor of E' || echo '047b95e5a8c7727224040f79f089ea66b482d623 not an ancestor of E'
+  047b95e5a8c7727224040f79f089ea66b482d623 not an ancestor of E
+  [exit 0]
+  ```
+  Read: the table files are `reg19_final_20261113T225441Z_71959_1.txt` and `reg19_final_err_20261113T225441Z_71959_1.txt`, in the main working tree only, both added by `047b95e` (committer time 2026-11-13 22:56:19 UTC), so **S = 2026-11-13 22:54:41 UTC** (1794610481). The grep's lines at 6900 are the two synthetic stamps the [REG] fixed before any table file existed (20261114T010203Z and 20261114T020000Z, rule F round 11's BK2 trace), listed as synthetic and not counted; its lines at 16522 and 16524 are REG-19's [RESULT] quoting `final.sh`'s own file names. The 15 other `reg19_final_*` names are the review bundles' copies of `final.sh` (`reg19_final_sh_for_reference.sh`), not table files; the nine commits `ab6988f` … `ba67e55` printed by the second `git log` add those copies (DERIVED: the grep keeps their commit lines and drops their file names, which do not match the table-file expression). E's committer time, 1794608824 (2026-11-13 22:27:04 UTC), is earlier than S, and `047b95e` is not an ancestor of E. **Fact (2) holds.**
+- **The validity freeze.** After E, no validity flag of a run matching the batch-2 pattern, or of a REG-19 control (`*_stage2_control_l1pl350cl_r2.0_w3000_s1[5-9]`), was set or changed other than by the harness's checks or the recheck under the pinned checks: the one recheck after E is `final.sh`'s, 10 runs, 0 changed (PROBE(docs/probe/20261113_reg19/final_sh_stdout_20261113T225441Z.txt), its first line); the queue's rechecks of 19:20:29 and 21:48:51 UTC came before E; no valid burst run was rerun; no decisions.md entry after E touches a flag. **The validity freeze holds.** No flag is listed.
+- **The root-level import checks** (CG4), from the prechecks file:
+  ```
+  ## Root-level import checks (REG-21 BI-O1; REG-22 CG4)
+  $ git diff --quiet d9b324d071284d5f3154ef0defce6b357f349c55 3c8e5dc6d87ed7dbf364df49dfa2780282ff4deb -- ':(glob)*.py' ':(glob)*.pth'
+  [exit 0]
+  $ git status --porcelain --ignored --untracked-files=all -- ':(glob)*.py' ':(glob)*.pth'
+  !! .claude/worktrees/agent-a31d1e17f6b31f54e/
+  !! docs/paper/
+  [exit 0]
+  $ find . -maxdepth 1 \( -name '*.py' -o -name '*.pth' -o -name '*.so' \) -print
+  [exit 0]
+  $ find . -mindepth 2 -maxdepth 2 -name '__init__.py' -not -path './analysis/*' -not -path './harness/*' -print
+  [exit 0]
+  $ git status --porcelain --ignored --untracked-files=all -- analysis harness | grep -v '__pycache__' | grep -v '^.. analysis/figures/'
+  [exit 1]
+  ```
+  `git diff --quiet E B -- ':(glob)*.py' ':(glob)*.pth'` exits 0, and both `find` commands print nothing: no root-level `.py`, `.pth` or `.so` file and no package beside `analysis/` and `harness/` could shadow what the judged path imports. The `git status` form, which the [REG] does not ask for (CG4: it prints the nested repository `docs/paper/`), printed two ignored folders: `docs/paper/` and `.claude/worktrees/agent-a31d1e17f6b31f54e/`, a git worktree at `a7bb77a` made after E by a subagent that drafts C1's confirmation; neither is on Python's path as a package that `analysis` or `harness` imports (the two `find` commands). The `git status --porcelain --ignored --untracked-files=all -- analysis harness` line (with `__pycache__` and `analysis/figures/` left out) printed nothing. No breach.
+- **The duties on table files.** Both table files were committed on `main`, together and alone, in the first commit after they were written (`047b95e`, whose parent `d90f985` was HEAD when `final.sh` ran); no pair was set aside; before this command every table file in every working tree was committed (the `find` above); no committed text writes a table-file name with a stamp that `final.sh` did not write, apart from the two synthetic names in rule F round 11's saved review, its bundle copies and the [REG]'s quote of it (DERIVED: `grep -rnoE 'reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z' --exclude-dir=.git --exclude-dir=_to_delete --exclude-dir=runs .` over the repository, `docs/paper/` left out, run at 2026-11-13 23:29 UTC: 39 hits; besides the synthetic names, the other hits are `final.sh`'s stdout file, REG-19's [RESULT] lines 16522 and 16524, the context pack's generated copy of them, the two prechecks files committed with this entry and REG-21's (the verbatim output of fact (2)'s commands), and one untracked draft of REG-20's operations decision, which writes `final.sh`'s own name; REG-21's [RESULT] reports that last one under its stricter rule). No breach.
+- **The standing, by these facts:** batch 2 is **retrospective (by design)**: read (iii) of "What was known" (a context-pack script on 2026-11-12 most likely printed seed 17's burst run's `ok` and `unfinished` counts), with decisions.md 2026-11-13 [CORR] "Two reads of REG-19's seed 17" (FILE(docs/decisions.md:4453)); fact (1), fact (2) and the validity freeze hold, so no failed fact is added. The run-time lines and the looks are disclosed in the [REG] ("Run-time lines and looks").
+
+**Runs: the comparison under "Runs"** (names and `valid` only, compared by name before the command ran; the prechecks file):
+  ```
+  ## Runs: REG-21 (a) and (b), REG-22's comparison under 'Runs'
+  $ for d in runs/*_burst_l1pl350cl_r2.0_w3000_s1[5-9]; do test -e $d/checks.json && echo "$d checks.json" || echo "$d none"; done
+  runs/20261112-061951_burst_l1pl350cl_r2.0_w3000_s15 checks.json
+  runs/20261112-084533_burst_l1pl350cl_r2.0_w3000_s16 checks.json
+  runs/20261112-135538_burst_l1pl350cl_r2.0_w3000_s17 checks.json
+  runs/20261113-180511_burst_l1pl350cl_r2.0_w3000_s18 checks.json
+  runs/20261113-203108_burst_l1pl350cl_r2.0_w3000_s19 checks.json
+  [exit 0]
+  $ for d in runs/*_burst_l1pl350cl_r2.0_w3000_s1[5-9]; do if test -e $d/checks.json; then echo "${d:t} valid=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))[\"valid\"])" $d/checks.json)"; else echo "${d:t} no checks.json"; fi; done
+  20261112-061951_burst_l1pl350cl_r2.0_w3000_s15 valid=True
+  20261112-084533_burst_l1pl350cl_r2.0_w3000_s16 valid=True
+  20261112-135538_burst_l1pl350cl_r2.0_w3000_s17 valid=True
+  20261113-180511_burst_l1pl350cl_r2.0_w3000_s18 valid=True
+  20261113-203108_burst_l1pl350cl_r2.0_w3000_s19 valid=True
+  [exit 0]
+  $ PYTHONPATH=/private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad python3 /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad/b2_lists.py
+  L1 valid folders 5 ['20261112-061951_burst_l1pl350cl_r2.0_w3000_s15', '20261112-084533_burst_l1pl350cl_r2.0_w3000_s16', '20261112-135538_burst_l1pl350cl_r2.0_w3000_s17', '20261113-180511_burst_l1pl350cl_r2.0_w3000_s18', '20261113-203108_burst_l1pl350cl_r2.0_w3000_s19']
+  L2 REG-19 [RESULT] seeds in n 5 ['20261112-061951_burst_l1pl350cl_r2.0_w3000_s15', '20261112-084533_burst_l1pl350cl_r2.0_w3000_s16', '20261112-135538_burst_l1pl350cl_r2.0_w3000_s17', '20261113-180511_burst_l1pl350cl_r2.0_w3000_s18', '20261113-203108_burst_l1pl350cl_r2.0_w3000_s19']
+  L3 table file rows less excluded 5 ['20261112-061951_burst_l1pl350cl_r2.0_w3000_s15', '20261112-084533_burst_l1pl350cl_r2.0_w3000_s16', '20261112-135538_burst_l1pl350cl_r2.0_w3000_s17', '20261113-180511_burst_l1pl350cl_r2.0_w3000_s18', '20261113-203108_burst_l1pl350cl_r2.0_w3000_s19']
+  REG-19 [RESULT] n: 5 seeds_run: [15, 16, 17, 18, 19] excluded: []
+  L1 == L2: True | L1 == L3: True | L2 == L3: True
+  [exit 0]
+  ```
+  L1, the valid folders matching the batch-2 pattern; L2, the burst runs of the seeds in n of REG-19's table as its final [RESULT] reports them (n 5, seeds 15–19, none excluded); L3, the burst runs of the seeds the table file counts (its rows less `excluded`). The three lists are equal. Batch 2's five runs are those five, as `batch_runs(2)` then selected them (the file's rows). No case under "Runs" for "not computed" applied.
+
+**What was public when it was computed.**
+- REG-19's [RESULT] (committed in `6748c26`, 2026-11-13 23:02:54 UTC) had published, per run, the verdict (`stuck` for every burst run, `recovered` for every control), the end-window values (W's completion rate c 1.740–1.758, `q_end` and the line's length) and the emptyings (none), so the labels here were partly implied (FILE(docs/decisions.md:16517)).
+- **Every decisions.md entry committed between REG-19's result heading and this command:** none besides REG-19's [RESULT] itself (DERIVED: `git log 6748c26..ed1a16e -- docs/decisions.md` prints nothing).
+- **Every computation on REG-19's burst runs between that heading and this command:** REG-20's gate (`AFTERSHOCK_UNSEAL=REG-20 uv run python -m analysis.k1 reg20_a_may_start`, started 2026-11-13 23:03:07 UTC, committed in `3c8e5dc`), which printed `{'k_closed': 5, 'n': 5, 'best_p': 0.03125, 'may_start': True}` (PROBE(docs/probe/reg20/gate_20261113T230307Z.txt)); the prechecks' `test -e` and `valid` reads of the five burst runs' `checks.json`, and the three lists (from REG-19's table file and its [RESULT]), at 23:17:45 UTC. REG-19's table (`final.sh`, 22:54:41 UTC) came before the heading; REG-21's batch 2 (23:18:10 UTC) came after this command. `uv run pytest` (23:04:44 UTC on) ran on synthetic runs. In the other sessions active in that interval, by their tool-call inputs only (the agent's scan of the project's transcripts from 23:02:54 to 23:17:46 UTC): the session drafting REG-20's operations counted run names of REG-20's own pattern (`ls runs | grep -cE '_l1pl350ol_|_s15_drift$'`) and edited its scripts; another teammate session made 27 tool calls, none naming `runs/` or an `analysis` command; the subagent drafting C1's confirmation read REG-19's configs (`configs/`), not runs. None ran `c2` or printed a label on a REG-19 run.
+- **D1 and D2:** no proposal of D1 or D2 exists, before S or after (no decisions.md heading names either), so none is named here with its commit.
+
+**Counts (rule H; `c2.reg22_table`, `by_load`; bounds by `stats.cp_upper`, one-sided 95 % Clopper–Pearson).**
+| λ | stuck runs | `loop` | `not_sustained` | `not_memory_limited` | `undefined` | `loop` lower bound | `loop` upper bound | seeds |
+|---|---|---|---|---|---|---|---|---|
+| 2.0 | 5 | 5 | 0 | 0 | 0 | 0.549 | 1.000 | 15, 16, 17, 18, 19 |
+- **Spans:** 45 judged spans in the 5 runs (9 per run, each run's `sustain.n_spans`); none failed a link (DERIVED: no judged span has `holds` other than True). The span that starts before the exit is not judged in any run.
+- No run was left out (`left_out` is empty): every burst run's verdict is `stuck`.
+
+**What may be said (decision line a, met at λ = 2.0; lines c to h; the ceiling).**
+- **Status sentence, λ = 2.0, batch 2:** condition 4's registered levels held at the end of the watch, and all four links were present in every 300 s span after the burst's requests had left, in 5 of 5 stuck runs at λ = 2.0 (one-sided 95 % Clopper–Pearson bounds 0.549 to 1.000); the order clause is not judged and no loop figure exists; an overload gives the same picture; the loop-cut controls are not run. Batch 2: "retrospective (by design)", with decisions.md 2026-11-13 [CORR] "Two reads of REG-19's seed 17" cited; run-time lines and the looks disclosed in the [REG]. Of the 5, 5 have a same-seed control that is `recovered` and holds the four links in no judged span (`c2.reported_counts`, the control's own-baseline flag); against the burst run's own baseline each of those controls also holds them in no judged span (per run, below). The other three counts beside it: `not_sustained` 0, `not_memory_limited` 0, `undefined` 0 (line f).
+- **Batches that disagree at λ = 2.0** (both batches' counts side by side, with no summary across them):
+| batch | standing | stuck runs at λ = 2.0 | `loop` | `not_sustained` | `not_memory_limited` | `undefined` | bounds on `loop` | judged spans | judged spans failing a link | line met |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 (REG-17's and REG-18's seeds 2, 4, 3, 6) | "thresholds fixed after these runs were reported" | 4 | 4 | 0 | 0 | 0 | 0.473 to 1.000 | 16 | 0 | a |
+| 2 (REG-19's seeds 15–19) | "retrospective (by design)" | 5 | 5 | 0 | 0 | 0 | 0.549 to 1.000 | 45 | 0 | a |
+  Batch 1's values are from its file (PROBE(docs/probe/reg22/batch1_20261113T224144Z.txt), `by_load` and the four λ = 2.0 rows). Both batches have at least 3 stuck runs at λ = 2.0 and meet the same line, a, so **they do not disagree**; C2's status for λ = 2.0 may name line a for each batch, with each batch's standing, and claims neither batch alone. Batch 2 has 9 judged spans per run against batch 1's 4 (alternative 5).
+- **D1 and D2** may now be proposed on the session population as planned, by their own decision (line a's last bullet): the batches agree, batch 2 is computed, and no cause at or after S withholds line a's permission. This entry proposes neither.
+- **Line c:** `loop` is a code label; this entry's heading and every status line spell the outcome out as above, and none says the loop was shown, found, present or confirmed. **Lines d and e** do not apply (no `not_memory_limited` or `not_sustained` run). **Line g:** the command printed one load only; no all-load sentence is made.
+- **The order clause is not judged** (the registration's proposal; the owner's three choices are in `agent/FOR_AUTHOR.md`). The deadline FOR_AUTHOR gave for the second choice, a blind order test on REG-19's runs registered before this batch printed their onsets, has passed: the onsets are below, so an order test on these runs could no longer be blind.
+
+**Every run** (reported, never judged; `c2.condition4`'s rows). Units: reuse is the cached share of later turns' previous prompt; u is the session uncached prefill rate in tokens per second; N the mean running batch; KV the mean KV usage; λp the span's planned session rate (`c2.planned_rates`, by `t_planned`). Span start times are seconds of the run; the burst starts at 900 s; the span that starts before the exit is marked "not judged". The file writes the `judged` flag as the strings "True" and "False" (FILE(analysis/c2.py:443)); it is read as such here.
+- **RUN(20261112-061951_burst_l1pl350cl_r2.0_w3000_s15, c2.condition4)** (REG-19, λ = 2.0, seed 15): `loop`. Baseline [300, 900) s: reuse 0.997, u 1002, N 4.79, KV 0.155. End window: KV 0.950, N 29.87 (6.23 × baseline), N max 33; levels hold. Exit 1228.1 s; 9 judged spans, all four links in each. Spans (start: reuse / u / N / KV / λp): 1080 (not judged): 0.000 / 3496 / 32.6 / 0.958 / 1.76; 1380: 0.000 / 5300 / 29.3 / 0.951 / 1.78; 1680: 0.000 / 5310 / 30.3 / 0.951 / 2.33; 1980: 0.000 / 5287 / 30.1 / 0.951 / 1.71; 2280: 0.000 / 5274 / 30.0 / 0.949 / 2.49; 2580: 0.000 / 5335 / 30.6 / 0.950 / 2.31; 2880: 0.000 / 5329 / 30.2 / 0.949 / 1.92; 3180: 0.000 / 5303 / 29.7 / 0.950 / 1.87; 3480: 0.000 / 5310 / 29.5 / 0.950 / 2.08; 3780: 0.000 / 5314 / 30.3 / 0.951 / 1.90. Rows (`c2.row_counts`): 7442 ok session requests, 0 without `cached_tokens`, 31 with a first token that never finished.
+- **RUN(20261112-084533_burst_l1pl350cl_r2.0_w3000_s16, c2.condition4)** (REG-19, λ = 2.0, seed 16): `loop`. Baseline [300, 900) s: reuse 0.999, u 991, N 5.06, KV 0.164. End window: KV 0.952, N 30.29 (5.99 × baseline), N max 33; levels hold. Exit 1215.5 s; 9 judged spans, all four links in each. Spans (start: reuse / u / N / KV / λp): 1080 (not judged): 0.000 / 3575 / 32.6 / 0.947 / 2.17; 1380: 0.000 / 5281 / 28.9 / 0.947 / 1.77; 1680: 0.000 / 5329 / 30.3 / 0.950 / 1.93; 1980: 0.000 / 5275 / 29.5 / 0.952 / 1.81; 2280: 0.000 / 5320 / 29.8 / 0.948 / 1.85; 2580: 0.000 / 5341 / 29.9 / 0.946 / 2.27; 2880: 0.000 / 5321 / 30.2 / 0.949 / 1.98; 3180: 0.000 / 5297 / 30.1 / 0.952 / 2.46; 3480: 0.000 / 5268 / 30.2 / 0.951 / 1.75; 3780: 0.000 / 5302 / 30.4 / 0.952 / 2.26. Rows (`c2.row_counts`): 7447 ok session requests, 0 without `cached_tokens`, 25 with a first token that never finished.
+- **RUN(20261112-135538_burst_l1pl350cl_r2.0_w3000_s17, c2.condition4)** (REG-19, λ = 2.0, seed 17): `loop`. Baseline [300, 900) s: reuse 0.999, u 989, N 4.87, KV 0.158. End window: KV 0.952, N 29.90 (6.14 × baseline), N max 33; levels hold. Exit 1218.2 s; 9 judged spans, all four links in each. Spans (start: reuse / u / N / KV / λp): 1080 (not judged): 0.000 / 3509 / 32.9 / 0.959 / 2.35; 1380: 0.000 / 5234 / 30.2 / 0.957 / 2.31; 1680: 0.000 / 5242 / 30.3 / 0.954 / 1.85; 1980: 0.000 / 5309 / 29.9 / 0.947 / 1.89; 2280: 0.000 / 5309 / 29.6 / 0.946 / 2.44; 2580: 0.000 / 5297 / 30.4 / 0.949 / 2.33; 2880: 0.000 / 5300 / 30.4 / 0.949 / 1.81; 3180: 0.000 / 5280 / 30.0 / 0.952 / 2.21; 3480: 0.000 / 5245 / 29.9 / 0.954 / 1.72; 3780: 0.000 / 5277 / 29.9 / 0.950 / 2.09. Rows (`c2.row_counts`): 7416 ok session requests, 0 without `cached_tokens`, 27 with a first token that never finished.
+- **RUN(20261113-180511_burst_l1pl350cl_r2.0_w3000_s18, c2.condition4)** (REG-19, λ = 2.0, seed 18): `loop`. Baseline [300, 900) s: reuse 0.997, u 1110, N 5.87, KV 0.191. End window: KV 0.951, N 29.80 (5.07 × baseline), N max 35; levels hold. Exit 1216.4 s; 9 judged spans, all four links in each. Spans (start: reuse / u / N / KV / λp): 1080 (not judged): 0.000 / 3619 / 32.5 / 0.953 / 1.96; 1380: 0.000 / 5275 / 29.6 / 0.950 / 1.94; 1680: 0.000 / 5269 / 29.4 / 0.953 / 1.32; 1980: 0.000 / 5267 / 29.5 / 0.954 / 1.85; 2280: 0.000 / 5323 / 30.3 / 0.951 / 2.23; 2580: 0.000 / 5293 / 30.2 / 0.952 / 2.14; 2880: 0.000 / 5315 / 29.9 / 0.948 / 1.94; 3180: 0.000 / 5288 / 30.0 / 0.952 / 2.07; 3480: 0.000 / 5301 / 29.8 / 0.951 / 1.77; 3780: 0.000 / 5296 / 29.8 / 0.951 / 2.06. Rows (`c2.row_counts`): 7509 ok session requests, 0 without `cached_tokens`, 26 with a first token that never finished.
+- **RUN(20261113-203108_burst_l1pl350cl_r2.0_w3000_s19, c2.condition4)** (REG-19, λ = 2.0, seed 19): `loop`. Baseline [300, 900) s: reuse 0.996, u 1121, N 5.69, KV 0.184. End window: KV 0.950, N 29.97 (5.27 × baseline), N max 32; levels hold. Exit 1207.2 s; 9 judged spans, all four links in each. Spans (start: reuse / u / N / KV / λp): 1080 (not judged): 0.000 / 3756 / 32.1 / 0.955 / 1.83; 1380: 0.000 / 5248 / 29.2 / 0.956 / 1.76; 1680: 0.000 / 5327 / 30.3 / 0.952 / 2.04; 1980: 0.000 / 5262 / 30.1 / 0.954 / 2.15; 2280: 0.000 / 5312 / 30.0 / 0.951 / 2.02; 2580: 0.000 / 5324 / 29.7 / 0.951 / 1.71; 2880: 0.000 / 5342 / 29.9 / 0.948 / 2.25; 3180: 0.000 / 5327 / 30.1 / 0.951 / 1.83; 3480: 0.000 / 5334 / 29.9 / 0.950 / 2.31; 3780: 0.000 / 5280 / 30.0 / 0.950 / 2.10. Rows (`c2.row_counts`): 7441 ok session requests, 0 without `cached_tokens`, 27 with a first token that never finished.
+
+**The same-seed controls** (`c2.control_readout`; reported, carries no label). Each is a **single same-seed control**. "No span" means the links failed in every one of the burst run's judged spans.
+- 20261112-061951_burst_l1pl350cl_r2.0_w3000_s15 (seed 15): single same-seed control RUN(20261112-050920_stage2_control_l1pl350cl_r2.0_w3000_s15, c2.control_readout), verdict `recovered`; own baseline reuse 0.997, u 1002, N 4.83, KV 0.156. Against its own baseline the links hold in no judged span; against the burst run's baseline in no judged span; all four links failed in every span against either baseline.
+- 20261112-084533_burst_l1pl350cl_r2.0_w3000_s16 (seed 16): single same-seed control RUN(20261112-073516_stage2_control_l1pl350cl_r2.0_w3000_s16, c2.control_readout), verdict `recovered`; own baseline reuse 0.999, u 990, N 5.03, KV 0.164. Against its own baseline the links hold in no judged span; against the burst run's baseline in no judged span; all four links failed in every span against either baseline.
+- 20261112-135538_burst_l1pl350cl_r2.0_w3000_s17 (seed 17): single same-seed control RUN(20261112-103423_stage2_control_l1pl350cl_r2.0_w3000_s17, c2.control_readout), verdict `recovered`; own baseline reuse 0.999, u 990, N 4.85, KV 0.157. Against its own baseline the links hold in no judged span; against the burst run's baseline in no judged span; all four links failed in every span against either baseline.
+- 20261113-180511_burst_l1pl350cl_r2.0_w3000_s18 (seed 18): single same-seed control RUN(20261113-165516_stage2_control_l1pl350cl_r2.0_w3000_s18, c2.control_readout), verdict `recovered`; own baseline reuse 0.997, u 1110, N 5.88, KV 0.191. Against its own baseline the links hold in no judged span; against the burst run's baseline in no judged span; all four links failed in every span against either baseline.
+- 20261113-203108_burst_l1pl350cl_r2.0_w3000_s19 (seed 19): single same-seed control RUN(20261113-192110_stage2_control_l1pl350cl_r2.0_w3000_s19, c2.control_readout), verdict `recovered`; own baseline reuse 0.996, u 1122, N 5.72, KV 0.186. Against its own baseline the links hold in no judged span; against the burst run's baseline in no judged span; all four links failed in every span against either baseline.
+
+**Onsets (line h; `c2.onsets`, `c2.onset_reading`; reported, never judged).** Per stuck run: the onset times (s of the run; the burst starts at 900 s), the order found beside the plan's order (reuse, u, N, KV), the pairs (reuse, N) and (reuse, KV) with their `dt_s`, and the run-level reading. Listed per run with no tally; no pass or fail is attached, and none of it is a reading of the order clause. **Every `reversed` pair below is given with alternative 7 beside it:** session signals are read by first token while the burst shares the server, so a `reversed` pair says nothing about when the cache was lost unless every trailing 60 s window through the burst held at least 20 later turns, which this registration does not compute.
+- 20261112-061951_burst_l1pl350cl_r2.0_w3000_s15: reuse 920, u 1230, N 910, KV 960; found [n] then [reuse] then [kv] then [u] (plan: reuse, u, N, KV); (reuse, N) `reversed`, dt -17.9 s; (reuse, KV) `reversed`, dt -12.6 s; run-level `differs`.
+- 20261112-084533_burst_l1pl350cl_r2.0_w3000_s16: reuse 930, u 1220, N 930, KV 970; found [n, reuse] then [kv] then [u] (plan: reuse, u, N, KV); (reuse, N) `together`, dt -8.4 s; (reuse, KV) `reversed`, dt -12.5 s; run-level `differs`.
+- 20261112-135538_burst_l1pl350cl_r2.0_w3000_s17: reuse 940, u 1220, N 930, KV 970; found [n] then [reuse] then [kv] then [u] (plan: reuse, u, N, KV); (reuse, N) `reversed`, dt -18.1 s; (reuse, KV) `reversed`, dt -22.5 s; run-level `differs`.
+- 20261113-180511_burst_l1pl350cl_r2.0_w3000_s18: reuse 930, u 1220, N 920, KV 970; found [n] then [reuse] then [kv] then [u] (plan: reuse, u, N, KV); (reuse, N) `reversed`, dt -21.1 s; (reuse, KV) `reversed`, dt -12.3 s; run-level `differs`.
+- 20261113-203108_burst_l1pl350cl_r2.0_w3000_s19: reuse 930, u 1220, N 920, KV 970; found [n] then [reuse] then [kv] then [u] (plan: reuse, u, N, KV); (reuse, N) `reversed`, dt -20.4 s; (reuse, KV) `reversed`, dt -12.5 s; run-level `differs`.
+
+**The eviction link read directly** (`c2.eviction_readout`; R is `vllm:kv_block_idle_before_evict_seconds`, sampled on 1 % of blocks; reported, never judged). Per run: the samples gained, the bucket holding R's median, the shares at or below 5 s and 30 s, and the turn spacing (`c2.turn_spacing`), in the baseline [300, 900) s and from the exit to the end of the watch.
+- 20261112-061951_burst_l1pl350cl_r2.0_w3000_s15: baseline 458 samples, median in (30, 60] s, ≤ 5 s 0.015, ≤ 30 s 0.172, turn spacing 5.94 s; after the exit 9983 samples, median in (10, 20] s, ≤ 5 s 0.015, ≤ 30 s 1.000, turn spacing 114.98 s.
+- 20261112-084533_burst_l1pl350cl_r2.0_w3000_s16: baseline 463 samples, median in (30, 60] s, ≤ 5 s 0.022, ≤ 30 s 0.279, turn spacing 5.77 s; after the exit 10026 samples, median in (10, 20] s, ≤ 5 s 0.016, ≤ 30 s 1.000, turn spacing 89.26 s.
+- 20261112-135538_burst_l1pl350cl_r2.0_w3000_s17: baseline 457 samples, median in (30, 60] s, ≤ 5 s 0.013, ≤ 30 s 0.125, turn spacing 5.95 s; after the exit 9972 samples, median in (10, 20] s, ≤ 5 s 0.016, ≤ 30 s 1.000, turn spacing 130.85 s.
+- 20261113-180511_burst_l1pl350cl_r2.0_w3000_s18: baseline 526 samples, median in (30, 60] s, ≤ 5 s 0.034, ≤ 30 s 0.306, turn spacing 6.28 s; after the exit 10005 samples, median in (10, 20] s, ≤ 5 s 0.014, ≤ 30 s 1.000, turn spacing 89.51 s.
+- 20261113-203108_burst_l1pl350cl_r2.0_w3000_s19: baseline 516 samples, median in (30, 60] s, ≤ 5 s 0.027, ≤ 30 s 0.275, turn spacing 6.15 s; after the exit 10059 samples, median in (10, 20] s, ≤ 5 s 0.016, ≤ 30 s 1.000, turn spacing 90.46 s.
+- No window was flagged `reset` (DERIVED: the key appears in no eviction readout of the file).
+
+**The prediction, scored** (ledger row 25 in `docs/model.md`, updated with this entry).
+- **Batch 2:** predicted computed ≈ 0.6, with at least three stuck runs ≈ 0.7 of that, and then each stuck run `loop` ≈ 0.96 (0.71 at the pessimistic end). Observed: computed, 5 stuck runs, all five `loop`. **Hit** (DERIVED: at 0.96 per run, all five `loop` ≈ 0.82).
+- **Onsets:** predicted the pairs (reuse, N) and (reuse, KV) `reversed` in most stuck runs and the run-level reading `differs`. Observed (the per-run list above): (reuse, KV) `reversed` in 5 of 5 runs; (reuse, N) `reversed` in 4 (s15, s17, s18, s19), `together` in the others; the run-level reading `differs` in 5. **Met as listed.** It changes no decision, as registered (alternative 7).
+- **Eviction link:** predicted, in the cold state, R's median in the (10, 20] or (20, 30] s bucket and below the turn spacing; warm, in the (60, 120] s bucket. Observed: after the exit, the median in (10, 20] s in every run, against a turn spacing of 89 to 131 s: **hit**. In the baseline: (30, 60] s in 5, against a turn spacing of 5.77 to 6.28 s: **miss on the bucket**, as in batch 1, and still above the turn spacing.
+
+**What is restated and what is new.** Restated: the five `stuck` verdicts, the recovered controls, W's completion rates and the end-window queues (REG-19's [RESULT]); the hit share of 0 in the cold spans is what `stuck` requires. New here: the session uncached prefill rate, the reuse of later turns, the running batch and KV per 300 s span with their baselines; each run's exit time; the controls' links over the burst runs' judged spans; the onsets; R and the turn spacing.
+
+**Alternatives to state with this result** (the registration's 1 to 7, rule A2):
+1. **Overload, not a loop.** λ = 2.0 sits below the closed-loop warm capacity, at which λ = 2.4 sits (FILE(docs/claims.md:45)); each burst run's single same-seed control, the same schedule without the burst, was `recovered` and held the links in no judged span against either baseline. On these five schedules the load alone did not give this state. PROTOCOL §3 conditions 2, 5 and 6 decide overload, and the loop-cut controls are not run.
+2. **The label follows from the selection.** `stuck` already requires a low hit rate at the end; the levels nearly follow. Not selected on: the eight judged spans before the end window, and every judged span held all four links.
+3. **The preemption cycle of Ao et al.** A full pool with a large batch is also what their limit cycle shows; this registration does not separate it.
+4. **A schedule lull.** The lowest planned rate of a judged span, 1.32 req/s (20261113-180511_burst_l1pl350cl_r2.0_w3000_s18, from 1680 s), held all four links; the planned rate is by schedule time, and in closed loop a lull reaches the server later.
+5. **More spans, more chances.** Batch 2's runs have 9 judged spans, batch 1's 4 (REG-15's 14); with no failing span in either batch, the span count did not make them disagree.
+6. **The deepest backlogs drop out.** No run was `undefined`; every exit fell between 1207 and 1228 s, so each 3000 s watch kept 9 judged spans.
+7. **Late first tokens** (beside every `reversed` pair, above).
+
+**Not changed by this entry.** No threshold, label, window or rule. `docs/claims.md` (C2's status) is not edited here: a status line for C2 needs its own decision with its reviews (rule C; `agent/FOR_AUTHOR.md`). `docs/status.md` carries the status sentence above, worded as line a allows, with the two facts shown here first. D1 and D2 are not proposed here.
+
+## 2026-11-13 · [RESULT] REG-21 batch 2, a second retrospective reading (REG-19's five burst runs at λ = 2.0): J1 inside with no side, median r 1.028 (n 5, range 1.023 to 1.029, window 2400 s); batch 1's λ = 2.0 group is inside too; fixed-load contrast +0.0065; J2 stays "load or day"; batch 2 never governs
+
+**What was computed.** REG-21's batch 2, once, as registered (decisions.md 2026-11-13 [REG] REG-21, FILE(docs/decisions.md:9731), and its [DECISION] (delegate), FILE(docs/decisions.md:12752)), after REG-19's final [RESULT] (FILE(docs/decisions.md:16517)) and after REG-22's batch 2. 0 GPU h.
+- **The command line** (line 33 of the agent's script `run_batch2.zsh` in its scratchpad, run from the repository root; `$S` is the scratchpad), verbatim:
+  ```
+  TS2=$(date -u +%Y%m%dT%H%M%SZ); uv run python -m analysis.k3w reg21 2 > docs/probe/reg21/batch2_$TS2.txt 2> $S/reg21_batch2_stderr_$TS2.txt; RC2=$?
+  ```
+  Started 2026-11-13 23:18:10 UTC (the stamp), exit 0, stderr empty (0 lines), at B = `ed1a16e` (`ed1a16eb60e69fb352ab6fff0cfae41b8ace9dab`).
+- **The output:** `docs/probe/reg21/batch2_20261113T231810Z.txt`, sha256 `b90b624380f8009db214a25530960a49e80a21995a1a44d6b940fb3607bb6cbd`, committed at once and alone in `7be592d` (committer time 2026-11-13 23:18:36 UTC, after the stamp, so this is a first run that wrote its file as registered), before any reading of it was written. Every value below is read from that file by the function named; PROBE(docs/probe/reg21/batch2_20261113T231810Z.txt).
+- **This is batch 2's first run:** no output of `k3w.reg21_table` for batch 2, and no U, r or J label for one of its runs, was printed before it (the check at the append, FILE(docs/decisions.md:9841), and the [DECISION] (delegate)'s search at E; between E and this command the agent ran `k3w` on real run folders only for batch 1).
+- **Whether any computation printed an uncached-token rate on its runs before it:** yes, one. REG-22's batch 2 (`uv run python -m analysis.c2 reg22 2`, started 2026-11-13 23:17:46 UTC, output committed in `ed1a16e` at 2026-11-13 23:18:09 UTC, PROBE(docs/probe/reg22/batch2_20261113T231746Z.txt)) printed `c2.session_uncached_rate`, the session uncached prefill rate by first token, for every 300 s span and the baseline of all five runs, with the reuse of later turns, N and KV. It ran from the same script 24 s before this command, which printed only its stamp, exit code and sizes; no one read its output before this command started. REG-19's table prints no uncached-token rate (its keys are the completion rate `c`, the hit share, the queue, KV, the running batch and the like; DERIVED from the key names in the table file), and REG-20's gate printed four values (`k_closed`, `n`, `best_p`, `may_start`; PROBE(docs/probe/reg20/gate_20261113T230307Z.txt)).
+- **Before it:** `analysis/` and `tests/` clean (the script refuses otherwise); `uv run pytest` passed at `3c8e5dc` (529 passed in 752.68 s, started 2026-11-13 23:04:44 UTC), and B differs from `3c8e5dc` by REG-22's batch-2 file alone (`ed1a16e`, one file under `docs/probe/reg22/`); the hand checks below were run and saved first, at B (`docs/probe/reg21/batch2_prechecks_20261113T231809Z.txt`, sha256 `144feeec6e66577a2f396a104a02703d5c9e0f13b907f0b6df99219d7763964f`, a byte copy of the agent's scratchpad file `prechecks_b2_reg21_20261113T231809Z.txt`, written 2026-11-13 23:18:09 UTC; PROBE(docs/probe/reg21/batch2_prechecks_20261113T231809Z.txt)). Nothing was left out, so no r of a left-out run is given.
+
+**The standing.** Batch 2 is a second retrospective reading: it is labelled retrospective by design under read (x) of "What was known" (on 2026-11-12 at 17:59:38 UTC a context-pack script read the `ok` and `unfinished` counts of `no_errors` from every run folder's `checks.json`, REG-19's seeds 15 to 17 included, and most likely printed seed 17's two rows; FILE(docs/decisions.md:9784)), and under (i) the note `docs/probe/20261111_reg19/ops/RESUME.md`, which holds lines of seed 17's control's harness log, was opened in this project's sessions on 2026-11-12 and 2026-11-13 (FILE(docs/decisions.md:9784)). It never governs, and neither "disagree" nor the line "Batch 2's J1 inside" applies to it ("The two batches").
+
+**The two facts, verbatim** (E = `d9b324d`, the later of the two commits that appended this [REG] and its [DECISION] (delegate); B = `ed1a16e`; the prechecks file).
+- **Fact (1)**, its four commands on the 26 frozen files (the last is the shadow-path check):
+  ```
+  ## Fact (1), REG-21 (its 26 frozen files)
+  $ git log --full-history --format='%H %ct %s' d9b324d071284d5f3154ef0defce6b357f349c55..ed1a16eb60e69fb352ab6fff0cfae41b8ace9dab -- analysis/__init__.py analysis/derived.py analysis/floor.py analysis/gate.py analysis/k1.py analysis/k3.py analysis/k3w.py analysis/load.py analysis/margin.py analysis/modelf.py analysis/modelf_sim.py analysis/stats.py analysis/tables.py analysis/withheld.py harness/__init__.py harness/checks.py harness/config.py harness/env_snapshot.py harness/loadgen.py harness/recorder.py harness/run.py harness/trigger.py harness/workload.py .python-version pyproject.toml uv.lock
+  [exit 0]
+  $ git diff --quiet d9b324d071284d5f3154ef0defce6b357f349c55 ed1a16eb60e69fb352ab6fff0cfae41b8ace9dab -- analysis/__init__.py analysis/derived.py analysis/floor.py analysis/gate.py analysis/k1.py analysis/k3.py analysis/k3w.py analysis/load.py analysis/margin.py analysis/modelf.py analysis/modelf_sim.py analysis/stats.py analysis/tables.py analysis/withheld.py harness/__init__.py harness/checks.py harness/config.py harness/env_snapshot.py harness/loadgen.py harness/recorder.py harness/run.py harness/trigger.py harness/workload.py .python-version pyproject.toml uv.lock
+  [exit 0]
+  $ git status --porcelain -- analysis/__init__.py analysis/derived.py analysis/floor.py analysis/gate.py analysis/k1.py analysis/k3.py analysis/k3w.py analysis/load.py analysis/margin.py analysis/modelf.py analysis/modelf_sim.py analysis/stats.py analysis/tables.py analysis/withheld.py harness/__init__.py harness/checks.py harness/config.py harness/env_snapshot.py harness/loadgen.py harness/recorder.py harness/run.py harness/trigger.py harness/workload.py .python-version pyproject.toml uv.lock
+  [exit 0]
+  $ git log -m --diff-filter=AR --name-only --format= d9b324d071284d5f3154ef0defce6b357f349c55..ed1a16eb60e69fb352ab6fff0cfae41b8ace9dab | grep -E '^([^/]+\.py|[^/]+/__init__\.py|(analysis|harness)/(derived|floor|gate|k1|k3|k3w|load|margin|modelf|modelf_sim|stats|tables|withheld|checks|config|env_snapshot|loadgen|recorder|run|trigger|workload)/.*)$'
+  [exit 1]
+  ```
+  The `git log` printed nothing, `git diff --quiet` exited 0, `git status --porcelain` printed nothing, and the shadow-path `grep` printed nothing (its exit 1 is grep's "no line matched"). **Fact (1) holds.**
+- **Fact (2)**, its commands in every working tree `git worktree list` names, with REG-22's stricter `git log` (`-m --reflog --no-renames`) printed first and REG-21's own (`git log --all --full-history --diff-filter=A …`, filtered) second, the decisions.md grep (with line numbers, `-n`), the committer time of E, S, and the ancestry of the commit that adds the table files:
+  ```
+  ## Fact (2): table files (every worktree; every ref and the reflog; decisions.md quotes)
+  $ git worktree list
+  /Users/chalshik/Projects/aftershock-artifacts                                           ed1a16e [main]
+  /Users/chalshik/Projects/aftershock-artifacts/.claude/worktrees/agent-a31d1e17f6b31f54e a7bb77a [worktree-agent-a31d1e17f6b31f54e] locked
+  /Users/chalshik/Projects/aftershock-linktest-pin                                        a7bb77a (detached HEAD)
+  /Users/chalshik/Projects/aftershock-reg19-pin                                           a7bb77a (detached HEAD)
+  [exit 0]
+  $ (cd /Users/chalshik/Projects/aftershock-artifacts && find . -name 'reg19_final_*' -not -path './.git/*' | grep -E '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$')
+  ./docs/probe/20261113_reg19/ops_r3/state/reg19_final_err_20261113T225441Z_71959_1.txt
+  ./docs/probe/20261113_reg19/ops_r3/state/reg19_final_20261113T225441Z_71959_1.txt
+  [exit 0]
+  $ (cd /Users/chalshik/Projects/aftershock-artifacts && find . -name 'reg19_final_*' -not -path './.git/*' | grep -vE '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$' | wc -l)
+        15
+  [exit 0]
+  $ (cd /Users/chalshik/Projects/aftershock-artifacts/.claude/worktrees/agent-a31d1e17f6b31f54e && find . -name 'reg19_final_*' -not -path './.git/*' | grep -E '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$')
+  [exit 1]
+  $ (cd /Users/chalshik/Projects/aftershock-artifacts/.claude/worktrees/agent-a31d1e17f6b31f54e && find . -name 'reg19_final_*' -not -path './.git/*' | grep -vE '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$' | wc -l)
+         0
+  [exit 0]
+  $ (cd /Users/chalshik/Projects/aftershock-linktest-pin && find . -name 'reg19_final_*' -not -path './.git/*' | grep -E '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$')
+  [exit 1]
+  $ (cd /Users/chalshik/Projects/aftershock-linktest-pin && find . -name 'reg19_final_*' -not -path './.git/*' | grep -vE '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$' | wc -l)
+         0
+  [exit 0]
+  $ (cd /Users/chalshik/Projects/aftershock-reg19-pin && find . -name 'reg19_final_*' -not -path './.git/*' | grep -E '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$')
+  [exit 1]
+  $ (cd /Users/chalshik/Projects/aftershock-reg19-pin && find . -name 'reg19_final_*' -not -path './.git/*' | grep -vE '/reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$' | wc -l)
+         0
+  [exit 0]
+  $ git log -m --all --reflog --full-history --no-renames --diff-filter=A --name-only --format='%H %ct' -- ':(glob)**/reg19_final_*' | awk '/^[0-9a-f]+ [0-9]+$/ {c=$0; next} NF {print c, $0}' | grep -E ' (.*/)?reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z[^/]*$'
+  047b95e5a8c7727224040f79f089ea66b482d623 1794610579 docs/probe/20261113_reg19/ops_r3/state/reg19_final_20261113T225441Z_71959_1.txt
+  047b95e5a8c7727224040f79f089ea66b482d623 1794610579 docs/probe/20261113_reg19/ops_r3/state/reg19_final_err_20261113T225441Z_71959_1.txt
+  [exit 0]
+  $ git log --all --full-history --diff-filter=A --name-only --format='%H %ct' -- ':(glob)**/reg19_final_*' | grep -E '(^|/)reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z|^[0-9a-f]{40} [0-9]+$'
+  047b95e5a8c7727224040f79f089ea66b482d623 1794610579
+  docs/probe/20261113_reg19/ops_r3/state/reg19_final_20261113T225441Z_71959_1.txt
+  docs/probe/20261113_reg19/ops_r3/state/reg19_final_err_20261113T225441Z_71959_1.txt
+  ba67e55debb286ff4e34067774e96c05e4b0623c 1794584284
+  e062504f777006b6b1e8915447eeadb46ec59246 1794573269
+  3e9c73fbd5e7b2bde56887ac272087efd6850ea9 1794572025
+  b8ea9158be64554637e96d8b400116dd58ef7a69 1794571329
+  346ee6cf29adec7c88d111eba51d20196b847709 1794570652
+  2bf6a9085cfe640fad1e38e3e066f7ed5ec9fdf8 1794569631
+  4ad587d762aff98fc7a3e495e268a6ca57e0557a 1794569464
+  72d488448087df9b0fade97996f692f825f6dcdb 1794568931
+  ab6988f49e2ad18c28613c9467aeb9b00d9e28cb 1794568531
+  [exit 0]
+  $ grep -noE 'reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z' docs/decisions.md
+  6900:reg19_final_20261114T010203Z
+  6900:reg19_final_20261114T020000Z
+  16522:reg19_final_20261113T225441Z
+  16522:reg19_final_err_20261113T225441Z
+  16524:reg19_final_20261113T225441Z
+  [exit 0]
+  $ git log -1 --format='%ct %cI' d9b324d071284d5f3154ef0defce6b357f349c55
+  1794608824 2026-11-14T04:27:04+06:00
+  [exit 0]
+  $ TZ=UTC date -j -f '%Y%m%dT%H%M%SZ' 20261113T225441Z +%s
+  1794610481
+  [exit 0]
+  $ git merge-base --is-ancestor 047b95e5a8c7727224040f79f089ea66b482d623 d9b324d071284d5f3154ef0defce6b357f349c55 && echo '047b95e5a8c7727224040f79f089ea66b482d623 is E or an ancestor of E' || echo '047b95e5a8c7727224040f79f089ea66b482d623 not an ancestor of E'
+  047b95e5a8c7727224040f79f089ea66b482d623 not an ancestor of E
+  [exit 0]
+  ```
+  Read: the table files are `reg19_final_20261113T225441Z_71959_1.txt` and `reg19_final_err_20261113T225441Z_71959_1.txt`, in the main working tree only; **S = 2026-11-13 22:54:41 UTC**, the stamp of both. **The source of the stamp that sets S:** `docs/probe/20261113_reg19/ops_r3/state/reg19_final_20261113T225441Z_71959_1.txt`, added by `047b95e` (committer time 2026-11-13 22:56:19 UTC), and quoted at FILE(docs/decisions.md:16522). The grep's two lines at 6900 are the synthetic stamps 20261114T010203Z and 20261114T020000Z (REG-22's rule F round 11, BK2 trace), listed as synthetic and not counted. The nine commits `ab6988f` … `ba67e55` that REG-21's own `git log` prints add the review bundles' `reg19_final_sh_for_reference.sh`, not table files (their file names do not match the expression), and the 15 other names the `find` counts are those copies. E's committer time (1794608824, 2026-11-13 22:27:04 UTC) is earlier than S (1794610481), and `047b95e` is not an ancestor of E. **Fact (2) holds.**
+
+**The hand checks and the duties.**
+- **E in the reflog, the stash, and `analysis/` and `harness/`:**
+  ```
+  ## E in the reflog; the stash
+  $ git reflog show --date=iso main | grep d9b324d
+  d9b324d main@{2026-11-14 04:27:04 +0600}: commit: [REG] REG-22 and REG-21 registered, each with its [DECISION] (delegate) (E): REG-22 [REG] (draft 18 as approved) and [DECISION]; REG-21 [REG] (draft 27 with CK1-CK12 as approved) and [DECISION]; the freeze of each command's imported files runs from this commit. With them: the terms docs/definitions.md gains (rule J) and ledger rows 24 and 25 in docs/model.md, each quote checked against the appended lines (the not-in-force draft of these terms had two errors, both fixed before this commit: the waiting gauge's deferred requests, and row 25's onset and batch-2 predictions); the at-E transcript searches (search, search2, classify2 with 0 unlabelled; noteread: no new first-class hit since 21:49:08 UTC); status, STATE, FOR_AUTHOR and open-questions. Batch 1 of each follows in its own commit
+  [exit 0]
+  $ git stash list
+  [exit 0]
+  ```
+  E's line is in `main`'s reflog; `git stash list` prints nothing. The status of `analysis` and `harness` with ignored and untracked files, `__pycache__` and `analysis/figures/` left out, printed nothing (its exit 1 is grep's; the prechecks' line under "Root-level import checks"). No breach.
+- **The root-level checks** (rule F round 18, BI-O1):
+  ```
+  ## Root-level import checks (REG-21 BI-O1; REG-22 CG4)
+  $ git diff --quiet d9b324d071284d5f3154ef0defce6b357f349c55 ed1a16eb60e69fb352ab6fff0cfae41b8ace9dab -- ':(glob)*.py' ':(glob)*.pth'
+  [exit 0]
+  $ git status --porcelain --ignored --untracked-files=all -- ':(glob)*.py' ':(glob)*.pth'
+  !! .claude/worktrees/agent-a31d1e17f6b31f54e/
+  !! docs/paper/
+  [exit 0]
+  $ find . -maxdepth 1 \( -name '*.py' -o -name '*.pth' -o -name '*.so' \) -print
+  [exit 0]
+  $ find . -mindepth 2 -maxdepth 2 -name '__init__.py' -not -path './analysis/*' -not -path './harness/*' -print
+  [exit 0]
+  $ git status --porcelain --ignored --untracked-files=all -- analysis harness | grep -v '__pycache__' | grep -v '^.. analysis/figures/'
+  [exit 1]
+  ```
+  `git diff --quiet E B -- ':(glob)*.py' ':(glob)*.pth'` exits 0. **`git status --porcelain --ignored --untracked-files=all -- ':(glob)*.py' ':(glob)*.pth'` printed two lines; each is a breach this rule reports:** `!! docs/paper/`, the paper's nested repository, ignored and present since before E (REG-22's rule F round 12, CG4, notes that this form prints it); and `!! .claude/worktrees/agent-a31d1e17f6b31f54e/`, a git worktree at `a7bb77a` made after E (2026-11-13 ≈ 23:07 UTC) for the subagent drafting C1's confirmation, which holds a copy of the repository's `.py` files. Neither is a root-level module or package: `python -m` puts the repository root first on the path, and the two `find` commands (root-level `.py`, `.pth` or `.so`; a package two levels down other than `analysis/` and `harness/`) print nothing, so neither folder can be imported in place of a frozen file or of a library they import. The breaches change neither fact and are not events of CE1.
+- **Hand check (a).** The [DECISION] (delegate) listed the folders matching the batch-2 pattern at E, each with `checks.json` (FILE(docs/decisions.md:12875)): 20261112-061951_burst_l1pl350cl_r2.0_w3000_s15, 20261112-084533_burst_l1pl350cl_r2.0_w3000_s16, 20261112-135538_burst_l1pl350cl_r2.0_w3000_s17, 20261113-180511_burst_l1pl350cl_r2.0_w3000_s18, 20261113-203108_burst_l1pl350cl_r2.0_w3000_s19. The list (b) finds below is the same five names; no folder without a valid `checks.json` was found, and no flag changed other than as the harness wrote it when the run ended: the one recheck after E, `final.sh`'s under the pinned checks, changed 0 of 10 (PROBE(docs/probe/20261113_reg19/final_sh_stdout_20261113T225441Z.txt), its first line). No breach of (a).
+- **Hand check (b), the three lists:**
+  ```
+  ## Runs: REG-21 (a) and (b), REG-22's comparison under 'Runs'
+  $ for d in runs/*_burst_l1pl350cl_r2.0_w3000_s1[5-9]; do test -e $d/checks.json && echo "$d checks.json" || echo "$d none"; done
+  runs/20261112-061951_burst_l1pl350cl_r2.0_w3000_s15 checks.json
+  runs/20261112-084533_burst_l1pl350cl_r2.0_w3000_s16 checks.json
+  runs/20261112-135538_burst_l1pl350cl_r2.0_w3000_s17 checks.json
+  runs/20261113-180511_burst_l1pl350cl_r2.0_w3000_s18 checks.json
+  runs/20261113-203108_burst_l1pl350cl_r2.0_w3000_s19 checks.json
+  [exit 0]
+  $ for d in runs/*_burst_l1pl350cl_r2.0_w3000_s1[5-9]; do if test -e $d/checks.json; then echo "${d:t} valid=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))[\"valid\"])" $d/checks.json)"; else echo "${d:t} no checks.json"; fi; done
+  20261112-061951_burst_l1pl350cl_r2.0_w3000_s15 valid=True
+  20261112-084533_burst_l1pl350cl_r2.0_w3000_s16 valid=True
+  20261112-135538_burst_l1pl350cl_r2.0_w3000_s17 valid=True
+  20261113-180511_burst_l1pl350cl_r2.0_w3000_s18 valid=True
+  20261113-203108_burst_l1pl350cl_r2.0_w3000_s19 valid=True
+  [exit 0]
+  $ PYTHONPATH=/private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad python3 /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad/b2_lists.py
+  L1 valid folders 5 ['20261112-061951_burst_l1pl350cl_r2.0_w3000_s15', '20261112-084533_burst_l1pl350cl_r2.0_w3000_s16', '20261112-135538_burst_l1pl350cl_r2.0_w3000_s17', '20261113-180511_burst_l1pl350cl_r2.0_w3000_s18', '20261113-203108_burst_l1pl350cl_r2.0_w3000_s19']
+  L2 REG-19 [RESULT] seeds in n 5 ['20261112-061951_burst_l1pl350cl_r2.0_w3000_s15', '20261112-084533_burst_l1pl350cl_r2.0_w3000_s16', '20261112-135538_burst_l1pl350cl_r2.0_w3000_s17', '20261113-180511_burst_l1pl350cl_r2.0_w3000_s18', '20261113-203108_burst_l1pl350cl_r2.0_w3000_s19']
+  L3 table file rows less excluded 5 ['20261112-061951_burst_l1pl350cl_r2.0_w3000_s15', '20261112-084533_burst_l1pl350cl_r2.0_w3000_s16', '20261112-135538_burst_l1pl350cl_r2.0_w3000_s17', '20261113-180511_burst_l1pl350cl_r2.0_w3000_s18', '20261113-203108_burst_l1pl350cl_r2.0_w3000_s19']
+  REG-19 [RESULT] n: 5 seeds_run: [15, 16, 17, 18, 19] excluded: []
+  L1 == L2: True | L1 == L3: True | L2 == L3: True
+  [exit 0]
+  ```
+  L1, the valid folders matching the pattern; L2, the burst runs of the seeds in n of REG-19's table as its final [RESULT] reports it (n 5; seeds 15–19; none excluded); L3, the burst runs of the seeds the table file counts (its rows less `excluded`). The three are equal, so batch 2 was computed.
+- **Events after E** (each with its author's statement of what had been seen of REG-19's runs, and, for the stamp that sets S, its source above):
+  - **A commit that touches a frozen file:** none (fact (1)).
+  - **A run whose folder matches the batch-2 pattern or `*_sweep_l1pl350_pc_off_r*`:** none made or copied in after E; the last GPU run, seed 19's burst run, was launched at 20:31 UTC and copied by 21:46 UTC, before E (REG-22's [REG], "About batch 2, what is known").
+  - **A table file's name with its stamp:** `final.sh`'s own files (the pair under `ops_r3/state/`, and its stdout, committed in `6748c26` as `docs/probe/20261113_reg19/final_sh_stdout_20261113T225441Z.txt`); `047b95e`, which commits the pair, whose message gives the stamp and no file name and whose author, the agent, had seen the first two lines of `final.sh`'s stdout (the recheck counts, rc, scripts, pin, output names), not the table (the agent's transcript shows the table's content first opened at 22:56:47 UTC, after the commit at 22:56:19 UTC); REG-19's [RESULT], which cites them (FILE(docs/decisions.md:16522), FILE(docs/decisions.md:16524)) and states what its author read; `docs/context-pack.md`'s generated copy of those lines (`tools/context_pack.py`, committed with the [RESULT]); the two prechecks files committed with this entry and REG-22's, the verbatim output of this rule's commands. **One more, a breach this rule reports:** `docs/drafts/reg20_ops_decision_draft2.md`, line 17, an untracked draft of REG-20's operations decision written by a teammate session before this command, writes `final.sh`'s own file name with its stamp, which only the files and entries above may do; its line states what its author had seen ("`git show --stat`, names only, not opened"). It changes neither fact and is not an event of CE1; the draft's author is asked to write `reg19_final_<stamp>` there.
+- **CE1's events:** none. Fact (1) and fact (2) hold; no fix to a frozen file was made; the only line that begins as REG-19's result heading is its final [RESULT] (FILE(docs/decisions.md:16517)), and `withheld.lifted('[RESULT] REG-19')` accepted it; batch 2 was computed, with no entry on a validity flag, no breach of duty (a) and no heading the seal refused. So the ceiling of "At the tolerance" does not apply through CE1.
+
+**Runs.** All five burst runs entered (`k1.cold_backlogged` held in each run's own end window; `not_cold_backlogged` is empty) and all five were judged: each was all-miss in W (reuse of later turns exactly 0.0, `k1.reuse`) and busy (a request waiting in every scrape of W, busy share exactly 1.0, `k3w.busy_share`, with the gauge covering W). **No run was left out**, at 0.99 or at 0.95. W is [1680, 4080) s in every run, 2400 s.
+
+**The reference** (`k3w.reference`): U_off = 5164.76 uncached tokens per second over REG-8's five saturated cache-off runs (SD 39.81, spread 1.99%; mean without the λ = 2.0 run 5180.36), the same five runs and values as in batch 1.
+
+**Judged (`k3w.judge`), batch 2.**
+- **J1 of the λ = 2.0 group: `inside`, no side** (`J1_side` null): `"median": 1.0275066839899665`, n 5, min 1.0227565450530962, max 1.0287768298361295, SD 0.002430778011481653, dates 20261112, 20261113; window 2400 s ([1680, 4080) s).
+- **J2:** not defined (one load; `J2` null), as batch 2 has a single load.
+- **The second table at a busy share of 0.95** (reported only): identical (J1 inside, median 1.0275066839899665; nothing left out).
+
+**The two batches** ("The two batches"; the label compared is batch 1's λ = 2.0 group's).
+- Batch 1, λ = 2.0 (PROBE(docs/probe/reg21/batch1_20261113T224220Z.txt), sha256 `af2c2747bd7d9351893901b54d034ced7f6719716d88d345f57b479cc5cb6ef2`): J1 `inside`, no side; median 1.0209631954979448; n 5; range 1.0201 to 1.0253; window 900 s; dates 20261110, 20261111.
+- Batch 2, λ = 2.0: J1 `inside`, no side; median 1.0275066839899665; n 5; range 1.0228 to 1.0288; window 2400 s; dates 20261112, 20261113.
+- The labels and sides are the same, so neither "At the tolerance" nor its ceiling for a retrospective batch 2 that differs in label or side applies, and the batches are not said to disagree. Batch 2 is reported beside batch 1 as a second retrospective reading; it never governs.
+- **Batch 1 does not become the paper's statement:** batch 2 is labelled retrospective, so the paper has a retrospective reading and no reading on unread runs.
+
+**The fixed-load contrast** (`fixed_load_contrast`; reported, not judged as a statement).
+- As printed: `batch1_group` "2.0", `batch1_median` 1.0209631954979448, `batch2_median` 1.0275066839899665, `difference` 0.006543488492021687.
+- **The check of `batch1_median`,** on the saved files: it equals the λ = 2.0 group median in batch 1's file, `1.0209631954979448`, exactly (DERIVED: the two values read from the two files compare equal). No deviation.
+- **The comparison with 0.05, by hand,** on the saved file: |0.006543| ≤ 0.05. **A contrast of 0.05 or less is not evidence against a day, window or selection effect: J2 stays "load or day"** (batch 1's J2, inside at λ = 2.0 and 2.4, is "one work rate at the two loads or days").
+- **r over the first 900 s of W** (`reported_spans`, `r_first`), every run of either batch: batch 2 (this file) seed 15 1.0244; seed 16 1.0277; seed 17 1.0236; seed 18 1.0236; seed 19 1.0263; batch 1 (its file) 20261109-042828 (λ = 2.4) 1.0147; 20261109-080203 (λ = 2.4) 1.0324; 20261109-093609 (λ = 2.4) 1.0191; 20261109-111316 (λ = 2.4) 1.0196; 20261109-125300 (λ = 2.4) 1.0248; 20261109-151300 (λ = 2.4) 1.0213; 20261110-063647 (λ = 2.2) 1.0200; 20261110-085730 (λ = 2.2) 1.0207; 20261110-182920 (λ = 2.0) 1.0205; 20261111-101805 (λ = 2.0) 1.0210; 20261111-115409 (λ = 2.0) 1.0253; 20261111-133019 (λ = 2.0) 1.0201; 20261111-150642 (λ = 2.0) 1.0217. It carries no wording: the batches differ in seeds, days, windows and filters.
+
+**What may be said.** At λ = 2.0, in a second retrospective reading on REG-19's five burst runs (seeds 15–19), labelled retrospective by design (read (x), and the reads of the note under (i)), the cold and backlogged (`k1.cold_backlogged`) engine's r had J1 `inside` with no side: median 1.028, n 5, range 1.023 to 1.029, window 2400 s. Beside it, batch 1's λ = 2.0 group: `inside`, median 1.021, n 5, window 900 s; the contrast +0.0065. Its two factors: the completion rate over W was 1.740 to 1.758 req/s against the reference's 1.681, and the mean served prompt 3017 to 3044 tokens against the 3072 of the eight turns (`k3w.readouts`). C1 is still not supported by its own test (FILE(docs/claims.md:31)). Nothing is said about other loads, and J2 stays "load or day".
+
+**r was roughly implied when it was computed.** REG-19's [RESULT] had published each run's completion rate c over the same W (FILE(docs/decisions.md:16517), its per-seed table), and r is close to (c ÷ 1.681) × (mean served prompt ÷ 3072). Per run (`k3w.row`, `k3w.readouts`; DERIVED: each product from the two numbers beside it):
+| run | seed | U (by first token) | U by end time | r | r without the λ = 2.0 reference | mean served prompt | c published (REG-19) | (c ÷ 1.681)(prompt ÷ 3072) | completion rate over W (`X_all`) | (X_all ÷ 1.681)(prompt ÷ 3072) | first-turn share | redo proxy |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| RUN(20261112-061951_burst_l1pl350cl_r2.0_w3000_s15, k3w.row) | 15 | 5307.7 | 5307.4 | 1.0277 | 1.0246 | 3017.2 | 1.758 | 1.0271 | 1.758 | 1.0273 | 0.145 | 0.025 |
+| RUN(20261112-084533_burst_l1pl350cl_r2.0_w3000_s16, k3w.row) | 16 | 5306.8 | 5307.1 | 1.0275 | 1.0244 | 3020.2 | 1.756 | 1.0270 | 1.756 | 1.0272 | 0.143 | 0.025 |
+| RUN(20261112-135538_burst_l1pl350cl_r2.0_w3000_s17, k3w.row) | 17 | 5282.3 | 5283.9 | 1.0228 | 1.0197 | 3020.6 | 1.750 | 1.0236 | 1.750 | 1.0234 | 0.143 | 0.031 |
+| RUN(20261113-180511_burst_l1pl350cl_r2.0_w3000_s18, k3w.row) | 18 | 5294.1 | 5297.5 | 1.0250 | 1.0220 | 3044.0 | 1.740 | 1.0257 | 1.740 | 1.0257 | 0.134 | 0.027 |
+| RUN(20261113-203108_burst_l1pl350cl_r2.0_w3000_s19, k3w.row) | 19 | 5313.4 | 5312.7 | 1.0288 | 1.0257 | 3026.1 | 1.756 | 1.0290 | 1.756 | 1.0289 | 0.140 | 0.025 |
+- The published c equals `X_all` to three decimals in every run, and the product with c lies within 0.0009 of r (DERIVED from the table): given the published c and a mean served prompt near 3072, r near 1.02 to 1.03 followed.
+
+**Reported, never judged.**
+- **Valse and Jannesari's rule** (`k3w.vj_counts`, `k3w.vj_rule`): λ = 2.0, 5 of 5 (one-sided 95 % Clopper–Pearson upper bound 1.000); token part and slope part held in each run (backlog slope 0.0502 to 0.0734 sessions/s against 0.0154 to 0.0254 needed).
+- **Spans** (`k3w.reported_spans`): U over the eight 300 s spans of W, seed 15 5274.5 to 5334.6; seed 16 5268.5 to 5341.0; seed 17 5241.6 to 5309.0; seed 18 5266.8 to 5323.1; seed 19 5261.7 to 5342.3; reuse of later turns 0.000 in every span.
+- **Gauges in W** (`k3w.readouts`): running 29.9 to 30.1, waiting 134 to 219, KV 0.950 to 0.952, preemptions 0.044 to 0.053/s, redo proxy 0.025 to 0.031, burst requests in W 0 in every run; the planned session rate over W 1.927 to 2.087; the rest of `readouts` is in the file.
+
+**The prediction, scored** (ledger row 24 in `docs/model.md`, updated with this entry).
+- Batch 2: never computed ≈ 0.4; if computed, J1 undefined ≈ 0.24 with five runs, otherwise inside ≈ 0.65, outside high ≈ 0.3, outside low ≈ 0.05. Observed: computed, five runs, J1 inside. **Hit on the modal outcome** given five runs (DERIVED: inside ≈ 0.76 × 0.65 ≈ 0.49, outside high ≈ 0.23, undefined ≈ 0.24).
+- The median, 1.0275, sits within the 1.02 to 1.04 that batch 1's λ = 2.0 group was predicted at, and +0.0065 above that group's observed median.
+
+**Alternatives to state with this result** (the registration's 1 to 11, rule A2, as they bear on batch 2):
+1. **Prefill done twice.** The redo proxy is 0.025 to 0.031 here and 0.018 to 0.032 in the reference; it bounds a difference in redone work and does not measure it.
+2. **Day, window and seeds.** Batch 2 is λ = 2.0 on 2026-11-12 and 13 with seeds 15–19 and a 2400 s window; batch 1's λ = 2.0 group is 2026-11-10 and 11 with seeds 2–6 and 900 s. A contrast of 0.0065 at one load is not evidence against a day, window or selection effect as large as J2's tolerance ("The fixed-load contrast").
+3. **Dev mode.** The burst runs ran with dev mode, the reference without (open-questions A6).
+4. **A different saturated state.** The reference's line grows without bound (waiting 130 to 1121), batch 2's does not (waiting 134 to 219); both run about 30 requests with KV near 0.95.
+5. **Window edges.** U by end time is within 0.06 % of U by first token in every run.
+6. **Two differences cancel.** Dev mode or the day could speed the cold arm while redone prefill slows it; nothing here separates a cancellation.
+7. **A new connection per request** in every burst config (`loadgen_force_close`), not in the reference.
+8. **Selection by the busy precondition:** no run was left out.
+9. **A bimodal set:** SD 0.0024; no gap between clusters (the per-run table).
+10. **The GPU clock, not the cache state.** A clock difference between the reference's day (2026-11-07) and these runs' days moves r for every run alike (BELIEF as to its size).
+11. **Selection on the outcome within one load:** no run was left out.
+- **The strongest alternative, rule F round 19's:** J1 inside follows from the preconditions (all-miss and busy) for any saturated all-miss engine with the same per-token prefill cost, and r restates c, published before this batch (the table above).
+
+**Not changed by this entry.** No threshold, label, window or rule. `docs/claims.md` (K3's status) and the paper are not edited; each edit needs its own decision or registration with its reviews (`agent/FOR_AUTHOR.md`). With both batch 2s computed, REG-21's freeze on its 26 files and its rule on REG-19 burst folders in `runs/` end.
