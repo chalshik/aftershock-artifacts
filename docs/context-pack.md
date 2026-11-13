@@ -700,35 +700,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-13 · [DECISION] (owner) The agent's plan of 2026-11-13 is approved: REG-21 and REG-22 drop the "record" of REG-19's table for a freeze with no exception; stale documents are moved, not deleted; the VM-return kit and the zero-GPU queue are prepared
-
-- **Who decides:** the owner, in session on 2026-11-13 (≈ 12:30 UTC). The request was: "Plan next work, remove stale not used docs. And continue working regardless of vm or results, so when the vm is back we will proceed faster, making it ready". The owner then approved the agent's plan as written. The plan's text is kept as FILE(docs/drafts/plan_2026-11-13.md:1).
-- **What the plan fixes, in short:**
-  - **Step 1.** REG-21 and REG-22 replace the record of REG-19's table, its cut, the saving duty as a condition, the statements, the reflog rules and the reviewed exceptions with one rule. The judged code is frozen from each entry's commit, with no exception. Batch 2 is primary only if two git facts hold: the judged path is unchanged since the entry (or each hunk lies outside it), and the entry commit precedes the first `reg19_final_*` file. Looks at REG-19's runs are disclosed, not used as switches. The reason: the four latest reviews (FILE(docs/drafts/reviews-2026-11-13/rulef-reg21-draft22-r15.md:1), FILE(docs/drafts/reviews-2026-11-13/rulef-reg22-draft13-r8.md:1), FILE(docs/drafts/reviews-2026-11-13/proxy-reg21-draft22-delta.md:1), FILE(docs/drafts/reviews-2026-11-13/proxy-reg22-draft13-delta.md:1)) found the recorder's status lines inside the definition and proposed four fixes that do not agree. The new drafts still need rule F and an owner-proxy pass each.
-  - **Stop rule, fixed now.** Wording-only items are applied and the drafts registered. A hole in the two git facts is fixed once. A third round still NOT READY on batch 2 means batch 1 is registered alone and batch 2 is labelled retrospective by design.
-  - **Step 5.** Stale documents are moved to `_to_delete/` with `git mv`, never deleted. A file is moved only if no canonical doc names it and no review that a [REG] will quote cites it with a line number. The list is in `agent/FOR_AUTHOR.md`.
-  - **Steps 3–4.** The VM-return kit and the zero-GPU queue, in order: REG-23, the pinned-source answers, E1 and REG-20 scripts, small analyses (each with its own [REG]), [CORR]s for stale docs, and the preprint.
-- **What the owner did not decide here:** attempt 3 of seed 18's control, 350 W, the quiet-hours patch, the auto-commit in `final.sh`, and pushing `main`. Each stays open in FOR_AUTHOR (−7, −9, −10).
-- **Done so far under it (commits):**
-  - `cf28fec`: the four reviews, saved verbatim.
-  - `deb82e6`: 32 items moved to `_to_delete/`; RUNBOOK §3 rewritten; `vm_back_probe.zsh` moved into `agent/bin/`.
-  - `e062504`: REG-21 draft 23 and REG-22 draft 14, sent to review.
-  - `1cec713`: the VM-return kit (attempt-3 draft 2, the quiet-hours patch, sandbox 167/167 patched and 160/160 unpatched, and the end kit); STATE, PLAN and status brought up to date.
-  - `b105f0a`: REG-23 draft 4, sent to its first review.
-
-### 2026-11-13 · [DECISION] A6 answered and A5 narrowed from the pinned vLLM source; A20 (what the KV block histograms measure) added and answered
-
-- **Source:** the v0.32.0 tag tarball. Its sha256 is `bf592c132f27bbb5f65cff0bbd2ee873eae722b79c8286934fd5b5cf88b43d61`, equal to the one `docs/open-questions.md` names. It was re-read on the Mac on 2026-11-13 from a job folder's copy; the hash was checked first (PROBE: this session's `shasum -a 256`).
-- **A6 (does dev mode change speed):** answered from the source: no code path of a request that succeeds depends on it. It only registers routes and sets the error-stack logging default, and it is excluded from the compile-cache hash. The evidence is in the row. This narrows REG-21's alternative 3 and E1's dev-mode confound to "not tested on a live server and not confirmed against the VM's wheel"; it does not remove them.
-- **A5 (client vs server TTFT):** what the server's TTFT spans is now known. It runs from the renderer's `arrival_time` to the API server's receipt of the first output. The size of the gap still needs an analysis of existing runs with its own [REG] (task Z5a).
-- **A20 (new):** what the three KV block histograms measure.
-  - An "access" is a prefix hit.
-  - "Idle before evict" includes the time a block is held by its running request after its last hit.
-  - Every sampled block that is reallocated is counted, cached or not.
-  - The warm prediction in `agent/theory/k1_held_prefix.md` stays in its bucket, (60, 120] s (DERIVED in the row).
-  - REG-22's description of `c2.eviction_readout` ("records the time since its last access") is accurate. It does not say that "access" means a prefix hit; that wording can be sharpened if REG-22's review asks for a further draft. It is a reported readout, never judged.
-- **Not changed:** any run, config, threshold, test, claim or registered rule.
-
 ### 2026-11-13 · [CORR] The agent's update of `agent/STATE.md` and `docs/status.md` in commit 1cec713 gave its time as "≈ 13:10 UTC"; it was about 12:40 UTC
 
 - The clock read 12:45 UTC when the next entry was written (`date -u`), so the earlier time was a guess. The agent's error: it estimated the time instead of reading the clock.
@@ -768,3 +739,25 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **Sessions.** Seed 18's pair and seed 19 run in a third boot (`06d8b294…`). Item 8 of the resume decision already groups by boot id; the [RESULT] lists every boot.
 - **Cost:** 1.2 GPU h for this control; 4.7 to 4.9 h for the rest of the queue, as before. The earliest start is 18:00 UTC today.
 - **Risk, said plainly:** two losses in two launches, and all eight boot ends were power-key presses from outside the guest. BELIEF: a third loss is likely enough to be planned for (item 4).
+
+### 2026-11-13 · [DECISION] (delegate) The review-stop rule for REG-21 and REG-22, settled before any batch exists: which rounds count, what triggers the stop, and what "retrospective by design" computes; round 1 on the freeze applied to it
+
+- **Why:** both owner-proxies of round 1 asked for it in an entry (FILE(docs/drafts/reviews-2026-11-13/proxy-reg21-draft23-delta.md:1), its BB9; FILE(docs/drafts/reviews-2026-11-13/proxy-reg22-draft14-delta.md:1), its BD8). The plan's rule (FILE(docs/decisions.md:4342)) says both "a hole in the two git facts is fixed once" and "a third round still NOT READY on batch 2"; BB9 asks which one counts. This entry reads them together and adds nothing the owner did not approve. It is fixed before any batch-1 or batch-2 output exists and before REG-19's table exists (`final.sh` waits for both entries, decisions.md 2026-11-13 [DECISION] (owner), REG-19 attempt 3, item 5), so it selects on no data.
+- **Round 1 on the freeze** (drafts 23 and 14), saved verbatim:
+  - REG-21: rule F round 16, NOT READY, required BA1–BA4 (FILE(docs/drafts/reviews-2026-11-13/rulef-reg21-draft23-r16.md:1)); owner-proxy REJECT of draft 23 as written, binding, conditions BB1–BB9 (the proxy's own reading: the reject is about batch 1's "What was known", not the two git facts).
+  - REG-22: rule F round 9, NOT READY, required BC1–BC3 (FILE(docs/drafts/reviews-2026-11-13/rulef-reg22-draft14-r9.md:1)); owner-proxy APPROVE on BD1–BD9, with no effect while rule F is NOT READY.
+- **The rule, as read here:**
+  1. **Rounds counted** are those on the freeze design, per registration: round 1 = REG-21's rule F r16 / REG-22's r9 with their proxy passes (done); round 2 = r17 / r10; round 3 = r18 / r11. There is no round 4 on batch 2.
+  2. **"Fixed once":** round 1's holes in the two git facts and in the validity cut (BA1–BA3, BC2, BC3) are fixed in drafts 24 and 15. That is the one change of the facts' design. After it, a change to the facts is allowed only if it is wording, a tag, a stricter rule or a reporting duty.
+  3. **What triggers the stop:** only a required rule F item, or a binding owner-proxy condition or reject, about batch 2's standing (the two facts, the validity cut, what a retrospective batch 2 does). Items on batch 1, on disclosures ("What was known"), or on wording are applied as usual and do not count. BB1 (a false sentence on batch 1's "What was known") is such an item.
+  4. **The stop:** if round 3 is still NOT READY on batch 2's standing, or if round 2 is NOT READY on batch 2's standing with an item that is not wording, a tag, a stricter rule or a reporting duty, the registration is written with batch 1 as its only primary reading and batch 2 labelled retrospective by design. That text gets its own rule F review and owner-proxy pass, binding as always.
+  5. **What "retrospective by design" computes** (BD8): batch 2 is still computed once, by the same command, after REG-19's final [RESULT], with the judged path frozen at the entry and the entry's decision lines; no code or threshold changes after the entry (rule A5 binds a retrospective batch too); what a retrospective batch 2 may say is set by each registration's own text (REG-21: it never governs, BB6; REG-22: it enters the disagreement test, BC1). The entry is committed before the first commit that adds a `reg19_final_*` file either way.
+- **Not changed:** the plan, any draft's thresholds, any code, REG-19's rules. REG-23 is outside this rule: it has no batch 2 and follows the normal review.
+
+### 2026-11-13 · [CORR] REG-21's drafts 5 to 23 said `k1.reuse` had not been computed on any run; REG-20's registration reports it on five of REG-21's batch-1 runs
+
+- **The sentence:** "U, the mean served prompt, `k1.reuse`, the busy share and r have not been computed on any run by anyone" (FILE(docs/drafts/reg21_draft23.md:49)). It stands in every draft from 5 to 23 (DERIVED: one match each in drafts 5, 6, 10, 15, 22 and 23, by grep).
+- **What contradicts it:** REG-20's [REG] of 2026-11-12 reports `k1.cold_backlogged` on REG-17's burst run and REG-18's four burst runs, "checked as a code smoke test on reported runs", with reuse 0.000 at the end against ≈ 1.0 before (FILE(docs/decisions.md:4084)). `cold_backlogged` computes `k1.reuse` over a base and an end window (FILE(analysis/k1.py:80)); the end window ends at the burst's end plus the watch (FILE(analysis/k1.py:57)), which is the end of REG-21's window W (DERIVED). All five runs are in REG-21's batch 1 (its λ = 2.0 group).
+- **Found by** the owner-proxy on draft 23 (FILE(docs/drafts/reviews-2026-11-13/proxy-reg21-draft23-delta.md:1), its BB1; the reject is binding). Every earlier review missed it.
+- **The agent's error:** it stated what had not been computed without searching the log for it.
+- **Effect:** a disclosure only. The reuse precondition (≤ 0.05, fixed in draft 2) is unchanged; it was seen to hold at the end of W on five runs. Draft 24 rewrites "What was known" and goes to rule F and an owner-proxy pass, as the draft's own rule requires. The transcript search behind such statements is widened and saved as a probe (`docs/probe/20261113_transcript_search/search.py`).
