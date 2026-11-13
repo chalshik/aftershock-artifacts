@@ -1,0 +1,36 @@
+# proxy-reg23-draft4 (proxy-reg23-d4), verbatim
+
+Saved by the agent from the teammate message received in the main session transcript, 2026-11-13 between 12:42 and 12:51 UTC (the senders' idle notifications). Item names as given by the reviewer (prefixes BA, BB, BC, BD, CA, CB were assigned in the review prompts).
+
+---
+
+Owner-proxy on REG-23 draft 4 (K5): Decision: APPROVE, with conditions CB1–CB8 (CB1–CB7 before the entry is appended).
+
+Verdict on the design: none of the levels is fitted toward a positive K5. H 0.06, L 1.0 s, N 2× and A 3.2 are constants already on record. What was known pushes toward the negative label, and the draft says so (P≈0.8). The problems are in disclosure, in wording, and in one loophole in the arrivals comparison.
+
+CB1 (BEFORE): disclose the departures from the owner's standing instruction. FILE(docs/FABLE_PROMPT.md:105) asks for "the onset rules and a critical-slowing-down test … on the stuck runs and the no-trigger tips". The file is untracked, and agent/RESUME_PROMPT.md:5 calls it the owner's standing instruction. The draft lists only the claims.md departure. Add under "How this differs": "The owner's start prompt (item 6.4) also asked for a critical-slowing-down test and for the burst runs. Both are left out. Burst runs are left out for the reason above. CSD is left out because the tips followed an external 120 s arrival surge (decisions.md 2026-11-10 [CORR]), so rising variance before the onset would be the surge's own variance. Also, three references are only 120–360 s long. Any later CSD reading of these runs needs its own [REG] and lists this result as known." List both in FOR_AUTHOR. Also say that the population still contains stuck runs without a trigger: REG-12 s5 and REG-16 are cold and stuck, and s4 is stuck by the verdict but only partly degraded (FILE(docs/decisions.md:2469-2478)). This makes the departure narrower than draft 4 says.
+
+CB2 (BEFORE): the event count is known exactly. "About seven" (reg:51) and "six or seven" (reg:57) contradict the record. gate.surge_table, which uses the same kv_onset rule, gives exactly 6 no-burst tips (FILE(docs/decisions.md:3423)). Write the six KV onsets from the published values, each reference length b−a, and which of them pass ref_min_s. State that ref_min_s = 120 was set knowing the shortest reference (REG-13, λ=3.0) is about 120 s, a knife-edge. Do not change 120 now. Replace the "≈0.1 no label" belief with the DERIVED count. Also list this as known: REG-12 seed 6's control is a quiet run with a sustained hit drop of 0.081 (FILE(docs/decisions.md:2479)), so H very likely has at least one false alarm.
+
+CB3 (BEFORE): A is a different statistic from the one 3.2 was read on. k5 uses t_sent (FILE(analysis/k5.py:117)), but gate.SURGE read 3.2 on t_planned (FILE(analysis/gate.py:1385)). Closed-loop release delay (10–23 s) can keep sent peaks of 3.24 below 3.2. When A has no median, judge() lets H/U pass the arrivals hurdle (FILE(analysis/k5.py:238-239), `math.isnan(a) or`). Replacement text for the decision: "`cache_signal_leads` keeps K5 only if A has an onset in at least 5 events; otherwise the comparison with arrivals was not made, and the outcome is handled as `no_usable_cache_lead` for that reason." Write the mismatch into the A bullet. If this is done in code instead, it is a judged-path change and goes back to rule F.
+
+CB4 (BEFORE): L's onset is an SLO breach, not a change, because its level is max(mean+4SD, 1.0 s) (FILE(analysis/k5.py:146)). Add alternative 7: "L is recorded when the first token arrives, so for queued requests it lags by their wait. Any signal recorded at scheduling time leads it by construction. The lead over Q is the guard." K5's wording under a pass reads "before the mean TTFT passed the 1.0 s SLO", not "before latency changed".
+
+CB5 (BEFORE): replacement text for the `cache_signal_leads` outcome: "K5 may stay, worded as a retrospective measurement on n no-trigger cold onsets, k of them REG-13's 900 s sweeps planned above the measured throughput. The levels were fixed with the KV onsets known. It reports the signal, its median and least lead over the 1.0 s TTFT breach and over the queue, the false alarms per hour over the quiet hours, and A's lead beside it, with A's level found on these runs."
+
+CB6 (BEFORE): replacement text for `no_usable_cache_lead`: "K5 leaves the claims. The limitations sentence gives the reason the table shows: too few events (then 'not measured', not 'no lead'), within the window, mixed, no lead, false alarms, arrivals earlier, queue earlier, or arrivals not compared. If the reason is arrivals, it says that A's level 3.2 was found on these same runs (decisions.md 2026-11-10 [CORR])." Delete "and that watching arrivals or the queue warned as early".
+
+CB7 (BEFORE): REG-23 needs its own freeze. Its judged path includes gate.kv_onset, load.find_runs and margin.is_burst_request, and _dirty sees only uncommitted changes. Add to the stopping rule: "The [RESULT] names the commit at which k5 ran. `git diff <entry> <that> -- analysis/k5.py analysis/gate.py analysis/load.py analysis/margin.py` touches no judged function, or a rule F review and an owner-proxy pass come before the table is read." Widen the "known" bullet: any output on a candidate run computed between draft 4 and the entry (REG-21 batch 1 as well as REG-22's) is listed with its file and commit.
+
+CB8 (LATER, in the [RESULT]): per rule H, k of n above 30 s per signal and comparator, with the one-sided 95% Clopper–Pearson bound. Each quiet run's verdict next to its alarms. The number of onsets clamped at the scan start b.
+
+Answers to your questions:
+Q1: yes, with CB1. Excluding burst runs is sound and within the delegation (analysis-only registrations and claim changes). The owner can overrule it.
+Q2: no fitting toward a positive result. What was known is understated (CB2), A's statistic is mismatched (CB3), and ref_min_s sits on a knife-edge.
+Q3: acceptable after CB3, CB5 and CB6. As written, the negative outcome presumes its own reason.
+Q4: acceptable on the merits, but it was never disclosed as a departure from the owner's instruction (CB1).
+Q5: the "no change outside k5.py" bullet is right. It lacks its own freeze (CB7). k5 imports `_dirty` from REG-21's k3w.py, which is harmless while REG-21's freeze holds.
+
+Notes for the owner: 5 of the 6 events are at λ ≥ 2.4 (REG-12 s4/s5) or are 900 s overload sweeps (REG-13 at 2.6–3.0). Only REG-16 is at 2.2. Any K5 lead is mostly the order of an overload onset. The arrivals hurdle is close to known in advance, so the negative label is likely by construction. That is acceptable for an optional claim at 0 GPU h. The earlier DECISION_TREE.md used "TTFT p50 doubled" for L; the draft's SLO-breach level replaces it.
+
+Not checked: whether vLLM 0.32.0 counts prefix-cache queries again for a waiting request that repeatedly fails to allocate (that would tie H to Q in a backlog); the source is not on the Mac (BELIEF, worth an open question). Also not checked: the exact published KV onsets of REG-13; whether A on t_sent actually crosses 3.2; the tests run (I did not run pytest); REG-11's control verdict. No run folder or probe state was read. Nothing was written into the repo.
