@@ -167,3 +167,16 @@ ec10bb1b-c4d6-4df7-ab43-624a9ba257bb.jsonl:714	no_read	reads a transcript-search
 9aa8df0a-c677-484b-82aa-84c912041bf0.jsonl:711	no_read	load_config of seed 17's burst config
 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:12539	no_read	appends the [CORR] on seed 17's reads
 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:13267	no_read	pending_copy.txt and an entry; context_pack
+56825f75-7175-41a0-8e62-711998a42dc1.jsonl:413	synthetic	E1 ops sandbox (e1-ops-writer): a temp repo under its scratchpad (e1_sandbox.*) with fake ssh and an empty runs/; the glob runs/* is that sandbox's
+56825f75-7175-41a0-8e62-711998a42dc1.jsonl:416	synthetic	the same E1 ops sandbox case, rerun with null_glob
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:15065	no_read	writes the hand-label script nic_labels.py (strings naming transcript keys and what each call read) and appends to labels.tsv; opens no run folder, log or note
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:13872	no_read	appends three labels to labels.tsv and runs classify2.py on the review bundles' search2 outputs (tool-call inputs only); opens no run folder
+e6263307-6f64-4fde-8309-47d36a63889e.jsonl:514	false_positive	rule F round 12 greps REG-22 draft 17 for anchor strings, one of which is the text 'python -m analysis.c2'; runs nothing
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:13983	names_or_validity	greps seed 18's control's launch log for the lines holding 'run_id' or '[run] checks' only (REG-19's allowed reads, FILE(docs/probe/20261113_reg19/ops_r3/common.sh:36)), then commits REG-20's ops files
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:14140	no_read	git status of manifests/, a count of manifest lines (file names and checksums) naming w3000_s18, and a grep of docs/status.md; opens no run folder
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:14652	no_read	writes patch_seed18.py, whose strings name seed 19's prelaunch records by file name only; opens no run folder, log or note
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:14955	no_read	writes nic_shell.py, which reads tool-call inputs from transcripts; opens no run folder, log or note
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:15109	no_read	writes patch_labels_disclosures.py, whose strings describe the disclosed reads; opens no run folder, log or note
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:16615	no_read	appends five labels to labels.tsv and runs classify2.py on the dry search output in the scratchpad; the label notes name a launch log's allowed lines as text; opens no run folder, log or note
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:16687	names_only	runs at_append2.py on dry keys: it lists the REG-19 folder names and tests whether each holds checks.json (test -e), and prints keys built from git, the classification and the drafts; opens no file in a run folder
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:16019	false_positive	appends five labels to labels.tsv; one label's note quotes the module-run text of REG-22's batch command; runs nothing
