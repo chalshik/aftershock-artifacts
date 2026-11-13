@@ -1,0 +1,1 @@
+{'k_closed': 5, 'n': 5, 'best_p': 0.03125, 'may_start': True}
