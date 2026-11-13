@@ -43,7 +43,7 @@ If `final.sh` raises, its two files go in with the [OPS] entry that `final.sh` r
 
 - Launches, with attempt, boot id, launch read (limit, temp, driver) and run id: <from state/attempt_* and the queue output, names and reads only>.
 - Stops and their causes (2026-11-12: four, from RESUME.md; 2026-11-13: attempt 2 lost at ≈ 04:40 UTC, stop line FILE(docs/decisions.md:4306); later: <…>).
-- The interim look of 2026-11-12 (seed 17's control's harness log, FILE(docs/decisions.md:4276)), restated; any other read beyond `common.sh`'s ALLOWED: <none known | listed>.
+- The interim look of 2026-11-12 (seed 17's control's harness log, FILE(docs/decisions.md:4276)), restated with the [CORR]s that extend it (FILE(docs/decisions.md:4428): the folder listing, `tail -3 events.jsonl`, `head -c 300 checks.json`; FILE(docs/decisions.md:4453): s57_inv.py's most likely print of seed 17's two runs' `ok` and `unfinished` counts at 17:59:38 UTC, and that the 300 bytes reach the same counts); any other read beyond `common.sh`'s ALLOWED: <none further known | listed>.
 - Copies and checksums: <COPIED lines>; manifest <command, output>.
 - The recheck before the table (`final.sh`): <its lines>.
 ```
@@ -59,7 +59,7 @@ If `final.sh` raises, its two files go in with the [OPS] entry that `final.sh` r
 - **Order flag and the controls' waiting share:** <…>.
 - **Wording:** the registered sentence for this outcome, from `agent/DECISION_TREE.md` P0 and nothing stronger.
 - **Alternatives (rule A2), at least two, each with what would separate them:** <…>.
-- **Deviations:** the two lost runs of seed 18's control (attempts 1 and 2), the boots, and the interim look; none of them selects on outcomes, because a lost run is never opened.
+- **Deviations:** the two lost runs of seed 18's control (attempts 1 and 2), the boots, and the interim looks at seed 17 (harness log, `events.jsonl` tail, the start of `checks.json`, and the context pack's most likely print of both seed-17 runs' `ok` and `unfinished` counts; decisions.md 2026-11-13 [CORR]s). A lost run is never opened, so the lost runs select on no outcome. The looks at seed 17 came after seed 17's runs and before seed 18's. They changed no rule and no code, and the decisions since then give other grounds. Still, seed 17's counts were in a context before seeds 18 and 19 ran, and the [RESULT] says so beside k of n.
 - **Decision taken:** the P0 row of `agent/DECISION_TREE.md` for this outcome, quoted.
 - **Then:** `docs/model.md`'s next free ledger row; `docs/status.md`; `docs/claims.md` status lines; `python3 tools/context_pack.py`; `python3 tools/check_docs.py`; commit. After that, the lost seed-18 folders are copied (`pending_copy`), HEAD is deployed to the VM (RUNBOOK §4) and `analysis.recheck` is reported beside the result.
 ```

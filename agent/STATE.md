@@ -3,11 +3,11 @@
 Any fresh session resumes from this file alone. Read it, then `agent/PLAN.md`, then the last block of `agent/LOG.md`.
 Rules: `docs/FABLE_PROMPT.md` (the start prompt), `CLAUDE.md`, `PROTOCOL.md`, `docs/process.md`. The plan in force: the owner-approved plan of 2026-11-13 (session 8c5f8396; copy at `/Users/chalshik/.claude/plans/lexical-petting-thunder.md`, summarised under "Next three").
 
-Last updated: 2026-11-13 ≈ 16:25 UTC (session 8c5f8396). The update blocks of 05:15 to 12:10 UTC were moved to `_to_delete/agent/STATE_blocks_to_2026-11-13.md` (FOR_AUTHOR, "Things moved"); their content is in `agent/LOG.md` and `docs/decisions.md`.
+Last updated: 2026-11-13 ≈ 17:00 UTC (session 8c5f8396). The update blocks of 05:15 to 12:10 UTC were moved to `_to_delete/agent/STATE_blocks_to_2026-11-13.md` (FOR_AUTHOR, "Things moved"); their content is in `agent/LOG.md` and `docs/decisions.md`.
 
 ## Phase
 
-**Phase 3: REG-19's last runs are scheduled; registrations in review.** The VM came back at 15:20 UTC (boot `06d8b294`; [OPS] "The VM is back"). The owner approved attempt 3 and the quiet-hours patch and set 350 W (decisions.md 2026-11-13 [DECISION] (owner), attempt 3). No REG-19 outcome has been read. No run registered by the delegate yet.
+**Phase 3: REG-19's last runs are scheduled; registrations in review.** The VM came back at 15:20 UTC (boot `06d8b294`; [OPS] "The VM is back"). The owner approved attempt 3 and the quiet-hours patch and set 350 W (decisions.md 2026-11-13 [DECISION] (owner), attempt 3). No REG-19 verdict has been read; but on 2026-11-12 a context-pack script most likely printed seed 17's two runs' `ok`/`unfinished` request counts (decisions.md 2026-11-13 [CORR], :4453, found by the agent at ≈ 16:50 UTC; round 3's four reviewers were sent it). No run registered by the delegate yet.
 
 ## State of each item
 
@@ -25,7 +25,7 @@ Last updated: 2026-11-13 ≈ 16:25 UTC (session 8c5f8396). The update blocks of 
 
 ## Next three
 
-1. When round 3 returns (rulef-reg21-r18, proxy-reg21-d25, rulef-reg22-r11, proxy-reg22-d16): save each verbatim (`scratchpad/save_review.py NAME STEM NOTE`), commit, apply the review-stop rule (round 3 is the last). Then drafts 26/17 with the items, assembly via `scratchpad/build_reg_entries.py` (elides only unresolvable FILE tags), `search2.py` + `closure.py` at E, register REG-22 then REG-21 ([REG] + [DECISION] (delegate) each, from the condition-mapper's `docs/drafts/reg2{1,2}_decision_draft2.md` updated for rounds 2–3), with definitions, ledger rows, the status notice and FOR_AUTHOR in the same commit.
+1. When round 3 returns (rulef-reg21-r18, proxy-reg21-d25, rulef-reg22-r11, proxy-reg22-d16): save each verbatim (`scratchpad/save_review.py NAME STEM NOTE`), commit, apply the review-stop rule (round 3 is the last). Then drafts 26/17 with the items **and the [CORR] of :4453: item (x) (s57_inv.py, 17:59:38), item (iii)'s checks.json wording (only `valid`/`failed` are allowed; 300 bytes reach the counts), the 17:56:24 `ls` into (viii)**; at E run `classify2.py <search2 output> labels.tsv` and label new hits so none is UNLABELLED, assembly via `scratchpad/build_reg_entries.py` (elides only unresolvable FILE tags), `search2.py` + `closure.py` at E, register REG-22 then REG-21 ([REG] + [DECISION] (delegate) each, from the condition-mapper's `docs/drafts/reg2{1,2}_decision_draft2.md` updated for rounds 2–3), with definitions, ledger rows, the status notice and FOR_AUTHOR in the same commit.
 2. Batch 1 of each, once, stamped files under `docs/probe/reg21/` and `docs/probe/reg22/`, each committed alone; [RESULT]s. Then `final.sh` once the queue has ended (end kit C).
 3. When REG-23's round 2 returns: save both verbatim, apply; register if READY and APPROVE (with S8 replacing alternative 8). When `reg20-ops-writer` returns: review its scripts and sandbox, write the REG-20 ops [DECISION] (delegate) draft (pin and the design points), send it to rule F and the owner-proxy. Then E1 scripts, the preprint.
 
