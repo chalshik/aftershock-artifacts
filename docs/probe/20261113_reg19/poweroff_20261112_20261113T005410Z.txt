@@ -1,0 +1,141 @@
+# REG-19 resume, owner-proxy round 3, condition D3: why the VM went off on 2026-11-12. Read-only over ssh (user chalshik, no sudo). No run folder and no harness log is read.
+# captured 2026-11-13T00:54:10Z
+## journalctl --list-boots (last 4)
+ -3 7f7c8f5e66da43a3ad2bf89e633a44c0 Thu 2026-11-05 11:53:45 UTC Sat 2026-11-07 15:06:05 UTC
+ -2 a3b3d7c348ca47f49f5e244b5aa84a30 Sun 2026-11-08 12:31:15 UTC Wed 2026-11-11 17:36:47 UTC
+ -1 d59f372fbf2f4e20aa7a1a00f1458a25 Thu 2026-11-12 05:05:54 UTC Thu 2026-11-12 15:52:08 UTC
+  0 7d11a2972521439b84cda8d7b29fa8c7 Thu 2026-11-12 19:47:34 UTC Fri 2026-11-13 00:54:11 UTC
+## journalctl -b -1: the last 25 lines of that boot
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Stopped target local-fs-pre.target - Preparation for Local File Systems.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Stopping lvm2-monitor.service - Monitoring of LVM2 mirrors, snapshots etc. using dmeventd or progress polling...
+2026-11-12T15:52:08+00:00 chalshik multipathd[455]: multipathd: shut down
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Stopping multipathd.service - Device-Mapper Multipath Device Controller...
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: systemd-tmpfiles-setup-dev.service: Deactivated successfully.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Stopped systemd-tmpfiles-setup-dev.service - Create Static Device Nodes in /dev.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: systemd-tmpfiles-setup-dev-early.service: Deactivated successfully.
+2026-11-12T15:52:08+00:00 chalshik lvm[50575]:   1 logical volume(s) in volume group "ubuntu-vg" unmonitored
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Stopped systemd-tmpfiles-setup-dev-early.service - Create Static Device Nodes in /dev gracefully.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: lvm2-monitor.service: Deactivated successfully.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Stopped lvm2-monitor.service - Monitoring of LVM2 mirrors, snapshots etc. using dmeventd or progress polling.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: multipathd.service: Deactivated successfully.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Stopped multipathd.service - Device-Mapper Multipath Device Controller.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: multipathd.service: Consumed 2.813s CPU time.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: systemd-remount-fs.service: Deactivated successfully.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Stopped systemd-remount-fs.service - Remount Root and Kernel File Systems.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Reached target shutdown.target - System Shutdown.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Reached target final.target - Late Shutdown Services.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: systemd-poweroff.service: Deactivated successfully.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Finished systemd-poweroff.service - System Power Off.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Reached target poweroff.target - System Power Off.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Shutting down.
+2026-11-12T15:52:08+00:00 chalshik systemd-shutdown[1]: Syncing filesystems and block devices.
+2026-11-12T15:52:08+00:00 chalshik systemd-shutdown[1]: Sending SIGTERM to remaining processes...
+2026-11-12T15:52:08+00:00 chalshik systemd-journald[397]: Journal stopped
+## journalctl -b -1, from 15:00 UTC: lines naming power, thermal, temperature, shutdown, logind, NVRM or Xid
+2026-11-12T15:51:32+00:00 chalshik nvidia-persistenced[1136]: Shutdown (1136)
+2026-11-12T15:51:32+00:00 chalshik tailscaled[864]: tailscaled got signal terminated; shutting down
+2026-11-12T15:51:32+00:00 chalshik tailscaled[864]: control: client.Shutdown ...
+2026-11-12T15:51:32+00:00 chalshik tailscaled[864]: control: Client.Shutdown done.
+2026-11-12T15:51:32+00:00 chalshik tailscaled[864]: ipnext: work queue shutdown failed: execqueue shut down
+2026-11-12T15:51:32+00:00 chalshik systemd-logind[859]: Session 4 logged out. Waiting for processes to exit.
+2026-11-12T15:51:32+00:00 chalshik systemd-logind[859]: Removed session 4.
+2026-11-12T15:51:32+00:00 chalshik systemd[1]: Stopping systemd-logind.service - User Login Management...
+2026-11-12T15:51:32+00:00 chalshik systemd-logind[859]: Removed session 802.
+2026-11-12T15:51:32+00:00 chalshik systemd[1]: systemd-logind.service: Deactivated successfully.
+2026-11-12T15:51:32+00:00 chalshik systemd[1]: Stopped systemd-logind.service - User Login Management.
+2026-11-12T15:51:32+00:00 chalshik systemd[1]: systemd-logind.service: Consumed 1.917s CPU time.
+2026-11-12T15:51:32+00:00 chalshik systemd[1485]: Reached target shutdown.target - Shutdown.
+2026-11-12T15:51:32+00:00 chalshik systemd[1]: Stopped finalrd.service - Create final runtime dir for shutdown pivot root.
+2026-11-12T15:52:07+00:00 chalshik tailscaled[864]: tailscale.com/ipn/ipnlocal.(*LocalBackend).shutdown(0x1554de1f4608)
+2026-11-12T15:52:07+00:00 chalshik tailscaled[864]: tailscale.com/ipn/ipnlocal.(*LocalBackend).Shutdown(...)
+2026-11-12T15:52:07+00:00 chalshik tailscaled[50493]: ,{"logtail":{"client_time":"2026-11-12T15:52:07.145620675Z","proc_id":1106292347,"proc_seq":7025},"metrics":"N5ewireguard_message_initiation_tx_attempt_initialS9a0140I5602","text":"ipnlocal watchdog gorouti
+2026-11-12T15:52:07+00:00 chalshik tailscaled[50493]: ,{"logtail":{"client_time":"2026-11-12T15:52:07.145620675Z","proc_id":1106292347,"proc_seq":7025},"metrics":"N5ewireguard_message_initiation_tx_attempt_initialS9a0140I5602","text":"ipnlocal watchdog gorouti
+2026-11-12T15:52:07+00:00 chalshik tailscaled[50493]: ,{"logtail":{"client_time":"2026-11-12T15:52:07.145620675Z","proc_id":1106292347,"proc_seq":7025},"metrics":"N5ewireguard_message_initiation_tx_attempt_initialS9a0140I5602","text":"ipnlocal watchdog gorouti
+2026-11-12T15:52:07+00:00 chalshik tailscaled[50493]: ,{"logtail":{"client_time":"2026-11-12T15:52:07.145620675Z","proc_id":1106292347,"proc_seq":7025},"metrics":"N5ewireguard_message_initiation_tx_attempt_initialS9a0140I5602","text":"ipnlocal watchdog gorouti
+2026-11-12T15:52:07+00:00 chalshik tailscaled[50493]: ,{"logtail":{"client_time":"2026-11-12T15:52:07.145620675Z","proc_id":1106292347,"proc_seq":7025},"metrics":"N5ewireguard_message_initiation_tx_attempt_initialS9a0140I5602","text":"ipnlocal watchdog gorouti
+2026-11-12T15:52:07+00:00 chalshik tailscaled[50493]: ,{"logtail":{"client_time":"2026-11-12T15:52:07.145620675Z","proc_id":1106292347,"proc_seq":7025},"metrics":"N5ewireguard_message_initiation_tx_attempt_initialS9a0140I5602","text":"ipnlocal watchdog gorouti
+2026-11-12T15:52:07+00:00 chalshik tailscaled[50493]: ,{"logtail":{"client_time":"2026-11-12T15:52:07.145620675Z","proc_id":1106292347,"proc_seq":7025},"metrics":"N5ewireguard_message_initiation_tx_attempt_initialS9a0140I5602","text":"ipnlocal watchdog gorouti
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Stopping systemd-update-utmp.service - Record System Boot/Shutdown in UTMP...
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Stopped systemd-update-utmp.service - Record System Boot/Shutdown in UTMP.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Reached target shutdown.target - System Shutdown.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Reached target final.target - Late Shutdown Services.
+2026-11-12T15:52:08+00:00 chalshik systemd[1]: Shutting down.
+2026-11-12T15:52:08+00:00 chalshik systemd-shutdown[1]: Syncing filesystems and block devices.
+2026-11-12T15:52:08+00:00 chalshik systemd-shutdown[1]: Sending SIGTERM to remaining processes...
+## journalctl -b 0: the first 3 lines of the present boot
+2026-11-12T19:47:34+00:00 chalshik kernel: Linux version 6.8.0-147-generic (buildd@lcy02-amd64-081) (x86_64-linux-gnu-gcc-13 (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, GNU ld (GNU Binutils for Ubuntu) 2
+2026-11-12T19:47:34+00:00 chalshik kernel: Command line: BOOT_IMAGE=/vmlinuz-6.8.0-147-generic root=/dev/mapper/ubuntu--vg-ubuntu--lv ro
+2026-11-12T19:47:34+00:00 chalshik kernel: KERNEL supported cpus:
+## journalctl -b -1, 15:45:00 to 15:51:33 UTC: every line of systemd-logind, sshd, kernel, and any line naming power, thermal or temperature
+2026-11-12T15:45:08+00:00 chalshik sshd[49153]: Accepted publickey for chalshik from 100.68.5.40 port 64831 ssh2: ED25519 SHA256:BQTdQBhJPG0HtQW82rp0L0Oj1LEpftNS5FDmrcF4jMw
+2026-11-12T15:45:08+00:00 chalshik sshd[49153]: pam_unix(sshd:session): session opened for user chalshik(uid=1000) by chalshik(uid=0)
+2026-11-12T15:45:08+00:00 chalshik systemd-logind[859]: New session 878 of user chalshik.
+2026-11-12T15:45:08+00:00 chalshik sshd[49210]: Received disconnect from 100.68.5.40 port 64831:11: disconnected by user
+2026-11-12T15:45:08+00:00 chalshik sshd[49210]: Disconnected from user chalshik 100.68.5.40 port 64831
+2026-11-12T15:45:08+00:00 chalshik sshd[49153]: pam_unix(sshd:session): session closed for user chalshik
+2026-11-12T15:45:08+00:00 chalshik systemd-logind[859]: Session 878 logged out. Waiting for processes to exit.
+2026-11-12T15:45:08+00:00 chalshik systemd-logind[859]: Removed session 878.
+2026-11-12T15:45:08+00:00 chalshik sshd[49212]: Accepted publickey for chalshik from 100.68.5.40 port 64834 ssh2: ED25519 SHA256:BQTdQBhJPG0HtQW82rp0L0Oj1LEpftNS5FDmrcF4jMw
+2026-11-12T15:45:08+00:00 chalshik sshd[49212]: pam_unix(sshd:session): session opened for user chalshik(uid=1000) by chalshik(uid=0)
+2026-11-12T15:45:08+00:00 chalshik systemd-logind[859]: New session 879 of user chalshik.
+2026-11-12T15:45:08+00:00 chalshik sshd[49260]: Received disconnect from 100.68.5.40 port 64834:11: disconnected by user
+2026-11-12T15:45:08+00:00 chalshik sshd[49260]: Disconnected from user chalshik 100.68.5.40 port 64834
+2026-11-12T15:45:08+00:00 chalshik sshd[49212]: pam_unix(sshd:session): session closed for user chalshik
+2026-11-12T15:45:08+00:00 chalshik systemd-logind[859]: Session 879 logged out. Waiting for processes to exit.
+2026-11-12T15:45:08+00:00 chalshik systemd-logind[859]: Removed session 879.
+2026-11-12T15:46:09+00:00 chalshik sshd[49264]: Accepted publickey for chalshik from 100.68.5.40 port 64840 ssh2: ED25519 SHA256:BQTdQBhJPG0HtQW82rp0L0Oj1LEpftNS5FDmrcF4jMw
+2026-11-12T15:46:09+00:00 chalshik sshd[49264]: pam_unix(sshd:session): session opened for user chalshik(uid=1000) by chalshik(uid=0)
+2026-11-12T15:46:09+00:00 chalshik systemd-logind[859]: New session 880 of user chalshik.
+2026-11-12T15:46:09+00:00 chalshik sshd[49321]: Received disconnect from 100.68.5.40 port 64840:11: disconnected by user
+2026-11-12T15:46:09+00:00 chalshik sshd[49321]: Disconnected from user chalshik 100.68.5.40 port 64840
+2026-11-12T15:46:09+00:00 chalshik sshd[49264]: pam_unix(sshd:session): session closed for user chalshik
+2026-11-12T15:46:09+00:00 chalshik systemd-logind[859]: Session 880 logged out. Waiting for processes to exit.
+2026-11-12T15:46:09+00:00 chalshik systemd-logind[859]: Removed session 880.
+2026-11-12T15:46:09+00:00 chalshik sshd[49324]: Accepted publickey for chalshik from 100.68.5.40 port 64843 ssh2: ED25519 SHA256:BQTdQBhJPG0HtQW82rp0L0Oj1LEpftNS5FDmrcF4jMw
+2026-11-12T15:46:09+00:00 chalshik sshd[49324]: pam_unix(sshd:session): session opened for user chalshik(uid=1000) by chalshik(uid=0)
+2026-11-12T15:46:09+00:00 chalshik systemd-logind[859]: New session 881 of user chalshik.
+2026-11-12T15:46:09+00:00 chalshik sshd[49372]: Received disconnect from 100.68.5.40 port 64843:11: disconnected by user
+2026-11-12T15:46:09+00:00 chalshik sshd[49372]: Disconnected from user chalshik 100.68.5.40 port 64843
+2026-11-12T15:46:09+00:00 chalshik sshd[49324]: pam_unix(sshd:session): session closed for user chalshik
+2026-11-12T15:46:09+00:00 chalshik systemd-logind[859]: Session 881 logged out. Waiting for processes to exit.
+2026-11-12T15:46:09+00:00 chalshik systemd-logind[859]: Removed session 881.
+2026-11-12T15:47:09+00:00 chalshik sshd[49378]: Accepted publickey for chalshik from 100.68.5.40 port 64849 ssh2: ED25519 SHA256:BQTdQBhJPG0HtQW82rp0L0Oj1LEpftNS5FDmrcF4jMw
+2026-11-12T15:47:09+00:00 chalshik sshd[49378]: pam_unix(sshd:session): session opened for user chalshik(uid=1000) by chalshik(uid=0)
+2026-11-12T15:47:09+00:00 chalshik systemd-logind[859]: New session 882 of user chalshik.
+2026-11-12T15:47:10+00:00 chalshik sshd[49435]: Received disconnect from 100.68.5.40 port 64849:11: disconnected by user
+2026-11-12T15:47:10+00:00 chalshik sshd[49435]: Disconnected from user chalshik 100.68.5.40 port 64849
+2026-11-12T15:47:10+00:00 chalshik sshd[49378]: pam_unix(sshd:session): session closed for user chalshik
+2026-11-12T15:47:10+00:00 chalshik systemd-logind[859]: Session 882 logged out. Waiting for processes to exit.
+2026-11-12T15:47:10+00:00 chalshik systemd-logind[859]: Removed session 882.
+## count of lines naming thermal, overheat or a critical temperature in that whole boot:
+6
+## journalctl -b -1: every line naming a power key or button, or 'Powering off'
+2026-11-12T05:05:54+00:00 chalshik kernel: input: Power Button as /devices/LNXSYSTM:00/LNXPWRBN:00/input/input0
+2026-11-12T05:05:54+00:00 chalshik kernel: ACPI: button: Power Button [PWRF]
+2026-11-12T05:05:57+00:00 chalshik systemd-logind[859]: Watching system buttons on /dev/input/event0 (Power Button)
+2026-11-12T15:51:32+00:00 chalshik systemd-logind[859]: Power key pressed short.
+2026-11-12T15:51:32+00:00 chalshik systemd-logind[859]: Powering off...
+2026-11-12T15:51:32+00:00 chalshik systemd-logind[859]: System is powering down.
+## journalctl -b -1: the lines naming thermal, overheat, a critical temperature or Xid (all of them)
+2026-11-12T05:05:54+00:00 chalshik kernel: thermal_sys: Registered thermal governor 'fair_share'
+2026-11-12T05:05:54+00:00 chalshik kernel: thermal_sys: Registered thermal governor 'bang_bang'
+2026-11-12T05:05:54+00:00 chalshik kernel: thermal_sys: Registered thermal governor 'step_wise'
+2026-11-12T05:05:54+00:00 chalshik kernel: thermal_sys: Registered thermal governor 'user_space'
+2026-11-12T05:05:54+00:00 chalshik kernel: thermal_sys: Registered thermal governor 'power_allocator'
+2026-11-12T05:05:57+00:00 chalshik systemd[1]: thermald.service - Thermal Daemon Service was skipped because of an unmet condition check (ConditionVirtualization=no).
+## journalctl -b -1, 15:51:20 to 15:51:32 UTC, first 12 lines that are not sshd or session lines
+2026-11-12T15:51:32+00:00 chalshik systemd-logind[859]: Power key pressed short.
+2026-11-12T15:51:32+00:00 chalshik systemd-logind[859]: Powering off...
+2026-11-12T15:51:32+00:00 chalshik systemd-logind[859]: System is powering down.
+2026-11-12T15:51:32+00:00 chalshik systemd[1]: Removed slice system-modprobe.slice - Slice /system/modprobe.
+2026-11-12T15:51:32+00:00 chalshik systemd[1]: Stopped target graphical.target - Graphical Interface.
+2026-11-12T15:51:32+00:00 chalshik systemd[1]: Stopped target multi-user.target - Multi-User System.
+2026-11-12T15:51:32+00:00 chalshik systemd[1]: Stopped target getty.target - Login Prompts.
+2026-11-12T15:51:32+00:00 chalshik systemd[1]: Stopped target nss-lookup.target - Host and Network Name Lookups.
+2026-11-12T15:51:32+00:00 chalshik systemd[1]: Stopped target sound.target - Sound Card.
+2026-11-12T15:51:32+00:00 chalshik systemd[1]: Stopped target timers.target - Timer Units.
+2026-11-12T15:51:32+00:00 chalshik systemd[1]: apt-daily-upgrade.timer: Deactivated successfully.
+2026-11-12T15:51:32+00:00 chalshik systemd[1]: Stopped apt-daily-upgrade.timer - Daily apt upgrade and clean activities.
+## the last ssh login before the shutdown:
+2026-11-12T15:51:12+00:00 chalshik sshd[49828]: Accepted publickey for chalshik from 100.68.5.40 port 64898 ssh2: ED25519 SHA256:BQTdQBhJPG0
+2026-11-12T15:51:12+00:00 chalshik sshd[49887]: Accepted publickey for chalshik from 100.68.5.40 port 64899 ssh2: ED25519 SHA256:BQTdQBhJPG0
