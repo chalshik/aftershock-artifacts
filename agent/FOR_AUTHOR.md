@@ -40,6 +40,7 @@ What you should know or may want to overrule. The agent never waits on this file
 
 ## Things moved instead of deleted (`_to_delete/`)
 
+- `_to_delete/docs/probe/20261113_transcript_search/noteread_20261113T220353Z.txt` (2026-11-13 ≈ 22:07 UTC): an output of the CL15/CL17 search that the agent ran again into the same file after adding hand labels, so its stamp no longer named the run that made its content. It was never committed. It was replaced by `noteread_20261113T220718Z.txt`, which the drafts cite.
 - `_to_delete/docs/probe/20261113_reg19/ops_r3/state/scripts_commit.txt` (2026-11-13 ≈ 17:00 UTC): a copy of the scripts commit that the agent wrote into `state/` by mistake; the file the scripts read is `ops_r3/scripts_commit.txt`.
 
 Moved on 2026-11-13 with `git mv` (history kept), same relative path under `_to_delete/`. None is named in decisions.md, status.md, PROTOCOL.md, claims.md, definitions.md, model.md or open-questions.md, and none is cited with a line number by a review that a [REG] will quote. Delete the folder when you wish.
