@@ -40,9 +40,10 @@ If a session finds no result of these in `agent/LOG.md`, they did not finish: re
 
 ## Next three
 
-1. Process the four reviews: revise each draft, run the owner-proxy on REG-21 and on E0/E1/E2, write the [REG] and [DECISION] (delegate) entries. Add to REG-21 before registering: Valse and Jannesari's own trap rule as a reported per-run reading (uncached token rate within ±15 % of the all-miss rate; backlog slope above 0.5 × the excess), since its token half is REG-21's statistic (LITERATURE.md).
-2. After REG-21 is approved: `uv run python -m analysis.k3w reg21` once, [RESULT].
-3. Z3: register condition 4 with an executable trace-order test. Design note: the plan's order (hit rate first) is a wipe trigger's; for a burst the entry order is KV full, then reuse falls, then uncached prefill rises, and the test that matters is that all four links hold in every span after the last burst request has left. Then Z4 (K5), Z6a (PROTOCOL and claims.md notes need an owner-proxy pass), Z9, Z7, Z8, Z10.
+(Updated 2026-11-13 11:55 UTC.)
+1. Wait for the four reviews of REG-21 draft 20 and REG-22 draft 11 (ids in the 12:00 block below); save each verbatim, revise, resend until rule F is READY and the owner-proxy approves. Then append each [REG] and [DECISION] (delegate) (skeletons `docs/drafts/reg21_decision_draft1.md`, `reg22_decision_draft1.md`), REG-22 before REG-19's table is computed. (Valse and Jannesari's trap rule is already a reported readout, `k3w.vj_rule`.)
+2. After both are committed: batch 1 of each once (`uv run python -m analysis.k3w reg21`, `uv run python -m analysis.c2 reg22`), each output stamped by `date -u` in the command line, committed at once and alone, then its [RESULT].
+3. REG-23 (K5) to review once REG-22 is registered (it must list REG-22's control readout as known). Older plan for condition 4 (Z3) is now REG-22. Design note: the plan's order (hit rate first) is a wipe trigger's; for a burst the entry order is KV full, then reuse falls, then uncached prefill rises, and the test that matters is that all four links hold in every span after the last burst request has left. Then Z4 (K5), Z6a (PROTOCOL and claims.md notes need an owner-proxy pass), Z9, Z7, Z8, Z10.
 
 ## Blockers
 
