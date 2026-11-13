@@ -15,10 +15,14 @@ the first grid time after the reference window from which it stays beyond its le
 is onset(L) - onset(X): positive when X moves before latency does. (The column is L, not T: `frame.T` is pandas'
 transpose.)
 
-Judged per signal: "leads" only if at least min_events events have both onsets and every one of them has a positive
-lead; "no_lead" if the median lead is <= 0; "too_few" below min_events; otherwise "mixed". A lead is usable only if
-the same rule gives fewer than fa_per_hour_max onsets per hour on the runs that never tipped. K5 as a whole holds
-("cache_signal_leads") only if H or U leads, usably, with a median lead above A's.
+K5 (docs/claims.md) says that U and H "change before latency and queue length do". So each warner's lead is taken
+twice: over latency (onset(L) - onset(X)) and over the queue (onset(Q) - onset(X)).
+
+Judged per signal and per comparator: "leads" only if at least min_events events have both onsets and every one of
+them has a positive lead; "no_lead" if the median lead is <= 0; "too_few" below min_events; otherwise "mixed". A
+signal is usable only if it leads both latency and the queue and the same rule gives fewer than fa_per_hour_max
+onsets per hour on the runs that never tipped. K5 as a whole holds ("cache_signal_leads") only if H or U is usable
+with a median lead over latency above A's: if watching arrivals warns earlier, the cache signals add nothing.
 """
 from __future__ import annotations
 
@@ -171,7 +175,8 @@ def event(run: dict) -> dict:
     lv = levels(ref)
     on = {k: (crossings(sig, k, *lv[k], start=b) or [math.nan])[0] for k in SIGNALS}
     return {**out, "why": None, "ref": (a, b), "levels": {k: lv[k][1] for k in lv}, "onsets": on,
-            "leads": {k: on["L"] - on[k] for k in WARNERS}}
+            "leads": {k: on["L"] - on[k] for k in WARNERS},
+            "leads_over_queue": {k: on["Q"] - on[k] for k in WARNERS if k != "Q"}}
 
 
 def quiet(run: dict) -> dict:
@@ -190,31 +195,40 @@ def quiet(run: dict) -> dict:
             "alarms": {k: len(crossings(sig, k, *lv[k], start=K5["fa_from"], stop=end)) for k in SIGNALS}}
 
 
+def _lead_label(leads: list[float]) -> dict:
+    leads = [x for x in leads if not math.isnan(x)]
+    med = float(np.median(leads)) if leads else math.nan
+    if not leads:
+        label = "too_few"
+    elif med <= 0:
+        label = "no_lead"
+    elif len(leads) < K5["min_events"]:
+        label = "too_few"
+    else:
+        label = "leads" if all(x > 0 for x in leads) else "mixed"
+    return {"n": len(leads), "k_positive": sum(x > 0 for x in leads), "median_lead_s": med,
+            "min_lead_s": min(leads) if leads else math.nan, "label": label}
+
+
 def judge(events: list[dict], quiets: list[dict]) -> dict:
-    """Per warner: n events with both onsets, how many lead, the median lead, the label, the false alarms per hour
-    on the never-tipped runs, and whether the lead is usable. Then K5's own label."""
+    """Per warner: its lead over latency and over the queue (n events with both onsets, how many lead, the median
+    and the least lead, the label), the false alarms per hour on the never-tipped runs, and whether it is usable.
+    Then K5's own label."""
     ev, qu = [e for e in events if e["why"] is None], [x for x in quiets if x["why"] is None]
     hours = sum(x["hours"] for x in qu)
     out = {"n_events": len(ev), "quiet_hours": hours, "signals": {}}
     for k in WARNERS:
-        leads = [e["leads"][k] for e in ev if not math.isnan(e["leads"][k])]
-        med = float(np.median(leads)) if leads else math.nan
-        if not leads:
-            label = "too_few"
-        elif med <= 0:
-            label = "no_lead"
-        elif len(leads) < K5["min_events"]:
-            label = "too_few"
-        else:
-            label = "leads" if all(x > 0 for x in leads) else "mixed"
+        s = {"over_latency": _lead_label([e["leads"][k] for e in ev])}
+        if k != "Q":
+            s["over_queue"] = _lead_label([e["leads_over_queue"][k] for e in ev])
         fa = sum(x["alarms"][k] for x in qu) / hours if hours > 0 else math.nan
-        out["signals"][k] = {"n": len(leads), "k_positive": sum(x > 0 for x in leads), "median_lead_s": med,
-                             "min_lead_s": min(leads) if leads else math.nan, "label": label,
-                             "false_alarms_per_hour": fa,
-                             "usable": label == "leads" and not math.isnan(fa) and fa < K5["fa_per_hour_max"]}
-    a = out["signals"]["A"]["median_lead_s"]
+        s["false_alarms_per_hour"] = fa
+        s["usable"] = (s["over_latency"]["label"] == "leads" and s.get("over_queue", {}).get("label") == "leads"
+                       and not math.isnan(fa) and fa < K5["fa_per_hour_max"])
+        out["signals"][k] = s
+    a = out["signals"]["A"]["over_latency"]["median_lead_s"]
     better = [k for k in ("H", "U") if out["signals"][k]["usable"]
-              and (math.isnan(a) or out["signals"][k]["median_lead_s"] > a)]
+              and (math.isnan(a) or out["signals"][k]["over_latency"]["median_lead_s"] > a)]
     out["k5"] = "cache_signal_leads" if better else "no_usable_cache_lead"
     out["cache_signals_that_lead"] = better
     return out

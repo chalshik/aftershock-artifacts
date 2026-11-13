@@ -56,6 +56,7 @@ def test_an_event_gives_each_signals_onset_and_its_lead_over_latency():
     assert 900 <= on["H"] <= 910 and 905 <= on["U"] <= 925 and 930 <= on["Q"] <= 940 and 925 <= on["N"] <= 945
     assert 960 <= on["L"] <= 975 and math.isnan(on["A"])               # arrivals never surged
     assert lead["H"] > lead["U"] > lead["Q"] > 0 and math.isnan(lead["A"])
+    assert e["leads_over_queue"]["H"] > e["leads_over_queue"]["U"] > 0 and "Q" not in e["leads_over_queue"]
     assert e["levels"]["H"] == pytest.approx(0.84 - 0.06) and e["levels"]["L"] == 1.0   # floors, the SDs being 0
 
 
@@ -91,8 +92,10 @@ def test_crossings_count_an_onset_once_and_rearm():
     assert K.crossings(s, "X", "at_least", 1.0, start=0.0, stop=50.0) == [10.0]
 
 
-def _e(leads, why=None):
-    return {"why": why, "leads": {k: leads.get(k, math.nan) for k in K.WARNERS}}
+def _e(leads, over_queue=None, why=None):
+    oq = leads if over_queue is None else over_queue
+    return {"why": why, "leads": {k: leads.get(k, math.nan) for k in K.WARNERS},
+            "leads_over_queue": {k: oq.get(k, math.nan) for k in K.WARNERS if k != "Q"}}
 
 
 def _q(hours=1.0, **alarms):
@@ -102,16 +105,22 @@ def _q(hours=1.0, **alarms):
 def test_judge_labels_and_the_comparison_with_arrivals():
     five = [_e({"H": 40.0 + i, "U": 20.0, "Q": -5.0}) for i in range(5)]
     j = K.judge(five, [_q()])
-    assert j["signals"]["H"]["label"] == "leads" and j["signals"]["H"]["usable"] and j["signals"]["Q"]["label"] == "no_lead"
-    assert j["signals"]["A"]["label"] == "too_few" and j["k5"] == "cache_signal_leads" and j["cache_signals_that_lead"] == ["H", "U"]
-    assert K.judge(five[:4], [_q()])["signals"]["H"]["label"] == "too_few"            # four events are not five
+    h = j["signals"]["H"]
+    assert h["over_latency"]["label"] == "leads" and h["over_queue"]["label"] == "leads" and h["usable"]
+    assert j["signals"]["Q"]["over_latency"]["label"] == "no_lead" and "over_queue" not in j["signals"]["Q"]
+    assert j["signals"]["A"]["over_latency"]["label"] == "too_few"
+    assert j["k5"] == "cache_signal_leads" and j["cache_signals_that_lead"] == ["H", "U"]
+    assert K.judge(five[:4], [_q()])["signals"]["H"]["over_latency"]["label"] == "too_few"   # four events are not five
     mixed = five[:4] + [_e({"H": -10.0, "U": 20.0})]
-    assert K.judge(mixed, [_q()])["signals"]["H"]["label"] == "mixed"
+    assert K.judge(mixed, [_q()])["signals"]["H"]["over_latency"]["label"] == "mixed"
     noisy = K.judge(five, [_q(H=2, U=2)])                                             # two false alarms an hour
     assert not noisy["signals"]["H"]["usable"] and noisy["k5"] == "no_usable_cache_lead"
     assert K.judge(five, [])["k5"] == "no_usable_cache_lead"                          # no quiet hours: not usable
     arrivals_first = [_e({"H": 40.0, "U": 20.0, "A": 90.0}) for _ in range(5)]
     assert K.judge(arrivals_first, [_q()])["k5"] == "no_usable_cache_lead"            # watching arrivals warns earlier
+    queue_first = [_e({"H": 40.0, "U": 20.0}, over_queue={"H": -8.0, "U": -20.0}) for _ in range(5)]
+    jq = K.judge(queue_first, [_q()])                                                 # the queue moved before the cache
+    assert jq["signals"]["H"]["over_queue"]["label"] == "no_lead" and jq["k5"] == "no_usable_cache_lead"
     assert K.judge(five + [_e({}, why="no reference")], [_q()])["n_events"] == 5
 
 
@@ -131,5 +140,5 @@ def test_table_splits_events_from_quiet_runs(monkeypatch):
     monkeypatch.setattr(K, "candidates", lambda: runs)
     t = K.k5_table()
     assert [e["run"] for e in t["events"]] == ["tipped"] and [x["run"] for x in t["quiet"]] == ["quiet"]
-    assert t["judged"]["n_events"] == 1 and t["judged"]["signals"]["H"]["label"] == "too_few"
+    assert t["judged"]["n_events"] == 1 and t["judged"]["signals"]["H"]["over_latency"]["label"] == "too_few"
     assert t["judged"]["k5"] == "no_usable_cache_lead"
