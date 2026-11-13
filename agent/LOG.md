@@ -80,3 +80,9 @@ One block per work block: what was done, what was found, the commit.
 - Saved four review verdicts verbatim (59e1d49, 96cf7ac). REG-22 proxy r1: APPROVE on 16 conditions; the re-reading of PROTOCOL §3's order clause is not delegated. Rule F r2 on REG-22: NOT READY (N1–N8). Rule F r6 on REG-21: NOT READY (3 text items). REG-21 proxy delta: APPROVE on C1–C6.
 - Code ffc76b3 (reported only, REG-22). Correction found while drafting: the proxy's reason 3 read REG-12's seeds 2 and 3 as having exits before 1680 s; the gate label `pass` needs only one holding span (gate.py:126), so that is not established. Written into draft 5.
 - Drafts: REG-22 draft 5, REG-21 draft 10 (358418e). Four reviews launched (two rule F, two proxy deltas).
+
+## 2026-11-13 10:50–11:25 UTC (block 4, continued)
+- Saved verbatim: proxy deltas on REG-21 drafts 14 (APPROVE, F1) and 15 (APPROVE, G1–G2); rule F r9 on REG-21 draft 14 (NOT READY, H1: the cut's time came from memory); rule F r10 on draft 15 (NOT READY, J1–J3: late record commit, failed first run, a sealed run); rule F r3 on REG-22 draft 5 (NOT READY, F1–F7: the onset reading cannot answer A19 as worded, "no span re-warmed" false, decision lines 101/102 clash, order (b) gap, freeze, prediction incoherent).
+- Drafts: REG-21 15 (F1, H1), 16 (G1), 17 (J1–J3); REG-22 7. Commits `ab6988f`, `72d4884`.
+- Finding carried across: REG-22 had REG-21's H1 gap too ("REG-19's entry gives the time"); both now share one record rule.
+- Not done by choice: no code change for REG-22's optional 6/14 (stated as limits) or F1's code alternative; keeps code review closed.
