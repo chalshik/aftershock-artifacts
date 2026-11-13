@@ -253,7 +253,7 @@ None has code yet; each gets its code when the run or analysis that uses it is r
 ### uncached-token work rate U (REG-21)
 - **Text:** "uncached prompt tokens per second, Σ (prompt_tokens − cached_tokens) over ok requests, session and burst, whose first token falls in the window (the first token ends a request's prefill)" FILE(docs/decisions.md:9747), decisions.md 2026-11-13 [REG] REG-21, Statistic.
 - **Code:** `k3w.work_rate`. It raises if an ok request has no first-token time or no prompt length. Its values over consecutive 300 s spans are reported beside it (`reported_spans`).
-- **Not the same as:** the session uncached prefill rate (REG-22, below), which leaves the burst's requests out.
+- **Not the same as:** the counter-based `recomputed_prefill_tok_s` of `load.rates` (from the server's counters, all requests, per scrape interval, FILE(analysis/load.py:75)), a different computation of an uncached prefill rate (REG-21's text, FILE(docs/decisions.md:9849)); and the session uncached prefill rate (REG-22, below), which leaves the burst's requests out.
 
 ### cache-off work rate U_off (REG-21)
 - **Text:** "the mean of U over REG-8's five saturated cache-off runs, pinned by id" FILE(docs/decisions.md:9748); "each over its measured window. It raises unless exactly those five are there and valid." FILE(docs/decisions.md:9748)
