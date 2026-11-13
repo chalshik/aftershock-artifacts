@@ -27,7 +27,10 @@ Each item of round 4 the agent applied, the line of its anchor in draft 26 and t
 | CE-O5 | 59 | 59 |
 | CE-O7 | 4 | 4 |
 | CE-O8 | 111 | 111 |
-| CG1 (REG-22) applied here | 104 | 104 |
+| CG1 (REG-22 r12) cross-applied | 104 | 104 |
+| CG1 trace step 5 (duty) | 104 | 104 |
+| CG3 (REG-22 r12) cross-applied | new (after an earlier item) | 54 |
+| Seed 18's continue flag (agent) | 54 | 54 |
 | CF6 | 124 | 124 |
 | CF7 | 284 | 433 |
 | Header | 3 | 3 |
