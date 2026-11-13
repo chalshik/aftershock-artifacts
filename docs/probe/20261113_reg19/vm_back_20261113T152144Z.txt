@@ -1,0 +1,65 @@
+# REG-19: read-only read of the VM after it came back (agent). No run folder and no harness log is opened.
+# captured 2026-11-13T15:21:44Z via chalshik@100.83.53.50
+2026-11-13T15:21:44+00:00
+boot_id 06d8b294-9c8a-4aed-a31a-417b16ff2f48
+up_since 2026-11-13 15:20:36
+limit 420.00 W
+temp 42
+apps 0
+tree a7bb77abc863adcaad9d4516815a5ddddf2908e9 dirty 0
+free_kb 5300800
+tmux: error connecting to /tmp/tmux-1000/default (No such file or directory)
+## journalctl --list-boots (last 6)
+ -5 4de2f1324c9a4d8cb2fa68d4291b6545 Thu 2026-11-05 10:55:48 UTC Thu 2026-11-05 11:53:24 UTC
+ -4 7f7c8f5e66da43a3ad2bf89e633a44c0 Thu 2026-11-05 11:53:45 UTC Sat 2026-11-07 15:06:05 UTC
+ -3 a3b3d7c348ca47f49f5e244b5aa84a30 Sun 2026-11-08 12:31:15 UTC Wed 2026-11-11 17:36:47 UTC
+ -2 d59f372fbf2f4e20aa7a1a00f1458a25 Thu 2026-11-12 05:05:54 UTC Thu 2026-11-12 15:52:08 UTC
+ -1 7d11a2972521439b84cda8d7b29fa8c7 Thu 2026-11-12 19:47:34 UTC Fri 2026-11-13 04:39:18 UTC
+  0 06d8b2949c8a4aeda31a417b16ff2f48 Fri 2026-11-13 15:20:39 UTC Fri 2026-11-13 15:21:44 UTC
+## every power-key line in the journal, with its boot (all boots still kept)
+2026-10-23T16:09:54+00:00 chalshik systemd-logind[944]: Power key pressed short.
+2026-10-23T16:09:54+00:00 chalshik systemd-logind[944]: Powering off...
+2026-10-23T16:09:54+00:00 chalshik systemd-logind[944]: System is powering down.
+2026-10-31T02:53:50+00:00 chalshik systemd-logind[999]: Power key pressed short.
+2026-10-31T02:53:50+00:00 chalshik systemd-logind[999]: Powering off...
+2026-10-31T02:53:50+00:00 chalshik systemd-logind[999]: System is powering down.
+2026-11-01T15:41:07+00:00 chalshik systemd-logind[952]: Power key pressed short.
+2026-11-01T15:41:07+00:00 chalshik systemd-logind[952]: Powering off...
+2026-11-01T15:41:07+00:00 chalshik systemd-logind[952]: System is powering down.
+2026-11-04T14:35:45+00:00 chalshik systemd-logind[944]: Power key pressed short.
+2026-11-04T14:35:45+00:00 chalshik systemd-logind[944]: Powering off...
+2026-11-04T14:35:45+00:00 chalshik systemd-logind[944]: System is powering down.
+2026-11-07T15:06:01+00:00 chalshik systemd-logind[833]: Power key pressed short.
+2026-11-07T15:06:01+00:00 chalshik systemd-logind[833]: Powering off...
+2026-11-07T15:06:01+00:00 chalshik systemd-logind[833]: System is powering down.
+2026-11-11T17:36:43+00:00 chalshik systemd-logind[835]: Power key pressed short.
+2026-11-11T17:36:43+00:00 chalshik systemd-logind[835]: Powering off...
+2026-11-11T17:36:43+00:00 chalshik systemd-logind[835]: System is powering down.
+2026-11-12T15:51:32+00:00 chalshik systemd-logind[859]: Power key pressed short.
+2026-11-12T15:51:32+00:00 chalshik systemd-logind[859]: Powering off...
+2026-11-12T15:51:32+00:00 chalshik systemd-logind[859]: System is powering down.
+2026-11-13T04:39:14+00:00 chalshik systemd-logind[837]: Power key pressed short.
+2026-11-13T04:39:14+00:00 chalshik systemd-logind[837]: Powering off...
+2026-11-13T04:39:14+00:00 chalshik systemd-logind[837]: System is powering down.
+## the boot that ended on 2026-11-13: its last 6 lines, and its lines naming thermal, overheat, a critical temperature or Xid
+2026-11-13T04:39:18+00:00 chalshik systemd[1]: Reached target poweroff.target - System Power Off.
+2026-11-13T04:39:18+00:00 chalshik systemd[1]: Shutting down.
+2026-11-13T04:39:18+00:00 chalshik systemd-shutdown[1]: Syncing filesystems and block devices.
+2026-11-13T04:39:18+00:00 chalshik systemd-shutdown[1]: Sending SIGTERM to remaining processes...
+2026-11-13T04:39:18+00:00 chalshik systemd-journald[399]: Received SIGTERM from PID 1 (systemd-shutdow).
+2026-11-13T04:39:18+00:00 chalshik systemd-journald[399]: Journal stopped
+## the last ssh login before that shutdown
+2026-11-13T04:38:26+00:00 chalshik sshd[33147]: Accepted publickey for chalshik from 100.68.5.40 port 64518 ssh2: ED2551
+## what the VM holds for REG-19's configs (vm_state.py), and what decide() and gate() say for the four left
+   20261112-050920_stage2_control_l1pl350cl_r2.0_w3000_s15 valid - a7bb77abc863adcaad9d4516815a5ddddf2908e9
+   20261112-061951_burst_l1pl350cl_r2.0_w3000_s15 valid - a7bb77abc863adcaad9d4516815a5ddddf2908e9
+   20261112-073516_stage2_control_l1pl350cl_r2.0_w3000_s16 valid - a7bb77abc863adcaad9d4516815a5ddddf2908e9
+   20261112-084533_burst_l1pl350cl_r2.0_w3000_s16 valid - a7bb77abc863adcaad9d4516815a5ddddf2908e9
+   20261112-103423_stage2_control_l1pl350cl_r2.0_w3000_s17 valid - a7bb77abc863adcaad9d4516815a5ddddf2908e9
+   20261112-135538_burst_l1pl350cl_r2.0_w3000_s17 valid - a7bb77abc863adcaad9d4516815a5ddddf2908e9
+   20261112-151030_stage2_control_l1pl350cl_r2.0_w3000_s18 nochecks - a7bb77abc863adcaad9d4516815a5ddddf2908e9
+   20261113-033842_stage2_control_l1pl350cl_r2.0_w3000_s18 nochecks - a7bb77abc863adcaad9d4516815a5ddddf2908e9
+stage2_control_l1pl350cl_r2.0_w3000_s18: gate rc 0 []; decide rc 2 RID='' LAUNCH='' [20261113-033842_stage2_control_l1pl350cl_r2.0_w3000_s18 has no checks.json (lost or still running): a rerun needs its own decision, recorded as /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_reg19/ops_r3/state/lost_ok_20261113-033842_stage2_control_l1pl350cl_r2.0_w3000_s18.txt]
+burst_l1pl350cl_r2.0_w3000_s18: gate rc 2 [20261113-033842_stage2_control_l1pl350cl_r2.0_w3000_s18 has no checks.json (lost or still running): a rerun needs its own decision, recorded as /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_reg19/ops_r3/state/lost_ok_20261113-033842_stage2_control_l1pl350cl_r2.0_w3000_s18.txt]; decide rc 0 RID='' LAUNCH='1' []
+stage2_control_l1pl350cl_r2.0_w3000_s19: gate rc 2 [seed 19 is launched only after seed 18's step record says 'continue': True]; decide rc 0 RID='' LAUNCH='1' []
+burst_l1pl350cl_r2.0_w3000_s19: gate rc 2 [seed 19 is launched only after seed 18's step record says 'continue': True]; decide rc 0 RID='' LAUNCH='1' []

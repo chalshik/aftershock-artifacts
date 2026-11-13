@@ -4367,3 +4367,15 @@ Ends when the owner writes an entry ending it.
 
 - The clock read 12:45 UTC when the next entry was written (`date -u`), so the earlier time was a guess. The agent's error: it estimated the time instead of reading the clock.
 - Corrected in both files, and in the header of `_to_delete/agent/STATE_blocks_to_2026-11-13.md`. No other content changed.
+
+## 2026-11-13 · [OPS] The VM is back after the power-off of 2026-11-13 04:39 UTC: what it shows, read-only; REG-19 waits for the owner's attempt-3 decision and 350 W
+
+- **Probe:** PROBE(docs/probe/20261113_reg19/vm_back_20261113T152144Z.txt), by `agent/bin/vm_back_probe.zsh` (read-only; no run folder and no harness log opened), via Tailscale. The owner said in session at ≈ 15:20 UTC: "the vm is back".
+- **Boot:** new boot id `06d8b294-9c8a-4aed-a31a-417b16ff2f48`, up since 2026-11-13 15:20:36 UTC. The boot before it (`7d11a297…`, from 2026-11-12 19:47:34) ended with `Power key pressed short` at 04:39:14 UTC, then an orderly power-off (journal stopped 04:39:18). No thermal, overheat or Xid line in that boot. Its last ssh login, at 04:38:26 UTC, came from 100.68.5.40, which is the Mac's own Tailscale address (PROBE: this session's `ifconfig`), so it is the queue's poll, not a cause.
+- **Every end the journal keeps is a power-key press:** eight, from 2026-10-23 to 2026-11-13, including the two of 2026-11-07 and 2026-11-11 that had not been read. Open question A18's row is updated with the list; what presses the key is still on the host.
+- **GPU and host:** limit 420.00 W (the reboot default), 42 °C, no compute process, no tmux session; VM tree at `a7bb77a`, 0 dirty files; 5,300,800 kB free (≥ 4 × 240 MB, RUNBOOK §2).
+- **350 W:** the agent tried `sudo -n nvidia-smi -pl 350` (the one root command the delegation allows) at 15:22 UTC: `sudo: a password is required`. The limit stays 420 W; no 350 W run can start until the owner sets it (FOR_AUTHOR −2).
+- **REG-19's folders on the VM** (`vm_state.py`, names and validity only): seeds 15–17, six folders, all `valid`, at `a7bb77a`. Seed 18's control: attempt 1 `20261112-151030_…s18` and attempt 2 `20261113-033842_…s18`, both `nochecks` (no `checks.json`), as expected for lost runs. Nothing of either was opened.
+- **What `gate` and `decide` say for the four configs left:** `decide` refuses seed 18's control (rc 2) until attempt 2's `lost_ok` record exists in `ops_r3/state/` (its text is in the attempt-3 draft); seed 18's burst waits on that control; seed 19 waits on seed 18's step record. As expected.
+- **Timing:** the time now (15:22 UTC) is inside the quiet window 14:15–18:00 UTC of both the scripts in force and the unapplied patch, so no launch can start before 18:00 UTC either way (DERIVED from FILE(docs/drafts/reg19_attempt3_decision_draft2.md:53)).
+- **Not done:** no launch, no `RENEW=1` probe, no `lost_ok` record (each needs the owner's entry). The attempt-3 draft's open journal line can now be filled from this probe.
