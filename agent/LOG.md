@@ -66,3 +66,12 @@ One block per work block: what was done, what was found, the commit.
 **Commits:** `ef4dc4e`, `ea03d73`, the runbook commit, then this block's.
 
 **Block 3, later (2026-11-12 19:52 UTC): the VM came back.** Watcher `down -> up_idle` at 19:51:46 UTC. Read-only state: idle GPU, 420 W, tree `a7bb77a` clean, the lost seed-18 folder present without `checks.json`. `sudo -n nvidia-smi -pl 350` and the same with `/usr/bin/nvidia-smi` both fail with "a password is required"; `/etc/sudoers.d/` holds only README. Per the start prompt §7: logged in FOR_AUTHOR, no 350 W run started. A 2-minute loop now waits for 350.00 W.
+
+**Block 4 (2026-11-12 20:10 to 2026-11-13 00:50 UTC): review round 2 and the rewrite.**
+- Round 2: rule F on the REG-19 resume NOT READY (12 items), rule F on REG-21 draft 4 NOT READY (7), owner-proxy on REG-21 approve on 10 conditions (lapsed). Three reports of the first review batch arrived late; the first owner-proxy on the resume wanted the recheck before the table and a new decision for any further lost run. I took both (stricter).
+- REG-19 resume scripts rewritten with no typed value (`ops_r3/`); the sandbox now uses a throwaway git repo and a fake VM tree, 116 cases. It found a zsh modifier bug (`$PIN:uv.lock`).
+- REG-21 code: pooled level over J2's groups only, gauge coverage, every reason listed, batch guards, fixed-load contrast, redo proxy for both arms; the seal's heading test anchored. Draft 5 says plainly that batch 1 is a retrospective reading.
+- E1 code fixes committed (`3349552`).
+- Lesson: unnamed background agents return their report; named teammates' reports can arrive hours late. Save every report from the transcript at once.
+
+**Commits:** `3349552`, `c38388b`, `69f349b`, `76b2778`, `9771af8`, `aa9f09e`, `69ffedd`, `16c30fc`.
