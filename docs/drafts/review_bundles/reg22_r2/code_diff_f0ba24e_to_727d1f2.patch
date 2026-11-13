@@ -1,0 +1,311 @@
+diff --git a/analysis/c2.py b/analysis/c2.py
+index fd300ce..dd741f6 100644
+--- a/analysis/c2.py
++++ b/analysis/c2.py
+@@ -75,9 +75,10 @@ def session_uncached_rate(run: dict, a: float, b: float) -> float:
+     return float((w.prompt_tokens - w.cached_tokens.fillna(0)).clip(lower=0).sum() / (b - a))
+ 
+ 
+-def baseline(run: dict) -> dict:
+-    a, b = windows(run)["base"]
+-    return {"reuse": reuse_in(later_turns(run), a, b), "u": session_uncached_rate(run, a, b),
++def baseline(run: dict, window: tuple | None = None) -> dict:
++    """The four values over the baseline window (the run's own, or `window` for a control, which has no trigger)."""
++    a, b = window or windows(run)["base"]
++    return {"reuse": reuse_in(later_turns(run), a, b, C2["min_turns"]), "u": session_uncached_rate(run, a, b),
+             "n": gauge(run, N, a, b), "kv": gauge(run, KV, a, b)}
+ 
+ 
+@@ -87,13 +88,19 @@ def levels(run: dict, base: dict | None = None) -> dict:
+     a, b = windows(run)["end_window"]
+     kv, n, n_max = gauge(run, KV, a, b), gauge(run, N, a, b), gauge(run, N, a, b, "max")
+     vals = (kv, n, n_max, base["n"])
+-    ok = None if any(math.isnan(x) for x in vals) else bool(
+-        kv >= C2["min_kv"] and n >= C2["n_factor"] * base["n"] and n_max < C2["n_cap"])
+-    return {"kv": kv, "n": n, "n_over_base": n / base["n"] if base["n"] else math.nan, "n_max": n_max, "ok": ok}
++    if any(math.isnan(x) for x in vals):
++        ok, failed = None, None
++    else:
++        failed = [k for k, bad in (("kv", kv < C2["min_kv"]), ("n", n < C2["n_factor"] * base["n"]),
++                                   ("n_cap", n_max >= C2["n_cap"])) if bad]
++        ok = not failed
++    return {"kv": kv, "n": n, "n_over_base": n / base["n"] if base["n"] else math.nan, "n_max": n_max, "ok": ok,
++            "failed": failed}
+ 
+ 
+ def last_burst_end(run: dict) -> float:
+-    """When the last burst request ended; NaN if a burst request never ended (the burst is then still in the system)."""
++    """When the last burst request ended ("the exit"). NaN if a burst request never ended (the burst is then still
++    in the system), if one ended with an error status, or if the run has no burst rows."""
+     q = run["requests"]
+     b = q[is_burst_request(run)]
+     if not len(b) or (b.status != "ok").any() or b.t_end.isna().any():
+@@ -102,31 +109,42 @@ def last_burst_end(run: dict) -> float:
+ 
+ 
+ def links(run: dict, a: float, b: float, base: dict, turns=None) -> dict:
+-    """The loop's four links over [a, b); `holds` is None when a value is missing."""
++    """The loop's four links over [a, b); `holds` is None when a value is missing (fewer than min_turns later turns
++    give no reuse); `failed` names the links that do not hold."""
+     turns = later_turns(run) if turns is None else turns
+     drop = float(run["cfg"]["verdict"]["stuck_hit_drop"])
+-    v = {"reuse": reuse_in(turns, a, b), "u": session_uncached_rate(run, a, b), "n": gauge(run, N, a, b),
+-         "kv": gauge(run, KV, a, b)}
++    v = {"reuse": reuse_in(turns, a, b, C2["min_turns"]), "u": session_uncached_rate(run, a, b),
++         "n": gauge(run, N, a, b), "kv": gauge(run, KV, a, b)}
+     if any(math.isnan(x) for x in (*v.values(), base["reuse"], base["u"], base["n"])):
+-        return {**v, "span": (a, b), "holds": None}
+-    holds = (v["reuse"] <= base["reuse"] - drop and v["u"] >= C2["u_factor"] * base["u"]
+-             and v["n"] >= C2["n_factor"] * base["n"] and v["kv"] >= C2["min_kv"])
+-    return {**v, "span": (a, b), "holds": bool(holds)}
++        return {**v, "span": (a, b), "holds": None, "failed": None}
++    failed = [k for k, bad in (("reuse", v["reuse"] > base["reuse"] - drop), ("u", v["u"] < C2["u_factor"] * base["u"]),
++                               ("n", v["n"] < C2["n_factor"] * base["n"]), ("kv", v["kv"] < C2["min_kv"])) if bad]
++    return {**v, "span": (a, b), "holds": not failed, "failed": failed}
+ 
+ 
+ def sustain(run: dict, base: dict | None = None) -> dict:
+-    """The links in every span of the watch that starts at or after the last burst request's end."""
++    """The links in every 300 s span of the watch. A span is judged when it starts at or after the exit (the last
++    burst request's end); the earlier spans are reported with `judged` False. With fewer than min_spans judged spans
++    (or no exit) the result is None. Otherwise one judged span that fails decides (False), whatever the others are;
++    with none failing, a judged span with a missing value gives None; else True."""
+     base, w = base or baseline(run), windows(run)
+     tb = last_burst_end(run)
+-    starts = np.arange(w["end"], w["watch_end"] - 1e-9, C2["span_s"])
+     turns = later_turns(run)
+-    rows = [links(run, float(a), float(min(a + C2["span_s"], w["watch_end"])), base, turns)
+-            for a in starts if not math.isnan(tb) and a >= tb]
+-    if math.isnan(tb) or len(rows) < C2["min_spans"] or any(r["holds"] is None for r in rows):
++    rows = []
++    for a in np.arange(w["end"], w["watch_end"] - 1e-9, C2["span_s"]):
++        r = links(run, float(a), float(min(a + C2["span_s"], w["watch_end"])), base, turns)
++        rows.append({**r, "judged": (not math.isnan(tb)) and a >= tb})
++    judged = [r for r in rows if r["judged"]]
++    if len(judged) < C2["min_spans"]:
++        ok = None
++    elif any(r["holds"] is False for r in judged):
++        ok = False
++    elif any(r["holds"] is None for r in judged):
+         ok = None
+     else:
+-        ok = all(r["holds"] for r in rows)
+-    return {"last_burst_end": tb, "n_spans": len(rows), "spans": rows, "ok": ok}
++        ok = True
++    return {"last_burst_end": tb, "n_spans": len(judged), "spans": rows, "ok": ok,
++            "links_failed": sorted({k for r in judged for k in (r["failed"] or [])})}
+ 
+ 
+ def onsets(run: dict, base: dict | None = None) -> dict:
+@@ -147,8 +165,8 @@ def onsets(run: dict, base: dict | None = None) -> dict:
+                 out[k] = float(t)
+         if not any(math.isnan(x) for x in out.values()):
+             break
+-    seen = sorted((v, k) for k, v in out.items() if not math.isnan(v))
+-    return {**out, "order": [k for _, k in seen]}
++    times = sorted({v for v in out.values() if not math.isnan(v)})
++    return {**out, "order": [sorted(k for k, v in out.items() if v == x) for x in times]}   # equal times: one group
+ 
+ 
+ def condition4(run: dict, with_readouts: bool = True) -> dict:
+@@ -166,7 +184,8 @@ def condition4(run: dict, with_readouts: bool = True) -> dict:
+         label = "loop" if su["ok"] else "not_sustained"
+     out = {"run": run["dir"].name, "baseline": base, "levels": lv, "sustain": su, "label": label}
+     if with_readouts:
+-        for key, f in (("onsets", lambda: onsets(run, base)), ("evictions", lambda: eviction_readout(run))):
++        for key, f in (("onsets", lambda: onsets(run, base)), ("evictions", lambda: eviction_readout(run)),
++                       ("control", lambda: control_readout(run, su)), ("rows", lambda: row_counts(run))):
+             try:
+                 out[key] = f()
+             except Exception as e:   # a reported readout never takes the judged label with it
+@@ -219,7 +238,9 @@ def histogram_delta(metrics_jsonl, name: str, a: float, b: float) -> dict:
+         return nan
+     d = {e: last.get(e, 0.0) - first.get(e, 0.0) for e in sorted(last)}
+     total = d.get(math.inf, 0.0)
+-    if total <= 0 or any(v < 0 for v in d.values()):      # nothing sampled, or a counter reset
++    if any(v < 0 for v in d.values()):                    # a counter went down: a restart inside the window
++        return {**nan, "reset": True}
++    if total <= 0:                                         # nothing sampled
+         return nan
+     med = next(e for e in sorted(d) if d[e] >= total / 2)
+     return {"count": total, "median_le_s": med, "share_le_5s": d.get(5.0, math.nan) / total,
+@@ -250,7 +271,37 @@ def eviction_readout(run: dict) -> dict:
+     return out
+ 
+ 
++def row_counts(run: dict) -> dict:
++    """Reported only: ok session requests, how many of them carry no cached_tokens (counted as a full miss), and
++    requests that got a first token and never finished (not counted in the uncached rate)."""
++    q = run["requests"]
++    s = q[~is_burst_request(run)]
++    ok = s[s.status == "ok"]
++    return {"ok_session": int(len(ok)), "ok_without_cached_tokens": int(ok.cached_tokens.isna().sum()),
++            "first_token_never_finished": int(((s.status != "ok") & s.t_first_token.notna()).sum())}
++
++
++def control_readout(run: dict, su: dict) -> dict:
++    """Reported only: the same-seed control of a burst run (the same session schedule, no burst), its registered
++    verdict, and its links over the burst run's judged spans against its own baseline. A queue that the load alone
++    explains would hold the links in the control too; a state the burst left behind would not."""
++    name = run["cfg"]["name"]
++    cname = REG22["controls"].get(name) or ("stage2_control_" + name[len("burst_"):] if name.startswith("burst_") else None)
++    if cname is None:
++        return {"why": "this config has no control"}
++    got = find_runs(f"*_{cname}")
++    if len(got) != 1:
++        return {"why": f"{len(got)} valid runs of {cname}"}
++    c, w = got[0], windows(run)
++    base = baseline(c, w["base"])
++    spans = [links(c, *r["span"], base) for r in su["spans"] if r["judged"]]
++    return {"run": c["dir"].name, "verdict": verdict(c)["verdict"], "baseline": base,
++            "spans": spans, "links_hold_in_every_span": bool(spans) and all(s["holds"] is True for s in spans)}
++
++
+ REG22 = {
++    # REG-11's control carries no seed in its name; every other burst config maps by its own name.
++    "controls": {"burst_l1pl350cl_r2.4_s1": "stage2_control_l1pl350cl_r2.4"},
+     # The closed-loop L1 burst runs at 350 W made before REG-19 (REG-11, REG-12, REG-14, REG-15, REG-17, REG-18), as
+     # k3.REG21["batch1"]. A run is judged only if its registered verdict (`load.verdict`) is "stuck".
+     "runs": ("20261109-042828_burst_l1pl350cl_r2.4_s1", "20261109-080203_burst_l1pl350cl_r2.4_s2",
+@@ -293,7 +344,9 @@ def reg22_table(batch: int = 1) -> dict:
+         by_load.setdefault(f"{float(r['cfg']['workload']['rate']):.1f}", []).append(lab)
+     rows = [{**condition4(r), "lam": float(r["cfg"]["workload"]["rate"]), "seed": r["cfg"].get("seed")} for r in judged]
+     return {"batch": batch, "left_out": left, "n_stuck": len(judged), "counts": {k: labels.count(k) for k in kinds},
+-            "by_load": {g: {"n": len(v), **{k: v.count(k) for k in kinds}, "loop_cp_upper_95": cp_upper(v.count("loop"), len(v))}
++            "by_load": {g: {"n": len(v), **{k: v.count(k) for k in kinds},
++                            "loop_cp_upper_95": cp_upper(v.count("loop"), len(v)),
++                            "loop_cp_lower_95": 1.0 - cp_upper(len(v) - v.count("loop"), len(v))}
+                         for g, v in sorted(by_load.items())},
+             "rows": rows}
+ 
+@@ -303,6 +356,9 @@ if __name__ == "__main__":
+     import sys
+ 
+     if len(sys.argv) in (2, 3) and sys.argv[1] == "reg22":
++        from analysis.k3w import _dirty
++        if _dirty():
++            raise SystemExit("analysis/ or tests/ holds modified or untracked files; REG-22 runs from committed code:\n" + _dirty())
+         print(json.dumps(reg22_table(int(sys.argv[2]) if len(sys.argv) == 3 else 1), indent=1, default=str))
+     else:
+         raise SystemExit("usage: python -m analysis.c2 reg22 [1|2]")
+diff --git a/tests/test_c2.py b/tests/test_c2.py
+index d685848..533cf1d 100644
+--- a/tests/test_c2.py
++++ b/tests/test_c2.py
+@@ -48,7 +48,9 @@ def test_a_cold_full_backlogged_run_shows_the_loop():
+     assert r["label"] == "loop" and r["levels"]["ok"] and r["sustain"]["ok"]
+     assert r["baseline"]["reuse"] == pytest.approx(1.0) and r["levels"]["n_over_base"] == pytest.approx(12.0)
+     assert r["sustain"]["last_burst_end"] == 1200.0 and r["sustain"]["n_spans"] == 4      # spans from 1380 s on
+-    assert all(s["reuse"] == 0.0 and s["holds"] for s in r["sustain"]["spans"])
++    assert [s["judged"] for s in r["sustain"]["spans"]] == [False, True, True, True, True]   # every span is reported
++    assert all(s["reuse"] == 0.0 and s["holds"] for s in r["sustain"]["spans"] if s["judged"])
++    assert r["levels"]["failed"] == [] and r["sustain"]["links_failed"] == []
+ 
+ 
+ def test_a_backlog_without_a_full_pool_is_not_this_loop():
+@@ -60,7 +62,9 @@ def test_a_backlog_without_a_full_pool_is_not_this_loop():
+ def test_a_span_in_which_the_cache_comes_back_breaks_sustain():
+     r = C.condition4(fake_run(rewarm=(1700.0, 1950.0)))
+     assert r["label"] == "not_sustained" and r["levels"]["ok"]
+-    assert [s["holds"] for s in r["sustain"]["spans"]] == [True, False, True, True]
++    assert [s["holds"] for s in r["sustain"]["spans"] if s["judged"]] == [True, False, True, True]
++    assert r["sustain"]["links_failed"] == ["u"]     # the cache back for 250 of 300 s: reuse 0.83 is still "lost"
++    assert [round(s["reuse"], 2) for s in r["sustain"]["spans"] if s["holds"] is False] == [0.83]   # by baseline - 0.06
+ 
+ 
+ def test_undefined_when_the_burst_is_still_in_the_system_or_leaves_too_late():
+@@ -72,9 +76,9 @@ def test_undefined_when_the_burst_is_still_in_the_system_or_leaves_too_late():
+ def test_onsets_report_the_order_found():
+     o = C.onsets(fake_run(kv_from=930.0, n_from=920.0, cold_from=1000.0))
+     assert o["n"] <= o["kv"] <= o["reuse"] <= o["u"]
+-    assert o["order"][0] == "n" and set(o["order"]) == {"n", "kv", "reuse", "u"}
++    assert o["order"][0] == ["n"] and {k for g in o["order"] for k in g} == {"n", "kv", "reuse", "u"}
+     never = C.onsets(fake_run(cold_from=END + 1.0, kv_cold=0.5))                          # the cache is never lost
+-    assert math.isnan(never["reuse"]) and math.isnan(never["kv"]) and never["order"] == ["n"]
++    assert math.isnan(never["reuse"]) and math.isnan(never["kv"]) and never["order"] == [["n"]]
+ 
+ 
+ def test_links_are_none_when_a_value_is_missing():
+@@ -173,3 +177,82 @@ def test_turn_spacing_is_the_gap_between_a_sessions_first_tokens():
+ def test_eviction_readout_without_a_metrics_file_is_none():
+     r = C.condition4(fake_run())
+     assert r["evictions"] == {"baseline": None, "after": None}
++
++
++def test_failing_levels_decide_whatever_sustain_is():
++    """The label map, cell by cell: levels False gives not_memory_limited even when sustain cannot be read."""
++    r = C.condition4(fake_run(kv_cold=0.5, burst_unfinished=True))
++    assert r["levels"]["ok"] is False and r["sustain"]["ok"] is None and r["label"] == "not_memory_limited"
++    assert r["levels"]["failed"] == ["kv"]
++    assert C.condition4(fake_run(n_cold=8.0))["levels"]["failed"] == ["n"]
++    assert C.condition4(fake_run(n_max=256.0))["levels"]["failed"] == ["n_cap"]
++    r = C.condition4(fake_run(burst_unfinished=True))                       # levels hold, no exit
++    assert r["levels"]["ok"] is True and r["sustain"]["ok"] is None and r["label"] == "undefined"
++
++
++def test_one_failing_span_decides_even_if_another_is_missing():
++    run = fake_run(rewarm=(1700.0, 1960.0))                                 # the cache comes back inside one span
++    m = run["metrics"]
++    run["metrics"] = m[(m.t < 1400.0) | (m.t > 1450.0)]                    # and an earlier judged span has a scrape hole
++    r = C.condition4(run)
++    assert r["label"] == "not_sustained" and r["sustain"]["links_failed"] == ["u"]
++    holds = [s["holds"] for s in r["sustain"]["spans"] if s["judged"]]
++    assert False in holds and None in holds
++
++
++def test_a_span_with_too_few_later_turns_has_no_reuse():
++    run = fake_run()
++    q = run["requests"]
++    run["requests"] = q[~((q.turn > 0) & (q.t_first_token >= 1680.0) & (q.t_first_token < 1980.0) & (q.session_id % 40 != 0))]
++    s = [x for x in C.sustain(run)["spans"] if x["span"] == (1680.0, 1980.0)][0]
++    assert math.isnan(s["reuse"]) and s["holds"] is None
++
++
++def test_onsets_report_ties_as_ties():
++    o = C.onsets(fake_run(cold_from=1000.0, kv_from=1000.0, n_from=1000.0))
++    assert all(isinstance(g, list) for g in o["order"])
++    assert sorted(k for g in o["order"] for k in g) == ["kv", "n", "reuse", "u"]
++    same = [g for g in o["order"] if len(g) > 1]
++    assert all(len({o[k] for k in g}) == 1 for g in same)                    # a group shares one onset time
++
++
++def test_control_readout_and_row_counts(monkeypatch):
++    burst = _named("20261110-000000_burst_l1pl350cl_r2.0_s2")
++    burst["cfg"]["name"] = "burst_l1pl350cl_r2.0_s2"
++    control = _named("20261110-000000_stage2_control_l1pl350cl_r2.0_s2", cold_from=1e9, kv_from=1e9, n_from=1e9)
++    monkeypatch.setattr(C, "find_runs", lambda pattern: [control] if pattern == "*_stage2_control_l1pl350cl_r2.0_s2" else [])
++    monkeypatch.setattr(C, "verdict", lambda run: {"verdict": "recovered"})
++    c = C.control_readout(burst, C.sustain(burst))
++    assert c["verdict"] == "recovered" and len(c["spans"]) == 4 and c["links_hold_in_every_span"] is False
++    assert all(s["failed"] == ["reuse", "u", "n", "kv"] for s in c["spans"])  # a warm control holds none of them
++    burst["cfg"]["name"] = "confirm_l1pl350cl_r2.2_s12"
++    assert C.control_readout(burst, C.sustain(burst)) == {"why": "this config has no control"}
++    n = C.row_counts(fake_run())
++    assert n["ok_without_cached_tokens"] == 0 and n["first_token_never_finished"] == 0 and n["ok_session"] > 1000
++
++
++def test_table_gives_both_bounds(monkeypatch):
++    runs = {f"r{i}": _named(f"r{i}") for i in range(3)}
++    monkeypatch.setitem(C.REG22, "runs", tuple(runs))
++    monkeypatch.setattr(C, "find_runs", lambda pattern: [runs[pattern]] if pattern in runs else [])
++    monkeypatch.setattr(C, "verdict", lambda run: {"verdict": "stuck"})
++    monkeypatch.setattr(C, "control_readout", lambda run, su: {"why": "stub"})
++    b = C.reg22_table()["by_load"]["2.0"]
++    assert b["n"] == 3 and b["loop"] == 3 and b["loop_cp_upper_95"] == 1.0
++    assert b["loop_cp_lower_95"] == pytest.approx(0.05 ** (1 / 3))            # 3 of 3: the one-sided 95 % lower bound
++
++
++def test_batch2_is_guarded_as_reg21s(monkeypatch, tmp_path):
++    import analysis.k3w as W
++    d = tmp_path / "decisions.md"
++    d.write_text("## 2026-11-11 · [REG] REG-19\n")
++    monkeypatch.setattr(W.withheld, "DECISIONS", d)
++    with pytest.raises(RuntimeError):
++        C.batch_runs(2)
++
++
++def test_a_long_watch_has_fourteen_judged_spans():
++    cfg = {"trigger": dict(CFG["trigger"]), "verdict": {**CFG["verdict"], "watch_s": 4500.0}}
++    w = C.windows({"cfg": cfg})
++    assert w["watch_end"] == 5580.0 and w["end_window"] == (4980.0, 5580.0)
++    assert len(np.arange(w["end"], w["watch_end"] - 1e-9, C.C2["span_s"])) == 15   # 15 spans, 14 after an exit by 1380 s
