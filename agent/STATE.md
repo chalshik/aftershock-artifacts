@@ -5,6 +5,15 @@ Rules: `docs/FABLE_PROMPT.md` (the start prompt), `CLAUDE.md`, `PROTOCOL.md`, `d
 
 Last updated: 2026-11-13 (session 8c5f8396, block 3).
 
+## ⚠ READ FIRST: what happened while you were stopped (2026-11-13 ≈ 03:30–03:40 UTC, an owner-attended Opus session, not you)
+
+- **The owner set the VM to 350 W by hand** (read 350.00 W at 03:34:45 UTC) and **approved the REG-19 resume directly**: decisions.md 2026-11-13 `[DECISION] (owner) REG-19 resumes for seeds 18 and 19` (commit `7bbb134`). It adopts your draft 5 as written. It is an owner decision, so rule F/owner-proxy no longer gate it. **Do not re-run the round-4 reviews of the REG-19 resume.** (All four round-4 subagents had died on the usage limit with no verdict.)
+- **One script change:** `DECISION_PAT` in `ops_r3/common.sh` now also accepts `(owner)` (commit `a4d46ce`; `scripts_commit.txt` updated in `7bbb134`). Sandbox: 159/160; the failure is `final.sh`'s "all five seeds run" case comparing `T//` with `T/` (a TMPDIR double slash). Please confirm it is only that before running `final.sh`.
+- **Session probe passed** at 03:38:25 UTC (`docs/probe/20261113_reg19/session_*.txt`; boot id `7d11a297…`; `state/session_boot_id.txt` written).
+- **The queue is RUNNING**, started 03:38:39 UTC, detached (`nohup caffeinate -i zsh docs/probe/20261113_reg19/ops_r3/queue.sh`). Output: `docs/probe/20261113_reg19/queue_owner_20261113T033838Z.txt`. Seed 18's control attempt 2 launched on the VM at 03:38:42 UTC. The queue continues by itself: seed 18 burst, step, and seed 19 only if `'continue': True`. Quiet hours (no control after 11:45, no burst after 13:00 UTC) may stop it; then start it again after 18:00 UTC with the same command.
+- **Your next steps:** do not start a second queue (it holds a lock; check `pgrep -f ops_r3/queue.sh`). Watch the output file. When it prints `QUEUE DONE` or `QUEUE END futility stop`: run `final.sh` once, write the [OPS] record of item 7 (include this session's facts above) and the [RESULT]. On any `QUEUE STOP`: follow draft 5's rules (allowed reads only). Still in review and yours: REG-21 round 4 (relaunch from `review_bundles/reg21_r4/`).
+- Stale lines below (Phase, "VM still off", "four reviews running", 420 W) predate this block.
+
 ## Phase
 
 **Phase 2: zero-GPU work; four reviews running; nothing registered or approved by the delegate yet.** VM still off (read 2026-11-12 19:22 UTC).

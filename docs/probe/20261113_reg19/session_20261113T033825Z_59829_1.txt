@@ -1,0 +1,17 @@
+# REG-19 resume: session probe (agent). scripts commit a4d46ce7689a15da46144e39170463e2ce860c98; Mac HEAD 7bbb134ff59de9c0beace1dbd0e1e34e232cae63
+mac_venv missing_or_other_version 0 extra 94 (uv sync --frozen --dry-run --offline)
+2026-11-13T03:38:25+00:00
+boot_id 7d11a297-2521-439b-84cd-a8d7b29fa8c7
+up_since 2026-11-12 19:47:31
+kernel 6.8.0-147-generic
+driver 595.99.02
+governor n/a
+limit_before 350.00 W
+apps 0
+boots  -2 a3b3d7c348ca47f49f5e244b5aa84a30 Sun 2026-11-08 12:31:15 UTC Wed 2026-11-11 17:36:47 UTC; -1 d59f372fbf2f4e20aa7a1a00f1458a25 Thu 2026-11-12 05:05:54 UTC Thu 2026-11-12 15:52:08 UTC; 0 7d11a2972521439b84cda8d7b29fa8c7 Thu 2026-11-12 19:47:34 UTC Fri 2026-11-13 03:38:25 UTC;
+prev_boot_kernel Linux version 6.8.0-147-generic
+prev_boot_nvidia NVIDIA UNIX Open Kernel Module 
+limit_after 350.00 W
+tree a7bb77abc863adcaad9d4516815a5ddddf2908e9 dirty 0
+lock_blob 8b1c04b402b6741cf9c1837b060c4e39b64bbcff
+free_kb 5591184
