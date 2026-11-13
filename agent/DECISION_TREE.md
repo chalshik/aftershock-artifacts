@@ -18,6 +18,9 @@ Registered outcomes (`gate.reg19_outcome`): `supports`, `supports_edge`, `some`,
 | `surge_reading_wrong` | Stop P0 and K4's surge reading. Write a [CORR] on the surge readout before anything else is drafted (the registration's branch). | "A control went cold with no 120 s surge above 3.2 req/s in its schedule; the surge reading of the earlier collapses does not hold." |
 | The queue stops for an operational reason | No table. Runs reported from `checks.json`. Resume through the watcher; a partial matrix is recorded and never pooled. | none |
 
+**Correction (2026-11-13): D1 and D2 do not need `supports`.** What a loop-cut control needs is a cell where the burst run ends with the verdict `stuck` while its control recovers, in most seeds. REG-18 already showed that at λ = 2.0: all four burst runs ended cold, full and backlogged and all four controls recovered (decisions.md 2026-11-11 [RESULT]); the matrix label was `some` because of the per-span cold side. So after `some` or `none` with the backlog persisting (not `drains`), D1 and D2 can still be registered at λ = 2.0, with their comparison stated on the verdict and on the line never emptying, not on the matrix label. Only `drains` in most seeds, or controls that do not recover, takes the cell away. The rows above that tie D1/D2 to `supports` are superseded by this note.
+
+
 **Fallback framing if P0 fails** (any row but the first two): the paper's title claim is the boundary map, with this cell as "entered, not held" at margin 1.19; P0 stays a cited premise, replicated only in single seeds (REG-14, REG-17) and in the cold, backlogged end state of every burst run.
 
 ## K1 (turn semantics): REG-20
