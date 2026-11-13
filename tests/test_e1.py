@@ -117,3 +117,13 @@ def test_the_earliest_of_two_valid_runs_at_a_rate_counts():
                       "throughput": [1.7, 1.6, 1.4], "planned_rate": [2.1, 2.1, 1.6], "kv_mean": [0.9, 0.9, 0.5]})
     keep, dropped = E.first_valid(r)
     assert list(keep.run) == ["20261114-08_x_r1.5", "20261114-09_x_r2"] and dropped == ["20261114-10_x_r2"]
+
+
+def test_the_report_waits_for_reg21s_result(monkeypatch, tmp_path):
+    """`report` computes REG-21's statistic on REG-8's runs, which is REG-21's reference."""
+    import analysis.e1 as E
+    d = tmp_path / "decisions.md"
+    d.write_text("## 2026-11-13 · [REG] REG-21 (K3, step B)\n")
+    monkeypatch.setattr(E.withheld, "DECISIONS", d)
+    with pytest.raises(RuntimeError, match="REG-21"):
+        E.report()

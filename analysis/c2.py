@@ -1,4 +1,4 @@
-"""C2, condition 4 (a memory-limited loop, not just a queue) on stuck burst runs. Draft for REG-22; not registered.
+"""C2, condition 4 (a memory-limited loop, not just a queue) on stuck burst runs: REG-22 (draft until registered).
 Never writes into runs/.
 
 PROTOCOL §3, condition 4: "mean KV >= 0.80, mean N >= 2 x baseline, N below the 256 cap, and the traces follow the
@@ -22,7 +22,9 @@ import math
 import numpy as np
 
 from analysis.k1 import later_turns
+from analysis.load import _covered, find_runs, verdict
 from analysis.margin import is_burst_request
+from analysis.stats import cp_upper
 
 C2 = {
     "min_kv": 0.80, "n_factor": 2.0, "n_cap": 256,   # PROTOCOL §3 condition 4 (decisions.md 2026-11-01)
@@ -31,6 +33,7 @@ C2 = {
     "min_spans": 2,         # `sustain` needs at least this many spans after the last burst request
     "roll_s": 60.0, "step_s": 10.0, "min_turns": 20,   # onsets: trailing windows on a grid; reuse needs this many turns
     "kv_onset": 0.9,        # as gate.SURGE["kv_onset"]
+    "gauge_max_gap_s": 10.0,   # a gauge value over a window needs scrapes covering it with no gap above this
 }
 KV, N = "vllm:kv_cache_usage_perc", "vllm:num_requests_running"
 
@@ -43,10 +46,16 @@ def windows(run: dict) -> dict:
 
 
 def gauge(run: dict, col: str, a: float, b: float, how: str = "mean") -> float:
+    """Mean (or `how`) of a gauge over [a, b). NaN when the gauge does not cover the window: no scrapes, no such
+    column, or a gap between its values above gauge_max_gap_s (`load._covered`). A mean over the few scrapes that
+    happen to exist is not a level of the window."""
     m = run["metrics"]
     if not len(m) or col not in m:
         return math.nan
-    w = m[(m.t >= a) & (m.t < b)][col].dropna()
+    g = m[["t", col]].dropna()
+    if not _covered(g.t.to_numpy(float), a, b, C2["gauge_max_gap_s"]):
+        return math.nan
+    w = g[(g.t >= a) & (g.t < b)][col]
     return float(getattr(w, how)()) if len(w) else math.nan
 
 
@@ -59,7 +68,10 @@ def reuse_in(turns, a: float, b: float, min_turns: int = 1) -> float:
 def session_uncached_rate(run: dict, a: float, b: float) -> float:
     """Uncached prompt tokens per second over ok session requests (no burst rows) whose first token falls in [a, b)."""
     q = run["requests"]
-    w = q[~is_burst_request(run) & (q.status == "ok") & (q.t_first_token >= a) & (q.t_first_token < b)]
+    ok = q[~is_burst_request(run) & (q.status == "ok")]
+    if ok.t_first_token.isna().any() or ok.prompt_tokens.isna().any():
+        raise ValueError("an ok session request without a first-token time or prompt_tokens: the rate would leave it out")
+    w = ok[(ok.t_first_token >= a) & (ok.t_first_token < b)]
     return float((w.prompt_tokens - w.cached_tokens.fillna(0)).clip(lower=0).sum() / (b - a))
 
 
@@ -139,10 +151,11 @@ def onsets(run: dict, base: dict | None = None) -> dict:
     return {**out, "order": [k for _, k in seen]}
 
 
-def condition4(run: dict) -> dict:
+def condition4(run: dict, with_readouts: bool = True) -> dict:
     """One run's label: 'loop' (levels and sustain hold), 'not_memory_limited' (levels fail: a backlog, not this
     loop), 'not_sustained' (levels hold but a link is missing in some span after the burst's requests left),
-    'undefined' (a value is missing, or fewer than min_spans spans after the last burst request)."""
+    'undefined' (a value is missing, or fewer than min_spans spans after the last burst request). The reported
+    readouts come after the label, and one that raises is kept as its message."""
     base = baseline(run)
     lv, su = levels(run, base), sustain(run, base)
     if lv["ok"] is None or (lv["ok"] and su["ok"] is None):
@@ -151,8 +164,14 @@ def condition4(run: dict) -> dict:
         label = "not_memory_limited"
     else:
         label = "loop" if su["ok"] else "not_sustained"
-    return {"run": run["dir"].name, "baseline": base, "levels": lv, "sustain": su, "onsets": onsets(run, base),
-            "evictions": eviction_readout(run), "label": label}
+    out = {"run": run["dir"].name, "baseline": base, "levels": lv, "sustain": su, "label": label}
+    if with_readouts:
+        for key, f in (("onsets", lambda: onsets(run, base)), ("evictions", lambda: eviction_readout(run))):
+            try:
+                out[key] = f()
+            except Exception as e:   # a reported readout never takes the judged label with it
+                out[key] = {"error": f"{type(e).__name__}: {e}"[:200]}
+    return out
 
 
 
@@ -244,31 +263,46 @@ REG22 = {
 }
 
 
-def reg22_table() -> dict:
-    """Condition 4 on every stuck run of REG22["runs"]; the others are listed with their verdict. Computed once,
-    after REG-22 is approved."""
-    from analysis.load import RUNS, load_run, verdict
-    rows, left = [], []
-    for name in REG22["runs"]:
-        if not (RUNS / name / "config.yaml").exists():
-            left.append({"run": name, "why": "missing"})
-            continue
-        run = load_run(RUNS / name)
+def batch_runs(batch: int) -> list[dict]:
+    """Batch 1: the 13 registered runs, each valid; raises if one is missing or invalid. Batch 2: REG-19's burst runs
+    as `k3w.batch2_runs` gives them (only after REG-19's [RESULT]; one valid run per seed, at least three seeds)."""
+    if batch == 1:
+        found = {i: find_runs(i) for i in REG22["runs"]}
+        missing = [i for i, v in found.items() if len(v) != 1]
+        if missing:
+            raise ValueError(f"REG-22 needs its {len(REG22['runs'])} registered runs, each valid: not so for {missing}")
+        return [found[i][0] for i in REG22["runs"]]
+    if batch == 2:
+        from analysis.k3w import batch2_runs
+        return batch2_runs()
+    raise ValueError("REG-22 has batch 1 and batch 2")
+
+
+def reg22_table(batch: int = 1) -> dict:
+    """Condition 4 on every run of the batch whose registered verdict is "stuck"; the others are listed with their
+    verdict. The labels are computed before any reported readout. Per load: k of n `loop` with its one-sided 95 %
+    Clopper-Pearson upper bound (rule H); loads are never pooled. Each batch is computed once."""
+    judged, left = [], []
+    for run in batch_runs(batch):
         v = verdict(run)["verdict"]
-        if v != "stuck":
-            left.append({"run": name, "why": f"verdict {v}"})
-            continue
-        rows.append({**condition4(run), "lam": float(run["cfg"]["workload"]["rate"]), "seed": run["cfg"].get("seed")})
-    labels = [r["label"] for r in rows]
-    return {"rows": rows, "left_out": left, "n_stuck": len(rows),
-            "counts": {k: labels.count(k) for k in ("loop", "not_sustained", "not_memory_limited", "undefined")}}
+        (judged if v == "stuck" else left).append(run if v == "stuck" else {"run": run["dir"].name, "why": f"verdict {v}"})
+    labels = [condition4(r, with_readouts=False)["label"] for r in judged]
+    kinds = ("loop", "not_sustained", "not_memory_limited", "undefined")
+    by_load: dict[str, list[str]] = {}
+    for r, lab in zip(judged, labels):
+        by_load.setdefault(f"{float(r['cfg']['workload']['rate']):.1f}", []).append(lab)
+    rows = [{**condition4(r), "lam": float(r["cfg"]["workload"]["rate"]), "seed": r["cfg"].get("seed")} for r in judged]
+    return {"batch": batch, "left_out": left, "n_stuck": len(judged), "counts": {k: labels.count(k) for k in kinds},
+            "by_load": {g: {"n": len(v), **{k: v.count(k) for k in kinds}, "loop_cp_upper_95": cp_upper(v.count("loop"), len(v))}
+                        for g, v in sorted(by_load.items())},
+            "rows": rows}
 
 
 if __name__ == "__main__":
     import json
     import sys
 
-    if len(sys.argv) == 2 and sys.argv[1] == "reg22":
-        print(json.dumps(reg22_table(), indent=1, default=str))
+    if len(sys.argv) in (2, 3) and sys.argv[1] == "reg22":
+        print(json.dumps(reg22_table(int(sys.argv[2]) if len(sys.argv) == 3 else 1), indent=1, default=str))
     else:
-        raise SystemExit("usage: python -m analysis.c2 reg22")
+        raise SystemExit("usage: python -m analysis.c2 reg22 [1|2]")

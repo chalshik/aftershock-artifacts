@@ -92,25 +92,52 @@ def test_session_uncached_rate_leaves_the_burst_out():
     assert C.session_uncached_rate(run, 900.0, 1000.0) == pytest.approx(warm, rel=0.05)   # burst rows not counted
 
 
-def test_table_judges_only_stuck_runs(monkeypatch, tmp_path):
-    import analysis.load as L
-    names = ("a_stuck", "b_recovered", "c_missing")
-    for n in names[:2]:
-        (tmp_path / n).mkdir()
-        (tmp_path / n / "config.yaml").write_text("x: 1\n")
-    monkeypatch.setitem(C.REG22, "runs", names)
-    monkeypatch.setattr(L, "RUNS", tmp_path)
+def _named(name, lam=2.0, **kw):
+    r = fake_run(**kw)
+    r["dir"], r["cfg"] = Path(name), {**CFG, "workload": {"rate": lam}, "seed": 2}
+    return r
 
-    def load_run(p):
-        r = fake_run()
-        r["dir"] = Path(p)
-        r["cfg"] = {**CFG, "workload": {"rate": 2.0}, "seed": 2}
-        return r
-    monkeypatch.setattr(L, "load_run", load_run)
-    monkeypatch.setattr(L, "verdict", lambda run: {"verdict": "stuck" if run["dir"].name == "a_stuck" else "recovered"})
+
+def test_table_judges_only_stuck_runs_and_needs_every_registered_run(monkeypatch):
+    runs = {"a_stuck": _named("a_stuck"), "b_recovered": _named("b_recovered"), "c_stuck": _named("c_stuck", lam=2.4, kv_cold=0.5)}
+    monkeypatch.setitem(C.REG22, "runs", tuple(runs) + ("d_missing",))
+    monkeypatch.setattr(C, "find_runs", lambda pattern: [runs[pattern]] if pattern in runs else [])
+    monkeypatch.setattr(C, "verdict", lambda run: {"verdict": "recovered" if run["dir"].name == "b_recovered" else "stuck"})
+    with pytest.raises(ValueError, match="d_missing"):
+        C.reg22_table()                                                     # a registered run missing or invalid
+    with pytest.raises(ValueError):
+        C.reg22_table(3)
+    monkeypatch.setitem(C.REG22, "runs", tuple(runs))
     t = C.reg22_table()
-    assert [r["run"] for r in t["rows"]] == ["a_stuck"] and t["counts"]["loop"] == 1 and t["n_stuck"] == 1
-    assert t["left_out"] == [{"run": "b_recovered", "why": "verdict recovered"}, {"run": "c_missing", "why": "missing"}]
+    assert [r["run"] for r in t["rows"]] == ["a_stuck", "c_stuck"] and t["n_stuck"] == 2
+    assert t["counts"] == {"loop": 1, "not_sustained": 0, "not_memory_limited": 1, "undefined": 0}
+    assert t["left_out"] == [{"run": "b_recovered", "why": "verdict recovered"}]
+    assert t["by_load"]["2.0"]["loop"] == 1 and t["by_load"]["2.0"]["n"] == 1 and t["by_load"]["2.4"]["loop"] == 0
+    assert t["by_load"]["2.4"]["loop_cp_upper_95"] == pytest.approx(0.95)   # 0 of 1: the bound, not a pooled count
+
+
+def test_a_gauge_that_does_not_cover_its_window_gives_undefined_not_a_level():
+    run = fake_run()
+    m = run["metrics"]
+    run["metrics"] = m[(m.t < 2100.0) | (m.t > 2140.0)]                    # a 40 s hole in the end window
+    assert math.isnan(C.gauge(run, C.KV, 1980.0, 2580.0)) and C.condition4(run)["label"] == "undefined"
+    run["metrics"] = m.iloc[::5]                                           # a scrape every 5 s covers
+    assert C.condition4(run)["label"] == "loop"
+
+
+def test_an_ok_request_the_rate_cannot_place_raises():
+    run = fake_run()
+    q = run["requests"]
+    i = q[(q.status == "ok") & (q.session_id < 10_000)].index[5]
+    q.loc[i, "t_first_token"] = math.nan
+    with pytest.raises(ValueError):
+        C.session_uncached_rate(run, 300.0, 900.0)
+
+
+def test_a_failing_readout_does_not_take_the_label_with_it(monkeypatch):
+    monkeypatch.setattr(C, "onsets", lambda run, base: 1 / 0)
+    r = C.condition4(fake_run())
+    assert r["label"] == "loop" and "ZeroDivisionError" in r["onsets"]["error"]
 
 
 def _scrape(t, idle):

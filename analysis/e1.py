@@ -22,7 +22,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from analysis import modelf_sim
+from analysis import modelf_sim, withheld
 from analysis.gate import REG8, cold_floor, sweep_rows
 
 REPO = Path(__file__).resolve().parent.parent
@@ -228,7 +228,11 @@ def floor_status(parent: str) -> str:
 
 
 def report() -> dict:
-    """E1's registered result: `observed`, plus the work rates of both sweeps' saturated rows (reported only)."""
+    """E1's registered result: `observed`, plus the work rates of both sweeps' saturated rows (reported only).
+    The work rate is REG-21's statistic, and on REG-8's runs it is REG-21's reference: so this waits for REG-21's
+    first [RESULT] and raises before it."""
+    if not withheld.lifted("[RESULT] REG-21"):
+        raise RuntimeError("E1's report computes REG-21's statistic on REG-8's runs: it waits for REG-21's [RESULT]")
     res = observed()
     cl, ol = sweep_rows(E1["sweeps"]["cl"]), sweep_rows(E1["sweeps"]["ol"])
     res["work_cl"] = work_rates(cl, res["floor"]["lam_sat"])
