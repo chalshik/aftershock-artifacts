@@ -1,6 +1,6 @@
 ## 2026-11-13 · [REG] REG-23 (K5): do the cache signals warn before latency and the queue, and earlier than watching arrivals? Onsets on the runs that went cold without a burst, false alarms on the runs that stayed warm; a retrospective reading (0 GPU h)
 
-- **ID:** REG-23. An analysis of existing runs, 0 GPU h. Draft 3, not reviewed (drafts 1 and 2 are in `docs/drafts/`; draft 3 adds only the bullet on REG-22's control readout under "What was known"). Code: `analysis/k5.py`, `tests/test_k5.py` (10 tests), at the commit named when this is sent to review.
+- **ID:** REG-23. An analysis of existing runs, 0 GPU h. Draft 3, not reviewed (drafts 1 and 2 are in `_to_delete/docs/drafts/`, moved there 2026-11-13 as superseded; draft 3 adds only the bullet on REG-22's control readout under "What was known"). Code: `analysis/k5.py`, `tests/test_k5.py` (10 tests), at the commit named when this is sent to review.
 - **What this is, in one line:** a retrospective reading that decides whether K5 stays in the paper as a claim or becomes one sentence in the limitations. It is not called a test below.
 - **This registration covers computing and reporting only.** The edit to `docs/claims.md` and the paper that follows from it needs its own decision.
 - **Question:** when the warm server goes cold by itself, do the hit rate (H) and the recomputed prefill rate (U) move before latency (L) and the waiting line (Q) do, with few false alarms, and earlier than the arrival rate (A) moves?
