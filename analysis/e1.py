@@ -1,4 +1,4 @@
-"""E1 (registration: docs/decisions.md 2026-11-13 [REG] E1): the closed-loop cache-off sweep of setup L1
+"""E1 (not yet registered: draft docs/drafts/e1_draft4.md; its [REG] E1 entry does not exist yet): the closed-loop cache-off sweep of setup L1
 (configs/sweep_l1pl350cl_pc_off.yaml).
 
 Judged: nothing. E1 *measures* K2's 8-turn closed-loop cold floor (`floor`, `gate.cold_floor` with REG-8's settings,
