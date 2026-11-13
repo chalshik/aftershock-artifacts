@@ -424,6 +424,9 @@ w17 = [r for r in rows if r[4].startswith("CL17") or (r[4].startswith("hand:") a
 print(f"# noteread: {len(rows)} hits; class 1: {n['1']}; class 2: {n['2']}; class 3: {n['3']}; hand labels: {len(labels)}")
 print(f"# CL17 rules added {len(w17)} hits: before ffc76b3 {sum(r[0] < FRZ for r in w17)} (class 1: {sum(r[0] < FRZ and r[3] == '1' for r in w17)}), "
       f"after {sum(r[0] >= FRZ for r in w17)} (class 1: {sum(r[0] >= FRZ and r[3] == '1' for r in w17)})")
+FRZ21 = "2026-11-13T01:21:24"  # 8164211, REG-21's freeze (round 5 owner-proxy of REG-21, CK10 as accepted on ad3781c)
+print(f"# CL17 rules added, against 8164211: before {sum(r[0] < FRZ21 for r in w17)} (class 1: {sum(r[0] < FRZ21 and r[3] == '1' for r in w17)}), "
+      f"after {sum(r[0] >= FRZ21 for r in w17)} (class 1: {sum(r[0] >= FRZ21 and r[3] == '1' for r in w17)})")
 print("## first class, by time")
 for r in rows:
     if r[3] == "1":

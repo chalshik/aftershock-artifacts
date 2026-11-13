@@ -19,3 +19,5 @@ e1890469-fa93-4ca8-af9a-4c034439b43f.jsonl:1070	3	the owner-proxy's python scan 
 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:18582	3	the agent edits noteread.py; the note's path is a constant in the code written; opens no note, pack or s6.md
 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:18616	3	the agent's python scan of transcript files for the Write of the note (tool-call inputs only); opens no note, pack or s6.md
 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:18635	3	the agent edits noteread.py; the note's path is a constant in the code written; opens no note, pack or s6.md
+fa346d1a-a9c4-4607-bad4-9b34c206c996.jsonl:250	3	git show -s (--no-patch) with a format of hash and date: prints hashes and dates only, no diff; REG-22's owner-proxy round 9 note
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:19276	3	git grep of E1's start-gate pattern at HEAD with the pathspec docs/decisions.md only; prints one heading line of decisions.md; reaches neither the note nor the pack
