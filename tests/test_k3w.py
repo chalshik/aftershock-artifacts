@@ -401,3 +401,50 @@ def test_the_redo_proxy_is_reported_for_both_arms(ref):
     assert "redo_share" in ro and "preempt_per_s" in ro and "mean_prompt_all" in ro
     assert all("redo_share" in v or "gauges_error" in v for v in ref["runs"].values())
     assert "slope_needed_at_configured_rate" in W.row(truth(cfg(2.0), MU), ref)["vj_rule"]
+
+
+# ---------------------------------------------------------------- reported only, outside the judged path
+
+def test_span_values_give_the_window_mean_with_its_spread(ref):
+    run = truth(cfg(2.0), MU)
+    a, b = W.window(run)
+    v = W.span_values(run, a, b)
+    assert len(v["spans"]) == 3 and v["spans"][0]["span"] == (a, a + 300.0) and v["spans"][-1]["span"][1] == b
+    assert np.mean([x["U"] for x in v["spans"]]) == pytest.approx(W.work_rate(run, a, b))
+    assert v["U_min"] <= W.work_rate(run, a, b) <= v["U_max"] and all(x["reuse"] == 0 for x in v["spans"])
+    short = W.span_values(run, a, a + 400.0)                                # a last span shorter than 300 s
+    assert [x["span"] for x in short["spans"]] == [(a, a + 300.0), (a + 300.0, a + 400.0)]
+
+
+def test_reported_spans_cover_the_batch_and_the_reference(monkeypatch, ref):
+    runs = [truth(cfg(2.0, sd), MU, name=f"20261111-00000{sd}_burst_l1pl350cl_r2.0_s{sd}") for sd in (2, 3)]
+    refs = {i: ref_run(3.0, name=i) for i in W.REG21["ref_runs"][:2]}
+    monkeypatch.setattr(W, "batch1_runs", lambda: runs)
+    monkeypatch.setattr(W, "find_runs", lambda pattern: [refs[pattern]] if pattern in refs else [])
+    out = W.reported_spans(1, ref["mean"])
+    assert set(out["runs"]) == {r["dir"].name for r in runs}
+    assert all(v["r_first"] == pytest.approx(1.0, abs=0.02) for v in out["runs"].values())
+    assert "U_min" in out["reference"][W.REG21["ref_runs"][0]] and "error" in out["reference"][W.REG21["ref_runs"][4]]
+
+
+def test_vj_counts_are_k_of_n_per_load_with_their_bound():
+    rows = [{"lam": 2.0, "vj_rule": {"trapped": True}}, {"lam": 2.0, "vj_rule": {"trapped": False}},
+            {"lam": 2.4, "vj_rule": {"trapped": True}}, {"lam": 2.4, "vj_rule": {"error": "x"}}]
+    c = W.vj_counts(rows)
+    assert c["2.0"]["k"] == 1 and c["2.0"]["n"] == 2 and c["2.4"] == {"n": 1, "k": 1, "cp_upper_95": 1.0}
+    assert 0.9 < c["2.0"]["cp_upper_95"] < 1.0
+
+
+def test_the_schedules_of_one_seed_at_two_loads_are_nested():
+    """Rule H: the load groups share seeds, and the sharing is exact. Every session start of a seed's schedule at
+    lam = 2.0 is also a session start of the same seed's schedule at 2.4 (the count is drawn first, then that many
+    uniform times from the same stream), and seed 2's schedule at 2.2 lies between. So J2's two groups are paired by
+    seed, and the runs pooled over 2.0 and 2.4 hold six distinct seeds (1 to 6), not eleven."""
+    def starts(lam, seed):
+        s = S.schedule(cfg(lam, seed))
+        s = s[(s.turn == 0) & ~s["burst"].fillna(False).astype(bool)]
+        return set(np.round(s.t_planned.to_numpy(float), 6))
+    for seed in (2, 3, 4, 5, 6):
+        low, high = starts(2.0, seed), starts(2.4, seed)
+        assert len(low) > 500 and low < high                              # a proper subset
+    assert starts(2.0, 2) < starts(2.2, 2) < starts(2.4, 2)

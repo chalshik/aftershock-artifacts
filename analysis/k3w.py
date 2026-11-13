@@ -14,9 +14,11 @@ all-miss rate". In tokens the statement needs no model of the queue.
 A run enters when `k1.cold_backlogged` holds in its own end window. It is judged only if, in W, it is all-miss (reuse
 of later turns <= allmiss_reuse_max) and busy (requests waiting in at least busy_min of the scrapes, the gauge covering
 W with no gap above gauge_max_gap_s): an engine that idles in part of W does less work for a reason that is not its
-capacity. The gauge `vllm:num_requests_waiting` counts the scheduler's waiting queues without the deferred requests
-and no request of the running set (SOURCE(vLLM 0.32.0 vllm/v1/core/sched/scheduler.py:Scheduler.make_stats,
-Scheduler.get_request_counts)), so an engine that holds every request in its running set reads 0 and is left out.
+capacity. The gauge `vllm:num_requests_waiting` counts the scheduler's waiting queues, the deferred requests
+included, and no request of the running set (SOURCE(vLLM 0.32.0 vllm/v1/core/sched/scheduler.py:
+Scheduler.get_request_counts); SOURCE(vLLM 0.32.0 vllm/v1/metrics/loggers.py:PrometheusStatLogger.record), which
+adds the deferred ones back to the field `Scheduler.make_stats` gives without them), so an engine that holds every
+request in its running set reads 0 and is left out.
 
 Judged (thresholds registered before r is computed on any run):
   J2  load (batch 1 only): max - min of the medians of r over the load groups with at least min_group_runs judged runs
@@ -48,6 +50,7 @@ from analysis.gate import burst_end, shock_size
 from analysis.k1 import cold_backlogged, reuse
 from analysis.load import _covered, find_runs
 from analysis.margin import is_burst_request
+from analysis.stats import cp_upper
 
 REG21 = {
     # Batch 1: the 13 closed-loop L1 burst runs at 350 W made before REG-19 (REG-11, REG-12, REG-14, REG-15, REG-17,
@@ -390,11 +393,78 @@ def reg21_table(batch: int = 1) -> dict:
     return out
 
 
+# ---------------------------------------------------------------- reported only, outside the judged path
+# Nothing below is called by `reg21_table` or by any function it calls; the command adds it to the printed table.
+
+REPORTED = {"span_s": 300.0,      # U and reuse are also given over consecutive spans of this length (rule H)
+            "first_s": 900.0}     # and r over the first first_s of W, the window batch 1's runs have
+
+
+def span_values(run: dict, a: float, b: float) -> dict:
+    """U and the reuse of later turns over consecutive spans of [a, b) (the last span may be shorter), with the
+    lowest and highest U: a mean over a window is reported with its spread."""
+    rows = []
+    for s in np.arange(a, b - 1e-9, REPORTED["span_s"]):
+        e = float(min(s + REPORTED["span_s"], b))
+        rows.append({"span": (float(s), e), "U": work_rate(run, float(s), e), "reuse": reuse(run, float(s), e)})
+    us = [x["U"] for x in rows if not math.isnan(x["U"])]
+    return {"spans": rows, "U_min": min(us) if us else math.nan, "U_max": max(us) if us else math.nan}
+
+
+def reported_spans(batch: int, ref_mean: float) -> dict:
+    """For every run of the batch: `span_values` over W and r over the first first_s of W (for a run whose W is
+    longer, the same stretch batch 1's runs have: it separates a window effect from a day effect in the fixed-load
+    contrast). For every reference run: `span_values` over its measured window. A run that raises keeps its message."""
+    out: dict = {"runs": {}, "reference": {}}
+    for r in (batch1_runs() if batch == 1 else batch2_runs()):
+        try:
+            a, b = window(r)
+            v = span_values(r, a, b)
+            u = work_rate(r, a, min(a + REPORTED["first_s"], b))
+            v["r_first"] = u / ref_mean if ref_mean and not math.isnan(ref_mean) and not math.isnan(u) else math.nan
+            out["runs"][r["dir"].name] = v
+        except Exception as e:
+            out["runs"][r["dir"].name] = {"error": f"{type(e).__name__}: {e}"[:200]}
+    for i in REG21["ref_runs"]:
+        try:
+            r = find_runs(i)[0]
+            out["reference"][i] = span_values(r, float(r["cfg"]["workload"]["warmup_s"]), float(r["cfg"]["workload"]["duration_s"]))
+        except Exception as e:
+            out["reference"][i] = {"error": f"{type(e).__name__}: {e}"[:200]}
+    return out
+
+
+def vj_counts(rows: list[dict]) -> dict:
+    """Per load: in how many of the table's rows Valse and Jannesari's rule holds (`trapped`, with the need computed
+    from the realized session rate), k of n with the one-sided 95 % Clopper-Pearson upper bound (rule H)."""
+    by: dict[str, list[bool]] = {}
+    for r in rows:
+        v = r.get("vj_rule") or {}
+        if "trapped" in v:
+            by.setdefault(f"{r['lam']:.1f}", []).append(bool(v["trapped"]))
+    return {g: {"n": len(x), "k": sum(x), "cp_upper_95": cp_upper(sum(x), len(x))} for g, x in sorted(by.items())}
+
+
+def _dirty() -> str:
+    """Modified or untracked files under analysis/ or tests/ (the registered command runs from committed code only)."""
+    import subprocess
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    return subprocess.run(["git", "status", "--porcelain", "--", "analysis", "tests"], cwd=root, capture_output=True,
+                          text=True, check=True).stdout.strip()
+
+
 if __name__ == "__main__":
     import json
     import sys
 
     if len(sys.argv) > 1 and sys.argv[1] == "reg21":
-        print(json.dumps(reg21_table(int(sys.argv[2]) if len(sys.argv) > 2 else 1), indent=1, default=str))
+        if _dirty():
+            raise SystemExit("analysis/ or tests/ holds modified or untracked files; REG-21 runs from committed code:\n" + _dirty())
+        batch = int(sys.argv[2]) if len(sys.argv) > 2 else 1
+        table = reg21_table(batch)
+        table["vj_counts"] = vj_counts(table["rows"])
+        table["reported_spans"] = reported_spans(batch, table["reference"]["mean"])
+        print(json.dumps(table, indent=1, default=str))
     else:
         raise SystemExit("usage: python -m analysis.k3w reg21 [1|2]")
