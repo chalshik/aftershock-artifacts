@@ -173,3 +173,10 @@ A fresh session (started by the owner with `claude` in this repo, or by the laun
 - **Running (resume by SendMessage to the id if cut):** rule F r13 on REG-21 draft 20 (`a0adfd0cddd98f5fb`, bundle `reg21_r13`); owner-proxy delta on REG-21 draft 20 (`a4122f052f465a926`); rule F r6 on REG-22 draft 11 (`a7e69db175dbd3a1d`, bundle `reg22_r6`); owner-proxy delta on REG-22 draft 11 (`a43b6d3c375ffd53e`).
 - **Owner-proxy approvals in force:** REG-21: round 4, C1–C6, D1–D3, E1–E2, F1, G1–G2, proxy-H1, P1–P3. REG-22: round 1, D1–D8, Q1–Q7, T1–T6 (T3 contested; T5 done in `da1f836`).
 - **When a pair clears:** the [REG] via `assemble_entry.py` (scratchpad), the [DECISION] (delegate) from `docs/drafts/reg21_decision_draft1.md` (REG-22's analogue still to write), and the same-commit items of the 10:50 block. REG-22 must be appended before REG-19's table is computed.
+
+## Update 2026-11-13 12:10 UTC
+- **Nothing registered; no run made or read.** VM still down. REG-19 waits for the owner.
+- **Current drafts (text only):** REG-21 draft 21 (`docs/drafts/reg21_draft21.md`), REG-22 draft 12 (`docs/drafts/reg22_draft12.md`), commit `b8ea915`; one shared record passage.
+- **Last verdicts:** REG-21 proxy APPROVE on draft 20 (V1–V3, V4 later); REG-21 rule F r13 NOT READY (M1, M2); REG-22 proxy APPROVE on draft 11 (U1, U2; T3 withdrawn for L1); REG-22 rule F r6 NOT READY (S1–S3; R1 withdrawn). All met in drafts 21/12.
+- **Running:** rule F r14 (`a0adfd0cddd98f5fb`, bundle `reg21_r14`), proxy on REG-21 draft 21 (`a4122f052f465a926`), rule F r7 (`a7e69db175dbd3a1d`, bundle `reg22_r7`), proxy on REG-22 draft 12 (`a43b6d3c375ffd53e`).
+- **Due at REG-19's end (once registered):** commit an [OPS] statement that no run that gave REG-19's table is known, before `final.sh` runs (S1/O3); then `final.sh`, then its two files committed at once, alone.
