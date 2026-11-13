@@ -103,7 +103,7 @@ def _q(hours=1.0, **alarms):
 
 
 def test_judge_labels_and_the_comparison_with_arrivals():
-    five = [_e({"H": 40.0 + i, "U": 20.0, "Q": -5.0}) for i in range(5)]
+    five = [_e({"H": 40.0 + i, "U": 35.0, "Q": -5.0}) for i in range(5)]
     j = K.judge(five, [_q()])
     h = j["signals"]["H"]
     assert h["over_latency"]["label"] == "leads" and h["over_queue"]["label"] == "leads" and h["usable"]
@@ -111,14 +111,18 @@ def test_judge_labels_and_the_comparison_with_arrivals():
     assert j["signals"]["A"]["over_latency"]["label"] == "too_few"
     assert j["k5"] == "cache_signal_leads" and j["cache_signals_that_lead"] == ["H", "U"]
     assert K.judge(five[:4], [_q()])["signals"]["H"]["over_latency"]["label"] == "too_few"   # four events are not five
-    mixed = five[:4] + [_e({"H": -10.0, "U": 20.0})]
+    mixed = five[:4] + [_e({"H": 12.0, "U": 35.0})]                                  # one lead inside the window
     assert K.judge(mixed, [_q()])["signals"]["H"]["over_latency"]["label"] == "mixed"
     noisy = K.judge(five, [_q(H=2, U=2)])                                             # two false alarms an hour
     assert not noisy["signals"]["H"]["usable"] and noisy["k5"] == "no_usable_cache_lead"
     assert K.judge(five, [])["k5"] == "no_usable_cache_lead"                          # no quiet hours: not usable
-    arrivals_first = [_e({"H": 40.0, "U": 20.0, "A": 90.0}) for _ in range(5)]
+    inside = [_e({"H": 12.0 + i, "U": 8.0}) for i in range(5)]                        # every lead shorter than the window
+    ji = K.judge(inside, [_q()])
+    assert ji["signals"]["H"]["over_latency"]["label"] == "within_window" and ji["k5"] == "no_usable_cache_lead"
+    assert ji["signals"]["H"]["over_latency"]["k_positive"] == 5 and ji["signals"]["H"]["over_latency"]["k_above_window"] == 0
+    arrivals_first = [_e({"H": 40.0, "U": 35.0, "A": 90.0}) for _ in range(5)]
     assert K.judge(arrivals_first, [_q()])["k5"] == "no_usable_cache_lead"            # watching arrivals warns earlier
-    queue_first = [_e({"H": 40.0, "U": 20.0}, over_queue={"H": -8.0, "U": -20.0}) for _ in range(5)]
+    queue_first = [_e({"H": 40.0, "U": 35.0}, over_queue={"H": -8.0, "U": -20.0}) for _ in range(5)]
     jq = K.judge(queue_first, [_q()])                                                 # the queue moved before the cache
     assert jq["signals"]["H"]["over_queue"]["label"] == "no_lead" and jq["k5"] == "no_usable_cache_lead"
     assert K.judge(five + [_e({}, why="no reference")], [_q()])["n_events"] == 5
@@ -142,3 +146,14 @@ def test_table_splits_events_from_quiet_runs(monkeypatch):
     assert [e["run"] for e in t["events"]] == ["tipped"] and [x["run"] for x in t["quiet"]] == ["quiet"]
     assert t["judged"]["n_events"] == 1 and t["judged"]["signals"]["H"]["over_latency"]["label"] == "too_few"
     assert t["judged"]["k5"] == "no_usable_cache_lead"
+
+
+def test_signals_that_step_together_do_not_lead():
+    """Hit rate, recomputed work, queue and latency all step at 900 s. Their trailing means cross their levels a few
+    seconds apart (a level near the reference mean is crossed sooner): those gaps stay inside the window and are not
+    leads."""
+    e = K.event(fake_run(h=900.0, u=900.0, q=900.0, n=900.0, ttft=900.0, kv=940.0))
+    assert e["why"] is None and all(900 <= e["onsets"][k] <= 925 for k in ("H", "U", "Q", "N", "L"))
+    assert all(abs(e["leads"][k]) < K.K5["min_lead_s"] for k in ("H", "U", "Q", "N"))
+    j = K.judge([e] * 5, [_q()])
+    assert j["signals"]["H"]["over_latency"]["label"] in ("within_window", "no_lead") and j["k5"] == "no_usable_cache_lead"

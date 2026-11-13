@@ -18,10 +18,15 @@ transpose.)
 K5 (docs/claims.md) says that U and H "change before latency and queue length do". So each warner's lead is taken
 twice: over latency (onset(L) - onset(X)) and over the queue (onset(Q) - onset(X)).
 
+A lead counts only above min_lead_s, the length of the trailing window: two signals that step at the same instant
+cross their levels at different times (a level close to the reference mean is crossed sooner), so a lead inside one
+window is not a lead.
+
 Judged per signal and per comparator: "leads" only if at least min_events events have both onsets and every one of
-them has a positive lead; "no_lead" if the median lead is <= 0; "too_few" below min_events; otherwise "mixed". A
-signal is usable only if it leads both latency and the queue and the same rule gives fewer than fa_per_hour_max
-onsets per hour on the runs that never tipped. K5 as a whole holds ("cache_signal_leads") only if H or U is usable
+them has a lead above min_lead_s; "no_lead" if the median lead is <= 0; "within_window" if the median is above 0 and
+not above min_lead_s; "too_few" below min_events; otherwise "mixed". A signal is usable only if it leads both
+latency and the queue and the same rule gives fewer than fa_per_hour_max onsets per hour on the runs that never
+tipped. K5 as a whole holds ("cache_signal_leads") only if H or U is usable
 with a median lead over latency above A's: if watching arrivals warns earlier, the cache signals add nothing.
 """
 from __future__ import annotations
@@ -60,6 +65,7 @@ K5 = {
     "arr_tip": 3.2,                         # A at least this (gate.SURGE's tip reading)
     "hold_s": 15.0,                         # an onset holds at every grid time of [t, t + hold_s]
     "min_events": 5,
+    "min_lead_s": 30.0,                     # a lead counts only above this (the trailing window: see the docstring)
     "fa_ref": (240.0, 540.0), "fa_from": 540.0,   # never-tipped runs: reference window, and where the scan starts
     "fa_per_hour_max": 1.0,
 }
@@ -197,17 +203,19 @@ def quiet(run: dict) -> dict:
 
 def _lead_label(leads: list[float]) -> dict:
     leads = [x for x in leads if not math.isnan(x)]
-    med = float(np.median(leads)) if leads else math.nan
+    med, least = (float(np.median(leads)) if leads else math.nan), K5["min_lead_s"]
     if not leads:
         label = "too_few"
     elif med <= 0:
         label = "no_lead"
+    elif med <= least:
+        label = "within_window"
     elif len(leads) < K5["min_events"]:
         label = "too_few"
     else:
-        label = "leads" if all(x > 0 for x in leads) else "mixed"
-    return {"n": len(leads), "k_positive": sum(x > 0 for x in leads), "median_lead_s": med,
-            "min_lead_s": min(leads) if leads else math.nan, "label": label}
+        label = "leads" if all(x > least for x in leads) else "mixed"
+    return {"n": len(leads), "k_above_window": sum(x > least for x in leads), "k_positive": sum(x > 0 for x in leads),
+            "median_lead_s": med, "min_lead_s": min(leads) if leads else math.nan, "label": label}
 
 
 def judge(events: list[dict], quiets: list[dict]) -> dict:
@@ -260,6 +268,9 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) == 2 and sys.argv[1] == "k5":
+        from analysis.k3w import _dirty
+        if _dirty():
+            raise SystemExit("analysis/ or tests/ holds modified or untracked files; K5 runs from committed code:\n" + _dirty())
         print(json.dumps(k5_table(), indent=1, default=str))
     else:
         raise SystemExit("usage: python -m analysis.k5 k5")
