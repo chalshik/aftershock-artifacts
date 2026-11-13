@@ -75,3 +75,8 @@ One block per work block: what was done, what was found, the commit.
 - Lesson: unnamed background agents return their report; named teammates' reports can arrive hours late. Save every report from the transcript at once.
 
 **Commits:** `3349552`, `c38388b`, `69f349b`, `76b2778`, `9771af8`, `aa9f09e`, `69ffedd`, `16c30fc`.
+
+## 2026-11-13 10:20–10:50 UTC (block 4, after the usage limit)
+- Saved four review verdicts verbatim (59e1d49, 96cf7ac). REG-22 proxy r1: APPROVE on 16 conditions; the re-reading of PROTOCOL §3's order clause is not delegated. Rule F r2 on REG-22: NOT READY (N1–N8). Rule F r6 on REG-21: NOT READY (3 text items). REG-21 proxy delta: APPROVE on C1–C6.
+- Code ffc76b3 (reported only, REG-22). Correction found while drafting: the proxy's reason 3 read REG-12's seeds 2 and 3 as having exits before 1680 s; the gate label `pass` needs only one holding span (gate.py:126), so that is not established. Written into draft 5.
+- Drafts: REG-22 draft 5, REG-21 draft 10 (358418e). Four reviews launched (two rule F, two proxy deltas).
