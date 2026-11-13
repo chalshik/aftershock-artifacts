@@ -1,0 +1,413 @@
+# classify2 of docs/probe/20261113_transcript_search/search2_20261113T163634Z.txt: 298 records at or after 2026-11-11T17:15:21 UTC; 108 `ran` lines of k3w/c2/k3/k1/k5/load.rates
+# labels: before_reg19_folders 8; code_text 21; config_only 3; denied_never_ran 1; disclosed(i)+(iii) 1; disclosed(ii) 3; disclosed(iv) 3; disclosed(iv)+(ix) 4; disclosed(ix) 12; disclosed(v) 1; disclosed(vii) 4; disclosed(viii) 2; disclosed(x) 1; disclosed[CORR] 1; disclosed_smoke_test 3; excludes_runs 7; false_positive 3; names_in_command 74; names_in_text 65; names_only 5; names_or_validity 31; non_reg19_run 15; own_tools 9; reg19_scripts 11; synthetic 10
+# ran labels: before_reg19_folders 4; config_only 2; disclosed_smoke_test 3; false_positive 3; no_run_read 89; synthetic 7
+
+## records: time | transcript:line | tool | classes | label | note
+2026-11-11T17:15:21.702Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:9282 | Bash | ran_on_reg19,names_reg19_run | before_reg19_folders | 
+2026-11-11T17:16:30.191Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:9301 | Bash | script_reads_runs | before_reg19_folders | 
+2026-11-11T17:17:13.923Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:9320 | Bash | names_reg19_run | before_reg19_folders | 
+2026-11-11T17:21:49.769Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:9363 | Bash | script_reads_runs | before_reg19_folders | 
+2026-11-11T17:25:16.455Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a/subagents/agent-a9847cf4ea556f83d.jsonl:68 | Bash | script_reads_runs | before_reg19_folders | 
+2026-11-11T17:25:26.723Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a/subagents/agent-a9847cf4ea556f83d.jsonl:72 | Bash | runs_glob_loop | before_reg19_folders | 
+2026-11-11T17:28:52.791Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:9467 | Bash | script_reads_runs | before_reg19_folders | 
+2026-11-11T17:34:23.637Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:9615 | Bash | script_reads_runs | before_reg19_folders | 
+2026-11-12T08:28:08.037Z | d4d16c2c-4433-4cad-bc86-8353baa26906.jsonl:91 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T08:42:35.128Z | d4d16c2c-4433-4cad-bc86-8353baa26906.jsonl:148 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-12T10:13:22.330Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:9968 | Bash | runs_glob_loop,cd_run,names_reg19_run | disclosed(vii) | (vii) du -sk of seed 16 folders
+2026-11-12T10:13:27.337Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:9977 | Bash | runs_glob_loop | disclosed(vii) | (vii) du growth of seed 16 control
+2026-11-12T10:14:02.756Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:9982 | Bash | runs_glob_loop,cd_run | disclosed(vii) | (vii) ls -la of seed 16 control
+2026-11-12T10:14:09.964Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:9988 | Bash | runs_glob_loop | disclosed(v) | (v) size of seed 16's partial metrics file
+2026-11-12T10:25:28.046Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10006 | Bash | runs_glob_loop | disclosed(vii) | (vii) ls -la of seed 16 burst metrics files
+2026-11-12T10:28:41.965Z | d4d16c2c-4433-4cad-bc86-8353baa26906.jsonl:1128 | Bash | names_reg19_run | code_text | 
+2026-11-12T10:30:33.499Z | d4d16c2c-4433-4cad-bc86-8353baa26906.jsonl:1160 | Bash | runs_glob_loop | disclosed(ix) | runs/20261112*: file counts and checks.json valid (d4d16c2c at 10:30); `rsync` only inside a `ps | grep` pattern
+2026-11-12T10:34:13.625Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10088 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T10:34:23.606Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10096 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T10:35:58.827Z | d4d16c2c-4433-4cad-bc86-8353baa26906.jsonl:1233 | Bash | names_reg19_run | code_text | 
+2026-11-12T11:45:33.423Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10177 | Bash | reg19_read,cd_run,names_reg19_run | disclosed(i)+(iii) | (i)+(iii) seed 17 control: log tail, ls -la, tail -3 events
+2026-11-12T11:50:49.002Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10195 | Bash | names_reg19_run | disclosed[CORR] | [CORR] head -c 300 checks.json of seed 17 control
+2026-11-12T13:54:36.505Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10213 | Bash | runs_glob_loop,names_reg19_run | reg19_scripts | launch4.sh
+2026-11-12T13:54:44.056Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10217 | Bash | names_reg19_run | reg19_scripts | queue_reg19c.sh
+2026-11-12T13:54:56.481Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10235 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T13:55:26.675Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10243 | Bash | names_reg19_run | reg19_scripts | launch5.sh
+2026-11-12T13:55:32.708Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10247 | Bash | names_reg19_run | reg19_scripts | queue_reg19c.sh
+2026-11-12T13:58:52.718Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:120 | Bash | runs_glob_loop | disclosed(ix) | runs/*w3000*: file counts and checks.json valid (fdf13821 at 13:58)
+2026-11-12T13:58:56.368Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:126 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T14:04:23.231Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:179 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T14:08:56.846Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:419 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T14:09:43.149Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:443 | Bash | script_reads_runs | disclosed_smoke_test | k1 on batch-1 bursts and REG-10's burst
+2026-11-12T14:13:10.869Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:490 | Agent | names_reg19_run | names_in_text | Agent
+2026-11-12T14:13:17.291Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-aae674a08e06ab588.jsonl:25 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T14:17:00.253Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-aae674a08e06ab588.jsonl:60 | SubagentHandback | names_reg19_run | names_in_text | SubagentHandback
+2026-11-12T14:21:24.997Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:650 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T14:22:21.331Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:666 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T14:22:33.727Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:678 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T14:22:49.700Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:701 | Bash | script_reads_runs | disclosed_smoke_test | k1 on batch-1 bursts and REG-10's burst
+2026-11-12T14:22:54.479Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:707 | Bash | script_reads_runs | disclosed_smoke_test | k1 on batch-1 bursts and REG-10's burst
+2026-11-12T15:04:47.037Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:740 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T15:33:50.323Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:1476 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T15:33:58.506Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:1481 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T15:36:30.182Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:1554 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T15:42:09.507Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:1691 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T15:42:19.253Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:1704 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T15:43:08.699Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:1739 | Bash | runs_glob_loop | non_reg19_run | *_burst_l1pl350cl_r2.0_s2 (REG-17's burst): parquet shapes and column names
+2026-11-12T15:46:09.227Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:1862 | Bash | runs_glob_loop | non_reg19_run | first *_sweep_l1pl350_pc_off_r2* (REG-8, a REG-21 reference run): first 700 bytes of requests.jsonl, metrics names
+2026-11-12T15:49:32.338Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:1908 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-12T15:49:37.581Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:1920 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-12T15:52:16.176Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:1984 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T15:52:19.166Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10325 | Bash | names_reg19_run | reg19_scripts | queue_reg19c.sh
+2026-11-12T15:52:27.707Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10332 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T15:52:46.137Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10345 | Bash | names_reg19_run | reg19_scripts | launch4.sh
+2026-11-12T15:52:53.091Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10356 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T15:53:29.307Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2042 | Bash | script_reads_runs | config_only | imports k3 for the REG21 dict; reads config.yaml only
+2026-11-12T15:53:29.794Z | bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10376 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T15:53:42.264Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2056 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-12T16:02:16.872Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2202 | Bash | script_reads_runs | config_only | config.yaml of 20261110-182920_burst_l1pl350cl_r2.0_s2, then modelf_sim on a simulated run
+2026-11-12T16:02:29.697Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2209 | Bash | script_reads_runs | config_only | modelf_sim and k3 on simulated runs built from four non-REG-19 configs
+2026-11-12T16:04:42.272Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2248 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T16:06:04.212Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2284 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T16:20:26.158Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-aaebfa565af29d02f.jsonl:74 | Bash | script_reads_runs | synthetic | review2/t2.py: truth()/readback() on synthetic runs; search2 matched another t2.py by its name
+2026-11-12T16:30:08.160Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad2f35320582754b4.jsonl:65 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T17:11:18.348Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a023b34dba3dfefb8.jsonl:94 | Bash | script_reads_runs | synthetic | review_e0e1/noise.py: e1.replay_rows on model F; search2 matched the noise.py of 2026-10-31 by its name
+2026-11-12T17:53:11.602Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:3864 | Bash | runs_glob_loop | disclosed(viii) | (viii) ls of the last run folder (seed 17 burst)
+2026-11-12T17:54:03.389Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:3905 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T17:56:10.389Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a27b7110cefc41d7d.jsonl:43 | Bash | cd_run | names_or_validity | auto
+2026-11-12T17:56:13.103Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:3958 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T17:56:16.528Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a2058e8f5d4c1fd10.jsonl:61 | Bash | runs_glob_loop | disclosed(viii) | (viii) ls + config.yaml lines
+2026-11-12T17:56:24.166Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad7b5aba70bdf01d4.jsonl:77 | Bash | names_reg19_run | names_only | `ls` of 20261112-135538_burst_..._s17 (seed 17's burst, the last folder): file names, like (viii)'s listing of 17:53:11; not yet listed in (viii), to be added there
+2026-11-12T17:56:24.725Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a2058e8f5d4c1fd10.jsonl:67 | Bash | runs_glob_loop | disclosed(iv) | (iv) source_config loop
+2026-11-12T17:56:24.749Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a27b7110cefc41d7d.jsonl:46 | Bash | cd_run | non_reg19_run | cd into 20261110-174432_stage2_control_l1pl350cl_r2.0_s2 (REG-17's control): first lines, events, metric names
+2026-11-12T17:56:29.901Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:73 | Bash | runs_glob_loop | non_reg19_run | checks.json of *_burst_l1pl350cl_r2.2_s2 (REG-14)
+2026-11-12T17:56:30.774Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a27b7110cefc41d7d.jsonl:50 | Bash | cd_run | non_reg19_run | same REG-17 control: metric values, line counts, checks.json, env.json keys
+2026-11-12T17:56:32.210Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad7b5aba70bdf01d4.jsonl:83 | Bash | script_reads_runs | disclosed(iv)+(ix) | (iv)+(ix) s134_runs.py: source_config, validity
+2026-11-12T17:56:36.905Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad7b5aba70bdf01d4.jsonl:86 | Bash | script_reads_runs | disclosed(iv)+(ix) | (iv)+(ix) s134_runs.py: source_config, validity
+2026-11-12T17:56:42.087Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad7b5aba70bdf01d4.jsonl:91 | Bash | script_reads_runs | disclosed(iv)+(ix) | (iv)+(ix) s134_runs.py: source_config, validity
+2026-11-12T17:56:49.381Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a2058e8f5d4c1fd10.jsonl:79 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T17:57:42.836Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad7b5aba70bdf01d4.jsonl:131 | Bash | runs_glob_loop,cd_run,names_reg19_run | disclosed(ii) | (ii) env.json fields
+2026-11-12T17:57:48.882Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad7b5aba70bdf01d4.jsonl:135 | Bash | runs_glob_loop,cd_run,names_reg19_run | disclosed(ii) | (ii) server.log start-up grep
+2026-11-12T17:57:54.542Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad7b5aba70bdf01d4.jsonl:139 | Bash | reg19_read,cd_run,names_reg19_run | disclosed(ii) | (ii) server.log line 14
+2026-11-12T17:58:06.833Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a625ca98c29ea904b.jsonl:130 | Bash | script_reads_runs,runs_glob_loop | disclosed(ix) | w3000 folders: checks.json valid and failed (context-pack loops 17:58-18:11)
+2026-11-12T17:58:13.071Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad7b5aba70bdf01d4.jsonl:154 | Bash | runs_glob_loop,cd_run | disclosed(iv) | (iv) nvidia_smi + KV size loop
+2026-11-12T17:58:25.171Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad7b5aba70bdf01d4.jsonl:157 | Bash | runs_glob_loop,cd_run | disclosed(iv) | (iv) nvidia_smi + KV size loop
+2026-11-12T17:58:33.125Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a2058e8f5d4c1fd10.jsonl:172 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-12T17:59:11.097Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a2058e8f5d4c1fd10.jsonl:195 | Bash | script_reads_runs,runs_glob_loop | disclosed(ix) | w3000 folders: checks.json valid; counts of valid/invalid over all folders (context-pack loops)
+2026-11-12T17:59:38.541Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:201 | Bash | script_reads_runs | disclosed(x) | s57_inv.py (17:59:38): config.yaml and checks.json of every folder, `tail -3` of a table sorted by folder name: by the inputs, seed 17's control and burst rows with checks.json's `no_errors` counts (`ok`, `unfinished`), valid, failed, file count; the output was not opened; [CORR] 2026-11-13, PROBE inputs_s57_inv.txt
+2026-11-12T17:59:48.202Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:205 | Bash | script_reads_runs | disclosed(ix) | s57_inv.py rerun (17:59:48) with `ok` and `unfinished` blanked for every w3000 folder; `cut -c1-400` of the table: config fields, valid, failed, file counts
+2026-11-12T17:59:58.052Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:209 | Bash | script_reads_runs | disclosed(ix) | s57_inv.py rerun (17:59:58), the same blanking; every row printed: config fields, valid, failed, file counts
+2026-11-12T18:00:13.076Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:213 | Bash | runs_glob_loop | non_reg19_run | du -sh of the files of 20261110-122001_..._long_s14 and 20261107-110219_sweep_l1pl350_pc_on_r3.5
+2026-11-12T18:00:20.036Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a27b7110cefc41d7d.jsonl:194 | Bash | cd_run | non_reg19_run | same REG-17 control: requests.jsonl cached-token counts, config.yaml
+2026-11-12T18:00:38.624Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a5e154c88deef8559.jsonl:78 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T18:00:40.705Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:221 | Bash | script_reads_runs | non_reg19_run | s57_heavy.py: load_run on every folder whose name does not hold w3000 (its own filter)
+2026-11-12T18:00:57.819Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:233 | Bash | runs_glob_loop,cd_run | names_or_validity | auto
+2026-11-12T18:01:04.106Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:239 | Bash | script_reads_runs | non_reg19_run | s57_heavy.py rerun, the same filter
+2026-11-12T18:01:30.787Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:260 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T18:01:42.910Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a27b7110cefc41d7d.jsonl:223 | Bash | cd_run | non_reg19_run | same REG-17 control: last metrics line, kv_block histograms
+2026-11-12T18:02:03.559Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a27b7110cefc41d7d.jsonl:238 | Bash | runs_glob_loop,cd_run | names_or_validity | auto
+2026-11-12T18:02:16.689Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a2058e8f5d4c1fd10.jsonl:341 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T18:02:32.922Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:297 | Bash | script_reads_runs | non_reg19_run | load_run and load.verdict on 20261110-085730_confirm_..._s12 and 20261110-122001_..._long_s14
+2026-11-12T18:02:59.719Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:303 | Bash | script_reads_runs | disclosed(ix) | s57_fam.py: checks.json valid/failed of every folder, printed as counts per family; config.yaml fields used only to name the family, none printed
+2026-11-12T18:04:13.700Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:331 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-12T18:04:51.818Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:343 | Bash | script_reads_runs | non_reg19_run | s57_md.py: config.yaml and checks.json of the runs s57_heavy.py loaded, which skips every folder whose name holds w3000
+2026-11-12T18:05:02.831Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a625ca98c29ea904b.jsonl:308 | Bash | script_reads_runs,runs_glob_loop | disclosed(ix) | w3000 folders: checks.json valid and failed checks (context-pack loops)
+2026-11-12T18:05:33.815Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:355 | Bash | script_reads_runs | non_reg19_run | s57_md.py and s57_md2.py rerun: same runs as :343 (no w3000 folder)
+2026-11-12T18:05:45.502Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad7b5aba70bdf01d4.jsonl:310 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T18:06:09.204Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:379 | Bash | script_reads_runs | non_reg19_run | checks.json of 20261110-055201_stage2_control_l1pl350cl_r2.2_s2 (REG-14)
+2026-11-12T18:07:10.911Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a625ca98c29ea904b.jsonl:316 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T18:07:24.078Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a2058e8f5d4c1fd10.jsonl:395 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T18:07:38.644Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a625ca98c29ea904b.jsonl:328 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T18:07:57.198Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad7b5aba70bdf01d4.jsonl:325 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T18:08:46.174Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a27b7110cefc41d7d.jsonl:270 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T18:08:47.894Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad7b5aba70bdf01d4.jsonl:339 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T18:08:59.835Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad7b5aba70bdf01d4.jsonl:343 | Bash | script_reads_runs,runs_glob_loop,names_reg19_run | disclosed(iv)+(ix) | table built from s134_runs.txt (source_config, sweep_parent, checks.json valid); no new read
+2026-11-12T18:09:44.808Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:451 | Bash | script_reads_runs | non_reg19_run | s57_other.py: skips every folder whose name holds wipe, burst, control or confirm (so every REG-19 folder)
+2026-11-12T18:10:09.489Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:457 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T18:11:01.513Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a27b7110cefc41d7d.jsonl:298 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-12T18:11:18.950Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a27b7110cefc41d7d.jsonl:308 | Bash | names_reg19_run | code_text | 
+2026-11-12T18:11:42.893Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:502 | Bash | runs_glob_loop | names_only | manifest ids against folder names
+2026-11-12T18:12:11.139Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:508 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T18:19:07.385Z | d4486ba3-52b7-47f9-bcaa-fa8befa942a8.jsonl:72 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-12T18:24:10.905Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:97 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-12T18:29:47.542Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:346 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T18:30:18.592Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:347 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T18:41:19.919Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:626 | Bash | runs_glob_loop,names_reg19_run | disclosed(ix) | links of every folder into the pin worktree, names and counts (the agent's links at 18:41)
+2026-11-12T18:42:25.151Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:632 | Bash | names_reg19_run | reg19_scripts | launch6.sh
+2026-11-12T18:45:42.396Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:698 | Bash | ran_on_reg19,names_reg19_run | code_text | 
+2026-11-12T18:46:14.272Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:711 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T18:47:14.050Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:753 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T18:47:57.180Z | 4e055435-8eb9-470c-b0b4-3d021db3c5eb.jsonl:117 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T18:48:54.655Z | 41a5ee70-4e70-4e1c-94cf-d6b57d73f40b.jsonl:139 | Bash | runs_glob_loop | names_only | test -d / -L on runs and git check-ignore of path names
+2026-11-12T18:51:08.028Z | 41a5ee70-4e70-4e1c-94cf-d6b57d73f40b.jsonl:167 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T18:52:52.203Z | 4e055435-8eb9-470c-b0b4-3d021db3c5eb.jsonl:185 | Bash | runs_glob_loop,names_reg19_run | names_or_validity | auto
+2026-11-12T18:54:26.903Z | 41a5ee70-4e70-4e1c-94cf-d6b57d73f40b.jsonl:211 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T18:56:37.759Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:907 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T18:57:53.943Z | 6fcabc3d-6cf3-4832-9ab0-49f11bf5dea2.jsonl:118 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T18:58:06.811Z | 6fcabc3d-6cf3-4832-9ab0-49f11bf5dea2.jsonl:133 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T19:03:35.267Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1098 | Bash | names_reg19_run | reg19_scripts | launch7.sh
+2026-11-12T19:23:42.177Z | 7807bac0-fd6d-4170-ad93-1fb8e68653a0.jsonl:81 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T19:23:54.995Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1163 | Bash | ran_on_reg19,names_reg19_run | code_text | 
+2026-11-12T19:29:19.231Z | 7807bac0-fd6d-4170-ad93-1fb8e68653a0.jsonl:100 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T19:31:59.344Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1362 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T19:33:16.344Z | 59a25596-bbc1-4687-ba5c-db19cf964fc7.jsonl:161 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T19:33:18.708Z | 59a25596-bbc1-4687-ba5c-db19cf964fc7.jsonl:162 | Bash | script_reads_runs | synthetic | r3_traces.py: withheld.keep on two path names; no file opened
+2026-11-12T19:33:54.357Z | 7807bac0-fd6d-4170-ad93-1fb8e68653a0.jsonl:137 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T19:34:18.520Z | f6210500-71e7-4e92-98f0-66208cb33d5e.jsonl:178 | SendMessage | names_reg19_run | names_in_text | SendMessage
+2026-11-12T19:37:53.984Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1490 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T19:51:55.627Z | f6210500-71e7-4e92-98f0-66208cb33d5e.jsonl:193 | SendMessage | names_reg19_run | names_in_text | SendMessage
+2026-11-12T19:52:14.282Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1779 | Bash | runs_glob_loop,names_reg19_run | names_or_validity | auto
+2026-11-12T19:55:01.175Z | f6210500-71e7-4e92-98f0-66208cb33d5e.jsonl:216 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T19:55:39.595Z | f6210500-71e7-4e92-98f0-66208cb33d5e.jsonl:218 | SendMessage | names_reg19_run | names_in_text | SendMessage
+2026-11-12T19:56:32.123Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1904 | Bash | runs_glob_loop,cd_run,names_reg19_run | disclosed(ix) | rsync of seed 18's lost first control (20261112-151030_..._s18) to the holding folder; checksums printed as one hash (19:56)
+2026-11-12T19:57:03.329Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1908 | Bash | runs_glob_loop,cd_run,names_reg19_run | disclosed(ix) | the same copy, retried; one hash of the checksums (19:57)
+2026-11-12T19:57:19.227Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1917 | Bash | cd_run,names_reg19_run | names_only | moves links (not REG-19's) out of the pin worktree by name
+2026-11-12T19:58:25.264Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1921 | Bash | names_reg19_run | reg19_scripts | launch8.sh
+2026-11-12T19:59:08.797Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1937 | Bash | names_reg19_run | code_text | 
+2026-11-12T20:00:07.164Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1948 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T20:02:11.637Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1994 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T20:05:42.783Z | 49020ad6-a4cc-45ad-b1b0-ed861e407f83.jsonl:255 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-12T20:10:09.882Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aeadab8b31a485d50.jsonl:62 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T20:16:04.313Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aeadab8b31a485d50.jsonl:75 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T20:17:01.599Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a6777409ea40e3318.jsonl:71 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T20:17:20.954Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aeadab8b31a485d50.jsonl:84 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T20:17:23.210Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aeadab8b31a485d50.jsonl:86 | Bash | script_reads_runs | synthetic | b_judge_ref_batch2_vj.py: find_runs replaced by a raiser, then by lambdas over synthetic runs; DECISIONS a temp file
+2026-11-12T20:17:31.166Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a6777409ea40e3318.jsonl:73 | Write | names_reg19_run | names_in_text | Write
+2026-11-12T20:31:48.006Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2336 | Bash | names_reg19_run | names_in_command | 
+2026-11-12T20:33:40.278Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2360 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T00:22:51.163Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2516 | Bash | names_reg19_run | code_text | 
+2026-11-13T00:25:39.916Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2529 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T00:28:37.318Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2574 | Bash | script_reads_runs,cd_run,names_reg19_run | disclosed(ix) | the VM read at 00:28 on 2026-11-13: folder names, checks.json valid/failed, checksums
+2026-11-13T00:28:56.373Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2585 | Bash | runs_glob_loop,names_reg19_run | names_or_validity | auto
+2026-11-13T00:29:04.365Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2591 | Bash | runs_glob_loop,names_reg19_run | names_or_validity | auto
+2026-11-13T00:30:17.216Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2630 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T00:33:21.408Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2677 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T00:37:46.530Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2755 | Bash | ran_on_reg19,names_reg19_run | code_text | 
+2026-11-13T00:45:02.914Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a2a5c2cef92be27bd.jsonl:186 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T00:46:17.326Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a166134e23638f9ea.jsonl:108 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T00:46:50.537Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a6a8a3241c8c5e416.jsonl:199 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T00:47:40.364Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a6a8a3241c8c5e416.jsonl:203 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T00:48:44.687Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a6a8a3241c8c5e416.jsonl:215 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T00:52:18.128Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-ad7f6f660bfdeb54d.jsonl:162 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T00:53:09.222Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a6a8a3241c8c5e416.jsonl:241 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T00:53:26.079Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a2a5c2cef92be27bd.jsonl:243 | SubagentHandback | names_reg19_run | names_in_text | SubagentHandback
+2026-11-13T00:54:14.924Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a166134e23638f9ea.jsonl:149 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T00:55:49.134Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a166134e23638f9ea.jsonl:158 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T00:55:51.707Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a166134e23638f9ea.jsonl:160 | Bash | script_reads_runs | synthetic | c_batches_seal.py: find_runs replaced (no_find, then fakes); DECISIONS a temp file
+2026-11-13T01:00:10.105Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a166134e23638f9ea.jsonl:167 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T01:03:45.696Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a6a8a3241c8c5e416.jsonl:310 | SubagentHandback | names_reg19_run | names_in_text | SubagentHandback
+2026-11-13T01:07:55.756Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:3423 | Bash | names_reg19_run | code_text | 
+2026-11-13T01:09:22.410Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:3449 | Bash | names_reg19_run | code_text | 
+2026-11-13T01:13:21.859Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:3490 | Bash | names_reg19_run | code_text | 
+2026-11-13T01:25:05.674Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a5f4a6d2ba3957cd7.jsonl:165 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T05:21:29.194Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:3795 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T05:25:34.552Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1a83befb82fcfd8a.jsonl:84 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T05:28:27.852Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:3916 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T05:30:04.420Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a4ca1db0b695fabcf.jsonl:202 | Bash | runs_glob_loop | excludes_runs | find prunes ./runs
+2026-11-13T05:33:35.212Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a4ca1db0b695fabcf.jsonl:266 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T05:34:32.357Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-af3cd85f0f63adbb0.jsonl:157 | Bash | ran_on_reg19,names_reg19_run | synthetic | h_newcode.py: find_runs/load_run replaced by a stub that raises, RUNS points nowhere; the w3000 name is a synthetic run's (20261112-000018, no such folder)
+2026-11-13T05:39:55.764Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-af3cd85f0f63adbb0.jsonl:200 | Bash | ran_on_reg19,names_reg19_run | synthetic | m_misc.py: the same stubs; the same synthetic name
+2026-11-13T05:55:29.809Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:4209 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T05:57:12.263Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:4243 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T05:57:40.914Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aea70a41daaffaecd.jsonl:115 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T05:57:47.078Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:4249 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T05:57:59.983Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aea70a41daaffaecd.jsonl:119 | Bash | script_reads_runs,ran_on_reg19,names_reg19_run | synthetic | a_path.py: load.RUNS points at synthetic folders under the scratch folder, guarded by an assert; find_runs/load_run guarded
+2026-11-13T05:58:11.015Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aea70a41daaffaecd.jsonl:125 | Bash | script_reads_runs | synthetic | a_path.py rerun, the same guards
+2026-11-13T06:00:02.212Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0fd29b2b40338bb5.jsonl:106 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T06:01:31.592Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a43b6d3c375ffd53e.jsonl:174 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T06:03:45.828Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aea70a41daaffaecd.jsonl:158 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T06:07:33.992Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0fd29b2b40338bb5.jsonl:178 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T10:30:45.626Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1bce48befd9127b9.jsonl:103 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T10:31:50.942Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1bce48befd9127b9.jsonl:123 | Bash | script_reads_runs | synthetic | r6_check.py: load.RUNS points at synthetic folders, guarded by asserts
+2026-11-13T10:32:47.311Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0fd29b2b40338bb5.jsonl:283 | SubagentHandback | names_reg19_run | names_in_text | SubagentHandback
+2026-11-13T10:53:06.516Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a7e69db175dbd3a1d.jsonl:149 | Bash | script_reads_runs | names_only | prints load.RUNS and whether it exists
+2026-11-13T11:06:27.646Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0adfd0cddd98f5fb.jsonl:234 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T11:20:22.234Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0adfd0cddd98f5fb.jsonl:312 | SubagentHandback | names_reg19_run | names_in_text | SubagentHandback
+2026-11-13T11:26:29.028Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:6386 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T12:00:17.950Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:7379 | Bash | names_reg19_run | code_text | 
+2026-11-13T12:01:28.672Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:7423 | Bash | script_reads_runs | false_positive | make_drafts_r14.py edits draft text that names find_runs
+2026-11-13T12:17:44.723Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:7868 | Agent | names_reg19_run | names_in_text | Agent
+2026-11-13T12:17:48.430Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:15 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-13T12:17:51.314Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:27 | Bash | runs_glob_loop | false_positive | loop over docs/drafts/review_bundles/*/
+2026-11-13T12:18:24.788Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:58 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-13T12:18:32.931Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:64 | Bash | runs_glob_loop | excludes_runs | find -not -path './runs/*'
+2026-11-13T12:19:05.411Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a6dd9dd5f66fbc950.jsonl:104 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T12:20:06.901Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:71 | Bash | runs_glob_loop | excludes_runs | find -not -path './runs/*'
+2026-11-13T12:21:28.343Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:78 | Bash | runs_glob_loop | excludes_runs | find -not -path './runs/*'
+2026-11-13T12:21:35.966Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:84 | Bash | runs_glob_loop | excludes_runs | find -not -path './runs/*'
+2026-11-13T12:21:43.101Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:90 | Bash | runs_glob_loop | excludes_runs | find -not -path './runs/*'
+2026-11-13T12:22:13.052Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:123 | Bash | runs_glob_loop | excludes_runs | find -not -path './runs/*'
+2026-11-13T12:35:43.344Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:8556 | Bash | names_reg19_run | reg19_scripts | ops_r3/queue.sh
+2026-11-13T12:36:19.156Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:8575 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T12:37:07.833Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:8613 | Bash | names_reg19_run | code_text | 
+2026-11-13T12:42:20.162Z | 90554eb7-1706-4aed-91c8-fbe345c3efce.jsonl:273 | SendMessage | names_reg19_run | names_in_text | SendMessage
+2026-11-13T12:47:39.487Z | 7e4037cf-0cb0-45cf-a04c-e3f4f20c18c9.jsonl:130 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T12:49:47.305Z | 7e4037cf-0cb0-45cf-a04c-e3f4f20c18c9.jsonl:191 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T15:23:16.241Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:9484 | Bash | names_reg19_run | code_text | 
+2026-11-13T15:23:33.899Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:9505 | Bash | names_reg19_run | code_text | 
+2026-11-13T15:25:27.203Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:9580 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T15:26:29.678Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:9631 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T15:26:41.753Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:9652 | Bash | names_reg19_run | code_text | 
+2026-11-13T15:30:00.655Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:9744 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T15:30:30.965Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:9774 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-13T15:31:23.751Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:9817 | Bash | names_reg19_run | code_text | 
+2026-11-13T15:31:47.958Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:9852 | Bash | runs_glob_loop,cd_run | denied_never_ran | the call was denied (its result: permission denied); it named a batch-1 run, 20261111-115409_burst_..._s3
+2026-11-13T15:32:08.571Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:9857 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T15:42:18.213Z | 6cf5f627-7b92-40fe-963d-9bfdc272be0a.jsonl:117 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-13T15:42:45.972Z | 3cc38f1d-6772-49b6-bed2-738d3f23bcfe.jsonl:199 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-13T15:42:48.041Z | f30c3b59-c857-4711-92a8-b6199e1ade7f.jsonl:142 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T15:43:51.540Z | f30c3b59-c857-4711-92a8-b6199e1ade7f.jsonl:184 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T15:45:54.718Z | 3cc38f1d-6772-49b6-bed2-738d3f23bcfe.jsonl:331 | Bash | names_reg19_run | code_text | 
+2026-11-13T15:46:20.784Z | 3cc38f1d-6772-49b6-bed2-738d3f23bcfe.jsonl:355 | Bash | names_reg19_run | code_text | 
+2026-11-13T15:46:29.180Z | 3cc38f1d-6772-49b6-bed2-738d3f23bcfe.jsonl:358 | Bash | names_reg19_run | code_text | 
+2026-11-13T15:46:41.375Z | 6cf5f627-7b92-40fe-963d-9bfdc272be0a.jsonl:278 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T15:50:10.805Z | f30c3b59-c857-4711-92a8-b6199e1ade7f.jsonl:353 | SendMessage | names_reg19_run | names_in_text | SendMessage
+2026-11-13T15:51:52.995Z | 8d1f94f8-7a77-426a-a112-e57becf90a7e.jsonl:493 | Bash | names_reg19_run | code_text | 
+2026-11-13T15:54:27.959Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:10571 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-13T15:54:41.264Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:10590 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-13T15:54:44.422Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:10593 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-13T15:55:41.727Z | 8d1f94f8-7a77-426a-a112-e57becf90a7e.jsonl:534 | SendMessage | names_reg19_run | names_in_text | SendMessage
+2026-11-13T15:57:22.028Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:10731 | Agent | names_reg19_run | names_in_text | Agent
+2026-11-13T15:58:57.755Z | 9e78b552-a745-40e5-9ea2-0b5792760e90.jsonl:173 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T15:59:32.124Z | 9e78b552-a745-40e5-9ea2-0b5792760e90.jsonl:196 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T16:04:32.827Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11087 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T16:04:49.543Z | 4cf7ccd2-e29c-4175-bc97-2b7ea12b330c.jsonl:288 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-13T16:08:21.421Z | 9e78b552-a745-40e5-9ea2-0b5792760e90.jsonl:278 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T16:08:30.084Z | 9e78b552-a745-40e5-9ea2-0b5792760e90.jsonl:290 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T16:10:04.657Z | 9e78b552-a745-40e5-9ea2-0b5792760e90.jsonl:324 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T16:10:37.218Z | 9e78b552-a745-40e5-9ea2-0b5792760e90.jsonl:329 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T16:11:27.741Z | 4cf7ccd2-e29c-4175-bc97-2b7ea12b330c.jsonl:347 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T16:12:08.828Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11355 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T16:12:10.512Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11366 | Bash | script_reads_runs | own_tools | the search, classification or closure tool: reads transcripts or source, not runs
+2026-11-13T16:12:21.850Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11373 | Bash | script_reads_runs | own_tools | the search, classification or closure tool: reads transcripts or source, not runs
+2026-11-13T16:12:51.665Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11392 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T16:13:23.104Z | 4cf7ccd2-e29c-4175-bc97-2b7ea12b330c.jsonl:388 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T16:14:07.892Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11419 | Bash | script_reads_runs | reg19_scripts | ops_r3/queue.sh
+2026-11-13T16:14:20.674Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11435 | Bash | script_reads_runs | own_tools | the search, classification or closure tool: reads transcripts or source, not runs
+2026-11-13T16:14:47.863Z | 9e78b552-a745-40e5-9ea2-0b5792760e90.jsonl:356 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T16:15:25.568Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11480 | Agent | names_reg19_run | names_in_text | Agent
+2026-11-13T16:16:50.622Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a2ff7c457dcd06dbf.jsonl:32 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T16:20:21.086Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a2ff7c457dcd06dbf.jsonl:47 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T16:22:49.119Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11716 | Bash | script_reads_runs | false_positive | closure.py's docstring names analysis.k3; closure.py parses source and imports nothing of analysis
+2026-11-13T16:25:14.910Z | ec10bb1b-c4d6-4df7-ab43-624a9ba257bb.jsonl:148 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T16:26:31.496Z | ec10bb1b-c4d6-4df7-ab43-624a9ba257bb.jsonl:198 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-13T16:26:52.697Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11873 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T16:26:55.550Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11874 | Bash | script_reads_runs | own_tools | the search, classification or closure tool: reads transcripts or source, not runs
+2026-11-13T16:27:19.549Z | 353762fb-0527-49f6-9a2c-1db84d1c97b0.jsonl:271 | Bash | names_reg19_run | names_in_command | 
+2026-11-13T16:27:36.827Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11901 | Bash | script_reads_runs | own_tools | the search, classification or closure tool: reads transcripts or source, not runs
+2026-11-13T16:27:54.881Z | 9e78b552-a745-40e5-9ea2-0b5792760e90.jsonl:453 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T16:28:48.404Z | 0ec2e539-fb6a-424d-bac1-c1fe28ca889c.jsonl:280 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-13T16:29:11.009Z | 0ec2e539-fb6a-424d-bac1-c1fe28ca889c.jsonl:304 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-13T16:29:23.160Z | ec10bb1b-c4d6-4df7-ab43-624a9ba257bb.jsonl:399 | Bash | runs_glob_loop | names_or_validity | auto
+2026-11-13T16:32:43.778Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:12113 | Bash | script_reads_runs | own_tools | the search, classification or closure tool: reads transcripts or source, not runs
+2026-11-13T16:33:41.311Z | 353762fb-0527-49f6-9a2c-1db84d1c97b0.jsonl:460 | Bash | script_reads_runs | own_tools | the search, classification or closure tool: reads transcripts or source, not runs
+2026-11-13T16:33:53.040Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:12183 | Bash | script_reads_runs | own_tools | the search, classification or closure tool: reads transcripts or source, not runs
+2026-11-13T16:35:15.612Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:12200 | Write | names_reg19_run | names_in_text | Write
+2026-11-13T16:35:21.260Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:12212 | Bash | script_reads_runs | own_tools | the search, classification or closure tool: reads transcripts or source, not runs
+2026-11-13T16:36:25.047Z | 0ec2e539-fb6a-424d-bac1-c1fe28ca889c.jsonl:614 | Bash | runs_glob_loop | names_or_validity | auto
+
+## ran lines: time | transcript:line | what | label | note
+2026-11-04T05:49:10.477Z | b9e7de0d-53d8-4718-b57d-2200ebc669e6.jsonl:312 | script analysis/c2.py (shell redirect): analysis.k1 []; analysis.margin [] | before_reg19_folders | 2026-11-04: jobs/.../scripts/c2.py on Stage 1 sweeps (*sweep_pc_on_r3/5/10); not analysis/c2.py, which search2 matched by name
+2026-11-04T05:49:10.477Z | b9e7de0d-53d8-4718-b57d-2200ebc669e6.jsonl:312 | script analysis/c2.py (shell redirect): analysis.load [] | before_reg19_folders | 2026-11-04: jobs/.../scripts/c2.py on Stage 1 sweeps (*sweep_pc_on_r3/5/10); not analysis/c2.py, which search2 matched by name
+2026-11-04T05:49:10.477Z | b9e7de0d-53d8-4718-b57d-2200ebc669e6.jsonl:312 | script /Users/chalshik/Projects/aftershock-artifacts/analysis/c2.py (Edit): analysis.gate [] | before_reg19_folders | 2026-11-04: jobs/.../scripts/c2.py on Stage 1 sweeps (*sweep_pc_on_r3/5/10); not analysis/c2.py, which search2 matched by name
+2026-11-04T05:49:10.477Z | b9e7de0d-53d8-4718-b57d-2200ebc669e6.jsonl:312 | script /Users/chalshik/.claude/jobs/c075c1a8/tmp/scripts/c2.py (shell redirect): analysis.load ['find_runs'] | before_reg19_folders | 2026-11-04: jobs/.../scripts/c2.py on Stage 1 sweeps (*sweep_pc_on_r3/5/10); not analysis/c2.py, which search2 matched by name
+2026-11-04T13:21:54.950Z | 4de6c4e2-0b8b-41c3-b388-0be464f1c7c9/subagents/agent-a320f677879effdb6.jsonl:65 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/fdf13821-770b-43f6-866b-c82b3bbdc140/scratc | no_run_read | auto
+2026-11-04T13:22:14.408Z | 4de6c4e2-0b8b-41c3-b388-0be464f1c7c9/subagents/agent-a320f677879effdb6.jsonl:71 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/fdf13821-770b-43f6-866b-c82b3bbdc140/scratc | no_run_read | auto
+2026-11-12T14:09:43.149Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:443 | import analysis.k1 ['cold_backlogged', 'overlap_after'] | disclosed_smoke_test | k1 on batch-1 bursts and REG-10's burst
+2026-11-12T14:22:49.700Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:701 | import analysis.k1 ['cold_backlogged', 'mechanism', 'readouts'] | disclosed_smoke_test | k1 on batch-1 bursts and REG-10's burst
+2026-11-12T14:22:54.479Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:707 | import analysis.k1 ['cold_backlogged', 'mechanism', 'readouts'] | disclosed_smoke_test | k1 on batch-1 bursts and REG-10's burst
+2026-11-12T15:53:11.440Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2030 | import analysis.k3 ['readouts'] | no_run_read | auto
+2026-11-12T15:53:29.307Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2042 | import analysis.k3 [] | config_only | imports k3 for the REG21 dict; reads config.yaml only
+2026-11-12T15:58:19.485Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ae4b025e6cf5745f0.jsonl:40 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/fdf13821-770b-43f6-866b-c82b3bbdc140/scratc | no_run_read | auto
+2026-11-12T15:58:38.314Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ae4b025e6cf5745f0.jsonl:44 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/fdf13821-770b-43f6-866b-c82b3bbdc140/scratc | no_run_read | auto
+2026-11-12T16:02:29.697Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2209 | import analysis.modelf_sim,k3 ['as_run', 'completed', 'd_obs', 'kbar_obs', 'kbar_of_z', 'lam_w', 'schedule', 'simulate', | config_only | modelf_sim and k3 on simulated runs built from four non-REG-19 configs
+2026-11-12T16:08:25.179Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2356 | import analysis.modelf_sim,k3 ['crossing', 'replay', 'schedule'] | no_run_read | auto
+2026-11-12T16:10:49.963Z | fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2419 | import analysis.modelf_sim,k3 ['as_run', 'fit', 'simulate'] | no_run_read | auto
+2026-11-12T16:27:18.531Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-aaebfa565af29d02f.jsonl:90 | import analysis.k3 [] | no_run_read | auto
+2026-11-12T17:26:55.269Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a5a590d4c460ad9e1.jsonl:75 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/0a689289-8928-4ed9-a8d6-140c6a3bbcb8/scratc | no_run_read | auto
+2026-11-12T17:26:55.269Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a5a590d4c460ad9e1.jsonl:75 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/7623a89b-d2e9-45fb-b6e4-318b49552b2e/scratc | no_run_read | auto
+2026-11-12T17:26:59.014Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a5a590d4c460ad9e1.jsonl:78 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/0a689289-8928-4ed9-a8d6-140c6a3bbcb8/scratc | no_run_read | auto
+2026-11-12T17:26:59.014Z | fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a5a590d4c460ad9e1.jsonl:78 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/7623a89b-d2e9-45fb-b6e4-318b49552b2e/scratc | no_run_read | auto
+2026-11-12T19:23:54.995Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1163 | import analysis.k3w ['work_rate'] | no_run_read | auto
+2026-11-12T20:05:28.083Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2043 | import analysis.k3,modelf_sim [] | no_run_read | auto
+2026-11-12T20:05:28.083Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2043 | import analysis.k3,modelf_sim,withheld [] | no_run_read | auto
+2026-11-12T20:16:06.461Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aeadab8b31a485d50.jsonl:77 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-12T20:17:23.210Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aeadab8b31a485d50.jsonl:86 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | synthetic | b_judge_ref_batch2_vj.py: find_runs replaced by a raiser, then by lambdas over synthetic runs; DECISIONS a temp file
+2026-11-12T20:20:26.589Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aeadab8b31a485d50.jsonl:95 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-13T00:47:21.595Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2972 | import analysis.k1 [] | no_run_read | auto
+2026-11-13T00:47:21.595Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2972 | import analysis.k1 [] | no_run_read | auto
+2026-11-13T00:47:21.595Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2972 | import analysis.k3w [] | no_run_read | auto
+2026-11-13T00:52:19.824Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a166134e23638f9ea.jsonl:142 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-13T00:54:17.112Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a166134e23638f9ea.jsonl:151 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-13T00:55:51.707Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a166134e23638f9ea.jsonl:160 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | synthetic | c_batches_seal.py: find_runs replaced (no_find, then fakes); DECISIONS a temp file
+2026-11-13T01:00:12.366Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a166134e23638f9ea.jsonl:169 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-13T01:04:18.686Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a166134e23638f9ea.jsonl:188 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-13T01:05:21.485Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a166134e23638f9ea.jsonl:195 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-13T05:32:09.659Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-af3cd85f0f63adbb0.jsonl:127 | script i_schedules.py (shell redirect): analysis.load []; analysis.k3w ['window']; analysis.modelf_sim ['schedule'] | no_run_read | auto
+2026-11-13T05:34:32.357Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-af3cd85f0f63adbb0.jsonl:157 | script h_newcode.py (shell redirect): analysis.load []; analysis.withheld []; analysis.k3w ['_dirty', 'reference', 'reg2 | synthetic | h_newcode.py: find_runs/load_run replaced by a stub that raises, RUNS points nowhere; the w3000 name is a synthetic run's (20261112-000018, no such folder)
+2026-11-13T05:35:50.875Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1a83befb82fcfd8a.jsonl:177 | script t00_configs_arith.py (shell redirect): analysis.c2 ['windows'] | no_run_read | auto
+2026-11-13T05:35:56.668Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-af3cd85f0f63adbb0.jsonl:179 | script j_numbers.py (shell redirect): analysis.load []; analysis.k3w ['judge'] | no_run_read | auto
+2026-11-13T05:36:28.209Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1a83befb82fcfd8a.jsonl:181 | script t01_label_map.py (shell redirect): analysis.c2 ['condition4'] | no_run_read | auto
+2026-11-13T05:36:56.391Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1a83befb82fcfd8a.jsonl:185 | script t02_sustain.py (shell redirect): analysis.c2 ['baseline', 'condition4', 'links', 'sustain', 'windows'] | no_run_read | auto
+2026-11-13T05:37:07.816Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-af3cd85f0f63adbb0.jsonl:183 | script k_rules.py (shell redirect): analysis.load []; analysis.k3w ['_level', 'judge', 'reg21_table'] | no_run_read | auto
+2026-11-13T05:37:37.801Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1a83befb82fcfd8a.jsonl:189 | script t03_levels.py (shell redirect): analysis.c2 ['condition4'] | no_run_read | auto
+2026-11-13T05:37:37.801Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1a83befb82fcfd8a.jsonl:189 | script t04_table.py (shell redirect): analysis.c2 ['condition4', 'reg22_table']; analysis.stats [] | no_run_read | auto
+2026-11-13T05:38:17.287Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1a83befb82fcfd8a.jsonl:193 | script t05_hist_onsets.py (shell redirect): analysis.c2 ['condition4', 'eviction_readout', 'histogram_delta', 'onsets'] | no_run_read | auto
+2026-11-13T05:38:59.496Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1a83befb82fcfd8a.jsonl:197 | script t06_overload_onsets.py (shell redirect): analysis.c2 ['baseline', 'condition4', 'links', 'onsets'] | no_run_read | auto
+2026-11-13T05:39:55.764Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-af3cd85f0f63adbb0.jsonl:200 | script m_misc.py (shell redirect): analysis.load []; analysis.k3w ['busy_share', 'judge', 'reference', 'row', 'span_valu | synthetic | m_misc.py: the same stubs; the same synthetic name
+2026-11-13T05:43:38.923Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1a83befb82fcfd8a.jsonl:219 | script t07_batch2_json.py (shell redirect): analysis.c2 ['batch_runs', 'reg22_table']; analysis.k3w []; analysis.withhel | no_run_read | auto
+2026-11-13T05:43:53.971Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1a83befb82fcfd8a.jsonl:223 | script t08_partial_warm.py (shell redirect): analysis.c2 ['condition4'] | no_run_read | auto
+2026-11-13T05:45:10.901Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1a83befb82fcfd8a.jsonl:233 | script t09_silent.py (shell redirect): analysis.c2 ['baseline', 'links', 'reuse_in', 'session_uncached_rate']; analysis. | no_run_read | auto
+2026-11-13T05:46:34.830Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1a83befb82fcfd8a.jsonl:255 | script t10_interruptions.py (shell redirect): analysis.c2 ['condition4'] | no_run_read | auto
+2026-11-13T05:50:53.186Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:4134 | import analysis.k3w [] | no_run_read | auto
+2026-11-13T05:50:53.186Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:4134 | import analysis.k3w [] | no_run_read | auto
+2026-11-13T05:56:16.554Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aea70a41daaffaecd.jsonl:103 | script j_numbers.py (shell redirect): analysis.load []; analysis.k3w ['judge'] | no_run_read | auto
+2026-11-13T05:56:37.681Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aea70a41daaffaecd.jsonl:109 | script m_misc.py (shell redirect): analysis.load []; analysis.k3w ['busy_share', 'judge', 'reference', 'row', 'span_valu | no_run_read | auto
+2026-11-13T05:57:59.983Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aea70a41daaffaecd.jsonl:119 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | synthetic | a_path.py: load.RUNS points at synthetic folders under the scratch folder, guarded by an assert; find_runs/load_run guarded
+2026-11-13T05:58:11.015Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aea70a41daaffaecd.jsonl:125 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | synthetic | a_path.py rerun, the same guards
+2026-11-13T05:58:58.705Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0fd29b2b40338bb5.jsonl:99 | script t00_configs_arith.py (shell redirect): analysis.c2 ['windows'] | no_run_read | auto
+2026-11-13T05:59:43.877Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:4302 | import analysis.k3w [] | no_run_read | auto
+2026-11-13T06:00:41.160Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aea70a41daaffaecd.jsonl:133 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-13T06:01:03.771Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aea70a41daaffaecd.jsonl:140 | script i_schedules.py (shell redirect): analysis.load []; analysis.k3w ['window']; analysis.modelf_sim ['schedule'] | no_run_read | auto
+2026-11-13T06:03:48.961Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aea70a41daaffaecd.jsonl:160 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-13T06:04:46.444Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0fd29b2b40338bb5.jsonl:141 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-13T06:05:35.898Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0fd29b2b40338bb5.jsonl:156 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-13T06:06:40.952Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0fd29b2b40338bb5.jsonl:165 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-13T06:06:47.874Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0fd29b2b40338bb5.jsonl:172 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-13T06:07:36.154Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0fd29b2b40338bb5.jsonl:180 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-13T06:08:43.349Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0fd29b2b40338bb5.jsonl:193 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-13T06:09:21.952Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0fd29b2b40338bb5.jsonl:202 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-13T06:09:37.814Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0fd29b2b40338bb5.jsonl:209 | import analysis.k3w ['_dirty'] | no_run_read | auto
+2026-11-13T06:12:56.471Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0fd29b2b40338bb5.jsonl:217 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-13T10:29:41.960Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0fd29b2b40338bb5.jsonl:275 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | no_run_read | auto
+2026-11-13T10:31:50.942Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1bce48befd9127b9.jsonl:123 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratc | synthetic | r6_check.py: load.RUNS points at synthetic folders, guarded by asserts
+2026-11-13T10:56:37.165Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0adfd0cddd98f5fb.jsonl:163 | script $S/runner/trace_main.py (shell redirect): analysis.load,withheld []; analysis.k3w ['reg21_table', 'reported_spans | no_run_read | auto
+2026-11-13T11:06:49.413Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0adfd0cddd98f5fb.jsonl:245 | script $S/runner/trace_b1_median.py (shell redirect): analysis.load,withheld []; analysis.k3w ['judge', 'reg21_table'] | no_run_read | auto
+2026-11-13T12:16:11.824Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a43b6d3c375ffd53e.jsonl:737 | -m analysis.c2 | false_positive | grep for the text "python -m analysis.c2" in docs/drafts/reg22_draft13.md
+2026-11-13T12:47:46.236Z | 0a689289-8928-4ed9-a8d6-140c6a3bbcb8.jsonl:188 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/0a689289-8928-4ed9-a8d6-140c6a3bbcb8/scratc | no_run_read | auto
+2026-11-13T12:47:46.236Z | 0a689289-8928-4ed9-a8d6-140c6a3bbcb8.jsonl:188 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/7623a89b-d2e9-45fb-b6e4-318b49552b2e/scratc | no_run_read | auto
+2026-11-13T12:47:55.658Z | 0a689289-8928-4ed9-a8d6-140c6a3bbcb8.jsonl:200 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/0a689289-8928-4ed9-a8d6-140c6a3bbcb8/scratc | no_run_read | auto
+2026-11-13T15:40:57.139Z | 8d1f94f8-7a77-426a-a112-e57becf90a7e.jsonl:227 | script /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_freeze/closure.py (Write): analysis.k3 [] | no_run_read | auto
+2026-11-13T15:43:34.422Z | 3cc38f1d-6772-49b6-bed2-738d3f23bcfe.jsonl:225 | script /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_freeze/closure.py (Write): analysis.k3 [] | no_run_read | auto
+2026-11-13T15:45:30.472Z | f30c3b59-c857-4711-92a8-b6199e1ade7f.jsonl:242 | script /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_freeze/closure.py (Write): analysis.k3 [] | no_run_read | auto
+2026-11-13T15:47:27.094Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:10247 | import analysis.k5 ['event', 'judge'] | no_run_read | auto
+2026-11-13T15:48:18.647Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:10328 | import analysis.k5 [] | no_run_read | auto
+2026-11-13T15:49:34.699Z | 3cc38f1d-6772-49b6-bed2-738d3f23bcfe.jsonl:438 | script /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_freeze/closure.py (Write): analysis.k3 [] | no_run_read | auto
+2026-11-13T15:50:55.508Z | 8d1f94f8-7a77-426a-a112-e57becf90a7e.jsonl:455 | script /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_freeze/closure.py (Write): analysis.k3 [] | no_run_read | auto
+2026-11-13T15:57:25.189Z | 7623a89b-d2e9-45fb-b6e4-318b49552b2e.jsonl:164 | script /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_freeze/closure.py (Write): analysis.k3 [] | no_run_read | auto
+2026-11-13T15:57:31.264Z | 7623a89b-d2e9-45fb-b6e4-318b49552b2e.jsonl:181 | script /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_freeze/closure.py (Write): analysis.k3 [] | no_run_read | auto
+2026-11-13T15:57:50.225Z | 7623a89b-d2e9-45fb-b6e4-318b49552b2e.jsonl:193 | import analysis.k5 [] | no_run_read | auto
+2026-11-13T15:57:50.225Z | 7623a89b-d2e9-45fb-b6e4-318b49552b2e.jsonl:193 | import analysis.k3w [] | no_run_read | auto
+2026-11-13T15:59:51.476Z | 7623a89b-d2e9-45fb-b6e4-318b49552b2e.jsonl:275 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/0a689289-8928-4ed9-a8d6-140c6a3bbcb8/scratc | no_run_read | auto
+2026-11-13T15:59:51.476Z | 7623a89b-d2e9-45fb-b6e4-318b49552b2e.jsonl:275 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/7623a89b-d2e9-45fb-b6e4-318b49552b2e/scratc | no_run_read | auto
+2026-11-13T15:59:54.235Z | 7623a89b-d2e9-45fb-b6e4-318b49552b2e.jsonl:286 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/0a689289-8928-4ed9-a8d6-140c6a3bbcb8/scratc | no_run_read | auto
+2026-11-13T15:59:54.235Z | 7623a89b-d2e9-45fb-b6e4-318b49552b2e.jsonl:286 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/7623a89b-d2e9-45fb-b6e4-318b49552b2e/scratc | no_run_read | auto
+2026-11-13T16:00:05.764Z | 7623a89b-d2e9-45fb-b6e4-318b49552b2e.jsonl:292 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/7623a89b-d2e9-45fb-b6e4-318b49552b2e/scratc | no_run_read | auto
+2026-11-13T16:00:50.220Z | 7623a89b-d2e9-45fb-b6e4-318b49552b2e.jsonl:310 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/7623a89b-d2e9-45fb-b6e4-318b49552b2e/scratc | no_run_read | auto
+2026-11-13T16:02:10.824Z | 7623a89b-d2e9-45fb-b6e4-318b49552b2e.jsonl:316 | script /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/7623a89b-d2e9-45fb-b6e4-318b49552b2e/scratc | no_run_read | auto
+2026-11-13T16:18:37.964Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11586 | script /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_freeze/closure.py (Write): analysis.k3 [] | no_run_read | auto
+2026-11-13T16:18:37.964Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11586 | script /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_freeze/closure.py (Write): analysis.k3 [] | no_run_read | auto
+2026-11-13T16:18:37.964Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11586 | script /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_freeze/closure.py (Write): analysis.k3 [] | no_run_read | auto
+2026-11-13T16:22:49.119Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11716 | script /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_freeze/closure.py (Write): analysis.k3 [] | false_positive | closure.py's docstring names analysis.k3; closure.py parses source and imports nothing of analysis
+2026-11-13T16:22:49.119Z | 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11716 | script /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_freeze/closure.py (Write): analysis.k3 [] | false_positive | closure.py's docstring names analysis.k3; closure.py parses source and imports nothing of analysis
+2026-11-13T16:26:56.289Z | 0ec2e539-fb6a-424d-bac1-c1fe28ca889c.jsonl:203 | script /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_freeze/closure.py (Write): analysis.k3 [] | no_run_read | auto
+2026-11-13T16:26:56.289Z | 0ec2e539-fb6a-424d-bac1-c1fe28ca889c.jsonl:203 | script /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_freeze/closure.py (Write): analysis.k3 [] | no_run_read | auto
+2026-11-13T16:27:07.698Z | ec10bb1b-c4d6-4df7-ab43-624a9ba257bb.jsonl:254 | script /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_freeze/closure.py (Write): analysis.k3 [] | no_run_read | auto
+2026-11-13T16:27:57.784Z | ec10bb1b-c4d6-4df7-ab43-624a9ba257bb.jsonl:324 | script /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_freeze/closure.py (Write): analysis.k3 [] | no_run_read | auto
+2026-11-13T16:28:01.413Z | ec10bb1b-c4d6-4df7-ab43-624a9ba257bb.jsonl:330 | script /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_freeze/closure.py (Write): analysis.k3 [] | no_run_read | auto

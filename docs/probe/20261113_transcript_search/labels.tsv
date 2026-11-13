@@ -1,0 +1,83 @@
+# Hand labels for classify2.py (key <transcript>:<line> TAB label TAB note). Written by the agent on 2026-11-13 from the
+# tool-call inputs only (no tool output read). A hand label overrides a rule. Labels:
+#   disclosed(<item>)      a read that "What was known" of REG-21 draft 25 / REG-22 draft 16 lists, by item; (x) is new: the [CORR] of 2026-11-13 on s57_inv.py
+#   disclosed_smoke_test   REG-20's smoke test of 2026-11-12 (k1 on five batch-1 burst runs and REG-10's burst), disclosed
+#                          in both drafts and in the [CORR] on `k1.reuse` (decisions.md 2026-11-13)
+#   non_reg19_run          a read of named runs none of which is a REG-19 folder (`*_w3000_s1[5-9]`)
+#   config_only            only config.yaml of named non-REG-19 runs (a run's input, copied from configs/)
+#   synthetic              code on synthetic or stubbed runs; no run file opened
+#   names_only             folder or link names, `test -d`, path printing; no run file opened
+#   excludes_runs          a `find` or grep that prunes or excludes ./runs/*
+#   false_positive         the matched text is not a read or a run (a grep pattern, a docstring, a loop over another folder)
+#   denied_never_ran       the tool call was denied, so nothing ran
+#   before_reg19_folders   (`ran` lines) before 2026-11-12 05:09:20 UTC, when the first REG-19 folder was made
+# --- records
+d4d16c2c-4433-4cad-bc86-8353baa26906.jsonl:1160	disclosed(ix)	runs/20261112*: file counts and checks.json valid (d4d16c2c at 10:30); `rsync` only inside a `ps | grep` pattern
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:120	disclosed(ix)	runs/*w3000*: file counts and checks.json valid (fdf13821 at 13:58)
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:443	disclosed_smoke_test	k1.cold_backlogged on *_burst_l1pl350cl_r2.0_s2..s6 and *_burst_l1pl350_r2.4_s1
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:701	disclosed_smoke_test	k1 on *_burst_l1pl350cl_r2.0_s2..s6 and *_burst_l1pl350_r2.4_s1
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:707	disclosed_smoke_test	k1 on *_burst_l1pl350cl_r2.0_s2..s6 and *_burst_l1pl350_r2.4_s1
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:1739	non_reg19_run	*_burst_l1pl350cl_r2.0_s2 (REG-17's burst): parquet shapes and column names
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:1862	non_reg19_run	first *_sweep_l1pl350_pc_off_r2* (REG-8, a REG-21 reference run): first 700 bytes of requests.jsonl, metrics names
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2042	config_only	config.yaml of REG21["batch1"] (trigger, verdict, workload fields)
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2202	config_only	config.yaml of 20261110-182920_burst_l1pl350cl_r2.0_s2, then modelf_sim on a simulated run
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2209	config_only	config.yaml of four named REG-11/14/15/17 runs, then modelf_sim and k3 on simulated runs
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-aaebfa565af29d02f.jsonl:74	synthetic	review2/t2.py: truth()/readback() on synthetic runs; search2 matched another t2.py by its name
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a023b34dba3dfefb8.jsonl:94	synthetic	review_e0e1/noise.py: e1.replay_rows on model F; search2 matched the noise.py of 2026-10-31 by its name
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a27b7110cefc41d7d.jsonl:46	non_reg19_run	cd into 20261110-174432_stage2_control_l1pl350cl_r2.0_s2 (REG-17's control): first lines, events, metric names
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a27b7110cefc41d7d.jsonl:50	non_reg19_run	same REG-17 control: metric values, line counts, checks.json, env.json keys
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a27b7110cefc41d7d.jsonl:194	non_reg19_run	same REG-17 control: requests.jsonl cached-token counts, config.yaml
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a27b7110cefc41d7d.jsonl:223	non_reg19_run	same REG-17 control: last metrics line, kv_block histograms
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:73	non_reg19_run	checks.json of *_burst_l1pl350cl_r2.2_s2 (REG-14)
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a625ca98c29ea904b.jsonl:130	disclosed(ix)	w3000 folders: checks.json valid and failed (context-pack loops 17:58-18:11)
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a2058e8f5d4c1fd10.jsonl:195	disclosed(ix)	w3000 folders: checks.json valid; counts of valid/invalid over all folders (context-pack loops)
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:201	disclosed(x)	s57_inv.py (17:59:38): config.yaml and checks.json of every folder, `tail -3` of a table sorted by folder name: by the inputs, seed 17's control and burst rows with checks.json's `no_errors` counts (`ok`, `unfinished`), valid, failed, file count; the output was not opened; [CORR] 2026-11-13, PROBE inputs_s57_inv.txt
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:205	disclosed(ix)	s57_inv.py rerun (17:59:48) with `ok` and `unfinished` blanked for every w3000 folder; `cut -c1-400` of the table: config fields, valid, failed, file counts
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:209	disclosed(ix)	s57_inv.py rerun (17:59:58), the same blanking; every row printed: config fields, valid, failed, file counts
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:221	non_reg19_run	s57_heavy.py: load_run on every folder whose name does not hold w3000 (its own filter)
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:239	non_reg19_run	s57_heavy.py rerun, the same filter
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aeadab8b31a485d50.jsonl:86	synthetic	b_judge_ref_batch2_vj.py: find_runs replaced by a raiser, then by lambdas over synthetic runs; DECISIONS a temp file
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a166134e23638f9ea.jsonl:160	synthetic	c_batches_seal.py: find_runs replaced (no_find, then fakes); DECISIONS a temp file
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aea70a41daaffaecd.jsonl:119	synthetic	a_path.py: load.RUNS points at synthetic folders under the scratch folder, guarded by an assert; find_runs/load_run guarded
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aea70a41daaffaecd.jsonl:125	synthetic	a_path.py rerun, the same guards
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1bce48befd9127b9.jsonl:123	synthetic	r6_check.py: load.RUNS points at synthetic folders, guarded by asserts
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:213	non_reg19_run	du -sh of the files of 20261110-122001_..._long_s14 and 20261107-110219_sweep_l1pl350_pc_on_r3.5
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:297	non_reg19_run	load_run and load.verdict on 20261110-085730_confirm_..._s12 and 20261110-122001_..._long_s14
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:303	disclosed(ix)	s57_fam.py: checks.json valid/failed of every folder, printed as counts per family; config.yaml fields used only to name the family, none printed
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:343	non_reg19_run	s57_md.py: config.yaml and checks.json of the runs s57_heavy.py loaded, which skips every folder whose name holds w3000
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a625ca98c29ea904b.jsonl:308	disclosed(ix)	w3000 folders: checks.json valid and failed checks (context-pack loops)
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:355	non_reg19_run	s57_md.py and s57_md2.py rerun: same runs as :343 (no w3000 folder)
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:379	non_reg19_run	checks.json of 20261110-055201_stage2_control_l1pl350cl_r2.2_s2 (REG-14)
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad7b5aba70bdf01d4.jsonl:343	disclosed(iv)+(ix)	table built from s134_runs.txt (source_config, sweep_parent, checks.json valid); no new read
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:451	non_reg19_run	s57_other.py: skips every folder whose name holds wipe, burst, control or confirm (so every REG-19 folder)
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:502	names_only	manifest ids against folder names
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad7b5aba70bdf01d4.jsonl:77	names_only	`ls` of 20261112-135538_burst_..._s17 (seed 17's burst, the last folder): file names, like (viii)'s listing of 17:53:11; not yet listed in (viii), to be added there
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:626	disclosed(ix)	links of every folder into the pin worktree, names and counts (the agent's links at 18:41)
+41a5ee70-4e70-4e1c-94cf-d6b57d73f40b.jsonl:139	names_only	test -d / -L on runs and git check-ignore of path names
+59a25596-bbc1-4687-ba5c-db19cf964fc7.jsonl:162	synthetic	r3_traces.py: withheld.keep on two path names; no file opened
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1904	disclosed(ix)	rsync of seed 18's lost first control (20261112-151030_..._s18) to the holding folder; checksums printed as one hash (19:56)
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1908	disclosed(ix)	the same copy, retried; one hash of the checksums (19:57)
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1917	names_only	moves links (not REG-19's) out of the pin worktree by name
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2574	disclosed(ix)	the VM read at 00:28 on 2026-11-13: folder names, checks.json valid/failed, checksums
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a4ca1db0b695fabcf.jsonl:202	excludes_runs	find prunes ./runs
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-af3cd85f0f63adbb0.jsonl:157	synthetic	h_newcode.py: find_runs/load_run replaced by a stub that raises, RUNS points nowhere; the w3000 name is a synthetic run's (20261112-000018, no such folder)
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-af3cd85f0f63adbb0.jsonl:200	synthetic	m_misc.py: the same stubs; the same synthetic name
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a7e69db175dbd3a1d.jsonl:149	names_only	prints load.RUNS and whether it exists
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:7423	false_positive	make_drafts_r14.py edits draft text that names find_runs
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:27	false_positive	loop over docs/drafts/review_bundles/*/
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:64	excludes_runs	find -not -path './runs/*'
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:71	excludes_runs	find -not -path './runs/*'
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:78	excludes_runs	find -not -path './runs/*'
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:84	excludes_runs	find -not -path './runs/*'
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:90	excludes_runs	find -not -path './runs/*'
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:123	excludes_runs	find -not -path './runs/*'
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:9852	denied_never_ran	the call was denied (its result: permission denied); it named a batch-1 run, 20261111-115409_burst_..._s3
+# --- `ran` lines
+b9e7de0d-53d8-4718-b57d-2200ebc669e6.jsonl:312	before_reg19_folders	2026-11-04: jobs/.../scripts/c2.py on Stage 1 sweeps (*sweep_pc_on_r3/5/10); not analysis/c2.py, which search2 matched by name
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:443	disclosed_smoke_test	k1 on batch-1 bursts and REG-10's burst
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:701	disclosed_smoke_test	k1 on batch-1 bursts and REG-10's burst
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:707	disclosed_smoke_test	k1 on batch-1 bursts and REG-10's burst
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2042	config_only	imports k3 for the REG21 dict; reads config.yaml only
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2209	config_only	modelf_sim and k3 on simulated runs built from four non-REG-19 configs
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a43b6d3c375ffd53e.jsonl:737	false_positive	grep for the text "python -m analysis.c2" in docs/drafts/reg22_draft13.md
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11716	false_positive	closure.py's docstring names analysis.k3; closure.py parses source and imports nothing of analysis

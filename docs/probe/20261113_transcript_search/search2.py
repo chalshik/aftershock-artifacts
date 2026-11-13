@@ -100,7 +100,9 @@ def _runs_ref(node):
     for n in ast.walk(node):
         if isinstance(n, ast.Name) and n.id == "RUNS" or isinstance(n, ast.Attribute) and n.attr == "RUNS":
             return True
-        if isinstance(n, ast.Constant) and isinstance(n.value, str) and (n.value == "runs" or re.search(r"(^|/)runs/", n.value)):
+        # `(/|$)`: a path that ends in the folder itself, '/Users/.../runs', counts too (added 2026-11-13: the
+        # classification at the append found `Path('/Users/.../runs')` in a script search2 had missed)
+        if isinstance(n, ast.Constant) and isinstance(n.value, str) and (n.value == "runs" or re.search(r"(^|/)runs(/|$)", n.value)):
             return True
     return False
 
@@ -424,6 +426,8 @@ def selftest():
         ("Bash", {"command": "python3 - <<'EOF'\nfrom pathlib import Path\np = Path('analysis/load.py'); t = p.read_text()\n"
                              "t = t.replace('out = find_runs(RUNS)', 'out = []')\np.write_text(t)\nEOF"}),
         ("Bash", {"command": "uv run python - <<'EOF'\nimport analysis.load as L\nL.find_runs = lambda p: []\nprint(L.find_runs('*'))\nEOF"}),
+        ("Bash", {"command": "python3 - <<'EOF'\nfrom pathlib import Path\nR = Path('/Users/u/p/runs')\n"
+                             "for d in R.iterdir():\n    print((d/'config.yaml').read_text()[:9])\nEOF"}),
     ]
     with tempfile.TemporaryDirectory() as d:
         os.makedirs(os.path.join(d, "s", "subagents"))
@@ -441,7 +445,7 @@ def selftest():
     def has(n, *cls):
         got = rec.get(f"2026-11-12T10:{n:02d}:00Z", "")
         assert all(c in got.split(", ") for c in cls), (n, cls, got)
-    assert "16 distinct tool calls" in out, out[:300]
+    assert "17 distinct tool calls" in out, out[:300]
     assert "script /tmp/x/foo.py (shell redirect): analysis.k3w" in out
     has(1, "script_reads_runs")
     has(2, "ran_unknown")
@@ -460,10 +464,11 @@ def selftest():
     assert "2026-11-12T10:14:00Z" not in rec, rec.get("2026-11-12T10:14:00Z")   # a code edit whose strings name find_runs
     has(15, "script_reads_runs")
     assert "inline python, stubbed" in out
+    has(16, "script_reads_runs")                                 # an absolute path ending in /runs
     for bad in ("secret", "h=0.53", "0.53", "h=0.9", "0.77", "OUTPUT"):
         assert bad not in out, bad
     assert "<<body: 1 lines -> notes.md, not printed>>" in out
-    print("selftest: OK (16 cases)")
+    print("selftest: OK (17 cases)")
 
 
 if __name__ == "__main__":
