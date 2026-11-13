@@ -3,35 +3,36 @@
 Any fresh session resumes from this file alone. Read it, then `agent/PLAN.md`, then the last block of `agent/LOG.md`.
 Rules: `docs/FABLE_PROMPT.md` (the start prompt), `CLAUDE.md`, `PROTOCOL.md`, `docs/process.md`. The plan in force: the owner-approved plan of 2026-11-13 (session 8c5f8396; copy at `/Users/chalshik/.claude/plans/lexical-petting-thunder.md`, summarised under "Next three").
 
-Last updated: 2026-11-13 ≈ 12:40 UTC (session 8c5f8396). The update blocks of 05:15 to 12:10 UTC were moved to `_to_delete/agent/STATE_blocks_to_2026-11-13.md` (FOR_AUTHOR, "Things moved"); their content is in `agent/LOG.md` and `docs/decisions.md`.
+Last updated: 2026-11-13 ≈ 15:45 UTC (session 8c5f8396). The update blocks of 05:15 to 12:10 UTC were moved to `_to_delete/agent/STATE_blocks_to_2026-11-13.md` (FOR_AUTHOR, "Things moved"); their content is in `agent/LOG.md` and `docs/decisions.md`.
 
 ## Phase
 
-**Phase 2: zero-GPU work while the VM is off.** No run is registered by the delegate yet. No run has been made by this agent. No REG-19 outcome has been read.
+**Phase 3: REG-19's last runs are scheduled; registrations in review.** The VM came back at 15:20 UTC (boot `06d8b294`; [OPS] "The VM is back"). The owner approved attempt 3 and the quiet-hours patch and set 350 W (decisions.md 2026-11-13 [DECISION] (owner), attempt 3). No REG-19 outcome has been read. No run registered by the delegate yet.
 
 ## State of each item
 
-- **REG-19** (P0, the owner's): seeds 15–17 are done (6 valid runs, withheld). Both attempts of seed 18's control were lost to the VM going off (2026-11-12 15:51 and 2026-11-13 ≈ 04:40 UTC). The queue stopped by itself at 05:49:28 UTC.
-  - Attempt 3 is the last and needs the owner's `[DECISION] (owner)`. It is ready to sign: `docs/drafts/reg19_attempt3_decision_draft2.md` (the stop line, the `lost_ok` text, `RENEW=1`).
-  - The quiet-hours patch is prepared, not applied: `docs/drafts/reg19_ops_r3_patch/` (sandbox 167/167; unpatched 160/160).
-  - The end kit: `docs/drafts/reg19_end_kit.md`. Steps: `agent/RUNBOOK.md` §3.
-  - **`final.sh` waits until REG-21's and REG-22's entries are committed.**
-- **REG-21 / REG-22** (K3 step B / C2 condition 4, 0 GPU h): drafts 23 / 14 (commit `e062504`). The record machinery is replaced by a freeze with no exception from the entry commit (plan Step 1; FOR_AUTHOR −10). Four fresh reviews are running: rule F r16 on REG-21, rule F r9 on REG-22, and an owner-proxy on each, named `rulef-reg21-r16`, `rulef-reg22-r9`, `proxy-reg21-d23`, `proxy-reg22-d14`. Their items are named BA (r16), BC (r9), BB and BD (the proxies).
-  - **Stop rule, fixed:** wording-only items are applied and the drafts registered. A hole in the two git facts is fixed once. A third round still NOT READY on batch 2 means batch 1 is registered alone and batch 2 is retrospective by design.
-- **REG-23** (K5): draft 3 with `analysis/k5.py` exists; never reviewed. Next after REG-21/22.
-- **E1:** draft 4; its launch scripts are not written. **E0/E2:** draft 3, NOT READY, needs a redesign.
-- **REG-20:** registered and approved by the owner. Its gate needs REG-19's [RESULT]. No ops scripts yet. `ulimit -n 65536` in the launch command is enough (hard limit 1,048,576).
+- **REG-19** (P0): seeds 15–17 done (6 valid, withheld). Seed 18's control: attempts 1 and 2 lost (`nochecks`); **attempt 3, the last, starts by a detached timer at 18:00:30 UTC** (`caffeinate` + `sleep`, pids 71631/71633 at scheduling), output `docs/probe/20261113_reg19/queue_agent_20261113T180030Z.txt`. Scripts: ops_r3 with the quiet-hours patch (no run overlaps 02:30–05:00 or 14:15–18:00 UTC; sandbox 167/167; `scripts_commit.txt` = `ea4a25e`); session probe renewed for boot `06d8b294` (SESSION OK, 350.00 W).
+  - The watcher `bwnigx6gj` exits when the VM goes down or the queue prints `QUEUE STOP|DONE|END`. Then: read only the queue's allowed lines; RUNBOOK §3 step 3 for a stop.
+  - If attempt 3 is lost: the queue stops, no table, the owner decides (attempt-3 entry, item 4).
+  - **`final.sh` waits until REG-21's and REG-22's entries are committed** (or their review ends with batch 2 retrospective by design). End kit: `docs/drafts/reg19_end_kit.md`.
+- **REG-21 / REG-22** (0 GPU h): drafts 24 / 15 (commit `ba67e55`), the one allowed fix of the freeze after round 1 (rule F r16 NOT READY BA1–BA4 + proxy REJECT BB1–BB9; rule F r9 NOT READY BC1–BC3 + proxy APPROVE BD1–BD9; all saved verbatim). Whole-file freeze of the import closure; fact (2) on the earliest `reg19_final_*` stamp anywhere; validity frozen from the entry. **Round 2 running:** `rulef-reg21-r17` (BE), `proxy-reg21-d24` (BF), `rulef-reg22-r10` (BG), `proxy-reg22-d15` (BH).
+  - **Review-stop rule** (decisions.md 2026-11-13 [DECISION] (delegate), settled): at most three rounds on the freeze; after drafts 24/15 a change to the facts is allowed only if wording, a tag, stricter or a reporting duty; a round-2 NOT READY on batch 2's standing with a design item, or a round-3 NOT READY on it, means batch 1 alone and batch 2 retrospective by design (still computed once with the frozen code), with its own rule F and proxy.
+  - **The freeze binds from the entry:** no commit to the 23 frozen files (k3w/c2 import closure, pyproject.toml, uv.lock) until both batch 2s are computed or declared not computed. REG-20 code, SEALS changes (arm B), everything new: new files only.
+  - The transcript search (`docs/probe/20261113_transcript_search/search.py`) is rerun at the append; the [DECISION] (delegate) maps every proxy condition (BD9) and repeats the statement on REG-19 readings.
+- **REG-23** (K5): round 1 back (saved): rule F NOT READY CA1–CA6 (k5.py changes: L_rel comparator, paired lead over A, `too_few_events` and failure reasons, `alarm_share` and bounds); owner-proxy APPROVE on CB1–CB8. Draft 5 + k5.py changes are next; k5.py is outside the frozen closure.
+- **E1:** draft 4; launch scripts not written. **E0/E2:** draft 3, NOT READY, needs a redesign.
+- **REG-20:** registered and approved by the owner; gate after REG-19's [RESULT] and before both batch 2s. The ops worker stopped at the usage limit: `docs/probe/20261113_reg20/ops/PIN_DECISION_DRAFT.md` and `DESIGN_NOTES.md` (untracked, unreviewed; seven open points, e.g. no per-run reading mid-matrix, the arm-B seal heading); the six scripts and the sandbox are not written.
 
 ## Next three
 
-1. When the four reviews return: save each verbatim (`scratchpad/extract_handback.py` pattern: the SubagentHandback input) and apply the stop rule. Then register: `[REG]` with every review quoted (`assemble_entry.py`), and the `[DECISION] (delegate)` from `docs/drafts/reg21_decision_draft1.md` / `reg22_decision_draft1.md`, trimmed to the conditions in force. In the same commit: definitions (`docs/drafts/definitions_reg21_reg22.md`), ledger rows, the status notice, FOR_AUTHOR. REG-22 goes first or together with REG-21, both before any batch 1.
-2. Batch 1 of each, once (`uv run python -m analysis.k3w reg21`, `uv run python -m analysis.c2 reg22`). Each output is stamped with `date -u` in the command line and committed at once and alone; then its [RESULT]. Then Step 5b: move the superseded `reg21_draft*`/`reg22_draft*` to `_to_delete/`, except drafts 4, 10, 19 / 4, 12, which are line-cited by reviews.
-3. REG-23 to rule F and the owner-proxy. In parallel: the vLLM-source answers (A6, the histogram semantics, the TTFT reference point), E1 launch scripts, REG-20 ops scripts, then the preprint (plan Step 4).
+1. When round 2 returns: save each verbatim (the teammate message, from the main transcript), commit, apply the review-stop rule. If cleared: dry-run the assembly through check_docs (the relative `FILE(delegation.md:…)`/`FILE(round1_rule_f.md:…)` refs in `proxy-reg21-draft4.md` need an annotated path), rerun the transcript search, then register REG-22 and REG-21 ([REG] + [DECISION] (delegate) mapping every proxy condition), with definitions, ledger rows, the status notice and FOR_AUTHOR in the same commit.
+2. Batch 1 of each, once, stamped files under `docs/probe/reg21/` and `docs/probe/reg22/`, each committed alone; [RESULT]s. Then `final.sh` once the queue has ended (end kit C).
+3. REG-23 draft 5 (CA1–CA6 in k5.py with tests; CB1–CB7 in text) to its second review; then REG-20 ops scripts, E1 scripts, the preprint.
 
 ## Blockers
 
-- **GPU:** the VM has been off since ≈ 04:40 UTC. The watcher loop (`b2n4cwfii`) runs `agent/bin/gpu_watch.sh` every 3 min and exits when the state changes. When the VM is back: run `zsh agent/bin/vm_back_probe.zsh`, write the [OPS] (end kit A), and stop for the owner.
-- The owner: 350 W, the attempt-3 decision, `RENEW=1`, the host's power log (A18), and the choices in FOR_AUTHOR −9 (auto-commit in `final.sh`, pushing `main`).
+- **GPU:** in use by REG-19 from 18:00:30 UTC. If the VM goes down again: record the partial matrix, never pool, and the owner decides (three attempts are spent).
+- The owner: the host's power-key cause (A18; all eight ends are power-key presses), the sudoers rule for 350 W (FOR_AUTHOR −2), and FOR_AUTHOR −9 (auto-commit in `final.sh`, pushing `main`).
 - `DRIVE_COPIES` path not given (FOR_AUTHOR item 3).
 
 ## Withheld data (hard rule, start prompt §3)
