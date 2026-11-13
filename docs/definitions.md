@@ -103,7 +103,7 @@ One entry per term: one text definition, its source, and the code that computes 
 
 ### R (block idle time before eviction)
 - **Text:** "`vllm:kv_block_idle_before_evict_seconds` | How long a cached prefix survives (R)". `docs/experiment-plan.md:129`. Recorded as a histogram, sampled (`--kv-cache-metrics`, `configs/base.yaml:17`).
-- **Code:** **none.** `load.metrics_wide` drops the `_bucket` series, and nothing reads `_sum` or `_count`.
+- **Code:** `c2.histogram_delta` (REG-22, decisions.md 2026-11-13) reads the sampled histogram's buckets from the raw `metrics.jsonl`: the gain over a window, the median's bucket with both edges, the shares at or below 5 s and 30 s; a window in which any bucket goes down is flagged `reset` and not read. `load.metrics_wide` still drops the `_bucket` series. Before REG-22: none.
 
 ## Run verdicts
 
@@ -136,7 +136,7 @@ All five come from one rule, `docs/decisions.md:272-277`, restated at `PROTOCOL.
 ### metastable failure
 - **Wording (2026-11-12, decisions.md [DECISION], wording and K2):** the stuck regime is called *metastable*, not *bistable*. "Two states at one load" (condition 6) means a healthy steady state and a degraded regime that sustains itself while its waiting line grows; the degraded regime is not a second steady state (the line rose 76 → 120 in REG-17, decisions.md 2026-11-10 [RESULT]). "Bistable" is used only for cited systems with two steady states.
 - **Text:** six conditions at one load: trigger over at the same load; control `recovered`; `stuck` in most seeds; a memory-limited loop; persistence over a 4500 s watch; two states at one load. `docs/decisions.md:281-287`, restated at `PROTOCOL.md:30-36`.
-- **Code:** none. Only the per-run verdict is coded.
+- **Code:** none. Only the per-run verdict is coded. Condition 4's levels have code (`c2.levels`, REG-22); its order clause has none. No definition here says condition 4 is met.
 - **Other text:** three conditions (`docs/experiment-plan.md:265`, superseded); "Stuck ... The metastable failure" (`:207`).
 
 ## Derived quantities
@@ -249,6 +249,55 @@ None has code yet; each gets its code when the run or analysis that uses it is r
 ### sessions in service (count)
 - **Text:** the mean, on a 10 s grid, of the sessions in service (see session cap: first turn sent to last reply; a session with an unfinished or unsent turn stays in service). A readout of REG-20 only.
 - **Code:** `k1.sessions_in_service`.
+
+### uncached-token work rate U (REG-21)
+- **Text:** "uncached prompt tokens per second, Σ (prompt_tokens − cached_tokens) over ok requests, session and burst, whose first token falls in the window (the first token ends a request's prefill)" FILE(docs/decisions.md:9747), decisions.md 2026-11-13 [REG] REG-21, Statistic.
+- **Code:** `k3w.work_rate`. It raises if an ok request has no first-token time or no prompt length. Its values over consecutive 300 s spans are reported beside it (`reported_spans`).
+- **Not the same as:** the session uncached prefill rate (REG-22, below), which leaves the burst's requests out.
+
+### cache-off work rate U_off (REG-21)
+- **Text:** "the mean of U over REG-8's five saturated cache-off runs, pinned by id" FILE(docs/decisions.md:9748); "each over its measured window. It raises unless exactly those five are there and valid." FILE(docs/decisions.md:9748)
+- **Code:** `k3w.reference`; the five run ids are `k3w.REG21["ref_runs"]`.
+
+### work-rate ratio r (REG-21)
+- **Text:** "= U over W ÷ U_off, per run. W = [burst end + 600 s, burst end + watch)" FILE(docs/decisions.md:9749).
+- **Code:** `k3w.row` (`"r"`), with W from `k3w.window`.
+
+### busy share (REG-21)
+- **Text:** "at least one request waiting in at least 0.99 of the scrapes of W" FILE(docs/decisions.md:9760), "a scrape within 10 s of each end and no gap above 10 s (`load._covered`). A missing gauge is listed as "no waiting gauge in W", not as idleness." FILE(docs/decisions.md:9760)
+- **Code:** `k3w.busy_share` on `vllm:num_requests_waiting`; coverage by `load._covered`.
+- **What the gauge counts:** "`vllm:num_requests_waiting` is the scheduler's waiting queues, the deferred requests included; a request in the running set is not counted" FILE(docs/decisions.md:9761).
+
+### condition-4 levels ⚠ (two computations on record; left for the owner, rule J) (REG-22)
+- **Text:** "in the end window, mean KV ≥ 0.80, mean N ≥ 2 × its baseline mean, maximum N < 256" FILE(docs/decisions.md:4641), decisions.md 2026-11-13 [REG] REG-22, thresholds of decisions.md 2026-11-01. A gauge value needs coverage: "scrapes within 10 s of each end of its window and no gap above 10 s (`load._covered`); otherwise the value is missing." FILE(docs/decisions.md:4642)
+- **Code:** `c2.levels`, every gauge value through `c2.gauge`.
+- **Second computation:** REG-15's [RESULT] computed the same three levels over the watch's last 1500 s (decisions.md 2026-11-10 [RESULT] REG-15, "Condition 4"), not the end window.
+- **Never written here or anywhere under REG-22:** that condition 4 is met, holds or is passed. The order clause of PROTOCOL §3 condition 4 has no code.
+
+### the exit (REG-22)
+- **Text:** "the moment the last burst request ended. Missing if a burst request never ended, ended with an error status, or the run has no burst rows." FILE(docs/decisions.md:4643)
+- **Code:** `c2.last_burst_end`.
+
+### reuse of later turns, with a minimum of turns ⚠ (two computations) (REG-22)
+- **Text:** "reuse of later turns (cached tokens over the previous prompt, by first token; at least 20 later turns, else missing)" FILE(docs/decisions.md:4645).
+- **Code:** `c2.reuse_in` (with its minimum of turns); `k1.reuse` (FILE(analysis/k1.py:69)), which REG-21 prints, computes the same quantity with no minimum ("reuse (prefix reuse of later turns)", above).
+
+### loop links and sustain (REG-22)
+- **Text:** the four links over one span (decisions.md 2026-11-13 [REG] REG-22, its lines FILE(docs/decisions.md:4645) to FILE(docs/decisions.md:4648)), and "a span is judged when it starts at or after the exit." FILE(docs/decisions.md:4650)
+- **Code:** `c2.links` (one span), `c2.sustain` (every span); the label by `c2.condition4`.
+
+### session uncached prefill rate ⚠ (three computations) (REG-22)
+- **Text:** "session uncached prefill (prompt tokens not served from the cache, session requests only, per second, by first token)" FILE(docs/decisions.md:4646).
+- **Code:** `c2.session_uncached_rate`.
+- **Other computations:** `k3w.work_rate` (U of REG-21: the burst's requests too, by first token); `load.rates`'s `recomputed_prefill_tok_s` (from the server's counters, all requests, per scrape interval, FILE(analysis/load.py:75)).
+
+### turn spacing (REG-22)
+- **Text:** "the median time between the first tokens of a session's consecutive turns (`c2.turn_spacing`)" FILE(docs/decisions.md:4725).
+- **Code:** `c2.turn_spacing`.
+
+### onset reading (REG-22)
+- **Text:** "The code takes each run's own baseline and end-window values, so each onset minus its own lag is the step time it implies." FILE(docs/decisions.md:4724)
+- **Code:** `c2.onset_reading`.
 
 ## Used configs that cannot be fixed (rule 5)
 
