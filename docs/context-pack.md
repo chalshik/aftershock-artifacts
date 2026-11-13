@@ -18,6 +18,8 @@ Living document: update it after every run or decision. Last updated: 2026-11-13
 
 **REG-19's table is computed only by `zsh docs/probe/20261113_reg19/ops_r3/final.sh`, never by hand or mid-matrix, and its two output files (`ops_r3/state/reg19_final_<stamp>.txt` and `…_err_<stamp>.txt`) are committed at once, alone.** This is REG-19's own rule. REG-21 (draft 25) and REG-22 (draft 16), not yet registered, no longer rest on that commit as a "record": their batch 2 needs only that their entries are committed before the first table file (`reg19_final_<stamp>`) and that their judged code is unchanged since the entry. So `final.sh` is not run until both entries are committed. The older `RESUME.md` step 4 is struck (`agent/RUNBOOK.md` §3).
 
+**REG-19's queue is done (2026-11-13 21:49 UTC, `QUEUE DONE (all five seeds run)`): seeds 15 to 19, ten valid runs, all on the Mac; the table is not computed.** The queue stopped once before seed 19's step because the agent's subagent had edited `analysis/e1.py` in the main checkout; the agent restored the file and started the queue again, which ran the step and ended (decisions.md 2026-11-13 [OPS] and [CORR], "the queue stopped before seed 19's step"). Next: REG-21's and REG-22's entries, then `final.sh` once, then REG-19's [RESULT]. The paragraph below is the earlier state.
+
 **REG-19 resumed (2026-11-13): attempt 3 of seed 18's control, the last, started at 16:55:12 UTC as `20261113-165516_stage2_control_l1pl350cl_r2.0_w3000_s18`; the owner withdrew the quiet hours and cut the timer short** (decisions.md 2026-11-13 [DECISION] (owner), quiet hours withdrawn; [OPS], queue started). Earlier text of this paragraph: **attempt 3 of seed 18's control, the last, was set to start at 18:00:30 UTC** (decisions.md 2026-11-13 [DECISION] (owner), attempt 3). The VM came back at 15:20 UTC; the boot of 2026-11-13 had ended with a power-key press at 04:39:14 UTC, as all eight ends the journal keeps did (open question A18). The owner set 350 W and approved the quiet-hours patch: no run overlaps 02:30–05:00 or 14:15–18:00 UTC. The session probe is renewed for the new boot. Queue output: `docs/probe/20261113_reg19/queue_agent_20261113T180030Z.txt`. If attempt 3 is lost, the queue stops and the owner decides. The paragraph below is the earlier state.
 
 **REG-19 was paused again (2026-11-13 ≈ 04:40 UTC): the VM went off ≈ 61 min into seed 18's control, attempt 2** (decisions.md 2026-11-13 [OPS], "went off again"). Attempt 2 is spent, one attempt remains; the queue stops by itself. **Before any run the owner must:** power the VM on, set 350 W, decide on attempt 3 (a `lost_ok` record), and allow a `RENEW=1` session probe; read the VM's journal for the cause first. Cause unknown; outside the quiet hours.
@@ -113,7 +115,7 @@ Steps:
 
 ## Runs on record
 
-184 run folders: 156 VALID, 24 INVALID, 4 without checks (2026-11-13 ≈ 20:20 UTC, after REG-19's queue copied seed 18's control and burst run; `tools/check_docs.py` inventory). All kept; none counts unless VALID.
+186 run folders: 158 VALID, 24 INVALID, 4 without checks (2026-11-13 ≈ 21:50 UTC, after REG-19's queue copied seed 19's control and burst run; `tools/check_docs.py` inventory). All kept; none counts unless VALID.
 
 - **No checks:** `20261030-114021_first_real` (failed start, no load sent); `20261031-025032_tau` (VM shut down 140 s in); `20261104-134159_long_pc_off_r3_s0` (REG-6 seed 0, VM powered off at t = 3168 s of 3600, DERIVED: power key 14:35:45.08 − planned load start 13:42:56.74 from `events.jsonl` `load_t0_planned`; copied 2026-11-05).
 - **No checks, REG-7 G2:** `20261105-181511_sweep_l1_pc_off_r2` (stopped by the owner at t = 247 s).
@@ -702,18 +704,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-13 · [CORR] Commit f42f66a was made while check_docs failed: attempt 3's run id was named before it was listed in manifests/pending_copy.txt; the run is listed now and the check passes
-
-- **What happened.** The agent ran `python3 tools/check_docs.py` and `git commit` as two calls in parallel, so the commit did not wait for the check. The check failed on three lines naming `20261113-165516_stage2_control_l1pl350cl_r2.0_w3000_s18`, a run that exists only on the VM (FILE(tools/check_docs.py:82)). The same slip was made once before and corrected the same way (commit b5c29b7).
-- **Fix.** That run id is added to `manifests/pending_copy.txt` (FILE(tools/check_docs.py:69)), as attempt 2's run already was; it is removed once the folder is copied to the Mac and checksum-verified. No entry is edited.
-- **The agent's error, and its rule from now on.** The check runs first and alone. The commit is sent only after it prints PASS, never in the same batch of calls.
-
-### 2026-11-13 · [OPS] ops_r3's sandbox: the quiet-hour cases replaced by any-hour cases, after the owner withdrew the quiet hours; 165 of 165 pass
-
-- The owner's decision withdrawing the quiet hours left `ops_r3/test_sandbox.sh`'s window cases failing, to be updated in a later commit (decisions.md 2026-11-13 [DECISION] (owner), quiet hours withdrawn). They are replaced by eleven cases: the queue runs to its end at 15:00, 12:00, 13:00, 03:00, 00:00, 04:59, 01:15, 18:00, 05:00 and 23:59 UTC, and a burst rerun starts at 13:00 UTC (five launches). The check that an attempt record names its boot is kept.
-- Result: passed 165, failed 0 (PROBE(docs/probe/20261113_reg19/sandbox_ops_r3_noquiet_20261113T171116Z.txt)).
-- The queue's six scripts (FILE(docs/probe/20261113_reg19/ops_r3/common.sh:32)) are unchanged, so `scripts_commit.txt` still matches and the running queue's checks before each launch are not affected. `test_sandbox.sh` is a test the queue does not run.
-
 ### 2026-11-13 · [DECISION] (delegate) Round 3 on the freeze ends in the stop for both REG-21 and REG-22: batch 1 is each registration's first reading and batch 2 is labelled retrospective by design; the round's items against the two review-stop entries are applied here
 
 - **Round 3, all saved verbatim (e3b2cc2):**
@@ -743,3 +733,43 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **Reviews.** CG1 is rule F round 12's item, classed by its reviewer as a change to fact (2), which by BK-S2 is none of the four classes (FILE(docs/decisions.md:4552)); the stop entry's rule 5 has items of the review of the text written under the stop applied as usual (FILE(docs/decisions.md:4553)). REG-22's owner-proxy approved it and asked for this entry, written as given, before E of either registration ("Written as given, this needs no further pass", FILE(docs/drafts/reviews-2026-11-13/proxy-reg22-draft18-delta.md:67)); REG-21's owner-proxy approved CG1 for REG-21 (FILE(docs/drafts/reviews-2026-11-13/proxy-reg21-draft27-delta.md:1), "CG1, cross-applied from REG-22's rule F round 12 (approve)").
 - **Timing.** This entry is committed before E of either registration (BK-S1, FILE(docs/decisions.md:4549)); both [DECISION] (delegate) entries cite it.
 - **Not changed:** any threshold, code, run set, label or other part of the review-stop rule.
+
+### 2026-11-13 · [OPS] REG-19: the queue stopped before seed 19's step because the agent's subagent had edited `analysis/e1.py`; started again, it ran the step and ended (QUEUE DONE); all ten runs are on the Mac
+
+- **The stop.** At 21:46 UTC the queue started at 16:55 UTC stopped after copying seed 19's two runs, before the recheck and the step of seed 19 (PROBE(docs/probe/20261113_reg19/queue_agent_20261113T180030Z.txt); only the allowed lines read: `RUN … VALID/INVALID`, `COPIED`, `STEP after seed …`, `QUEUE …`). Its allowed lines, in order:
+  ```
+  QUEUE START seeds 18 19; scripts fb0608878e8e909418d773e0bc769ad97cc841fd; pin a7bb77abc863adcaad9d4516815a5ddddf2908e9; 2026-11-13T16:55:12Z
+  RUN stage2_control_l1pl350cl_r2.0_w3000_s18 20261113-165516_stage2_control_l1pl350cl_r2.0_w3000_s18 VALID
+  RUN burst_l1pl350cl_r2.0_w3000_s18 20261113-180511_burst_l1pl350cl_r2.0_w3000_s18 VALID
+  COPIED 20261113-165516_stage2_control_l1pl350cl_r2.0_w3000_s18 10 files sha-of-sums 4c3e327571f7baa9
+  COPIED 20261113-180511_burst_l1pl350cl_r2.0_w3000_s18 10 files sha-of-sums 6b953059b706923c
+  STEP after seed 18: 'done': [15, 16, 17, 18] 'continue': True (stderr_lines 0 reg19_step_err_s18_20261113T192038Z_71631_4.txt)
+  RUN stage2_control_l1pl350cl_r2.0_w3000_s19 20261113-192110_stage2_control_l1pl350cl_r2.0_w3000_s19 VALID
+  RUN burst_l1pl350cl_r2.0_w3000_s19 20261113-203108_burst_l1pl350cl_r2.0_w3000_s19 VALID
+  COPIED 20261113-192110_stage2_control_l1pl350cl_r2.0_w3000_s19 10 files sha-of-sums df5ec7140a94f408
+  COPIED 20261113-203108_burst_l1pl350cl_r2.0_w3000_s19 10 files sha-of-sums 30564e284f0f6a8b
+  QUEUE STOP the recheck before the step of seed 19 could not be run: analysis/, harness/ or configs/defaults.yaml differ in the working tree from the Mac's HEAD
+  ```
+  The guard that stopped it requires `analysis/`, `harness/` and `configs/defaults.yaml` in the Mac's working tree to equal HEAD before the recheck (FILE(docs/probe/20261113_reg19/ops_r3/common.sh:207), FILE(docs/probe/20261113_reg19/ops_r3/queue.sh:73)). The difference was `analysis/e1.py`, edited at 21:38:05–21:38:08 UTC by the agent's subagent writing E1's draft 6 (session `1ac110f4`, three Edit calls; tool-call inputs only). No recheck and no step ran in that queue. The error is the agent's (the [CORR] below).
+- **What the agent did.** It saved the subagent's change, a diff of 42 lines, to `docs/drafts/e1_r2/e1_py_draft6.patch` and the edited file to `docs/drafts/e1_r2/e1.py.draft6` (sha256 `615e386f…`). It then restored `analysis/e1.py` to HEAD (`git checkout HEAD -- analysis/e1.py`) and checked that `git diff --quiet HEAD -- analysis harness configs/defaults.yaml` passes. It told the subagent to write any further code change into patch files only. Nothing was deleted.
+- **The restart.** The queue can be started again after any stop, and it launches nothing that is already there (FILE(docs/probe/20261113_reg19/ops_r3/queue.sh:4)). This stop was not an operational stop, the kind left to the owner (FILE(docs/probe/20261113_reg19/ops_r3/queue.sh:72)). The agent started it again at 21:48:38 UTC with RUNBOOK's command, writing to a new file; the first file is kept unchanged. Its allowed lines, in order (PROBE(docs/probe/20261113_reg19/queue_agent_20261113T214838Z.txt)):
+  ```
+  QUEUE START seeds 18 19; scripts fb0608878e8e909418d773e0bc769ad97cc841fd; pin a7bb77abc863adcaad9d4516815a5ddddf2908e9; 2026-11-13T21:48:38Z
+  STEP after seed 18: 'done': [15, 16, 17, 18] 'continue': True (stderr_lines 0 reg19_step_err_s18_20261113T192038Z_71631_4.txt)
+  RUN stage2_control_l1pl350cl_r2.0_w3000_s19 20261113-192110_stage2_control_l1pl350cl_r2.0_w3000_s19 VALID (found on the VM; not launched)
+  RUN burst_l1pl350cl_r2.0_w3000_s19 20261113-203108_burst_l1pl350cl_r2.0_w3000_s19 VALID (found on the VM; not launched)
+  COPIED 20261113-192110_stage2_control_l1pl350cl_r2.0_w3000_s19 10 files sha-of-sums df5ec7140a94f408
+  COPIED 20261113-203108_burst_l1pl350cl_r2.0_w3000_s19 10 files sha-of-sums 30564e284f0f6a8b
+  STEP after seed 19: 'done': [15, 16, 17, 18, 19] 'continue': False (stderr_lines 0 reg19_step_err_s19_20261113T214901Z_69257_2.txt)
+  QUEUE DONE (all five seeds run). Next: final.sh, once
+  ```
+  It launched no run (both of seed 19's runs were found valid on the VM), copied and checked seed 19's folders again with the same sums, ran the recheck, and ran the step after seed 19 once. The step's line is quoted, not interpreted.
+- **What follows (REG-19's own rules).** REG-19's table is computed once, by `zsh docs/probe/20261113_reg19/ops_r3/final.sh`, and only after REG-21's and REG-22's [REG] and [DECISION] (delegate) entries are committed. Its two output files are committed at once, alone, and REG-19's [RESULT] follows. The control of seed 18's attempt 2 (`20261113-033842_stage2_control_l1pl350cl_r2.0_w3000_s18`) stays on the VM until after the [RESULT] (`manifests/pending_copy.txt`). The manifest gains seed 19's two folders (written by `queue.sh`). The inventory is 186 folders: 158 valid, 24 invalid and 4 without checks (`tools/check_docs.py`).
+- **The GPU.** No REG-19 run remains, and nothing else is approved to run. E1's draft 5 came back NOT READY from rule F (FILE(docs/drafts/reviews-2026-11-13/rulef-e1-draft5-r1.md:9)) and APPROVE on conditions from its owner-proxy (FILE(docs/drafts/reviews-2026-11-13/proxy-e1-draft5.md:7)). Its draft 6 is being written, and it needs a second rule F round before it can run.
+
+### 2026-11-13 · [CORR] The agent let a subagent edit `analysis/e1.py` in the main checkout while REG-19's queue ran, and the queue's guard stopped it before seed 19's step; the agent also first watched for a queue line that is not an allowed read
+
+- **What was wrong.** At 21:32:05 UTC the agent started a subagent to write E1's draft 6, with code changes to `analysis/e1.py`, in the main checkout and without a separate worktree. REG-19's queue was running and requires `analysis/` to equal HEAD before each step (FILE(docs/probe/20261113_reg19/ops_r3/common.sh:207)). The subagent's edit at 21:38 UTC stopped the queue before seed 19's step (the [OPS] above).
+- **Effect.** A delay of about three minutes to the step, from the stop at 21:46 UTC to the restart at 21:48:38 UTC. No run was lost or launched, no step was computed twice, and nothing beyond the allowed lines was read. The guard worked as written.
+- **A second, smaller error.** The first command the agent wrote to wait for the restarted queue's end also printed lines starting `RECHECK `, which are not among the queue's allowed lines. The agent stopped that command before the queue had printed anything: the command's output holds the file's path and `[killed]` only. It then waited with the allowed patterns alone. No `RECHECK` line was read.
+- **Fix, from now on.** While a queue that guards `analysis/`, `harness/` or `configs/` is running, a subagent that edits code works in its own git worktree, or writes patch files only. A command that prints queue lines uses exactly the allowed patterns (`RUN … VALID/INVALID`, `COPIED`, `STEP after seed …`, `QUEUE …`).

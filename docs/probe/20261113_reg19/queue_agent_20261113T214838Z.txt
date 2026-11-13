@@ -1,0 +1,9 @@
+QUEUE START seeds 18 19; scripts fb0608878e8e909418d773e0bc769ad97cc841fd; pin a7bb77abc863adcaad9d4516815a5ddddf2908e9; 2026-11-13T21:48:38Z
+STEP after seed 18: 'done': [15, 16, 17, 18] 'continue': True (stderr_lines 0 reg19_step_err_s18_20261113T192038Z_71631_4.txt)
+RUN stage2_control_l1pl350cl_r2.0_w3000_s19 20261113-192110_stage2_control_l1pl350cl_r2.0_w3000_s19 VALID (found on the VM; not launched)
+RUN burst_l1pl350cl_r2.0_w3000_s19 20261113-203108_burst_l1pl350cl_r2.0_w3000_s19 VALID (found on the VM; not launched)
+COPIED 20261113-192110_stage2_control_l1pl350cl_r2.0_w3000_s19 10 files sha-of-sums df5ec7140a94f408
+COPIED 20261113-203108_burst_l1pl350cl_r2.0_w3000_s19 10 files sha-of-sums 30564e284f0f6a8b
+RECHECK before the step of seed 19: runs and changed 10 0; reg19_recheck_20261113T214851Z_69257_1.json
+STEP after seed 19: 'done': [15, 16, 17, 18, 19] 'continue': False (stderr_lines 0 reg19_step_err_s19_20261113T214901Z_69257_2.txt)
+QUEUE DONE (all five seeds run). Next: final.sh, once
