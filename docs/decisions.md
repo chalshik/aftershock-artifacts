@@ -4498,3 +4498,23 @@ Ends when the owner writes an entry ending it.
     Round 3's four reviewers, running now, are sent this entry.
   - **status.md.** Its "No result has been read" holds for REG-19's verdict. It does not hold for the counts above, and status.md now says so.
 - **Error:** mine. The search was built to find such reads and missed two kinds of script. And the earlier [CORR] of today called a `checks.json` read allowed without checking what its first bytes hold.
+
+## 2026-11-13 · [DECISION] (owner) REG-19: the quiet hours are withdrawn; the GPU is used whenever it is available, and the queue starts now instead of at 18:00:30 UTC
+
+- **The owner's words** (this session, about 16:50–16:55 UTC, recorded verbatim):
+  - "sorry to interupt, but do you manage to run something in vm, because we cant affort just letting be idle";
+  - then, answering the agent's question whether to start REG-19's queue now or keep its 18:00:30 UTC start: "there is no such thing as quiet hours, whenever its available use it, power off happens randomly".
+- **What changes.**
+  - The quiet hours of the attempt-3 decision (FILE(docs/decisions.md:4383)) are withdrawn. No run is held back for the time of day.
+  - `common.sh`: the two windows are empty (from = to), so `quiet_now` is never true (FILE(docs/probe/20261113_reg19/ops_r3/common.sh:26), FILE(docs/probe/20261113_reg19/ops_r3/common.sh:27)). The comment above them says why. The file keeps its line count, so every other line, and every citation of one, keeps its number. The earlier values are in ea4a25e.
+  - The queue's timer, armed for 18:00:30 UTC, is cut short. The agent ends the timer's `sleep`, so the armed command itself starts the same queue at once: attempt 3 of seed 18's control, then its burst run, the step, and seed 19 if the step says `continue`. Its output file keeps the name `docs/probe/20261113_reg19/queue_agent_20261113T180030Z.txt`; that stamp is the planned start, not the real one.
+  - `ops_r3`'s sandbox has quiet-hour cases that now fail. They are updated in a later commit. The sandbox is a test the queue does not run.
+- **The agent's view (rule A4).** The agent recommended keeping 18:00:30. Five of the seven recorded power-offs fell between 14:35 and 17:37 UTC (open question A18), and attempt 3 is seed 18's last. The owner judges the power-offs random (BELIEF, the owner's). The window was drawn around those events after they were seen, so no test of it is valid, and seven events cannot separate a time-of-day pattern from chance (BELIEF either way). The owner's decision rules. A18 stays open.
+- **If attempt 3 is lost:** as the attempt-3 decision says, the queue stops and the owner decides.
+- **Not changed:** REG-19's rules, configs, seeds, step and futility rule, `final.sh`, any threshold or check.
+
+## 2026-11-13 · [DECISION] (owner) E1 goes to review now, so that it can run once REG-19's queue has ended
+
+- **The owner's choice** (this session, about 16:55 UTC), answering whether to send E1 through rule F and the owner-proxy now so that it can run after REG-19: "Yes, prepare E1 (Recommended)".
+- **What it allows:** the agent sends `docs/drafts/e1_draft4.md` (about 2.1 GPU h, FILE(docs/drafts/e1_draft4.md:59)) to a rule F review and an owner-proxy pass. If both clear, it registers E1 as delegate, under the delegation's rules.
+- **What it does not allow:** E1 is not run before its [REG] entry is committed, and not while REG-19's queue holds the GPU. E1 changes no decision about a shock matrix, as its own draft says first (FILE(docs/drafts/e1_draft4.md:13)).

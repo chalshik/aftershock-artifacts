@@ -702,28 +702,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-13 · [DECISION] (delegate) The review-stop rule for REG-21 and REG-22, settled before any batch exists: which rounds count, what triggers the stop, and what "retrospective by design" computes; round 1 on the freeze applied to it
-
-- **Why:** both owner-proxies of round 1 asked for it in an entry (FILE(docs/drafts/reviews-2026-11-13/proxy-reg21-draft23-delta.md:1), its BB9; FILE(docs/drafts/reviews-2026-11-13/proxy-reg22-draft14-delta.md:1), its BD8). The plan's rule (FILE(docs/decisions.md:4342)) says both "a hole in the two git facts is fixed once" and "a third round still NOT READY on batch 2"; BB9 asks which one counts. This entry reads them together and adds nothing the owner did not approve. It is fixed before any batch-1 or batch-2 output exists and before REG-19's table exists (`final.sh` waits for both entries, decisions.md 2026-11-13 [DECISION] (owner), REG-19 attempt 3, item 5), so it selects on no data.
-- **Round 1 on the freeze** (drafts 23 and 14), saved verbatim:
-  - REG-21: rule F round 16, NOT READY, required BA1–BA4 (FILE(docs/drafts/reviews-2026-11-13/rulef-reg21-draft23-r16.md:1)); owner-proxy REJECT of draft 23 as written, binding, conditions BB1–BB9 (the proxy's own reading: the reject is about batch 1's "What was known", not the two git facts).
-  - REG-22: rule F round 9, NOT READY, required BC1–BC3 (FILE(docs/drafts/reviews-2026-11-13/rulef-reg22-draft14-r9.md:1)); owner-proxy APPROVE on BD1–BD9, with no effect while rule F is NOT READY.
-- **The rule, as read here:**
-  1. **Rounds counted** are those on the freeze design, per registration: round 1 = REG-21's rule F r16 / REG-22's r9 with their proxy passes (done); round 2 = r17 / r10; round 3 = r18 / r11. There is no round 4 on batch 2.
-  2. **"Fixed once":** round 1's holes in the two git facts and in the validity cut (BA1–BA3, BC2, BC3) are fixed in drafts 24 and 15. That is the one change of the facts' design. After it, a change to the facts is allowed only if it is wording, a tag, a stricter rule or a reporting duty.
-  3. **What triggers the stop:** only a required rule F item, or a binding owner-proxy condition or reject, about batch 2's standing (the two facts, the validity cut, what a retrospective batch 2 does). Items on batch 1, on disclosures ("What was known"), or on wording are applied as usual and do not count. BB1 (a false sentence on batch 1's "What was known") is such an item.
-  4. **The stop:** if round 3 is still NOT READY on batch 2's standing, or if round 2 is NOT READY on batch 2's standing with an item that is not wording, a tag, a stricter rule or a reporting duty, the registration is written with batch 1 as its only primary reading and batch 2 labelled retrospective by design. That text gets its own rule F review and owner-proxy pass, binding as always.
-  5. **What "retrospective by design" computes** (BD8): batch 2 is still computed once, by the same command, after REG-19's final [RESULT], with the judged path frozen at the entry and the entry's decision lines; no code or threshold changes after the entry (rule A5 binds a retrospective batch too); what a retrospective batch 2 may say is set by each registration's own text (REG-21: it never governs, BB6; REG-22: it enters the disagreement test, BC1). The entry is committed before the first commit that adds a `reg19_final_*` file either way.
-- **Not changed:** the plan, any draft's thresholds, any code, REG-19's rules. REG-23 is outside this rule: it has no batch 2 and follows the normal review.
-
-### 2026-11-13 · [CORR] REG-21's drafts 5 to 23 said `k1.reuse` had not been computed on any run; REG-20's registration reports it on five of REG-21's batch-1 runs
-
-- **The sentence:** "U, the mean served prompt, `k1.reuse`, the busy share and r have not been computed on any run by anyone" (FILE(docs/drafts/reg21_draft23.md:49)). It stands in every draft from 5 to 23 (DERIVED: one match each in drafts 5, 6, 10, 15, 22 and 23, by grep).
-- **What contradicts it:** REG-20's [REG] of 2026-11-12 reports `k1.cold_backlogged` on REG-17's burst run and REG-18's four burst runs, "checked as a code smoke test on reported runs", with reuse 0.000 at the end against ≈ 1.0 before (FILE(docs/decisions.md:4084)). `cold_backlogged` computes `k1.reuse` over a base and an end window (FILE(analysis/k1.py:80)); the end window ends at the burst's end plus the watch (FILE(analysis/k1.py:57)), which is the end of REG-21's window W (DERIVED). All five runs are in REG-21's batch 1 (its λ = 2.0 group).
-- **Found by** the owner-proxy on draft 23 (FILE(docs/drafts/reviews-2026-11-13/proxy-reg21-draft23-delta.md:1), its BB1; the reject is binding). Every earlier review missed it.
-- **The agent's error:** it stated what had not been computed without searching the log for it.
-- **Effect:** a disclosure only. The reuse precondition (≤ 0.05, fixed in draft 2) is unchanged; it was seen to hold at the end of W on five runs. Draft 24 rewrites "What was known" and goes to rule F and an owner-proxy pass, as the draft's own rule requires. The transcript search behind such statements is widened and saved as a probe (`docs/probe/20261113_transcript_search/search.py`).
-
 ### 2026-11-13 · [CORR] The operations entry on REG-19's interim look of 2026-11-12 named only the harness log's last 15 lines; the same command also listed that control's run folder and printed the last three lines of its `events.jsonl`, and a later command printed the start of its `checks.json`
 
 - **What the entry says:** decisions.md 2026-11-13 [OPS] "REG-19: the interim look of 2026-11-12 is recorded before the queue resumes" (FILE(docs/decisions.md:4276)): the session that ran the queue "read about the last 15 lines of that run's harness log".
@@ -797,3 +775,23 @@ Every model used to choose a run or read a result, with its equations, the evide
     Round 3's four reviewers, running now, are sent this entry.
   - **status.md.** Its "No result has been read" holds for REG-19's verdict. It does not hold for the counts above, and status.md now says so.
 - **Error:** mine. The search was built to find such reads and missed two kinds of script. And the earlier [CORR] of today called a `checks.json` read allowed without checking what its first bytes hold.
+
+### 2026-11-13 · [DECISION] (owner) REG-19: the quiet hours are withdrawn; the GPU is used whenever it is available, and the queue starts now instead of at 18:00:30 UTC
+
+- **The owner's words** (this session, about 16:50–16:55 UTC, recorded verbatim):
+  - "sorry to interupt, but do you manage to run something in vm, because we cant affort just letting be idle";
+  - then, answering the agent's question whether to start REG-19's queue now or keep its 18:00:30 UTC start: "there is no such thing as quiet hours, whenever its available use it, power off happens randomly".
+- **What changes.**
+  - The quiet hours of the attempt-3 decision (FILE(docs/decisions.md:4383)) are withdrawn. No run is held back for the time of day.
+  - `common.sh`: the two windows are empty (from = to), so `quiet_now` is never true (FILE(docs/probe/20261113_reg19/ops_r3/common.sh:26), FILE(docs/probe/20261113_reg19/ops_r3/common.sh:27)). The comment above them says why. The file keeps its line count, so every other line, and every citation of one, keeps its number. The earlier values are in ea4a25e.
+  - The queue's timer, armed for 18:00:30 UTC, is cut short. The agent ends the timer's `sleep`, so the armed command itself starts the same queue at once: attempt 3 of seed 18's control, then its burst run, the step, and seed 19 if the step says `continue`. Its output file keeps the name `docs/probe/20261113_reg19/queue_agent_20261113T180030Z.txt`; that stamp is the planned start, not the real one.
+  - `ops_r3`'s sandbox has quiet-hour cases that now fail. They are updated in a later commit. The sandbox is a test the queue does not run.
+- **The agent's view (rule A4).** The agent recommended keeping 18:00:30. Five of the seven recorded power-offs fell between 14:35 and 17:37 UTC (open question A18), and attempt 3 is seed 18's last. The owner judges the power-offs random (BELIEF, the owner's). The window was drawn around those events after they were seen, so no test of it is valid, and seven events cannot separate a time-of-day pattern from chance (BELIEF either way). The owner's decision rules. A18 stays open.
+- **If attempt 3 is lost:** as the attempt-3 decision says, the queue stops and the owner decides.
+- **Not changed:** REG-19's rules, configs, seeds, step and futility rule, `final.sh`, any threshold or check.
+
+### 2026-11-13 · [DECISION] (owner) E1 goes to review now, so that it can run once REG-19's queue has ended
+
+- **The owner's choice** (this session, about 16:55 UTC), answering whether to send E1 through rule F and the owner-proxy now so that it can run after REG-19: "Yes, prepare E1 (Recommended)".
+- **What it allows:** the agent sends `docs/drafts/e1_draft4.md` (about 2.1 GPU h, FILE(docs/drafts/e1_draft4.md:59)) to a rule F review and an owner-proxy pass. If both clear, it registers E1 as delegate, under the delegation's rules.
+- **What it does not allow:** E1 is not run before its [REG] entry is committed, and not while REG-19's queue holds the GPU. E1 changes no decision about a shock matrix, as its own draft says first (FILE(docs/drafts/e1_draft4.md:13)).
