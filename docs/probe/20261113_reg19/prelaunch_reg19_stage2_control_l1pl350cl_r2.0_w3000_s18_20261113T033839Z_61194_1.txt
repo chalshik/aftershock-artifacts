@@ -1,0 +1,14 @@
+# pre-launch read for stage2_control_l1pl350cl_r2.0_w3000_s18 attempt 2 (agent, read-only; scripts a4d46ce7689a15da46144e39170463e2ce860c98)
+2026-11-13T03:38:39+00:00
+power.limit [W], temperature.gpu, utilization.gpu [%], memory.used [MiB]
+350.00 W, 34, 0 %, 1 MiB
+# compute apps:
+# tree:
+a7bb77abc863adcaad9d4516815a5ddddf2908e9
+0
+# boot:
+7d11a297-2521-439b-84cd-a8d7b29fa8c7
+# free_kb:
+5591184
+# tmux:
+error connecting to /tmp/tmux-1000/default (No such file or directory)
