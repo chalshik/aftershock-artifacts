@@ -1,3 +1,4 @@
 # Run ids that exist only on the VM and are not yet copied to runs/ (tools/check_docs.py accepts them and says so).
 # Remove a line once the folder is in runs/ and in manifests/runs.sha256; check_docs fails if a listed id is already there.
 20261113-033842_stage2_control_l1pl350cl_r2.0_w3000_s18
+20261113-165516_stage2_control_l1pl350cl_r2.0_w3000_s18
