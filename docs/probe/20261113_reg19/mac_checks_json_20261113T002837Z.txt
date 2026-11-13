@@ -1,0 +1,7 @@
+# REG-19's run folders on the Mac: the fields `valid` and `failed` of each checks.json, nothing else (agent, read-only)
+20261112-050920_stage2_control_l1pl350cl_r2.0_w3000_s15 valid=True failed=[]
+20261112-073516_stage2_control_l1pl350cl_r2.0_w3000_s16 valid=True failed=[]
+20261112-103423_stage2_control_l1pl350cl_r2.0_w3000_s17 valid=True failed=[]
+20261112-061951_burst_l1pl350cl_r2.0_w3000_s15 valid=True failed=[]
+20261112-084533_burst_l1pl350cl_r2.0_w3000_s16 valid=True failed=[]
+20261112-135538_burst_l1pl350cl_r2.0_w3000_s17 valid=True failed=[]

@@ -1,0 +1,29 @@
+# REG-19 resume: read-only VM read before the decision (agent). No run file is opened: folder names, checks.json valid/failed, checksums.
+2026-11-13T00:28:38+00:00
+boot_id 7d11a297-2521-439b-84cd-a8d7b29fa8c7
+up_since 2026-11-12 19:47:31
+kernel 6.8.0-147-generic
+driver 595.99.02
+governor n/a
+limit 420.00 W
+apps 0
+tree a7bb77abc863adcaad9d4516815a5ddddf2908e9 dirty 0
+lock_blob 8b1c04b402b6741cf9c1837b060c4e39b64bbcff
+free_kb 5639776
+sudoers.d: README 
+tmux: error connecting to /tmp/tmux-1000/default (No such file or directory)
+pin_lock_blob 8b1c04b402b6741cf9c1837b060c4e39b64bbcff
+# what the VM holds for the four configs left (vm_state.py over ssh), and what decide() says:
+stage2_control_l1pl350cl_r2.0_w3000_s18: 1 folder(s)
+   20261112-151030_stage2_control_l1pl350cl_r2.0_w3000_s18 nochecks -
+   decide: rc 0 RID='' LAUNCH='2' MSG=''
+burst_l1pl350cl_r2.0_w3000_s18: 0 folder(s)
+   decide: rc 0 RID='' LAUNCH='1' MSG=''
+stage2_control_l1pl350cl_r2.0_w3000_s19: 0 folder(s)
+   decide: rc 0 RID='' LAUNCH='1' MSG=''
+burst_l1pl350cl_r2.0_w3000_s19: 0 folder(s)
+   decide: rc 0 RID='' LAUNCH='1' MSG=''
+# the lost folder: checksum of the sorted list of file checksums, VM and the Mac holding copy
+vm  files 9 sha-of-sums 8b6c4720032939de
+mac files 9 sha-of-sums 8b6c4720032939de  (/Users/chalshik/aftershock-backups/vm-holding/20261112-151030_stage2_control_l1pl350cl_r2.0_w3000_s18)
+file names on the VM: ./config.yaml ./env.json ./events.jsonl ./gpu.jsonl ./metrics.jsonl ./prompts.parquet ./requests.jsonl ./schedule.parquet ./server.log 
