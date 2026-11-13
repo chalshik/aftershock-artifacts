@@ -86,3 +86,4 @@ One block per work block: what was done, what was found, the commit.
 - Drafts: REG-21 15 (F1, H1), 16 (G1), 17 (J1–J3); REG-22 7. Commits `ab6988f`, `72d4884`.
 - Finding carried across: REG-22 had REG-21's H1 gap too ("REG-19's entry gives the time"); both now share one record rule.
 - Not done by choice: no code change for REG-22's optional 6/14 (stated as limits) or F1's code alternative; keeps code review closed.
+- 2026-11-13 12:00 UTC: saved rule F r12 (REG-21, NOT READY L1–L2), rule F r5 (REG-22, NOT READY R1–R4), proxy delta on REG-21 draft 19 (APPROVE P1–P3) in `9249115`. Wrote REG-21 draft 20 and REG-22 draft 11 with one record passage (v3), L1 taken over T3/R1, L2, P1–P3, R2–R4, T1, T2, T4, T6 and optional items (`346ee6c`). Four reviews sent.
