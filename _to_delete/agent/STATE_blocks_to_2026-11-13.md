@@ -1,4 +1,4 @@
-# agent/STATE.md blocks moved out on 2026-11-13 ≈ 13:10 UTC (superseded; history in git)
+# agent/STATE.md blocks moved out on 2026-11-13 ≈ 12:40 UTC (superseded; history in git)
 
 ## ⚠⚠ UPDATE 2026-11-13 05:15 UTC: the VM went off again (≈ 04:40 UTC), ~61 min into seed 18's control attempt 2
 

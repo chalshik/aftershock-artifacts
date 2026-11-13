@@ -4333,3 +4333,37 @@ Ends when the owner writes an entry ending it.
 - **Done (no run, no file of `runs/` read):** `agent/RUNBOOK.md` §3 carries a box at its head and its step 4 runs `zsh docs/probe/20261113_reg19/ops_r3/final.sh`, then a commit of the two `state/reg19_final_*` files alone; `agent/PLAN.md` row G1 says the same; `docs/probe/20261111_reg19/ops/RESUME.md` carries a note that it is superseded and its step 4 is not to be followed; `docs/status.md` carries the instruction above its REG-19 paragraphs.
 - **Not changed:** the older entry that names the same command by hand (FILE(docs/decisions.md:3818)) stays as written (append-only); this entry supersedes its instruction. `final.sh` itself does not commit; the commit stays a manual step, which the batch-2 [RESULT]s of REG-21 and REG-22 must cite.
 - **Checked:** `docs/probe/20261113_reg19/ops_r3/state/` holds no `reg19_final_*` file (file names listed only), and no session record of this agent shows a run of `analysis.gate reg19`.
+
+## 2026-11-13 · [DECISION] (owner) The agent's plan of 2026-11-13 is approved: REG-21 and REG-22 drop the "record" of REG-19's table for a freeze with no exception; stale documents are moved, not deleted; the VM-return kit and the zero-GPU queue are prepared
+
+- **Who decides:** the owner, in session on 2026-11-13 (≈ 12:30 UTC). The request was: "Plan next work, remove stale not used docs. And continue working regardless of vm or results, so when the vm is back we will proceed faster, making it ready". The owner then approved the agent's plan as written. The plan's text is kept as FILE(docs/drafts/plan_2026-11-13.md:1).
+- **What the plan fixes, in short:**
+  - **Step 1.** REG-21 and REG-22 replace the record of REG-19's table, its cut, the saving duty as a condition, the statements, the reflog rules and the reviewed exceptions with one rule. The judged code is frozen from each entry's commit, with no exception. Batch 2 is primary only if two git facts hold: the judged path is unchanged since the entry (or each hunk lies outside it), and the entry commit precedes the first `reg19_final_*` file. Looks at REG-19's runs are disclosed, not used as switches. The reason: the four latest reviews (FILE(docs/drafts/reviews-2026-11-13/rulef-reg21-draft22-r15.md:1), FILE(docs/drafts/reviews-2026-11-13/rulef-reg22-draft13-r8.md:1), FILE(docs/drafts/reviews-2026-11-13/proxy-reg21-draft22-delta.md:1), FILE(docs/drafts/reviews-2026-11-13/proxy-reg22-draft13-delta.md:1)) found the recorder's status lines inside the definition and proposed four fixes that do not agree. The new drafts still need rule F and an owner-proxy pass each.
+  - **Stop rule, fixed now.** Wording-only items are applied and the drafts registered. A hole in the two git facts is fixed once. A third round still NOT READY on batch 2 means batch 1 is registered alone and batch 2 is labelled retrospective by design.
+  - **Step 5.** Stale documents are moved to `_to_delete/` with `git mv`, never deleted. A file is moved only if no canonical doc names it and no review that a [REG] will quote cites it with a line number. The list is in `agent/FOR_AUTHOR.md`.
+  - **Steps 3–4.** The VM-return kit and the zero-GPU queue, in order: REG-23, the pinned-source answers, E1 and REG-20 scripts, small analyses (each with its own [REG]), [CORR]s for stale docs, and the preprint.
+- **What the owner did not decide here:** attempt 3 of seed 18's control, 350 W, the quiet-hours patch, the auto-commit in `final.sh`, and pushing `main`. Each stays open in FOR_AUTHOR (−7, −9, −10).
+- **Done so far under it (commits):**
+  - `cf28fec`: the four reviews, saved verbatim.
+  - `deb82e6`: 32 items moved to `_to_delete/`; RUNBOOK §3 rewritten; `vm_back_probe.zsh` moved into `agent/bin/`.
+  - `e062504`: REG-21 draft 23 and REG-22 draft 14, sent to review.
+  - `1cec713`: the VM-return kit (attempt-3 draft 2, the quiet-hours patch, sandbox 167/167 patched and 160/160 unpatched, and the end kit); STATE, PLAN and status brought up to date.
+  - `b105f0a`: REG-23 draft 4, sent to its first review.
+
+## 2026-11-13 · [DECISION] A6 answered and A5 narrowed from the pinned vLLM source; A20 (what the KV block histograms measure) added and answered
+
+- **Source:** the v0.32.0 tag tarball. Its sha256 is `bf592c132f27bbb5f65cff0bbd2ee873eae722b79c8286934fd5b5cf88b43d61`, equal to the one `docs/open-questions.md` names. It was re-read on the Mac on 2026-11-13 from a job folder's copy; the hash was checked first (PROBE: this session's `shasum -a 256`).
+- **A6 (does dev mode change speed):** answered from the source: no code path of a request that succeeds depends on it. It only registers routes and sets the error-stack logging default, and it is excluded from the compile-cache hash. The evidence is in the row. This narrows REG-21's alternative 3 and E1's dev-mode confound to "not tested on a live server and not confirmed against the VM's wheel"; it does not remove them.
+- **A5 (client vs server TTFT):** what the server's TTFT spans is now known. It runs from the renderer's `arrival_time` to the API server's receipt of the first output. The size of the gap still needs an analysis of existing runs with its own [REG] (task Z5a).
+- **A20 (new):** what the three KV block histograms measure.
+  - An "access" is a prefix hit.
+  - "Idle before evict" includes the time a block is held by its running request after its last hit.
+  - Every sampled block that is reallocated is counted, cached or not.
+  - The warm prediction in `agent/theory/k1_held_prefix.md` stays in its bucket, (60, 120] s (DERIVED in the row).
+  - REG-22's description of `c2.eviction_readout` ("records the time since its last access") is accurate. It does not say that "access" means a prefix hit; that wording can be sharpened if REG-22's review asks for a further draft. It is a reported readout, never judged.
+- **Not changed:** any run, config, threshold, test, claim or registered rule.
+
+## 2026-11-13 · [CORR] The agent's update of `agent/STATE.md` and `docs/status.md` in commit 1cec713 gave its time as "≈ 13:10 UTC"; it was about 12:40 UTC
+
+- The clock read 12:45 UTC when the next entry was written (`date -u`), so the earlier time was a guess. The agent's error: it estimated the time instead of reading the clock.
+- Corrected in both files, and in the header of `_to_delete/agent/STATE_blocks_to_2026-11-13.md`. No other content changed.
