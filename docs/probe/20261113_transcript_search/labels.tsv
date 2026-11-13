@@ -12,6 +12,9 @@
 #   false_positive         the matched text is not a read or a run (a grep pattern, a docstring, a loop over another folder)
 #   denied_never_ran       the tool call was denied, so nothing ran
 #   before_reg19_folders   (`ran` lines) before 2026-11-12 05:09:20 UTC, when the first REG-19 folder was made
+#   no_read                the input reads no run folder, no harness log or terminal pane of a run, and no note that quotes a run's lines; the note says what it does (owner-proxy on REG-22 draft 17, CH8)
+#   names_or_validity      (hand) names, and `valid`/`failed` only (common.sh:36's allowed reads); the note says which
+#   disclosed[CG5]         the 15:32:08 grep of the local context pack that REG-22 draft 18 discloses (rule F round 12, CG5)
 # --- records
 d4d16c2c-4433-4cad-bc86-8353baa26906.jsonl:1160	disclosed(ix)	runs/20261112*: file counts and checks.json valid (d4d16c2c at 10:30); `rsync` only inside a `ps | grep` pattern
 fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:120	disclosed(ix)	runs/*w3000*: file counts and checks.json valid (fdf13821 at 13:58)
@@ -85,3 +88,82 @@ fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2209	config_only	modelf_sim and k3 on
 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:12905	synthetic	REG-20 ops tests: test_sandbox.sh in a temp sandbox with fake ssh; test_control_due.py points load.RUNS at a temp folder and replaces load_run (docs/probe/20261113_reg20/ops/test_control_due.py lines 66-84)
 9aa8df0a-c677-484b-82aa-84c912041bf0.jsonl:1054	synthetic	rule F round 18's synthetic transcript (fake_tr in its scratchpad) for classify2: the commands are strings written to a fake jsonl, never run
 9e78b552-a745-40e5-9ea2-0b5792760e90.jsonl:652	false_positive	reg20-ops-writer greps for the text 'uv run python -m analysis.k1 reg20' in docs/probe/20261113_reg20/ops/final.sh
+d4d16c2c-4433-4cad-bc86-8353baa26906.jsonl:91	no_read	reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note; greps decisions.md and experiment-plan.md
+bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10088	no_read	copies a prelaunch record (the pre-launch GPU and tree read, written before the run) and lists the probe folder
+bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10096	names_only	on the VM: date, tmux ls, git log and the newest folder name in runs/ (`ls -t runs | head -1`); four lines of a prelaunch record
+bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10235	names_or_validity	the session that ran the queue: queue_reg19c.sh's own output (task bawk3gle3: QUEUE, RUN <id> VALID, COPIED and continue lines) and the last 5 lines of launch5.sh's output for seed 17's burst run, which holds only the harness's run_id line, LAUNCHED, DONE and the harness's checks event with `valid` and `failed` (FILE(docs/probe/20261111_reg19/ops/launch5.sh:32), FILE(docs/probe/20261111_reg19/ops/launch5.sh:40); harness/run.py:208 at a7bb77a), all within common.sh:36's allowed reads; git
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:126	names_only	two prelaunch records and `ls runs | tail -3` (folder names)
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:179	no_read	reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:419	no_read	writes REG-20's configs and loads them with load_config; reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-aae674a08e06ab588.jsonl:25	no_read	tests/test_k1.py and reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:678	no_read	writes the drift config; pytest tests/test_k1.py (synthetic runs)
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:740	no_read	appends REG-20's [REG] text to decisions.md
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:1476	no_read	git diff, ls of configs, pytest tests/test_k1.py (synthetic runs)
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:1481	no_read	git commit of REG-20's code and configs
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:1554	no_read	reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:1691	no_read	prelaunch records and the probe folder's listing
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:1704	no_read	a prelaunch record and git
+bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10332	no_read	git diff of code and configs against the pin
+bc2fcf6d-b7b6-45b7-9398-2cecb62afb9a.jsonl:10356	no_read	the configs' extends chain and gate.py's imports
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad2f35320582754b4.jsonl:65	no_read	reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:3905	no_read	writes the context pack's brief
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:3958	no_read	writes the pack's header; copies status.md, definitions.md and open-questions.md
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a2058e8f5d4c1fd10.jsonl:79	no_read	reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:260	no_read	decisions.md lines and the drift config
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a2058e8f5d4c1fd10.jsonl:341	no_read	reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a625ca98c29ea904b.jsonl:316	disclosed(i)	runs _gen6.py (written at line 304 of the same transcript), which copies the lines its template names into s6.md and prints only counts; the template names docs/probe/20261111_reg19/ops/RESUME.md lines 1-34 and 8 (the note) besides decisions.md, status.md, claims.md and two drafts: a whole copy of the note at 18:07:10 UTC, after the window 17:58-18:04 the drafts give
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a625ca98c29ea904b.jsonl:328	disclosed(i)	greps s6.md, which holds the note RESUME.md whole (line 316), for lines naming a REG-19 run (w3000_s1[5-9]) together with hit, verdict, stuck or pass_clear, and prints them (cut at 200 characters): a print of the note's lines; output not opened
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl:508	disclosed(x)	the subagent that ran s57_inv.py (read (x)) joins its sections 5-7 and prints every line naming w3000 (cut at 160 characters): the inventory rows of REG-19 folders (names, config fields, `valid`, `failed`), whose `ok` and `unfinished` it had blanked at 17:59:48 (PROBE(docs/probe/20261113_transcript_search/inputs_s57_inv.txt), line 43); output not opened
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:711	synthetic	writes tests/test_withheld.py (REG-19 names in a test list) and runs it on synthetic folders
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:753	names_or_validity	check_docs reads only `valid` of each run's checks.json (FILE(tools/check_docs.py:46)); otherwise appends the A17 decisions entry
+4e055435-8eb9-470c-b0b4-3d021db3c5eb.jsonl:117	no_read	git: configs changed since the pin, gate.py's imports at the pin, pyproject
+41a5ee70-4e70-4e1c-94cf-d6b57d73f40b.jsonl:167	no_read	imports in the pin worktree, prints module paths, load.RUNS's path and reg19_order(), which reads the configs' planned schedules (gate.py:1822 at a7bb77a); tests that the configs exist
+41a5ee70-4e70-4e1c-94cf-d6b57d73f40b.jsonl:211	no_read	stat and git diff of code and config files
+6fcabc3d-6cf3-4832-9ab0-49f11bf5dea2.jsonl:118	no_read	reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note
+6fcabc3d-6cf3-4832-9ab0-49f11bf5dea2.jsonl:133	no_read	a script that loads configs with load_config; reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note
+7807bac0-fd6d-4170-ad93-1fb8e68653a0.jsonl:81	no_read	reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note; load_config's source
+7807bac0-fd6d-4170-ad93-1fb8e68653a0.jsonl:100	no_read	loads configs; pytest tests/test_k3w.py (synthetic runs)
+7807bac0-fd6d-4170-ad93-1fb8e68653a0.jsonl:137	synthetic	s3_code.py sets load.RUNS to /nonexistent-reviewer-guard before any read; names REG-19's config path only
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1490	no_read	reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note; gate.py's function names
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:1948	synthetic	writes and runs the REG-19 ops sandbox (fake ssh, no run folder)
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-aeadab8b31a485d50.jsonl:62	no_read	reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2336	no_read	writes ops_r3's common.sh and vm_state.py
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2360	no_read	writes queue.sh, final.sh and an attempt record; syntax checks
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2630	names_or_validity	check_docs reads only `valid` of each run's checks.json (FILE(tools/check_docs.py:46)); otherwise appends the interim-look [OPS] entry; lists the probe folder
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a2a5c2cef92be27bd.jsonl:186	names_only	folder names in manifests/runs.sha256 at two commits
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a166134e23638f9ea.jsonl:108	no_read	reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a6a8a3241c8c5e416.jsonl:199	no_read	configs in the pin worktree and its .gitignore
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a6a8a3241c8c5e416.jsonl:203	no_read	prelaunch records (pin and power lines)
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a6a8a3241c8c5e416.jsonl:215	synthetic	writes a sandbox test script (fake configs named echo x)
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-ad7f6f660bfdeb54d.jsonl:162	no_read	load_config on configs; reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a6a8a3241c8c5e416.jsonl:241	synthetic	runs its sandbox test cases
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a5f4a6d2ba3957cd7.jsonl:165	names_only	journal greps in docs/probe, folder names in the manifest at 5ee6e38, commit times
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:3795	no_read	git diff of STATE.md, the vm_down probe and the agent's own attempt record
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1a83befb82fcfd8a.jsonl:84	no_read	reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a4ca1db0b695fabcf.jsonl:266	no_read	reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:4209	names_or_validity	check_docs reads only `valid` of each run's checks.json (FILE(tools/check_docs.py:46)); otherwise ops_r3 launch.sh's own status lines (LAUNCHED, DONE, VM NOT REACHABLE, STOP; launch.sh writes no harness line to its output, FILE(docs/probe/20261113_reg19/ops_r3/launch.sh:60)), a prelaunch record's line count, an [OPS] entry and a commit
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:4243	names_or_validity	check_docs reads only `valid` of each run's checks.json (FILE(tools/check_docs.py:46)); otherwise pending_copy.txt
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:4249	names_or_validity	check_docs reads only `valid` of each run's checks.json (FILE(tools/check_docs.py:46)); otherwise a [CORR] entry and a commit
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0fd29b2b40338bb5.jsonl:106	no_read	reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a43b6d3c375ffd53e.jsonl:174	no_read	decisions.md lines and reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a1bce48befd9127b9.jsonl:103	no_read	config names, gate.py lines, git
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a0adfd0cddd98f5fb.jsonl:234	no_read	the configs' extends chain in a snapshot; git
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a6dd9dd5f66fbc950.jsonl:104	no_read	git: first commits of configs and code
+7e4037cf-0cb0-45cf-a04c-e3f4f20c18c9.jsonl:130	no_read	reads only configs/ files (a run's inputs, written before it) and code or docs; no run folder, log or note
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:9580	no_read	writes the lost_ok record and the owner's attempt-3 entry
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:9857	disclosed[CG5]	the 15:32:08 grep of w3000_s17 in the local context pack (docs/paper/), which REG-22 draft 18 discloses (rule F round 12, CG5) and REG-21 draft 27 lists; output not opened
+f30c3b59-c857-4711-92a8-b6199e1ade7f.jsonl:142	no_read	a search of transcripts' tool-call inputs only
+f30c3b59-c857-4711-92a8-b6199e1ade7f.jsonl:184	no_read	a search of transcripts' tool-call inputs only
+6cf5f627-7b92-40fe-963d-9bfdc272be0a.jsonl:278	no_read	counts transcripts' tool-call inputs only
+9e78b552-a745-40e5-9ea2-0b5792760e90.jsonl:173	no_read	REG-20 configs at 1cface7
+9e78b552-a745-40e5-9ea2-0b5792760e90.jsonl:196	no_read	REG-19 configs at 1cface7 and harness/config.py
+9e78b552-a745-40e5-9ea2-0b5792760e90.jsonl:290	no_read	copies vm_state.py for REG-20 and computes durations from configs at 1cface7
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11392	names_only	`ls runs | grep w3000_s1[5-9]` (folder names) and counts of a transcript-search output
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a2ff7c457dcd06dbf.jsonl:32	no_read	prints transcripts' tool-call inputs only
+ec10bb1b-c4d6-4df7-ab43-624a9ba257bb.jsonl:148	no_read	checks draft texts for strings
+353762fb-0527-49f6-9a2c-1db84d1c97b0.jsonl:271	names_only	folder names in runs/ and in the pin worktree's runs/
+ec10bb1b-c4d6-4df7-ab43-624a9ba257bb.jsonl:714	no_read	reads a transcript-search output (inputs only)
+9aa8df0a-c677-484b-82aa-84c912041bf0.jsonl:698	no_read	load_config of seed 17's burst config
+9aa8df0a-c677-484b-82aa-84c912041bf0.jsonl:711	no_read	load_config of seed 17's burst config
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:12539	no_read	appends the [CORR] on seed 17's reads
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:13267	no_read	pending_copy.txt and an entry; context_pack

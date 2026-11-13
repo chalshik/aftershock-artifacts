@@ -29,6 +29,7 @@ Each item of round 4 the agent applied, the line of its anchor in draft 17 and t
 | CG10 | 80 | 80 |
 | CG12 | 93 | 93 |
 | Seed 18 (agent) | 79 | 79 |
+| Note copied at 18:07 (agent) | 80 | 80 |
 | Header | 3 | 3 |
 | Header reviews | 4 | 4 |
 

@@ -31,6 +31,8 @@ Each item of round 4 the agent applied, the line of its anchor in draft 26 and t
 | CG1 trace step 5 (duty) | 104 | 104 |
 | CG3 (REG-22 r12) cross-applied | new (after an earlier item) | 54 |
 | Seed 18's continue flag (agent) | 54 | 54 |
+| Note copied at 18:07 (agent) | 54 | 54 |
+| CG5 cross-applied (agent) | 54 | 54 |
 | CF6 | 124 | 124 |
 | CF7 | 284 | 433 |
 | Header | 3 | 3 |
