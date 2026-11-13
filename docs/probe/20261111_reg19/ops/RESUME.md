@@ -1,5 +1,7 @@
 # REG-19: how to resume (written 2026-11-12 ~16:00 UTC, after the VM went off)
 
+> **Superseded (note added 2026-11-13 11:40 UTC).** REG-19 resumes by the owner's [DECISION] of 2026-11-13 with `docs/probe/20261113_reg19/ops_r3/`. REG-19's table is computed only by `ops_r3/final.sh`, and its two `state/reg19_final_*` files are committed at once, alone (the record REG-21 and REG-22 rest on; `agent/RUNBOOK.md` §3). Step 4 below (`analysis.gate reg19` by hand) is not to be followed.
+
 ## State
 - Done, valid, copied to the Mac with matching checksums, manifest updated (not yet committed):
   - seed 15: `20261112-050920_stage2_control_l1pl350cl_r2.0_w3000_s15`, `20261112-061951_burst_l1pl350cl_r2.0_w3000_s15`

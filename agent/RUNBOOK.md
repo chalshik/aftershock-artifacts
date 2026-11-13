@@ -31,6 +31,8 @@ No root command other than `sudo -n nvidia-smi -pl 350`. No `git pull` on the VM
 
 ## 3. REG-19, seeds 18 and 19 (blocked until the resume decision is approved)
 
+> **⚠ Superseded in part (2026-11-13 11:40 UTC).** REG-19 resumes only by the owner's [DECISION] of 2026-11-13 and the scripts in `docs/probe/20261113_reg19/ops_r3/` (`queue.sh`, `final.sh`); `launch7.sh` and `queue_reg19e.sh` below are earlier drafts. **REG-19's table is computed only by `zsh docs/probe/20261113_reg19/ops_r3/final.sh`**, never by hand, never mid-matrix, never to a terminal: any output of `reg19_table()` or of `reg19_pair` for a REG-19 seed is "REG-19's table" for REG-21 and REG-22 (drafts 19 and 10), and the first one must be saved under its start stamp (`final.sh` does this, in `ops_r3/state/`) and **its two files committed at once, alone** (`git add docs/probe/20261113_reg19/ops_r3/state/reg19_final_<stamp>.txt docs/probe/20261113_reg19/ops_r3/state/reg19_final_err_<stamp>.txt && git commit -m "[OPS] REG-19 table record <stamp>"`). An unsaved first run means no record, and both registrations' batch 2 is lost. The old step 4 (output to `reg19_table.txt`, no stamp) did exactly that and is struck out (REG-22 owner-proxy, T5, FILE(docs/drafts/reviews-2026-11-13/proxy-reg22-draft10-delta.md)).
+
 Decision draft: `docs/drafts/reg19_resume_decision_draft1.md`. Scripts: `docs/probe/20261113_reg19/ops/launch7.sh`, `queue_reg19e.sh`. Worktree at `a7bb77a`: `/Users/chalshik/Projects/aftershock-reg19-pin` (run folders linked into its `runs/`).
 
 1. VM stays at `a7bb77a`; do **not** push or pull.
@@ -40,8 +42,7 @@ Decision draft: `docs/drafts/reg19_resume_decision_draft1.md`. Scripts: `docs/pr
    - invalid run: read its `checks.json` only; rerun unchanged if the registration's stopping rule allows (at most twice per run; heat once after cooling); `client_error`, a burst that did not fill the pool, a wrong limit: the queue stays stopped;
    - VM off: record a partial matrix, never pool it, wait for the watcher;
    - `sudo -n` failed: FOR_AUTHOR, no run.
-4. After `QUEUE DONE` or `QUEUE END`: once, from the worktree,
-   `cd /Users/chalshik/Projects/aftershock-reg19-pin && /Users/chalshik/Projects/aftershock-artifacts/.venv/bin/python -m analysis.gate reg19 > /Users/chalshik/Projects/aftershock-artifacts/docs/probe/20261113_reg19/reg19_table.txt`
+4. After `QUEUE DONE` or `QUEUE END futility stop`: once, `zsh docs/probe/20261113_reg19/ops_r3/final.sh` from the repo root (it checks the step records, rechecks validity, stamps, and saves stdout and stderr in `ops_r3/state/`); then **at once, before any other commit**, commit those two files alone (the box above). ~~Old step: `python -m analysis.gate reg19 > docs/probe/20261113_reg19/reg19_table.txt` from the worktree~~ (struck: no stamp, outside `state/`; it would leave REG-21 and REG-22 without a record).
 5. Then, in this order: the [OPS] entry (the four queue stops of 2026-11-12 from RESUME.md, the interim look it records, this session's stops, per-run launch reads); the [RESULT] (k of n, bound, `k_18`, the registered wording; alternatives; the decision taken from `agent/DECISION_TREE.md`); `docs/model.md` ledger row 24; `docs/status.md`; `docs/claims.md` status lines; `python3 tools/context_pack.py`; `python3 tools/check_docs.py`; commit (manifest, probes, entries).
 6. After the [RESULT]: copy the lost seed-18 folder from the VM (`rsync`, checksum, `tools/manifest.py update`, status.md "No checks" list); then deploy HEAD (§4); then `uv run python -m analysis.recheck '*_w3000_s1[5-9]'` and report it beside the result.
 

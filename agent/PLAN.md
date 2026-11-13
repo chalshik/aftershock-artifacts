@@ -53,7 +53,7 @@ Value rule: information for the paper per hour. Re-plan GPU order only through `
 
 | ID | Goal | Registered? | GPU h | Status |
 |---|---|---|---|---|
-| G1 | REG-19: seed 18 control (attempt 2), seed 18 burst, seed 19 pair; then `analysis.gate reg19` once, [OPS], [RESULT] | yes, owner-approved 2026-11-11; resume needs Z6b | 4.7–4.9 | blocked (VM off, Z6b) |
+| G1 | REG-19: seed 18 control (attempt 2), seed 18 burst, seed 19 pair; then `ops_r3/final.sh` once (never `analysis.gate reg19` by hand), its two `state/reg19_final_*` files committed at once and alone (the record of REG-21/REG-22), [OPS], [RESULT] | yes, owner-approved 2026-11-11; resume needs Z6b | 4.7–4.9 | blocked (VM off, Z6b) |
 | G2 | REG-20 gate once; arm A if it passes; arm B only after `supports` | yes, owner-approved 2026-11-12 | 6.4–7.4 (A), 3.2–3.7 (B), conditional | blocked (G1) |
 | G3 | REG-21 batch 2 | no (Z1) | 0 | blocked (G1, Z1) |
 | G4 | E1, then E2; E3 only if E0's gate passes | no (Z2c) | 2.1, 4.2; E3 8–12 | blocked (Z2c) |
