@@ -184,7 +184,9 @@ def condition4(run: dict, with_readouts: bool = True) -> dict:
         label = "loop" if su["ok"] else "not_sustained"
     out = {"run": run["dir"].name, "baseline": base, "levels": lv, "sustain": su, "label": label}
     if with_readouts:
-        for key, f in (("onsets", lambda: onsets(run, base)), ("evictions", lambda: eviction_readout(run)),
+        for key, f in (("onsets", lambda: onsets(run, base)),
+                       ("onset_reading", lambda: onset_reading(run, base, out["onsets"])),
+                       ("planned", lambda: planned_rates(run, su)), ("evictions", lambda: eviction_readout(run)),
                        ("control", lambda: control_readout(run, su)), ("rows", lambda: row_counts(run))):
             try:
                 out[key] = f()
@@ -215,12 +217,15 @@ def _buckets(values: dict, name: str) -> dict[float, float]:
 def histogram_delta(metrics_jsonl, name: str, a: float, b: float) -> dict:
     """What a sampled residency histogram gained in [a, b): from the first scrape at or after a to the last before b
     (raw metrics.jsonl; `load.metrics_wide` drops the buckets). Returns the count, the upper edge of the bucket that
-    holds the median, and the shares at or below 5 s (the mean turn gap) and 30 s. NaN where nothing was sampled.
+    holds the median (and its lower edge), and the shares at or below 5 s (the mean turn gap) and 30 s. NaN where
+    nothing was sampled. A bucket lower than at the scrape before, at any scrape of the window, is a restart: the
+    window is flagged `reset` and not read.
     SOURCE(vLLM 0.32.0 v1/core/kv_cache_metrics.py:KVCacheMetricsCollector.on_block_evicted): for a sampled block
     `idle` is the time from its last access (its allocation, or a later cache hit) to its eviction, so it includes
     the time the block was held by the request that computed it; `reuse_gap` is the time between two cache hits."""
     import json
     first = last = None
+    went_down = False
     with open(metrics_jsonl) as f:
         for line in f:
             if not line.strip():
@@ -230,21 +235,26 @@ def histogram_delta(metrics_jsonl, name: str, a: float, b: float) -> dict:
                 continue
             if s["t"] >= b:
                 break
+            cur = _buckets(s["values"], name)
             if first is None:
-                first = _buckets(s["values"], name)
-            last = _buckets(s["values"], name)
-    nan = {"count": 0.0, "median_le_s": math.nan, "share_le_5s": math.nan, "share_le_30s": math.nan}
+                first = cur
+            elif any(v < last.get(e, 0.0) for e, v in cur.items()):   # any bucket lower than at the scrape before
+                went_down = True
+            last = cur
+    nan = {"count": 0.0, "median_le_s": math.nan, "median_gt_s": math.nan, "share_le_5s": math.nan,
+           "share_le_30s": math.nan}
     if not first or not last:
         return nan
     d = {e: last.get(e, 0.0) - first.get(e, 0.0) for e in sorted(last)}
     total = d.get(math.inf, 0.0)
-    if any(v < 0 for v in d.values()):                    # a counter went down: a restart inside the window
+    if went_down or any(v < 0 for v in d.values()):       # a counter went down: a restart inside the window
         return {**nan, "reset": True}
     if total <= 0:                                         # nothing sampled
         return nan
-    med = next(e for e in sorted(d) if d[e] >= total / 2)
-    return {"count": total, "median_le_s": med, "share_le_5s": d.get(5.0, math.nan) / total,
-            "share_le_30s": d.get(30.0, math.nan) / total}
+    edges = sorted(d)
+    i = next(j for j, e in enumerate(edges) if d[e] >= total / 2)
+    return {"count": total, "median_le_s": edges[i], "median_gt_s": edges[i - 1] if i else 0.0,
+            "share_le_5s": d.get(5.0, math.nan) / total, "share_le_30s": d.get(30.0, math.nan) / total}
 
 
 def turn_spacing(run: dict, a: float, b: float) -> float:
@@ -294,9 +304,79 @@ def control_readout(run: dict, su: dict) -> dict:
         return {"why": f"{len(got)} valid runs of {cname}"}
     c, w = got[0], windows(run)
     base = baseline(c, w["base"])
-    spans = [links(c, *r["span"], base) for r in su["spans"] if r["judged"]]
+    judged = [r["span"] for r in su["spans"] if r["judged"]]
+    spans = [links(c, *s, base) for s in judged]
+    # Also against the burst run's own baseline: a control already cold or large in [base) cannot double its own
+    # baseline, so its own-baseline links would say "no loop" for a state the load alone made (rule F round 2).
+    spans_vs_burst = [links(c, *s, baseline(run)) for s in judged]
     return {"run": c["dir"].name, "verdict": verdict(c)["verdict"], "baseline": base,
-            "spans": spans, "links_hold_in_every_span": bool(spans) and all(s["holds"] is True for s in spans)}
+            "spans": spans, "links_hold_in_every_span": all(s["holds"] is True for s in spans) if spans else None,
+            "links_hold_in_no_span": all(s["holds"] is False for s in spans) if spans else None,
+            "spans_vs_burst_baseline": spans_vs_burst,
+            "links_hold_in_every_span_vs_burst_baseline":
+                all(s["holds"] is True for s in spans_vs_burst) if spans_vs_burst else None}
+
+
+# ------------------------------------------- reported only, added in REG-22 draft 5 (owner-proxy round 1, items 3a-3h)
+
+PLAN_ORDER = ("reuse", "u", "n", "kv")   # docs/experiment-plan.md, "Watch it happen", items 1 to 4
+
+
+def planned_rates(run: dict, su: dict) -> list[dict]:
+    """Reported only: each span's planned session rate (`gate.planned_session_rate`), to stand beside a link that
+    failed in a span planned below the cold completion rate."""
+    from analysis.gate import planned_session_rate
+    return [{"span": r["span"], "lam_p": planned_session_rate(run, *r["span"])} for r in su["spans"]]
+
+
+def onset_reading(run: dict, base: dict, on: dict) -> dict:
+    """Reported, never judged: is the order of the onsets the plan's beyond what the trailing window does by itself?
+    For a step at one instant from `before` (the baseline value) to `after` (the end-window value), a trailing roll_s
+    mean crosses the onset's level lag = roll_s x (level - before) / (after - before) seconds after the step; onset
+    minus lag is the step time the onset implies. For every pair x, y with x before y in the plan's order: `plan` if
+    y's implied step is more than step_s (the onsets' grid) after x's, `reversed` if more than step_s before, else
+    `together`. The run's reading: `incomplete` if a signal has no onset or no lag (its end value does not pass its
+    level); else `differs` if a pair is `reversed`; `plan_order_beyond_lags` if every pair is `plan`; otherwise
+    `not_distinguishable_from_simultaneous`. A ramp crosses with another lag; that is not modelled."""
+    a, b = windows(run)["end_window"]
+    drop = float(run["cfg"]["verdict"]["stuck_hit_drop"])
+    after = {"reuse": reuse_in(later_turns(run), a, b, C2["min_turns"]), "u": session_uncached_rate(run, a, b),
+             "n": gauge(run, N, a, b), "kv": gauge(run, KV, a, b)}
+    level = {"reuse": base["reuse"] - drop, "u": C2["u_factor"] * base["u"], "n": C2["n_factor"] * base["n"],
+             "kv": C2["kv_onset"]}
+    lag, step = {}, {}
+    for k in PLAN_ORDER:
+        d = after[k] - base[k]
+        f = (level[k] - base[k]) / d if (d and not math.isnan(d)) else math.nan
+        lag[k] = C2["roll_s"] * f if 0 < f <= 1 else math.nan            # a NaN comparison is False
+        step[k] = float(on[k]) - lag[k]
+    pairs = []
+    for i, x in enumerate(PLAN_ORDER):
+        for y in PLAN_ORDER[i + 1:]:
+            dt = step[y] - step[x]
+            pairs.append({"pair": (x, y), "dt_s": dt, "reading": None if math.isnan(dt) else
+                          ("plan" if dt > C2["step_s"] else "reversed" if dt < -C2["step_s"] else "together")})
+    rs = [p["reading"] for p in pairs]
+    reading = ("incomplete" if None in rs else "differs" if "reversed" in rs else
+               "plan_order_beyond_lags" if all(r == "plan" for r in rs) else "not_distinguishable_from_simultaneous")
+    return {"plan_order": list(PLAN_ORDER), "found_order": on.get("order"), "after": after, "level": level,
+            "lag_s": lag, "implied_step_s": step, "pairs": pairs, "reading": reading}
+
+
+def reported_counts(table: dict) -> dict:
+    """Reported, never judged, from `reg22_table`'s rows: per load, how many `loop` runs have a same-seed control that
+    is `recovered` and holds the four links in none of the burst run's judged spans; over the stuck runs, the tally of
+    `onset_reading`'s readings (a readout that raised counts as `error`). A tally, no bound."""
+    per: dict[str, dict] = {}
+    for r in table["rows"]:
+        g = per.setdefault(f"{r['lam']:.1f}", {"loop": 0, "loop_with_recovered_control_holding_no_link_set": 0})
+        if r["label"] == "loop":
+            g["loop"] += 1
+            c = r.get("control") or {}
+            if c.get("verdict") == "recovered" and c.get("links_hold_in_no_span") is True:
+                g["loop_with_recovered_control_holding_no_link_set"] += 1
+    readings = [(r.get("onset_reading") or {}).get("reading", "error") for r in table["rows"]]
+    return {"by_load": per, "onset_readings": {k: readings.count(k) for k in sorted(set(readings))}}
 
 
 REG22 = {
@@ -359,6 +439,7 @@ if __name__ == "__main__":
         from analysis.k3w import _dirty
         if _dirty():
             raise SystemExit("analysis/ or tests/ holds modified or untracked files; REG-22 runs from committed code:\n" + _dirty())
-        print(json.dumps(reg22_table(int(sys.argv[2]) if len(sys.argv) == 3 else 1), indent=1, default=str))
+        table = reg22_table(int(sys.argv[2]) if len(sys.argv) == 3 else 1)
+        print(json.dumps({**table, "reported": reported_counts(table)}, indent=1, default=str))
     else:
         raise SystemExit("usage: python -m analysis.c2 reg22 [1|2]")

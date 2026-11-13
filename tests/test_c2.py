@@ -256,3 +256,78 @@ def test_a_long_watch_has_fourteen_judged_spans():
     w = C.windows({"cfg": cfg})
     assert w["watch_end"] == 5580.0 and w["end_window"] == (4980.0, 5580.0)
     assert len(np.arange(w["end"], w["watch_end"] - 1e-9, C.C2["span_s"])) == 15   # 15 spans, 14 after an exit by 1380 s
+
+
+# ---- reported-only readouts added in REG-22 draft 5 (owner-proxy round 1, items 3a, 3e, 3h)
+
+def test_onset_reading_steps_at_one_instant_are_not_distinguishable_from_simultaneous():
+    r = C.condition4(fake_run(cold_from=1000.0, kv_from=1000.0, n_from=1000.0))
+    o = r["onset_reading"]
+    assert o["reading"] == "not_distinguishable_from_simultaneous" and o["plan_order"] == ["reuse", "u", "n", "kv"]
+    assert o["lag_s"]["kv"] == pytest.approx(60 * 0.6 / 0.65)                # (0.9 - 0.3) / (0.95 - 0.3) of the window
+    assert o["lag_s"]["reuse"] == pytest.approx(60 * 0.06)                    # baseline reuse 1.0, end 0.0
+    assert all(abs(s - 1000.0) <= 10.0 for s in o["implied_step_s"].values())  # every implied step near the true one
+
+
+def test_onset_reading_a_batch_that_grows_first_differs_from_the_plan():
+    o = C.condition4(fake_run())["onset_reading"]                             # N steps at 940, KV at 960, cache at 1000
+    assert o["reading"] == "differs"
+    assert {p["pair"]: p["reading"] for p in o["pairs"]}[("u", "n")] == "reversed"
+
+
+def test_onset_reading_plan_order_missing_onset_and_a_level_never_reached():
+    run = fake_run(cold_from=1000.0, kv_from=1000.0, n_from=1000.0)
+    base = C.baseline(run)
+    plan = C.onset_reading(run, base, {"reuse": 1010.0, "u": 1040.0, "n": 1080.0, "kv": 1200.0, "order": []})
+    assert plan["reading"] == "plan_order_beyond_lags"
+    assert C.onset_reading(run, base, {"reuse": 1010.0, "u": 1040.0, "n": 1080.0, "kv": math.nan})["reading"] == "incomplete"
+    low = fake_run(kv_cold=0.85)                                              # the pool never reaches the 0.9 onset level
+    assert math.isnan(C.onset_reading(low, C.baseline(low), {"reuse": 1., "u": 1., "n": 1., "kv": 1.})["lag_s"]["kv"])
+
+
+def test_planned_rates_are_given_for_every_span():
+    r = C.condition4(fake_run())
+    assert len(r["planned"]) == 5 and all(p["lam_p"] == pytest.approx(2.0) for p in r["planned"])   # one turn per 0.5 s
+
+
+def test_reported_counts_and_a_control_that_holds_no_link(monkeypatch):
+    burst = _named("20261110-000000_burst_l1pl350cl_r2.0_s2")
+    burst["cfg"]["name"] = "burst_l1pl350cl_r2.0_s2"
+    control = _named("20261110-000000_stage2_control_l1pl350cl_r2.0_s2", cold_from=1e9, kv_from=1e9, n_from=1e9)
+    monkeypatch.setattr(C, "find_runs", lambda pattern: [control] if pattern == "*_stage2_control_l1pl350cl_r2.0_s2" else [])
+    monkeypatch.setattr(C, "verdict", lambda run: {"verdict": "recovered"})
+    c = C.control_readout(burst, C.sustain(burst))
+    assert c["links_hold_in_no_span"] is True and c["links_hold_in_every_span"] is False
+    rows = [{**C.condition4(burst), "lam": 2.0}, {"label": "loop", "lam": 2.0, "control": {"why": "no control"}},
+            {"label": "not_sustained", "lam": 2.4, "onset_reading": {"error": "x"}}]
+    rc = C.reported_counts({"rows": rows})
+    assert rc["by_load"]["2.0"] == {"loop": 2, "loop_with_recovered_control_holding_no_link_set": 1}
+    assert rc["by_load"]["2.4"]["loop"] == 0
+    assert rc["onset_readings"] == {"differs": 1, "error": 2}
+
+
+def test_histogram_delta_flags_a_restart_whose_counts_climb_past_their_start(tmp_path):
+    f = tmp_path / "metrics.jsonl"
+    f.write_text("\n".join([
+        _scrape(0.0, {"5.0": 0, "30.0": 500, "120.0": 1000, "+Inf": 1000}),
+        _scrape(100.0, {"5.0": 0, "30.0": 0, "120.0": 0, "+Inf": 0}),            # the server restarted
+        _scrape(200.0, {"5.0": 10, "30.0": 900, "120.0": 1800, "+Inf": 1800}),    # and gained past the start
+    ]) + "\n")
+    h = C.histogram_delta(f, C.HIST["idle"], 0.0, 201.0)
+    assert h.get("reset") is True and h["count"] == 0.0 and math.isnan(h["median_le_s"])
+    g = C.histogram_delta(f, C.HIST["idle"], 100.0, 201.0)                      # after the restart: read
+    assert g["count"] == 1800 and g["median_le_s"] == 30.0 and g["median_gt_s"] == 5.0     # 900 of 1800 by 30 s
+
+
+def test_control_readout_against_the_burst_runs_baseline_and_with_no_judged_span(monkeypatch):
+    burst = _named("20261110-000000_burst_l1pl350cl_r2.0_s2")
+    burst["cfg"]["name"] = "burst_l1pl350cl_r2.0_s2"
+    # a control that the load alone made cold and full before the end of its baseline window (at 500 s)
+    control = _named("20261110-000000_stage2_control_l1pl350cl_r2.0_s2", cold_from=500.0, kv_from=500.0, n_from=500.0)
+    monkeypatch.setattr(C, "find_runs", lambda pattern: [control] if pattern == "*_stage2_control_l1pl350cl_r2.0_s2" else [])
+    monkeypatch.setattr(C, "verdict", lambda run: {"verdict": "stuck"})
+    c = C.control_readout(burst, C.sustain(burst))
+    assert c["links_hold_in_every_span"] is False                     # against its own, already cold baseline
+    assert c["links_hold_in_every_span_vs_burst_baseline"] is True     # against the burst run's warm baseline
+    gone = C.control_readout(burst, C.sustain(_named("x", burst_unfinished=True)))
+    assert gone["spans"] == [] and gone["links_hold_in_every_span"] is None and gone["links_hold_in_no_span"] is None
