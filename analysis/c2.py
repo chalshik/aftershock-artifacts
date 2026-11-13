@@ -75,9 +75,10 @@ def session_uncached_rate(run: dict, a: float, b: float) -> float:
     return float((w.prompt_tokens - w.cached_tokens.fillna(0)).clip(lower=0).sum() / (b - a))
 
 
-def baseline(run: dict) -> dict:
-    a, b = windows(run)["base"]
-    return {"reuse": reuse_in(later_turns(run), a, b), "u": session_uncached_rate(run, a, b),
+def baseline(run: dict, window: tuple | None = None) -> dict:
+    """The four values over the baseline window (the run's own, or `window` for a control, which has no trigger)."""
+    a, b = window or windows(run)["base"]
+    return {"reuse": reuse_in(later_turns(run), a, b, C2["min_turns"]), "u": session_uncached_rate(run, a, b),
             "n": gauge(run, N, a, b), "kv": gauge(run, KV, a, b)}
 
 
@@ -87,13 +88,19 @@ def levels(run: dict, base: dict | None = None) -> dict:
     a, b = windows(run)["end_window"]
     kv, n, n_max = gauge(run, KV, a, b), gauge(run, N, a, b), gauge(run, N, a, b, "max")
     vals = (kv, n, n_max, base["n"])
-    ok = None if any(math.isnan(x) for x in vals) else bool(
-        kv >= C2["min_kv"] and n >= C2["n_factor"] * base["n"] and n_max < C2["n_cap"])
-    return {"kv": kv, "n": n, "n_over_base": n / base["n"] if base["n"] else math.nan, "n_max": n_max, "ok": ok}
+    if any(math.isnan(x) for x in vals):
+        ok, failed = None, None
+    else:
+        failed = [k for k, bad in (("kv", kv < C2["min_kv"]), ("n", n < C2["n_factor"] * base["n"]),
+                                   ("n_cap", n_max >= C2["n_cap"])) if bad]
+        ok = not failed
+    return {"kv": kv, "n": n, "n_over_base": n / base["n"] if base["n"] else math.nan, "n_max": n_max, "ok": ok,
+            "failed": failed}
 
 
 def last_burst_end(run: dict) -> float:
-    """When the last burst request ended; NaN if a burst request never ended (the burst is then still in the system)."""
+    """When the last burst request ended ("the exit"). NaN if a burst request never ended (the burst is then still
+    in the system), if one ended with an error status, or if the run has no burst rows."""
     q = run["requests"]
     b = q[is_burst_request(run)]
     if not len(b) or (b.status != "ok").any() or b.t_end.isna().any():
@@ -102,31 +109,42 @@ def last_burst_end(run: dict) -> float:
 
 
 def links(run: dict, a: float, b: float, base: dict, turns=None) -> dict:
-    """The loop's four links over [a, b); `holds` is None when a value is missing."""
+    """The loop's four links over [a, b); `holds` is None when a value is missing (fewer than min_turns later turns
+    give no reuse); `failed` names the links that do not hold."""
     turns = later_turns(run) if turns is None else turns
     drop = float(run["cfg"]["verdict"]["stuck_hit_drop"])
-    v = {"reuse": reuse_in(turns, a, b), "u": session_uncached_rate(run, a, b), "n": gauge(run, N, a, b),
-         "kv": gauge(run, KV, a, b)}
+    v = {"reuse": reuse_in(turns, a, b, C2["min_turns"]), "u": session_uncached_rate(run, a, b),
+         "n": gauge(run, N, a, b), "kv": gauge(run, KV, a, b)}
     if any(math.isnan(x) for x in (*v.values(), base["reuse"], base["u"], base["n"])):
-        return {**v, "span": (a, b), "holds": None}
-    holds = (v["reuse"] <= base["reuse"] - drop and v["u"] >= C2["u_factor"] * base["u"]
-             and v["n"] >= C2["n_factor"] * base["n"] and v["kv"] >= C2["min_kv"])
-    return {**v, "span": (a, b), "holds": bool(holds)}
+        return {**v, "span": (a, b), "holds": None, "failed": None}
+    failed = [k for k, bad in (("reuse", v["reuse"] > base["reuse"] - drop), ("u", v["u"] < C2["u_factor"] * base["u"]),
+                               ("n", v["n"] < C2["n_factor"] * base["n"]), ("kv", v["kv"] < C2["min_kv"])) if bad]
+    return {**v, "span": (a, b), "holds": not failed, "failed": failed}
 
 
 def sustain(run: dict, base: dict | None = None) -> dict:
-    """The links in every span of the watch that starts at or after the last burst request's end."""
+    """The links in every 300 s span of the watch. A span is judged when it starts at or after the exit (the last
+    burst request's end); the earlier spans are reported with `judged` False. With fewer than min_spans judged spans
+    (or no exit) the result is None. Otherwise one judged span that fails decides (False), whatever the others are;
+    with none failing, a judged span with a missing value gives None; else True."""
     base, w = base or baseline(run), windows(run)
     tb = last_burst_end(run)
-    starts = np.arange(w["end"], w["watch_end"] - 1e-9, C2["span_s"])
     turns = later_turns(run)
-    rows = [links(run, float(a), float(min(a + C2["span_s"], w["watch_end"])), base, turns)
-            for a in starts if not math.isnan(tb) and a >= tb]
-    if math.isnan(tb) or len(rows) < C2["min_spans"] or any(r["holds"] is None for r in rows):
+    rows = []
+    for a in np.arange(w["end"], w["watch_end"] - 1e-9, C2["span_s"]):
+        r = links(run, float(a), float(min(a + C2["span_s"], w["watch_end"])), base, turns)
+        rows.append({**r, "judged": (not math.isnan(tb)) and a >= tb})
+    judged = [r for r in rows if r["judged"]]
+    if len(judged) < C2["min_spans"]:
+        ok = None
+    elif any(r["holds"] is False for r in judged):
+        ok = False
+    elif any(r["holds"] is None for r in judged):
         ok = None
     else:
-        ok = all(r["holds"] for r in rows)
-    return {"last_burst_end": tb, "n_spans": len(rows), "spans": rows, "ok": ok}
+        ok = True
+    return {"last_burst_end": tb, "n_spans": len(judged), "spans": rows, "ok": ok,
+            "links_failed": sorted({k for r in judged for k in (r["failed"] or [])})}
 
 
 def onsets(run: dict, base: dict | None = None) -> dict:
@@ -147,8 +165,8 @@ def onsets(run: dict, base: dict | None = None) -> dict:
                 out[k] = float(t)
         if not any(math.isnan(x) for x in out.values()):
             break
-    seen = sorted((v, k) for k, v in out.items() if not math.isnan(v))
-    return {**out, "order": [k for _, k in seen]}
+    times = sorted({v for v in out.values() if not math.isnan(v)})
+    return {**out, "order": [sorted(k for k, v in out.items() if v == x) for x in times]}   # equal times: one group
 
 
 def condition4(run: dict, with_readouts: bool = True) -> dict:
@@ -166,7 +184,8 @@ def condition4(run: dict, with_readouts: bool = True) -> dict:
         label = "loop" if su["ok"] else "not_sustained"
     out = {"run": run["dir"].name, "baseline": base, "levels": lv, "sustain": su, "label": label}
     if with_readouts:
-        for key, f in (("onsets", lambda: onsets(run, base)), ("evictions", lambda: eviction_readout(run))):
+        for key, f in (("onsets", lambda: onsets(run, base)), ("evictions", lambda: eviction_readout(run)),
+                       ("control", lambda: control_readout(run, su)), ("rows", lambda: row_counts(run))):
             try:
                 out[key] = f()
             except Exception as e:   # a reported readout never takes the judged label with it
@@ -219,7 +238,9 @@ def histogram_delta(metrics_jsonl, name: str, a: float, b: float) -> dict:
         return nan
     d = {e: last.get(e, 0.0) - first.get(e, 0.0) for e in sorted(last)}
     total = d.get(math.inf, 0.0)
-    if total <= 0 or any(v < 0 for v in d.values()):      # nothing sampled, or a counter reset
+    if any(v < 0 for v in d.values()):                    # a counter went down: a restart inside the window
+        return {**nan, "reset": True}
+    if total <= 0:                                         # nothing sampled
         return nan
     med = next(e for e in sorted(d) if d[e] >= total / 2)
     return {"count": total, "median_le_s": med, "share_le_5s": d.get(5.0, math.nan) / total,
@@ -250,7 +271,37 @@ def eviction_readout(run: dict) -> dict:
     return out
 
 
+def row_counts(run: dict) -> dict:
+    """Reported only: ok session requests, how many of them carry no cached_tokens (counted as a full miss), and
+    requests that got a first token and never finished (not counted in the uncached rate)."""
+    q = run["requests"]
+    s = q[~is_burst_request(run)]
+    ok = s[s.status == "ok"]
+    return {"ok_session": int(len(ok)), "ok_without_cached_tokens": int(ok.cached_tokens.isna().sum()),
+            "first_token_never_finished": int(((s.status != "ok") & s.t_first_token.notna()).sum())}
+
+
+def control_readout(run: dict, su: dict) -> dict:
+    """Reported only: the same-seed control of a burst run (the same session schedule, no burst), its registered
+    verdict, and its links over the burst run's judged spans against its own baseline. A queue that the load alone
+    explains would hold the links in the control too; a state the burst left behind would not."""
+    name = run["cfg"]["name"]
+    cname = REG22["controls"].get(name) or ("stage2_control_" + name[len("burst_"):] if name.startswith("burst_") else None)
+    if cname is None:
+        return {"why": "this config has no control"}
+    got = find_runs(f"*_{cname}")
+    if len(got) != 1:
+        return {"why": f"{len(got)} valid runs of {cname}"}
+    c, w = got[0], windows(run)
+    base = baseline(c, w["base"])
+    spans = [links(c, *r["span"], base) for r in su["spans"] if r["judged"]]
+    return {"run": c["dir"].name, "verdict": verdict(c)["verdict"], "baseline": base,
+            "spans": spans, "links_hold_in_every_span": bool(spans) and all(s["holds"] is True for s in spans)}
+
+
 REG22 = {
+    # REG-11's control carries no seed in its name; every other burst config maps by its own name.
+    "controls": {"burst_l1pl350cl_r2.4_s1": "stage2_control_l1pl350cl_r2.4"},
     # The closed-loop L1 burst runs at 350 W made before REG-19 (REG-11, REG-12, REG-14, REG-15, REG-17, REG-18), as
     # k3.REG21["batch1"]. A run is judged only if its registered verdict (`load.verdict`) is "stuck".
     "runs": ("20261109-042828_burst_l1pl350cl_r2.4_s1", "20261109-080203_burst_l1pl350cl_r2.4_s2",
@@ -293,7 +344,9 @@ def reg22_table(batch: int = 1) -> dict:
         by_load.setdefault(f"{float(r['cfg']['workload']['rate']):.1f}", []).append(lab)
     rows = [{**condition4(r), "lam": float(r["cfg"]["workload"]["rate"]), "seed": r["cfg"].get("seed")} for r in judged]
     return {"batch": batch, "left_out": left, "n_stuck": len(judged), "counts": {k: labels.count(k) for k in kinds},
-            "by_load": {g: {"n": len(v), **{k: v.count(k) for k in kinds}, "loop_cp_upper_95": cp_upper(v.count("loop"), len(v))}
+            "by_load": {g: {"n": len(v), **{k: v.count(k) for k in kinds},
+                            "loop_cp_upper_95": cp_upper(v.count("loop"), len(v)),
+                            "loop_cp_lower_95": 1.0 - cp_upper(len(v) - v.count("loop"), len(v))}
                         for g, v in sorted(by_load.items())},
             "rows": rows}
 
@@ -303,6 +356,9 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) in (2, 3) and sys.argv[1] == "reg22":
+        from analysis.k3w import _dirty
+        if _dirty():
+            raise SystemExit("analysis/ or tests/ holds modified or untracked files; REG-22 runs from committed code:\n" + _dirty())
         print(json.dumps(reg22_table(int(sys.argv[2]) if len(sys.argv) == 3 else 1), indent=1, default=str))
     else:
         raise SystemExit("usage: python -m analysis.c2 reg22 [1|2]")

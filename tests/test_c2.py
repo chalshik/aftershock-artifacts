@@ -48,7 +48,9 @@ def test_a_cold_full_backlogged_run_shows_the_loop():
     assert r["label"] == "loop" and r["levels"]["ok"] and r["sustain"]["ok"]
     assert r["baseline"]["reuse"] == pytest.approx(1.0) and r["levels"]["n_over_base"] == pytest.approx(12.0)
     assert r["sustain"]["last_burst_end"] == 1200.0 and r["sustain"]["n_spans"] == 4      # spans from 1380 s on
-    assert all(s["reuse"] == 0.0 and s["holds"] for s in r["sustain"]["spans"])
+    assert [s["judged"] for s in r["sustain"]["spans"]] == [False, True, True, True, True]   # every span is reported
+    assert all(s["reuse"] == 0.0 and s["holds"] for s in r["sustain"]["spans"] if s["judged"])
+    assert r["levels"]["failed"] == [] and r["sustain"]["links_failed"] == []
 
 
 def test_a_backlog_without_a_full_pool_is_not_this_loop():
@@ -60,7 +62,9 @@ def test_a_backlog_without_a_full_pool_is_not_this_loop():
 def test_a_span_in_which_the_cache_comes_back_breaks_sustain():
     r = C.condition4(fake_run(rewarm=(1700.0, 1950.0)))
     assert r["label"] == "not_sustained" and r["levels"]["ok"]
-    assert [s["holds"] for s in r["sustain"]["spans"]] == [True, False, True, True]
+    assert [s["holds"] for s in r["sustain"]["spans"] if s["judged"]] == [True, False, True, True]
+    assert r["sustain"]["links_failed"] == ["u"]     # the cache back for 250 of 300 s: reuse 0.83 is still "lost"
+    assert [round(s["reuse"], 2) for s in r["sustain"]["spans"] if s["holds"] is False] == [0.83]   # by baseline - 0.06
 
 
 def test_undefined_when_the_burst_is_still_in_the_system_or_leaves_too_late():
@@ -72,9 +76,9 @@ def test_undefined_when_the_burst_is_still_in_the_system_or_leaves_too_late():
 def test_onsets_report_the_order_found():
     o = C.onsets(fake_run(kv_from=930.0, n_from=920.0, cold_from=1000.0))
     assert o["n"] <= o["kv"] <= o["reuse"] <= o["u"]
-    assert o["order"][0] == "n" and set(o["order"]) == {"n", "kv", "reuse", "u"}
+    assert o["order"][0] == ["n"] and {k for g in o["order"] for k in g} == {"n", "kv", "reuse", "u"}
     never = C.onsets(fake_run(cold_from=END + 1.0, kv_cold=0.5))                          # the cache is never lost
-    assert math.isnan(never["reuse"]) and math.isnan(never["kv"]) and never["order"] == ["n"]
+    assert math.isnan(never["reuse"]) and math.isnan(never["kv"]) and never["order"] == [["n"]]
 
 
 def test_links_are_none_when_a_value_is_missing():
@@ -173,3 +177,82 @@ def test_turn_spacing_is_the_gap_between_a_sessions_first_tokens():
 def test_eviction_readout_without_a_metrics_file_is_none():
     r = C.condition4(fake_run())
     assert r["evictions"] == {"baseline": None, "after": None}
+
+
+def test_failing_levels_decide_whatever_sustain_is():
+    """The label map, cell by cell: levels False gives not_memory_limited even when sustain cannot be read."""
+    r = C.condition4(fake_run(kv_cold=0.5, burst_unfinished=True))
+    assert r["levels"]["ok"] is False and r["sustain"]["ok"] is None and r["label"] == "not_memory_limited"
+    assert r["levels"]["failed"] == ["kv"]
+    assert C.condition4(fake_run(n_cold=8.0))["levels"]["failed"] == ["n"]
+    assert C.condition4(fake_run(n_max=256.0))["levels"]["failed"] == ["n_cap"]
+    r = C.condition4(fake_run(burst_unfinished=True))                       # levels hold, no exit
+    assert r["levels"]["ok"] is True and r["sustain"]["ok"] is None and r["label"] == "undefined"
+
+
+def test_one_failing_span_decides_even_if_another_is_missing():
+    run = fake_run(rewarm=(1700.0, 1960.0))                                 # the cache comes back inside one span
+    m = run["metrics"]
+    run["metrics"] = m[(m.t < 1400.0) | (m.t > 1450.0)]                    # and an earlier judged span has a scrape hole
+    r = C.condition4(run)
+    assert r["label"] == "not_sustained" and r["sustain"]["links_failed"] == ["u"]
+    holds = [s["holds"] for s in r["sustain"]["spans"] if s["judged"]]
+    assert False in holds and None in holds
+
+
+def test_a_span_with_too_few_later_turns_has_no_reuse():
+    run = fake_run()
+    q = run["requests"]
+    run["requests"] = q[~((q.turn > 0) & (q.t_first_token >= 1680.0) & (q.t_first_token < 1980.0) & (q.session_id % 40 != 0))]
+    s = [x for x in C.sustain(run)["spans"] if x["span"] == (1680.0, 1980.0)][0]
+    assert math.isnan(s["reuse"]) and s["holds"] is None
+
+
+def test_onsets_report_ties_as_ties():
+    o = C.onsets(fake_run(cold_from=1000.0, kv_from=1000.0, n_from=1000.0))
+    assert all(isinstance(g, list) for g in o["order"])
+    assert sorted(k for g in o["order"] for k in g) == ["kv", "n", "reuse", "u"]
+    same = [g for g in o["order"] if len(g) > 1]
+    assert all(len({o[k] for k in g}) == 1 for g in same)                    # a group shares one onset time
+
+
+def test_control_readout_and_row_counts(monkeypatch):
+    burst = _named("20261110-000000_burst_l1pl350cl_r2.0_s2")
+    burst["cfg"]["name"] = "burst_l1pl350cl_r2.0_s2"
+    control = _named("20261110-000000_stage2_control_l1pl350cl_r2.0_s2", cold_from=1e9, kv_from=1e9, n_from=1e9)
+    monkeypatch.setattr(C, "find_runs", lambda pattern: [control] if pattern == "*_stage2_control_l1pl350cl_r2.0_s2" else [])
+    monkeypatch.setattr(C, "verdict", lambda run: {"verdict": "recovered"})
+    c = C.control_readout(burst, C.sustain(burst))
+    assert c["verdict"] == "recovered" and len(c["spans"]) == 4 and c["links_hold_in_every_span"] is False
+    assert all(s["failed"] == ["reuse", "u", "n", "kv"] for s in c["spans"])  # a warm control holds none of them
+    burst["cfg"]["name"] = "confirm_l1pl350cl_r2.2_s12"
+    assert C.control_readout(burst, C.sustain(burst)) == {"why": "this config has no control"}
+    n = C.row_counts(fake_run())
+    assert n["ok_without_cached_tokens"] == 0 and n["first_token_never_finished"] == 0 and n["ok_session"] > 1000
+
+
+def test_table_gives_both_bounds(monkeypatch):
+    runs = {f"r{i}": _named(f"r{i}") for i in range(3)}
+    monkeypatch.setitem(C.REG22, "runs", tuple(runs))
+    monkeypatch.setattr(C, "find_runs", lambda pattern: [runs[pattern]] if pattern in runs else [])
+    monkeypatch.setattr(C, "verdict", lambda run: {"verdict": "stuck"})
+    monkeypatch.setattr(C, "control_readout", lambda run, su: {"why": "stub"})
+    b = C.reg22_table()["by_load"]["2.0"]
+    assert b["n"] == 3 and b["loop"] == 3 and b["loop_cp_upper_95"] == 1.0
+    assert b["loop_cp_lower_95"] == pytest.approx(0.05 ** (1 / 3))            # 3 of 3: the one-sided 95 % lower bound
+
+
+def test_batch2_is_guarded_as_reg21s(monkeypatch, tmp_path):
+    import analysis.k3w as W
+    d = tmp_path / "decisions.md"
+    d.write_text("## 2026-11-11 · [REG] REG-19\n")
+    monkeypatch.setattr(W.withheld, "DECISIONS", d)
+    with pytest.raises(RuntimeError):
+        C.batch_runs(2)
+
+
+def test_a_long_watch_has_fourteen_judged_spans():
+    cfg = {"trigger": dict(CFG["trigger"]), "verdict": {**CFG["verdict"], "watch_s": 4500.0}}
+    w = C.windows({"cfg": cfg})
+    assert w["watch_end"] == 5580.0 and w["end_window"] == (4980.0, 5580.0)
+    assert len(np.arange(w["end"], w["watch_end"] - 1e-9, C.C2["span_s"])) == 15   # 15 spans, 14 after an exit by 1380 s
