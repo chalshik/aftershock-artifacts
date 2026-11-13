@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import fnmatch
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -36,11 +37,14 @@ class WithheldError(RuntimeError):
 
 
 def lifted(heading_text: str, decisions: Path | None = None) -> bool:
-    """True once a `## ` heading of decisions.md contains `heading_text`."""
+    """True once decisions.md has a heading that IS that result: `## <date> · <heading_text>` with no digit after it.
+    A heading that only quotes the text (a [CORR], a [REG] naming the result it waits for) or names another
+    registration ("[RESULT] REG-190") lifts nothing."""
     p = decisions or DECISIONS
     if not p.exists():
         return False
-    return any(line.startswith("## ") and heading_text in line for line in p.read_text().splitlines())
+    pat = re.compile(r"^## \d{4}-\d{2}-\d{2} · " + re.escape(heading_text) + r"(?!\d)")
+    return any(pat.match(line) for line in p.read_text().splitlines())
 
 
 def unsealed_ids() -> set[str]:

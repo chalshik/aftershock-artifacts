@@ -208,8 +208,9 @@ def test_a_server_that_idles_in_W_is_not_judged(ref):
 
 # ---------------------------------------------------------------- the judge
 
-def _r(lam, r, why=None, name=None, date="20261109"):
-    return {"run": name or f"x_r{lam}_{r}", "date": date, "lam": lam, "r": r, "why_not": why}
+def _r(lam, r, why=None, name=None, date="20261109", why95="same"):
+    return {"run": name or f"x_r{lam}_{r}", "date": date, "lam": lam, "r": r, "why_not": why,
+            "why_not_reported": why if why95 == "same" else why95}
 
 
 def test_J2_uses_only_groups_of_three_and_J1_pools_only_when_J2_is_inside():
@@ -217,14 +218,52 @@ def test_J2_uses_only_groups_of_three_and_J1_pools_only_when_J2_is_inside():
             _r(2.2, 1.30), _r(2.2, 0.70)]
     j = W.judge(rows)
     assert j["judged_groups"] == ["2.0", "2.4"] and j["J2"] == "inside" and j["spread"] == pytest.approx(0.02)
-    assert j["J1"] == "inside" and j["median_r"] == pytest.approx(1.025)      # pooled over all eight judged runs
+    assert j["J1"] == "inside" and j["median_r"] == pytest.approx(1.025)      # pooled over the six runs J2 judged
+    assert j["pooled_n"] == 6 and j["reported_not_pooled"] == ["x_r2.2_1.3", "x_r2.2_0.7"]
     assert j["groups"]["2.2"]["n"] == 2 and j["groups"]["2.2"]["min"] == 0.70 and "slope_r_per_reqs" in j
     far = [_r(2.0, 1.00), _r(2.0, 1.00), _r(2.0, 1.01), _r(2.4, 1.07), _r(2.4, 1.08), _r(2.4, 1.09)]
     j = W.judge(far)
     assert j["J2"] == "outside" and j["J1"] == "not_pooled" and math.isnan(j["median_r"])
     assert j["groups"]["2.0"]["J1"] == "inside" and j["groups"]["2.4"]["J1"] == "outside"
+    assert j["groups"]["2.4"]["J1_side"] == "high" and j["all_judged_groups_inside"] is False
     one = W.judge([_r(2.0, 1.0)] * 4)
     assert one["J2"] == "undefined" and one["J1"] == "not_pooled"            # one load group: nothing to pool over
+
+
+def test_a_pair_at_a_third_load_cannot_decide_the_pooled_level():
+    """The round-2 review's trace D2: with the pair pooled, its two runs moved the label either way."""
+    base = [_r(2.0, x) for x in (1.03, 1.04, 1.04, 1.05, 1.05)] + [_r(2.4, 1.05)] + [_r(2.4, 1.06)] * 5
+    for pair in ([], [_r(2.2, 1.07), _r(2.2, 1.08)], [_r(2.2, 0.90), _r(2.2, 0.95)]):
+        j = W.judge(base + pair)
+        assert j["J2"] == "inside" and j["J1"] == "inside" and j["median_r"] == pytest.approx(1.05) and j["pooled_n"] == 11
+
+
+def test_J2_outside_with_every_group_inside_is_told_apart():
+    j = W.judge([_r(2.0, 0.96)] * 3 + [_r(2.4, 1.02)] * 3)
+    assert j["J2"] == "outside" and j["spread"] == pytest.approx(0.06) and j["J1"] == "not_pooled"
+    assert j["all_judged_groups_inside"] is True
+    assert W._level(math.nan, 5) == ("undefined", None)
+
+
+def test_the_reported_second_table_uses_its_own_reasons():
+    rows = [_r(2.0, 1.0)] * 2 + [_r(2.0, 1.0, why="idle in W", why95=None)] + [_r(2.4, 1.0)] * 3
+    assert W.judge(rows)["J2"] == "undefined"                                 # the 2.0 group has two judged runs
+    assert W.judge(rows, why="why_not_reported")["J2"] == "inside"            # reported only
+
+
+def test_a_gauge_that_does_not_cover_W_is_not_idleness(ref):
+    run = truth(cfg(2.0), MU)
+    a, b = W.window(run)
+    full = run["metrics"]
+    run["metrics"] = full[(full.t < a + 100) | (full.t > a + 130)]            # a 30 s hole in the gauge
+    assert math.isnan(W.busy_share(run, a, b)) and W.row(run, ref, with_readouts=False)["why_not"] == "no waiting gauge in W"
+    run["metrics"] = full.drop(columns=["vllm:num_requests_waiting"])
+    assert W.row(run, ref, with_readouts=False)["why_not"] == "no waiting gauge in W"
+    run["metrics"] = full.iloc[::5]                                           # a scrape every 5 s still covers W
+    assert W.row(run, ref, with_readouts=False)["why_not"] is None
+    both = truth(cfg(2.0), MU, hit_frac=0.3)
+    both["metrics"] = both["metrics"].drop(columns=["vllm:num_requests_waiting"])
+    assert W.row(both, ref, with_readouts=False)["why_not"] == "not all-miss in W; no waiting gauge in W"
 
 
 def test_a_load_dependent_work_rate_fails_J2(ref):
@@ -267,6 +306,16 @@ def test_batch2_waits_for_reg19s_result_and_needs_one_run_per_seed(monkeypatch, 
     monkeypatch.setattr(W, "find_runs", lambda pattern: [])
     with pytest.raises(ValueError):
         W.batch2_runs()
+    monkeypatch.setattr(W, "find_runs", lambda pattern: [mk(15, 2), mk(16, 2)])
+    with pytest.raises(ValueError):
+        W.batch2_runs()                                                     # two seeds: the table would be undefined
+    monkeypatch.setattr(W, "find_runs", lambda pattern: [mk(15, 2), mk(16, 2), mk(17, 2)])
+    for heading in ("## 2026-11-14 · [CORR] the entry [RESULT] REG-19 named a wrong file\n",
+                    "## 2026-11-14 · [RESULT] REG-190: another registration\n",
+                    "## 2026-11-13 · [REG] REG-21 (batch 2 waits for [RESULT] REG-19)\n"):
+        d.write_text(heading)
+        with pytest.raises(RuntimeError):
+            W.batch2_runs()                                                 # a heading that only quotes the text
 
 
 def test_valse_and_jannesaris_rule_read_on_a_trap(ref):
@@ -312,13 +361,43 @@ def test_table_on_fake_runs(monkeypatch, ref):
             n = f"20261109-00000{sd}_burst_l1pl350cl_r{lam}_s{sd}"
             runs[n] = truth(cfg(lam, sd), MU, name=n)
     monkeypatch.setitem(W.REG21, "batch1", tuple(runs) + ("20261109-999999_missing",))
-    monkeypatch.setattr(W, "find_runs", lambda pattern: list(runs.values()))
+    monkeypatch.setattr(W, "find_runs", lambda pattern: [runs[pattern]] if pattern in runs else [])
     monkeypatch.setattr(W, "reference", lambda: ref)
     monkeypatch.setattr(W, "select", lambda rs: (rs[:-1], [{"run": rs[-1]["dir"].name, "cold_backlogged": False}]))
     monkeypatch.setattr(W, "readouts", lambda run: {"stub": True})
+    with pytest.raises(ValueError, match="999999_missing"):
+        W.reg21_table(1)                                                    # a registered run missing or invalid
+    with pytest.raises(ValueError):
+        W.reg21_table(3)
+    monkeypatch.setitem(W.REG21, "batch1", tuple(runs))
     t = W.reg21_table(1)
-    assert t["missing_or_invalid"] == ["20261109-999999_missing"] and len(t["rows"]) == 5
+    assert len(t["rows"]) == 5 and "fixed_load_contrast" not in t
+    assert t["judged"]["at_busy_min_reported"]["J2"] == "undefined"
     assert t["not_cold_backlogged"][0]["cold_backlogged"] is False
     assert t["judged"]["judged_groups"] == ["2.0"] and t["judged"]["J2"] == "undefined"   # 2.4 is left with two runs
     assert t["judged"]["J1"] == "not_pooled" and t["judged"]["groups"]["2.0"]["J1"] == "inside"
     assert all(r["readouts"] == {"stub": True} and r["date"] == "20261109" for r in t["rows"])
+
+
+def test_batch2_reports_the_fixed_load_contrast(monkeypatch, ref):
+    """Batch 2's median minus batch 1's median at the same load: reported, never judged."""
+    b1 = {f"20261111-00000{sd}_burst_l1pl350cl_r2.0_s{sd}": truth(cfg(2.0, sd), MU, name=f"20261111-00000{sd}_burst_l1pl350cl_r2.0_s{sd}")
+          for sd in (2, 3, 4)}
+    b2 = [truth(cfg(2.0, sd), 1.78, name=f"20261112-00000{sd}_burst_l1pl350cl_r2.0_w3000_s1{sd}") for sd in (5, 6, 7)]
+    monkeypatch.setitem(W.REG21, "batch1", tuple(b1))
+    monkeypatch.setattr(W, "find_runs", lambda pattern: [b1[pattern]] if pattern in b1 else [])
+    monkeypatch.setattr(W, "batch2_runs", lambda: b2)
+    monkeypatch.setattr(W, "reference", lambda: ref)
+    monkeypatch.setattr(W, "select", lambda rs: (rs, []))
+    monkeypatch.setattr(W, "readouts", lambda run: {"stub": True})
+    t = W.reg21_table(2)
+    c = t["fixed_load_contrast"]
+    assert t["judged"]["J1"] == "outside" and t["judged"]["J1_side"] == "high" and "J2" not in t["judged"]
+    assert c["batch1_median"] == pytest.approx(1.0, abs=0.02) and c["difference"] == pytest.approx(1.78 / MU - 1, abs=0.02)
+
+
+def test_the_redo_proxy_is_reported_for_both_arms(ref):
+    ro = W.row(truth(cfg(2.0), MU), ref)["readouts"]
+    assert "redo_share" in ro and "preempt_per_s" in ro and "mean_prompt_all" in ro
+    assert all("redo_share" in v or "gauges_error" in v for v in ref["runs"].values())
+    assert "slope_needed_at_configured_rate" in W.row(truth(cfg(2.0), MU), ref)["vj_rule"]
