@@ -113,7 +113,7 @@ Steps:
 
 ## Runs on record
 
-182 run folders: 154 VALID, 24 INVALID, 4 without checks. All kept; none counts unless VALID.
+184 run folders: 156 VALID, 24 INVALID, 4 without checks (2026-11-13 ≈ 20:20 UTC, after REG-19's queue copied seed 18's control and burst run; `tools/check_docs.py` inventory). All kept; none counts unless VALID.
 
 - **No checks:** `20261030-114021_first_real` (failed start, no load sent); `20261031-025032_tau` (VM shut down 140 s in); `20261104-134159_long_pc_off_r3_s0` (REG-6 seed 0, VM powered off at t = 3168 s of 3600, DERIVED: power key 14:35:45.08 − planned load start 13:42:56.74 from `events.jsonl` `load_t0_planned`; copied 2026-11-05).
 - **No checks, REG-7 G2:** `20261105-181511_sweep_l1_pc_off_r2` (stopped by the owner at t = 247 s).
