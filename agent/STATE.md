@@ -137,3 +137,15 @@ A fresh session (started by the owner with `claude` in this repo, or by the laun
 - **REG-22:** rule F round 1 NOT READY, ten items (`rulef-reg22-draft3-r1.md`); code revised (`727d1f2`, 22 tests), draft 4; **rule F round 2 (`a0fd29b2b40338bb5`) and the first owner-proxy pass (`a43b6d3c375ffd53e`) are running.** Open point for the proxy: the registration re-reads a PROTOCOL clause (order → `sustain`).
 - **Waiting, not sent:** REG-23 (K5) draft 1; E1 draft 4 (needs launch scripts).
 - **Full test suite:** 508 passed at `9b3cddf`; c2.py changed since (22 tests pass); run the suite again before a registration's commit.
+
+## Update 2026-11-13 06:11 UTC (session stopped on the usage limit)
+- **Nothing registered; no run made or read since the queue's stop.** VM still down; REG-19 waits for the owner (VM on, 350 W, attempt 3).
+- **Four reviews were running and will have been cut by the limit; resume each with SendMessage to its id (its work so far is saved), do not start new ones:**
+  - `a1bce48befd9127b9` rule F round 6 on REG-21 draft 9 (bundle `docs/drafts/review_bundles/reg21_r6/`);
+  - `a4122f052f465a926` owner-proxy delta pass on REG-21 draft 9 (the stopping-rule changes);
+  - `a0fd29b2b40338bb5` rule F round 2 on REG-22 draft 4 (bundle `reg22_r2/`);
+  - `a43b6d3c375ffd53e` owner-proxy first pass on REG-22 draft 4.
+- **REG-21 so far:** rule F round 5 NOT READY, six text items (`rulef-reg21-draft8-r5.md`), all in draft 9 (`docs/drafts/reg21_draft9.md`); code unchanged at `8164211`. Owner-proxy round 4 approved draft 6 on 12 conditions. When rule F says READY and the proxy's delta pass approves: compose the [REG] and [DECISION] (delegate) as the 06:00 block says; do not compute batch 1 before REG-22 is registered.
+- **REG-23 (K5):** draft 2 with a 30 s floor on a lead (`docs/drafts/reg23_k5_draft2.md`, `analysis/k5.py`, 10 tests); not sent to review.
+- **Full test suite:** the run at `642e850` ended with exit 0 (its count is in the scratchpad file `full_tests_642e850.txt`); `analysis/k5.py` changed after it (10 tests pass).
+- **Always run `tools/check_docs.py` as its own command before a commit** ([CORR] of today).
