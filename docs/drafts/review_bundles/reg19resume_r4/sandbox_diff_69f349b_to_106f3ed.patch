@@ -1,0 +1,240 @@
+diff --git a/docs/probe/20261113_reg19/ops_r3/test_sandbox.sh b/docs/probe/20261113_reg19/ops_r3/test_sandbox.sh
+index 9c15609..caea369 100644
+--- a/docs/probe/20261113_reg19/ops_r3/test_sandbox.sh
++++ b/docs/probe/20261113_reg19/ops_r3/test_sandbox.sh
+@@ -15,9 +15,10 @@ C18=stage2_control_l1pl350cl_r2.0_w3000_s18; B18=burst_l1pl350cl_r2.0_w3000_s18
+ G=(git -c user.name=sandbox -c user.email=sandbox@example.invalid -c commit.gpgsign=false)
+ mkdir -p $T/bin $T/state $VM/runs $T/repo && cd $T/repo && git init -q -b main . || exit 99
+ mkdir -p tools configs runs harness analysis $S/state
+-echo 'print("ok")' > tools/manifest.py; echo x > pyproject.toml; echo x > uv.lock; echo 'runs/' > .gitignore
++echo 'import os, sys; sys.exit(1 if os.environ.get("FAKE_MANIFEST_FAIL") else 0)' > tools/manifest.py
++echo x > pyproject.toml; echo x > uv.lock; echo 'runs/' > .gitignore
+ echo x > harness/checks.py; echo x > analysis/recheck.py
+-for sd in 18 19; do for k in stage2_control burst; do echo x > configs/${k}_l1pl350cl_r2.0_w3000_s$sd.yaml; done; done
++for sd in 15 16 17 18 19; do for k in stage2_control burst; do echo x > configs/${k}_l1pl350cl_r2.0_w3000_s$sd.yaml; done; done   # all ten, as at the real pin
+ $G add -A && $G commit -q -m pin || exit 99
+ PINH=$(git rev-parse HEAD); LOCKB=$(git rev-parse ${PINH}:uv.lock)
+ git worktree add -q --detach $T/wt $PINH && mkdir -p $T/wt/runs || exit 99
+@@ -25,15 +26,21 @@ cp $SRC/vm_state.py $SRC/session_probe.sh $SRC/launch.sh $SRC/queue.sh $SRC/fina
+ cp $SRC/state/attempt_${C18}_1.txt $SRC/state/lost_ok_$LOST.txt $S/state/
+ sed -e "s|^R=.*|R=$T/repo|" -e "s|^W=.*|W=$T/wt|" -e "s|^PY=.*|PY=$T/bin/fakepy|" -e "s|^PIN=.*|PIN=$PINH|" \
+     -e "s|^CHECKS_COMMIT=.*|CHECKS_COMMIT=$PINH|" -e "s|^RECHECK_COMMIT=.*|RECHECK_COMMIT=$PINH|" $SRC/common.sh > $S/common.sh
++mkdir -p docs && print -r -- "## 2026-11-13 · [DECISION] (delegate) REG-19 resumes for seeds 18 and 19: sandbox" > docs/decisions.md
+ $G add -A && $G commit -q -m scripts || exit 99
+ git log -1 --format=%H -- docs/probe/20261113_reg19/ops_r3/{common.sh,vm_state.py,session_probe.sh,launch.sh,queue.sh,final.sh} > $S/scripts_commit.txt
+ $G add -A && $G commit -q -m scripts_commit || exit 99
++HEADH=$(git rev-parse HEAD)
+ for sd in 15 16 17; do for k in stage2_control burst; do id=20261112-0000${sd}_${k}_l1pl350cl_r2.0_w3000_s$sd; mkdir -p $T/repo/runs/$id; ln -s $T/repo/runs/$id $T/wt/runs/$id; done; done
+ 
+ cat > $T/bin/sleep <<'EOS'
+ #!/bin/sh
+ exit 0
+ EOS
++cat > $T/bin/date <<'EOS'
++#!/bin/sh
++if [ "$*" = "-u +%H%M" ]; then echo "${FAKE_HHMM:-0300}"; else exec /bin/date "$@"; fi
++EOS
+ cat > $T/bin/uv <<'EOS'
+ #!/bin/sh
+ echo "Would use project environment at: .venv"; echo "Would uninstall 2 packages"; echo " - a==1"; echo " - b==1"
+@@ -54,7 +61,8 @@ case "$*" in
+     echo "{'fake': 'table', 'cwd': '$PWD'}";;
+   *"analysis.recheck"*)
+     echo "unseal=$AFTERSHOCK_UNSEAL pattern=${@[-1]}" >&2
+-    if [[ -f $ST/recheck_json ]]; then cat $ST/recheck_json; else echo "{\"n_runs\": ${FAKE_RECHECK_N:-10}, \"n_changed\": 0, \"changed\": []}"; fi;;
++    setopt null_glob; mac=(__T__/repo/runs/*_w3000_s1[5-9])
++    if [[ -f $ST/recheck_json ]]; then cat $ST/recheck_json; else echo "{\"n_runs\": ${FAKE_RECHECK_N:-${#mac}}, \"n_changed\": 0, \"changed\": []}"; fi;;
+   *) echo "fakepy: unhandled $*" >&2; exit 9;;
+ esac
+ EOS
+@@ -68,32 +76,43 @@ cat > $T/bin/ssh <<'EOS'
+ #!/bin/zsh
+ cmd=${@[-1]}; ST=__T__/state; VM=__T__/vmhome/aftershock-artifacts
+ case $cmd in
+-  "python3 - "*) [[ -n $FAKE_STATE_DOWN ]] && exit 255; HOME=__T__/vmhome python3 - ${cmd#python3 - };;
++  "python3 - "*) [[ -n $FAKE_STATE_DOWN ]] && exit 255; HOME=__T__/vmhome python3 - ${=cmd#python3 - };;
+   *"up_since"*)
+     echo "2026-11-13T00:00:00+00:00"; echo "boot_id ${FAKE_BOOT:-__BOOT__}"; echo "up_since 2026-11-12 19:48:00"; echo "kernel 6.8.0-fake"
+-    echo "driver ${FAKE_DRIVER:-595.99.02}"; echo "governor performance"; echo "limit_before ${FAKE_LIMIT_BEFORE:-420.00} W"; echo "apps ${FAKE_APPS_N:-0}";;
++    echo "driver ${FAKE_DRIVER:-595.99.02}"; echo "governor performance"; echo "limit_before ${FAKE_LIMIT_BEFORE:-420.00} W"; echo "apps ${FAKE_APPS_N:-0}"
++    echo "boots -1 aaa;0 bbb;"; echo "prev_boot_kernel Linux version 6.8.0-fake"; echo "prev_boot_nvidia NVIDIA UNIX x86_64 Kernel Module  595.99.02";;
+   *"sudo -n nvidia-smi -pl 350"*) echo "sudo: a password is required"; echo "sudo_rc 1";;
+   *"limit_after"*)
+     echo "limit_after ${FAKE_LIMIT:-350.00} W"; echo "tree ${FAKE_TREE:-__PIN__} dirty ${FAKE_DIRTY:-0}"; echo "lock_blob ${FAKE_LOCK:-__LOCK__}"; echo "free_kb ${FAKE_FREE:-5000000}";;
+   *"pre-launch read"*)
++    [[ -n $FAKE_PRELAUNCH_FAIL ]] && exit 255
+     echo "# pre-launch read (fake)"; echo "2026-11-13T00:00:00+00:00"; echo "power.limit [W], temperature.gpu, utilization.gpu [%], memory.used [MiB]"
+     echo "${FAKE_LIMIT:-350.00} W, ${FAKE_TEMP:-40}, 0 %, 1 MiB"; echo "# compute apps:"; [[ -n $FAKE_APPS ]] && echo "4242, python, 100 MiB"
+     echo "# tree:"; echo "${FAKE_TREE:-__PIN__}"; echo "${FAKE_DIRTY:-0}"; echo "# boot:"; if [[ -n $FAKE_BOOT_EMPTY ]]; then echo ""; else echo "${FAKE_BOOT:-__BOOT__}"; fi
+     echo "# free_kb:"; echo "${FAKE_FREE:-5000000}"; echo "# tmux:"; [[ -n $FAKE_TMUX_EXISTS ]] && echo "run: 1 windows" || echo "no server running on /tmp/tmux-1000/default";;
+-  *"temperature.gpu --format=csv,noheader"*) echo "${FAKE_TEMP:-40}";;
++  *"temperature.gpu --format=csv,noheader"*) [[ -n $FAKE_TEMP_FAIL ]] && exit 255; echo "${FAKE_TEMP:-40}";;
+   *"tmux new-session"*)
+     [[ -n $FAKE_LAUNCH_FAIL ]] && exit 255
+     n=$(( $(cat $ST/launch_n 2>/dev/null || echo 0) + 1 )); echo $n > $ST/launch_n
+     cfg=$(print -r -- $cmd | sed -n 's|.*configs/\([^ ]*\)\.yaml.*|\1|p'); rid=20261113-$(printf %06d $n)_$cfg; echo $rid > $ST/rid
+     mkdir -p $VM/runs/$rid; echo "{}" > $VM/runs/$rid/requests.jsonl; echo "name: $cfg" > $VM/runs/$rid/config.yaml
++    echo "{\"git_commit\": \"${FAKE_COMMIT:-__PIN__}\"}" > $VM/runs/$rid/env.json
+     failed=$FAKE_FAILED; [[ -n $FAKE_FAILED_KIND && $cfg != ${FAKE_FAILED_KIND}_* ]] && failed=""
+     if [[ -z $FAKE_NO_CHECKS ]]; then
+-      if [[ -n $failed ]]; then echo "{\"valid\": false, \"failed\": [\"$failed\"], \"checks\": []}" > $VM/runs/$rid/checks.json
+-      else echo '{"valid": true, "failed": [], "checks": []}' > $VM/runs/$rid/checks.json; fi
++      case $failed in
++        "") echo '{"valid": true, "failed": [], "checks": []}' > $VM/runs/$rid/checks.json;;
++        no_errors) echo '{"valid": false, "failed": ["no_errors"], "checks": [{"name": "no_errors", "passed": false, "detail": {"ok": 9, "client_error": 2}}]}' > $VM/runs/$rid/checks.json;;
++        no_errors_http) echo '{"valid": false, "failed": ["no_errors"], "checks": [{"name": "no_errors", "passed": false, "detail": {"ok": 9, "http_error": 2}}]}' > $VM/runs/$rid/checks.json;;
++        *) echo "{\"valid\": false, \"failed\": [\"$failed\"], \"checks\": []}" > $VM/runs/$rid/checks.json;;
++      esac
+     fi;;
+   *"grep -m1 -o"*) [[ -n $FAKE_NO_RID ]] || cat $ST/rid;;
+   *"test -f"*"checks.json"*)
+     [[ -n $FAKE_DOWN_ON_WAIT ]] && exit 255
++    if [[ -n $FAKE_LATE_CHECKS ]]; then
++      n=$(( $(cat $ST/late_n 2>/dev/null || echo 0) + 1 )); echo $n > $ST/late_n
++      (( n <= FAKE_LATE_CHECKS )) && exit 1
++    fi
+     rid=$(print -r -- $cmd | sed -n 's|.*runs/\([^/]*\)/checks.json.*|\1|p'); [[ -f $VM/runs/$rid/checks.json ]];;
+   *"tmux has-session"*) exit ${FAKE_TMUX_RC:-0};;
+   *"xargs sha256sum"*)
+@@ -102,7 +121,7 @@ case $cmd in
+   *) echo "fake ssh: unhandled: $cmd" >&2; exit 9;;
+ esac
+ EOS
+-sed -i '' -e "s|__T__|$T|g" -e "s|__PIN__|$PINH|g" -e "s|__LOCK__|$LOCKB|g" -e "s|__BOOT__|$BOOTA|g" $T/bin/ssh $T/bin/fakepy $T/bin/rsync
++/usr/bin/sed -i '' -e "s|__T__|$T|g" -e "s|__PIN__|$PINH|g" -e "s|__LOCK__|$LOCKB|g" -e "s|__BOOT__|$BOOTA|g" $T/bin/ssh $T/bin/fakepy $T/bin/rsync
+ chmod +x $T/bin/*
+ 
+ pass=0; fail=0
+@@ -110,7 +129,7 @@ reset() {
+   setopt localoptions null_glob
+   [[ $T == *reg19_sandbox3.* ]] || exit 99
+   rm -rf $T/state/* $T/repo/runs/*_s1[89] $T/wt/runs/*_s1[89] $T/wt/runs/foreign $PD/prelaunch_* $PD/session_* $T/elsewhere $VM/runs/*
+-  (cd $T/repo && git checkout -q -- . && git clean -fdq docs/probe/20261113_reg19/ops_r3/state)
++  (cd $T/repo && git reset -q --hard $HEADH && git clean -fdq docs/probe/20261113_reg19/ops_r3/state)
+   (cd $T/wt && git checkout -q --detach $PINH && git checkout -q -- .)
+   mkdir -p $VM/runs/$LOST; echo x > $VM/runs/$LOST/requests.jsonl
+   print -r -- $BOOTA > $S/state/session_boot_id.txt
+@@ -125,6 +144,11 @@ chk() {     # name, then a command that must succeed
+   if "$@" > /dev/null 2>&1; then pass=$((pass + 1)); echo "ok    $name"; else fail=$((fail + 1)); echo "FAIL  $name"; fi
+ }
+ is() { [[ $1 == $2 ]]; }                      # literal equality
++mkrun() {   # a hand-made run folder on the fake VM: run id, checks.json text ("" for none), commit (default: the pin)
++  mkdir -p $VM/runs/$1; echo "{\"git_commit\": \"${3:-$PINH}\"}" > $VM/runs/$1/env.json
++  [[ -z $2 ]] || print -r -- $2 > $VM/runs/$1/checks.json
++}
++VALID='{"valid": true, "failed": [], "checks": []}'
+ launches() { cat $T/state/launch_n 2>/dev/null || echo 0; }
+ nfiles() { setopt localoptions null_glob; local f=($~1); echo ${#f}; }
+ steps() { print -l -- "$@" > $T/state/steps; }
+@@ -240,15 +264,24 @@ reset
+ case_ "a heat failure" "INVALID failed=gpu_steady" 1 FAKE_FAILED=gpu_steady FAKE_FAILED_KIND=burst zsh $Q
+ case_ "is rerun once; a second heat failure" "INVALID failed=gpu_steady" 1 FAKE_FAILED=gpu_steady FAKE_FAILED_KIND=burst zsh $Q
+ case_ "stops the queue" "second heat failure" 1 zsh $Q
+-reset; mkdir -p $VM/runs/20261113-090000_$C18 $VM/runs/20261113-100000_$C18
+-for d in $VM/runs/20261113-090000_$C18 $VM/runs/20261113-100000_$C18; do echo '{"valid": true, "failed": [], "checks": []}' > $d/checks.json; done
++reset
++case_ "a heat failure of the control" "INVALID failed=gpu_steady" 1 FAKE_FAILED=gpu_steady FAKE_FAILED_KIND=stage2_control zsh $Q
++case_ "its rerun is valid; then a heat failure of the burst run" "INVALID failed=gpu_steady" 1 FAKE_FAILED=gpu_steady FAKE_FAILED_KIND=burst zsh $Q
++case_ "is the second among REG-19's runs: the queue stops (D2)" "second heat failure (gpu_steady) among REG-19's runs" 1 zsh $Q
++chk "three launches: control, control, burst" is "$(launches)" 3
++reset; steps $S18T $S19F
++case_ "an http error is an invalid run like any other" "INVALID failed=no_errors/other" 1 FAKE_FAILED=no_errors_http zsh $Q
++case_ "and is rerun (REG-19 registers the stop for a client error only)" "QUEUE DONE" 0 zsh $Q
++reset; mkrun 20261113-090000_$C18 $VALID; mkrun 20261113-100000_$C18 $VALID
+ case_ "two valid runs of one config stop the queue" "holds 2 valid runs" 1 zsh $Q
+-reset; mkdir -p $VM/runs/20261113-090000_$C18; echo '{"valid": true, "failed": ["x"], "checks": []}' > $VM/runs/20261113-090000_$C18/checks.json
++reset; mkrun 20261113-090000_$C18 '{"valid": true, "failed": ["x"], "checks": []}'
+ case_ "a checks.json that contradicts itself stops the queue" "cannot be read" 1 zsh $Q
+ reset; rm $S/state/attempt_${C18}_1.txt
+-case_ "without the lost run's attempt record nothing is launched (N1)" "only 0 attempts are recorded" 1 zsh $Q
++case_ "without the lost run's attempt record nothing is launched (N1)" "a committed state record differs" 2 zsh $Q
+ reset; rm $S/state/lost_ok_$LOST.txt
+-case_ "without the decision's record the lost run is not rerun" "a rerun needs its own decision" 1 zsh $Q
++case_ "without the decision's record the lost run is not rerun" "a committed state record differs" 2 zsh $Q
++reset; echo "changed" >> $S/state/lost_ok_$LOST.txt
++case_ "a changed state record stops everything" "a committed state record differs" 2 zsh $Q
+ chk "none of these launched anything" is "$(launches)" 0
+ 
+ echo "--- copy, checksums, links"
+@@ -284,15 +317,79 @@ case_ "scripts_commit.txt naming another commit" "changed since scripts_commit.t
+ chk "none of these launched anything" is "$(launches)" 0
+ 
+ echo "--- launch.sh by hand"
+-reset; mkdir -p $VM/runs/20261113-090000_$C18; echo '{"valid": true, "failed": [], "checks": []}' > $VM/runs/20261113-090000_$C18/checks.json
++reset; mkrun 20261113-090000_$C18 $VALID
+ case_ "a valid run with no attempt record is a launch outside these scripts: stop" "only 1 attempts are recorded" 2 zsh $L $C18
+ echo x > $S/state/attempt_${C18}_2.txt
+ case_ "launch.sh refuses when a valid run exists" "nothing to launch" 2 zsh $L $C18
+ reset
+-case_ "launch.sh refuses an unknown config" "no config" 2 zsh $L stage2_control_l1pl350cl_r2.0_w3000_s15
++case_ "launch.sh refuses a config that exists at the pin but is not one of the four" "is not one of the four configs left" 2 zsh $L stage2_control_l1pl350cl_r2.0_w3000_s15
++case_ "launch.sh refuses a name that is no config" "is not one of the four configs left" 2 zsh $L nonsense
+ reset
+ case_ "launch.sh by hand takes the next attempt number itself" "LAUNCHED 20261113-000001_$C18 (attempt 2)" 0 zsh $L $C18
+ 
++echo "--- round 3: the gate, the Mac's folders, the commit, the decision, the lock, the clock"
++C19=stage2_control_l1pl350cl_r2.0_w3000_s19; B19=burst_l1pl350cl_r2.0_w3000_s19
++reset
++case_ "by hand: seed 19 before seed 18 has a step record is refused (T1)" "seed 19 is launched only after seed 18's step record" 2 zsh $L $C19
++case_ "by hand: a burst run before a valid control is refused (T1)" "only after a valid control" 2 zsh $L $B18
++reset; steps $S18F; env PATH=$T/bin:$PATH zsh $Q > /dev/null 2>&1
++case_ "by hand after a futility stop: seed 19 is refused (T1)" "seed 19 is launched only after seed 18's step record" 2 zsh $L $C19
++case_ "by hand after a futility stop: seed 18 is not launched again (T1)" "seed 18 has a step record" 2 zsh $L $C18
++chk "nothing beyond seed 18's pair was launched" is "$(launches)" 2
++reset; steps garbage; env PATH=$T/bin:$PATH zsh $Q > /dev/null 2>&1                # the pair is copied, the step fails
++[[ $T == *reg19_sandbox3.* ]] && rm -rf $VM/runs/20261113-00000[12]_*              # someone clears the VM's copies
++case_ "a pair on the Mac that the VM no longer lists is not made again (T2)" "which the VM does not list" 1 zsh $Q
++chk "no third launch" is "$(launches)" 2
++reset
++case_ "a run made at another commit is not counted (T3)" "not at the pin" 1 FAKE_COMMIT=deadbeef zsh $Q
++reset; mkrun 20261113-090000_$C18 $VALID deadbeef; echo x > $S/state/attempt_${C18}_2.txt
++case_ "a valid run found on the VM at another commit is not used (T3)" "not at the pin" 1 zsh $Q
++reset; (cd $T/repo && : > docs/decisions.md && $G commit -q -am "no decision")
++case_ "no queue before the decision is in the committed log (T5)" "is not in the committed docs/decisions.md" 2 zsh $Q
++case_ "no launch by hand either (T5)" "is not in the committed docs/decisions.md" 2 zsh $L $C18
++reset; mkdir -p $S/state/queue.lock; echo $$ > $S/state/queue.lock/pid
++case_ "a second queue beside a running one is refused" "another queue is running" 1 zsh $Q
++reset; steps $S18T $S19F; mkdir -p $S/state/queue.lock; echo 999999 > $S/state/queue.lock/pid
++case_ "a lock left by a dead queue is set aside and the queue runs" "QUEUE DONE" 0 zsh $Q
++chk "the stale lock is kept under another name" is "$(nfiles "$S/state/queue.lock.stale_*")" 1
++reset
++case_ "WAIT_MIN that is not a number stops before anything" "WAIT_MIN is not a number" 2 WAIT_MIN=abc zsh $Q
++reset
++case_ "no control is started at 15:00 UTC" "no launch of $C18" 1 FAKE_HHMM=1500 zsh $Q
++case_ "nor at 12:00 UTC: its burst run would last into those hours" "no launch of $C18" 1 FAKE_HHMM=1200 zsh $Q
++chk "neither spent an attempt" test ! -e $S/state/attempt_${C18}_2.txt
++reset; steps $S18T $S19F; env PATH=$T/bin:$PATH FAKE_FAILED=client_lag FAKE_FAILED_KIND=burst zsh $Q > /dev/null 2>&1   # control valid, burst invalid
++case_ "a burst run may still start at 12:00 UTC; the next control may not" "no launch of $C19" 1 FAKE_HHMM=1200 zsh $Q
++chk "three launches: control, burst, burst" is "$(launches)" 3
++reset; env PATH=$T/bin:$PATH FAKE_FAILED=client_lag FAKE_FAILED_KIND=burst zsh $Q > /dev/null 2>&1
++case_ "no burst run is started at 13:00 UTC" "no launch of $B18" 1 FAKE_HHMM=1300 zsh $Q
++reset; steps $S18T $S19F
++case_ "at 18:00 UTC the queue runs again" "QUEUE DONE" 0 FAKE_HHMM=1800 zsh $Q
++chk "the attempt record names the boot of its run" grep -q "^boot $BOOTA" $S/state/attempt_${C18}_2.txt
++
++echo "--- round 3: the checks in force before each step"
++reset; steps $S18T $S19F
++echo '{"n_runs": 8, "n_changed": 1, "changed": [{"run": "x", "stored_valid": true, "now_valid": false, "stored_failed": [], "now_failed": ["recorder"], "recorder": {"end_ref_t": 4080.0}, "gpu_steady": {"max_temp_c": 70}}]}' > $T/state/recheck_json
++case_ "a run the checks in force would fail stops the queue before the step (T4)" "operational stop before the step of seed 18" 1 zsh $Q
++chk "no step record" test ! -e $S/state/reg19_step_s18.txt
++chk "the saved record keeps validity" grep -q '"now_failed"' $S/state/reg19_recheck_*.json
++chk "and none of the checks' details" sh -c "! grep -q 'end_ref_t\|max_temp_c' $S/state/reg19_recheck_*.json"
++reset; steps $S18T $S19F
++case_ "a recheck that sees another number of runs stops the queue before the step" "operational stop before the step of seed 18" 1 FAKE_RECHECK_N=6 zsh $Q
++
++echo "--- round 3: stops that had no case"
++reset
++case_ "a GPU still hot after the wait" "STOP: GPU at '60' C" 1 FAKE_TEMP=60 zsh $Q
++case_ "a temperature that cannot be read" "could not be read (temperature)" 1 FAKE_TEMP_FAIL=1 zsh $Q
++case_ "a pre-launch read that fails" "the pre-launch read failed" 1 FAKE_PRELAUNCH_FAIL=1 zsh $Q
++chk "none of the three launched" is "$(launches)" 0
++chk "or spent an attempt" test ! -e $S/state/attempt_${C18}_2.txt
++reset
++case_ "a manifest update that fails" "manifest update failed" 1 FAKE_MANIFEST_FAIL=1 zsh $Q
++reset; steps $S18T $S19F
++case_ "checks.json appearing just after tmux ended is found" "QUEUE DONE" 0 FAKE_LATE_CHECKS=1 FAKE_TMUX_RC=1 zsh $Q
++chk "and the launch output says so" sh -c "grep -q 'after tmux ended' $S/state/launch_${C18}_*.out"
++
+ echo "--- session probe"
+ reset; rm $S/state/session_boot_id.txt
+ case_ "session probe at 350 W" "SESSION OK boot_id $BOOTA" 0 zsh $P

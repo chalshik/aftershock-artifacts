@@ -1,0 +1,447 @@
+diff --git a/docs/probe/20261113_reg19/ops_r3/common.sh b/docs/probe/20261113_reg19/ops_r3/common.sh
+index cf94e22..baed794 100644
+--- a/docs/probe/20261113_reg19/ops_r3/common.sh
++++ b/docs/probe/20261113_reg19/ops_r3/common.sh
+@@ -1,5 +1,6 @@
+ # Shared, fixed settings and functions of the REG-19 resume scripts, third version (after the round-2 rule F review,
+-# docs/drafts/reviews-2026-11-13/rulef-reg19-resume-r2.md). Read from the environment: VM_HOST and WAIT_MIN only
++# docs/drafts/reviews-2026-11-13/rulef-reg19-resume-r2.md), revised after round 3 (rulef-reg19-resume-r3.md and
++# proxy-reg19-resume-r3.md). Read from the environment: VM_HOST and WAIT_MIN only
+ # (session_probe.sh also reads SET and RENEW). No seed, attempt number or run id is typed by anyone: the queue derives
+ # them from the attempt records in state/ and from what the VM's run folders say.
+ R=/Users/chalshik/Projects/aftershock-artifacts
+@@ -14,23 +15,36 @@ K=(-i $HOME/.ssh/id_ed25519_vllm -o BatchMode=yes -o ConnectTimeout=10 -o Server
+ MIN_FREE_KB=2097152                      # 2 GB free on the VM before a launch (about 240 MB per run)
+ MAX_ATTEMPTS=3                           # REG-19: a run once, rerun unchanged at most twice
+ SEEDS=(18 19)                            # the seeds left, in the registered order; not settable
++ALLCFG=(); for sd in 15 16 17 18 19; do ALLCFG+=(stage2_control_l1pl350cl_r2.0_w3000_s$sd burst_l1pl350cl_r2.0_w3000_s$sd); done
++LEFT=(${ALLCFG[7,10]})                   # the four configs of seeds 18 and 19: nothing else is ever launched
++DECISION_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[DECISION\] \(delegate\) REG-19 resumes for seeds 18 and 19'
++# Hours (UTC, HHMM) in which no run is started because it would run into the time of day at which the VM has been
++# powered off from outside: five of the six recorded power-offs fell between 14:35 and 17:37 UTC (BELIEF as to a
++# pattern; decisions.md 2026-11-05 [OPS] and docs/probe/20261113_reg19/poweroff_20261112_*.txt). A control is not
++# started unless its burst run can also end before that time.
++QUIET_CONTROL_FROM=1145; QUIET_BURST_FROM=1300; QUIET_TO=1800
+ DRIVER=595.99.02                         # the pinned driver (PROTOCOL.md, section 4, Software)
+ RECHECK_PAT='*_l1pl350cl_r2.0_w3000_s1[5-9]'   # REG-19's runs, both kinds, for analysis.recheck
+ CHECKS_COMMIT=5ee6e38d3a15994da8bb6597b9b13ea8be08807c    # harness/checks.py as of this commit (the checks in force, A14)
+ RECHECK_COMMIT=72fafb5991e036eddf1c4ce40b39bc1ca81fa74e   # analysis/recheck.py as of this commit
+ SCRIPTS=(common.sh vm_state.py session_probe.sh launch.sh queue.sh final.sh)
++RECORDS=(state/attempt_stage2_control_l1pl350cl_r2.0_w3000_s18_1.txt state/lost_ok_20261112-151030_stage2_control_l1pl350cl_r2.0_w3000_s18.txt)
+ CONTROL_PAT='*_stage2_control_l1pl350cl_r2.0_w3000_s1[5-9]'
+ BURST_PAT='*_burst_l1pl350cl_r2.0_w3000_s1[5-9]'
+ ALLOWED="Allowed reads while diagnosing a stop: 'tmux has-session -t run'; the folder names under runs/; a run's checks.json (valid, failed); in a launch log only the lines holding 'run_id' or '[run] checks'. Nothing else of a log or a run folder (REG-19: no interim look)."
+ 
+-# File-name stamp: UTC time plus the process id, so two starts in one second never share a name.
+-stamp() { print -r -- "$(date -u +%Y%m%dT%H%M%SZ)_$$"; }
++# File-name stamp, left in REPLY: UTC time, the process id and a count of the stamps this process has taken, so that
++# neither two starts in one second nor two files of one process in one second share a name. Call it as `stamp`,
++# never as $(stamp): a subshell would lose the count.
++STAMP_N=0
++stamp() { STAMP_N=$((STAMP_N + 1)); REPLY="$(date -u +%Y%m%dT%H%M%SZ)_$$_$STAMP_N"; }
+ 
+ # Mac-side checks before every launch, step and table: worktree at the pin and clean; the pin an ancestor of HEAD; the
+ # files used from the Mac's working tree (manifest tool, lock files) equal to the pin's; these scripts tracked, equal to
+-# their committed text, and that commit the one recorded in scripts_commit.txt. Sets SC.
++# their committed text, and that commit the one recorded in scripts_commit.txt; the two state records committed with
++# them (the lost run's attempt and the decision's allowance) tracked and unchanged. Sets SC.
+ mac_checks() {
+-  local st p paths
++  local st p paths recs
+   cd $R || { echo "STOP: no repo at $R"; return 2; }
+   [[ $(git -C $W rev-parse HEAD 2>/dev/null) == $PIN ]] || { echo "STOP: worktree $W is not at $PIN"; return 2; }
+   st=$(git -C $W status --short) || { echo "STOP: git status failed in $W"; return 2; }
+@@ -46,9 +60,27 @@ mac_checks() {
+   [[ -n $SC ]] || { echo "STOP: the resume scripts are not committed"; return 2; }
+   [[ -f $S/scripts_commit.txt ]] || { echo "STOP: no scripts_commit.txt"; return 2; }
+   [[ $(<$S/scripts_commit.txt) == $SC ]] || { echo "STOP: the scripts changed since scripts_commit.txt (now $SC)"; return 2; }
++  recs=(${RECORDS[@]/#/docs/probe/20261113_reg19/ops_r3/})
++  for p in $recs; do
++    git ls-files --error-unmatch $p > /dev/null 2>&1 || { echo "STOP: $p is not tracked by git"; return 2; }
++  done
++  git diff --quiet HEAD -- $recs || { echo "STOP: a committed state record differs from its committed text"; return 2; }
+   return 0
+ }
+ 
++# The decision that allows this queue is in the committed docs/decisions.md (no launch before it is in the log).
++decision_in_log() {
++  git -C $R grep -q -E "$DECISION_PAT" HEAD -- docs/decisions.md && return 0
++  MSG="the decision that allows this queue is not in the committed docs/decisions.md"; return 2
++}
++
++# True when a launch of config $1 now would run into the hours in which the VM has been powered off (see above).
++quiet_now() {
++  local now=$(date -u +%H%M) from=$QUIET_BURST_FROM
++  [[ $1 == stage2_control_* ]] && from=$QUIET_CONTROL_FROM
++  (( 10#$now >= from && 10#$now < QUIET_TO ))
++}
++
+ # Every REG-19 run folder on the Mac is linked into the worktree, each link resolves to the Mac's folder, and nothing
+ # else is in the worktree's runs/. A link is made only where nothing exists at its path; nothing is written elsewhere.
+ links_ok() {
+@@ -69,39 +101,45 @@ links_ok() {
+   return 0
+ }
+ 
+-# What the VM holds for one config: one line per run folder, "<run id> valid|invalid|nochecks|unreadable <failed|->".
+-# Read-only: vm_state.py is sent on stdin and reads folder names and the `valid` and `failed` fields of checks.json.
++# What the VM holds for REG-19's ten configs: one line per run folder,
++# "<run id> valid|invalid|nochecks|unreadable <failed|-> <commit|->". Read-only: vm_state.py is sent on stdin.
+ vm_state() {
+   local out
+   VMS=()
+-  out=$(ssh $K $H "python3 - $1" < $S/vm_state.py) || return 1
+-  [[ ${out##*$'\n'} == "END $1" ]] || return 1
++  out=$(ssh $K $H "python3 - ${ALLCFG[*]}" < $S/vm_state.py) || return 1
++  [[ ${out##*$'\n'} == "END ${#ALLCFG}" ]] || return 1
+   VMS=("${(@f)out}"); VMS=(${VMS[1,-2]})
+   return 0
+ }
+ 
+ # REG-19's rerun rule for one config, from the attempt records and the VM's checks.json files only. Returns 0 with
+ # RID set (one valid run exists: use it, launch nothing) or with LAUNCH set (the number of the attempt to launch);
+-# returns 2 with MSG set when the registration stops the queue.
++# returns 2 with MSG set when the registration, or this decision, stops the queue.
+ #   - every launch is one attempt, whatever it left behind; at most MAX_ATTEMPTS attempts of a config;
+-#   - a run folder on the VM without an attempt record stops the queue (a launch outside these scripts);
+-#   - no rerun after `no_errors` (a client error), `manipulation` (the burst did not fill the pool) or `power_limit`
+-#     (a limit other than 350 W); one rerun after `gpu_steady` (heat), a second heat failure stops the queue;
++#   - more run folders of the config on the VM than attempt records stop the queue (a launch outside these scripts);
++#   - a run folder of the config on the Mac that the VM does not list stops the queue (a valid run already copied
++#     must not be made a second time);
++#   - a valid run is used only if it was made at the pin (env.json's git_commit);
++#   - no rerun after a `no_errors` failure that holds a `client_error`, after `manipulation` (the burst did not fill
++#     the pool) or after `power_limit` (a limit other than 350 W); one rerun after `gpu_steady` (heat), and a second
++#     `gpu_steady` failure among ALL of REG-19's runs stops the queue;
+ #   - a run folder without checks.json (a lost run) is not rerun unless a decision allows it, recorded as
+ #     state/lost_ok_<run id>.txt. The record for seed 18's control of 2026-11-12 is committed with these scripts.
+ decide() {
+-  local cfg=$1 line parts f n_valid=0 n_heat=0 norerun="" bad="" lost="" atts
+-  RID=""; LAUNCH=""; MSG=""
+-  vm_state $cfg || { MSG="the VM's run folders of $cfg could not be read"; return 2; }
++  local cfg=$1 line parts f id n_valid=0 n_heat=0 norerun="" bad="" lost="" commit="" atts mine
++  RID=""; LAUNCH=""; MSG=""; mine=()
++  vm_state || { MSG="the VM's run folders could not be read"; return 2; }
+   for line in $VMS; do
+     parts=(${=line})
++    for f in ${(s:,:)parts[3]}; do [[ $f == gpu_steady ]] && n_heat=$((n_heat + 1)); done   # over every REG-19 run
++    [[ $parts[1] == *_$cfg ]] || continue
++    mine+=($parts[1])
+     case $parts[2] in
+-      valid) n_valid=$((n_valid + 1)); RID=$parts[1];;
++      valid) n_valid=$((n_valid + 1)); RID=$parts[1]; commit=$parts[4];;
+       invalid)
+         for f in ${(s:,:)parts[3]}; do
+           case $f in
+-            no_errors|manipulation|power_limit) norerun="$f ($parts[1])";;
+-            gpu_steady) n_heat=$((n_heat + 1));;
++            no_errors/client_error|manipulation|power_limit) norerun="$f ($parts[1])";;
+           esac
+         done;;
+       nochecks) [[ -f $ST/lost_ok_$parts[1].txt ]] || lost=$parts[1];;
+@@ -111,13 +149,65 @@ decide() {
+   atts=($ST/attempt_${cfg}_<->.txt(N))
+   [[ -z $bad ]] || { RID=""; MSG="checks.json of $bad cannot be read"; return 2; }
+   (( n_valid <= 1 )) || { RID=""; MSG="the VM holds $n_valid valid runs of $cfg: the owner decides"; return 2; }
+-  (( ${#VMS} <= ${#atts} )) || { RID=""; MSG="the VM holds ${#VMS} run folders of $cfg and only ${#atts} attempts are recorded in $ST"; return 2; }
+-  (( n_valid == 1 )) && return 0
++  (( ${#mine} <= ${#atts} )) || { RID=""; MSG="the VM holds ${#mine} run folders of $cfg and only ${#atts} attempts are recorded in $ST"; return 2; }
++  for id in $R/runs/*_${cfg}(N/:t); do
++    [[ ${mine[(Ie)$id]} -gt 0 ]] || { RID=""; MSG="the Mac holds $id, which the VM does not list: nothing of $cfg is launched or used; the owner decides"; return 2; }
++  done
++  if (( n_valid == 1 )); then
++    [[ $commit == $PIN ]] && return 0
++    MSG="the valid run $RID of $cfg was made at commit '$commit', not at the pin: the owner decides"; RID=""; return 2
++  fi
+   [[ -z $norerun ]] || { MSG="REG-19 registers no rerun after $norerun: the owner decides"; return 2; }
+   [[ -z $lost ]] || { MSG="$lost has no checks.json (lost or still running): a rerun needs its own decision, recorded as $ST/lost_ok_$lost.txt"; return 2; }
+-  (( n_heat < 2 )) || { MSG="second heat failure (gpu_steady) of $cfg: REG-19 stops the queue"; return 2; }
++  (( n_heat < 2 )) || { MSG="second heat failure (gpu_steady) among REG-19's runs: REG-19 stops the queue; the owner decides"; return 2; }
+   (( ${#atts} < MAX_ATTEMPTS )) || { MSG="the $MAX_ATTEMPTS attempts of $cfg are spent: operational stop, no table, the owner decides"; return 2; }
+   LAUNCH=$((${#atts} + 1))
+   [[ ! -e $ST/attempt_${cfg}_$LAUNCH.txt ]] || { MSG="attempt records of $cfg are not numbered 1..${#atts}"; LAUNCH=""; return 2; }
+   return 0
+ }
++
++# Is it this config's turn? Only the four configs of seeds 18 and 19; nothing of a seed that has a step record;
++# seed 19 only after seed 18's record says 'continue': True; a burst run only after a valid control of its seed.
++# launch.sh calls this before anything else, so a launch by hand cannot pass the futility stop or the order.
++gate() {
++  local cfg=$1 sd r18=$ST/reg19_step_s18.txt
++  MSG=""
++  [[ ${LEFT[(Ie)$cfg]} -gt 0 ]] || { MSG="'$cfg' is not one of the four configs left (seeds 18 and 19)"; return 2; }
++  sd=${cfg##*_s}
++  [[ ! -e $ST/reg19_step_s$sd.txt ]] || { MSG="seed $sd has a step record: none of its runs is launched again"; return 2; }
++  if [[ $sd == 19 ]]; then
++    [[ -f $r18 ]] || { MSG="seed 19 is launched only after seed 18's step record says 'continue': True"; return 2; }
++    [[ $(sed -n 1p $r18) == "'done': [15, 16, 17, 18]" && $(sed -n 2p $r18) == "'continue': True" ]] || { MSG="seed 19 is launched only after seed 18's step record says 'continue': True"; return 2; }
++  fi
++  if [[ $cfg == burst_* ]]; then
++    decide stage2_control_l1pl350cl_r2.0_w3000_s$sd || return 2
++    [[ -n $RID ]] || { RID=""; LAUNCH=""; MSG="the burst run of seed $sd is launched only after a valid control of that seed"; return 2; }
++    RID=""; LAUNCH=""
++  fi
++  return 0
++}
++
++# The checks in force (A14), applied read-only by analysis.recheck to REG-19's runs on the Mac, from main. $1 is the
++# number of runs there must be. Only validity is kept: of the recheck's output, n_runs, n_changed and, for a changed
++# run, its stored and recomputed `valid` and `failed`; the details of the checks are dropped before anything is
++# written (they could hint at an outcome). Sets RK (the record) and RECHECK_COUNTS. Returns 0 when the count is $1 and
++# nothing changed; 3 when not (an operational stop: the owner decides); 1 or 2 when the recheck could not be run.
++RECHECK_FILTER='import json, sys
++d = json.load(sys.stdin)
++keep = ("run", "stored_valid", "now_valid", "stored_failed", "now_failed", "error")
++print(json.dumps({"mac_head": sys.argv[1], "n_runs": d["n_runs"], "n_changed": d["n_changed"],
++                  "changed": [{k: r[k] for k in keep if k in r} for r in d["changed"]]}, indent=1))'
++recheck_ok() {
++  local want=$1 ts raw
++  MSG=""; RK=""; RECHECK_COUNTS=""
++  cd $R || { MSG="no repo at $R"; return 2; }
++  git diff --quiet $CHECKS_COMMIT -- harness/checks.py && git diff --quiet $RECHECK_COMMIT -- analysis/recheck.py || { MSG="harness/checks.py or analysis/recheck.py differ in the working tree from the commits named for the recheck"; return 2; }
++  git diff --quiet HEAD -- analysis harness configs/defaults.yaml || { MSG="analysis/, harness/ or configs/defaults.yaml differ in the working tree from the Mac's HEAD"; return 2; }
++  stamp; ts=$REPLY; RK=$ST/reg19_recheck_$ts.json; RKERR=$ST/reg19_recheck_err_$ts.txt
++  [[ ! -e $RK ]] || { MSG="$RK exists"; return 2; }
++  raw=$(AFTERSHOCK_UNSEAL=REG-19 $PY -m analysis.recheck "$RECHECK_PAT" 2> $RKERR) || { MSG="analysis.recheck failed (see $RKERR)"; return 1; }
++  print -r -- "$raw" | python3 -c "$RECHECK_FILTER" "$(git rev-parse HEAD)" > $RK || { MSG="the recheck's output cannot be read"; return 1; }
++  RECHECK_COUNTS=$(python3 -c 'import json, sys; d = json.load(open(sys.argv[1])); print(d["n_runs"], d["n_changed"])' $RK) || { MSG="the recheck's record cannot be read"; return 1; }
++  [[ $RECHECK_COUNTS == "$want 0" ]] && return 0
++  MSG="the recheck gives '$RECHECK_COUNTS' (runs, changed) where '$want 0' is required (${RK:t}: validity fields only)"; return 3
++}
+diff --git a/docs/probe/20261113_reg19/ops_r3/final.sh b/docs/probe/20261113_reg19/ops_r3/final.sh
+index 578c213..4555b3f 100644
+--- a/docs/probe/20261113_reg19/ops_r3/final.sh
++++ b/docs/probe/20261113_reg19/ops_r3/final.sh
+@@ -17,19 +17,15 @@ fi
+ [[ -n $why ]] || { echo "STOP: no table. The step records do not show all five seeds run or a futility stop; after an operational stop the owner decides (REG-19)"; exit 2; }
+ prev=($ST/reg19_final_*.txt(N))
+ (( ${#prev} == 0 )) || { echo "STOP: the table was already computed or tried: ${prev[*]:t}"; exit 2; }
+-ts=$(stamp); out=$ST/reg19_final_$ts.txt; err=$ST/reg19_final_err_$ts.txt
+-# Validity first, blind to the outcome: the checks in force since 2026-11-12 (A14), applied read-only by
+-# analysis.recheck to REG-19's runs on the Mac. Only n_runs, n_changed and the changed runs' check fields are printed.
+-# If any run's validity differs from its stored checks.json, the table is NOT computed: the owner decides.
+-cd $R || exit 2
+-git diff --quiet $CHECKS_COMMIT -- harness/checks.py && git diff --quiet $RECHECK_COMMIT -- analysis/recheck.py || { echo "STOP: harness/checks.py or analysis/recheck.py differ in the working tree from the commits named for the recheck"; exit 2; }
+-rk=$ST/reg19_recheck_$ts.json; rkerr=$ST/reg19_recheck_err_$ts.txt
+-[[ ! -e $rk ]] || { echo "STOP: $rk exists"; exit 2; }
+-AFTERSHOCK_UNSEAL=REG-19 $PY -m analysis.recheck "$RECHECK_PAT" > $rk 2> $rkerr || { echo "STOP: analysis.recheck failed (see $rkerr); no table"; exit 1; }
+-counts=$(python3 -c 'import json, sys; d = json.load(open(sys.argv[1])); print(d["n_runs"], d["n_changed"])' $rk) || { echo "STOP: the recheck output cannot be read; no table"; exit 1; }
++stamp; ts=$REPLY; out=$ST/reg19_final_$ts.txt; err=$ST/reg19_final_err_$ts.txt
++# Validity first: the checks in force since 2026-11-12 (A14), applied read-only to REG-19's runs on the Mac
++# (common.sh `recheck_ok`; the queue has done the same before each step). If any run's validity differs from its
++# stored checks.json, or the number of runs is not the number of valid pairs, the table is NOT computed.
+ want_n=10; [[ $why == "futility stop after seed 18" ]] && want_n=8
+-echo "RECHECK n_runs n_changed: $counts (expected $want_n 0); ${rk:t}"
+-[[ $counts == "$want_n 0" ]] || { echo "STOP: operational stop. The recheck does not show $want_n runs with unchanged validity (see $rk: validity fields only). REG-19's table is not computed; the delegate marks, reruns and counts nothing; the owner decides"; exit 3; }
++recheck_ok $want_n; rc=$?
++(( rc != 3 )) || { echo "STOP: operational stop. $MSG. REG-19's table is not computed; the delegate marks, reruns and counts nothing; the owner decides"; exit 3; }
++(( rc == 0 )) || { echo "STOP: the recheck could not be run: $MSG; no table"; exit $rc; }
++echo "RECHECK runs and changed: $RECHECK_COUNTS (expected $want_n 0); ${RK:t}; Mac HEAD $(git -C $R rev-parse HEAD)"
+ (cd $W && $PY -m analysis.gate reg19 > $out 2> $err); rc=$?
+ echo "FINAL ($why); rc $rc; scripts $SC; pin $PIN; worktree $W; output ${out:t}; stderr_lines $(wc -l < $err | tr -d ' ') ${err:t}"
+ (( rc == 0 )) || { echo "STOP: reg19 failed (see $err). A second try is an operational step with its own [OPS] entry: the file $out must first be set aside by hand"; exit 1; }
+diff --git a/docs/probe/20261113_reg19/ops_r3/launch.sh b/docs/probe/20261113_reg19/ops_r3/launch.sh
+index 9394797..821b1b4 100644
+--- a/docs/probe/20261113_reg19/ops_r3/launch.sh
++++ b/docs/probe/20261113_reg19/ops_r3/launch.sh
+@@ -1,7 +1,11 @@
+ #!/bin/zsh
+ # Pre-launch checks and launch of one REG-19 config on the VM; then wait for its checks.json.
+-# Usage: zsh launch.sh <config-name-without-.yaml>      (called by queue.sh; safe by hand: it applies the same rule)
+-# It asks `decide` (common.sh) which attempt this is and refuses when a valid run exists or REG-19 allows no rerun.
++# Usage: zsh launch.sh <config-name-without-.yaml>      (called by queue.sh)
++# By hand it applies the queue's own rules and no fewer: `gate` (common.sh) accepts only the four configs of seeds
++# 18 and 19, nothing of a seed that has a step record, seed 19 only after seed 18's record says 'continue': True,
++# and a burst run only after a valid control; `decide` says which attempt this is and refuses when a valid run
++# exists or REG-19 allows no rerun. What it does not do by hand is copy, verify or step: only the queue does.
++# No launch before the decision is in the committed log, and none in the hours in which the VM has been powered off.
+ # It only reads the power limit (a limit other than 350.00 W stops, as REG-19 registers). The pre-launch read goes to
+ # a time-stamped probe file; a stop before the launch spends no attempt. The attempt record state/attempt_<config>_<n>.txt
+ # is written immediately before the launch command, so from that line on the attempt is spent whatever happens.
+@@ -11,12 +15,16 @@
+ source ${0:A:h}/common.sh
+ mac_checks || exit 2
+ CFG=$1
+-[[ -n $CFG && -f $W/configs/$CFG.yaml ]] || { echo "STOP: no config '$CFG' at the pin"; exit 2; }
++decision_in_log || { echo "STOP: $MSG"; exit 2; }
++gate "$CFG" || { echo "STOP: $MSG"; exit 2; }
++[[ -f $W/configs/$CFG.yaml ]] || { echo "STOP: no config '$CFG' at the pin"; exit 2; }
++[[ ${WAIT_MIN:-120} == <-> ]] || { echo "STOP: WAIT_MIN is not a number"; exit 2; }
+ [[ -s $ST/session_boot_id.txt ]] || { echo "STOP: no session probe (run session_probe.sh first)"; exit 2; }
+ decide $CFG || { echo "STOP: $MSG"; exit 2; }
+ [[ -z $RID ]] || { echo "STOP: $RID is a valid run of $CFG: nothing to launch"; exit 2; }
++quiet_now $CFG && { echo "STOP: no launch of $CFG between $QUIET_CONTROL_FROM (a control) or $QUIET_BURST_FROM (a burst run) and $QUIET_TO UTC: the run would last into the hours in which the VM has been powered off. Start the queue again after $QUIET_TO UTC"; exit 2; }
+ ATT=$LAUNCH; MARK=$ST/attempt_${CFG}_$ATT.txt
+-ts=$(stamp)
++stamp; ts=$REPLY
+ PROBE=$PROBE_DIR/prelaunch_reg19_${CFG}_$ts.txt; LOG="~/${CFG}_$ts.log"
+ [[ ! -e $PROBE ]] || { echo "STOP: probe $PROBE exists"; exit 2; }
+ for i in $(seq 1 60); do
+@@ -39,7 +47,7 @@ BOOT=$(sed -n '/# boot:/{n;p;}' $PROBE); FREE=$(sed -n '/# free_kb:/{n;p;}' $PRO
+ [[ $FREE == <-> ]] && (( FREE >= MIN_FREE_KB )) || { echo "STOP: only '$FREE' kB free on the VM"; exit 2; }
+ sed -n '/# tmux:/,$p' $PROBE | grep -q "no server running\|No such file or directory\|error connecting" || { echo "STOP: a tmux session exists"; exit 2; }
+ [[ ! -e $MARK ]] || { echo "STOP: $MARK exists"; exit 2; }
+-print -r -l -- "attempt $ATT of $CFG" "time $(date -u +%Y-%m-%dT%H:%M:%SZ)" "scripts $SC" "probe ${PROBE:t}" > $MARK || { echo "STOP: the attempt record could not be written; nothing launched"; exit 2; }
++print -r -l -- "attempt $ATT of $CFG" "time $(date -u +%Y-%m-%dT%H:%M:%SZ)" "scripts $SC" "probe ${PROBE:t}" "boot $BOOT" > $MARK || { echo "STOP: the attempt record could not be written; nothing launched"; exit 2; }
+ ssh $K $H "cd ~/aftershock-artifacts && tmux new-session -d -s run \"~/.local/bin/uv run python -m harness.run configs/$CFG.yaml > $LOG 2>&1\"" || { echo "launch_command_failed" >> $MARK; echo "STOP: the launch command failed; attempt $ATT of $CFG is recorded as spent. $ALLOWED"; exit 2; }
+ RID=""
+ for i in $(seq 1 24); do
+diff --git a/docs/probe/20261113_reg19/ops_r3/queue.sh b/docs/probe/20261113_reg19/ops_r3/queue.sh
+index 4f00fcf..85d3945 100644
+--- a/docs/probe/20261113_reg19/ops_r3/queue.sh
++++ b/docs/probe/20261113_reg19/ops_r3/queue.sh
+@@ -10,9 +10,22 @@
+ # two fields, the `done` list and the `continue` flag, are written to state/reg19_step_s<seed>.txt. A seed with that
+ # record is never launched, copied or stepped again; seed 19 is reached only through seed 18's record saying
+ # 'continue': True. Every stop exits non-zero. "QUEUE END futility stop" needs 'continue': False in the record.
++# Since round 3: one queue at a time (a lock); no start before the decision is in the committed log; and the checks
++# in force are applied to REG-19's runs on the Mac BEFORE each step (common.sh `recheck_ok`), so that the futility
++# flag never counts a run those checks would fail: a changed run stops the queue with no step, for the owner.
+ source ${0:A:h}/common.sh
+ mac_checks || exit 2
++decision_in_log || { echo "QUEUE STOP $MSG"; exit 2; }
++[[ ${WAIT_MIN:-120} == <-> ]] || { echo "QUEUE STOP WAIT_MIN is not a number"; exit 2; }
+ mkdir -p $ST
++LOCK=$ST/queue.lock
++if ! mkdir $LOCK 2> /dev/null; then
++  pid=$(cat $LOCK/pid 2> /dev/null)
++  if [[ -n $pid ]] && kill -0 $pid 2> /dev/null; then echo "QUEUE STOP another queue is running (pid $pid)"; exit 1; fi
++  stamp; mv $LOCK $ST/queue.lock.stale_$REPLY && mkdir $LOCK || { echo "QUEUE STOP the lock could not be taken"; exit 1; }
++fi
++print -r -- $$ > $LOCK/pid
++trap 'stamp; mv $LOCK $ST/queue.lock.ended_$REPLY 2> /dev/null' EXIT
+ stop() { echo "QUEUE STOP $*"; exit 1; }
+ echo "QUEUE START seeds ${SEEDS[*]}; scripts $SC; pin $PIN; $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+ cd $R || stop "no repo"
+@@ -26,18 +39,19 @@ for sd in $SEEDS; do
+       cfg=${kind}_l1pl350cl_r2.0_w3000_s$sd
+       decide $cfg || stop "$cfg: $MSG"
+       if [[ -n $RID ]]; then echo "RUN $cfg $RID VALID (found on the VM; not launched)"; rids+=($RID); continue; fi
+-      ts=$(stamp); outf=$ST/launch_${cfg}_$ts.out
++      stamp; ts=$REPLY; outf=$ST/launch_${cfg}_$ts.out
+       [[ ! -e $outf ]] || stop "$outf exists"
+       out=$(zsh $S/launch.sh $cfg 2>&1); rc=$?
+       print -r -- "$out" > $outf
+       rid=$(print -r -- "$out" | sed -n 's/^LAUNCHED \([^ ]*\).*/\1/p')
+       (( rc == 0 )) || stop "$cfg launch rc=$rc rid=$rid: $(print -r -- "$out" | grep -E 'STOP|TMUX GONE|STILL RUNNING|VM NOT REACHABLE' | tail -1)"
+       [[ -n $rid ]] || stop "$cfg: launch.sh ended with rc 0 and no run id"
+-      vm_state $cfg || stop "$cfg: the VM's run folders could not be read after the run; $rid is not judged. Start the queue again"
+-      state=""; failed=""
+-      for line in $VMS; do parts=(${=line}); if [[ $parts[1] == $rid ]]; then state=$parts[2]; failed=$parts[3]; fi; done
++      vm_state || stop "$cfg: the VM's run folders could not be read after the run; $rid is not judged. Start the queue again"
++      state=""; failed=""; commit=""
++      for line in $VMS; do parts=(${=line}); if [[ $parts[1] == $rid ]]; then state=$parts[2]; failed=$parts[3]; commit=$parts[4]; fi; done
+       case $state in
+-        valid) echo "RUN $cfg $rid VALID"; rids+=($rid);;
++        valid) [[ $commit == $PIN ]] || stop "$cfg: $rid is valid but was made at commit '$commit', not at the pin: the owner decides"
++               echo "RUN $cfg $rid VALID"; rids+=($rid);;
+         invalid) echo "RUN $cfg $rid INVALID failed=$failed"; stop "after an invalid run. Starting the queue again applies REG-19's rerun rule from checks.json alone";;
+         *) stop "$cfg: checks.json of $rid could not be read after the run (state '$state')";;
+       esac
+@@ -54,7 +68,11 @@ for sd in $SEEDS; do
+     python3 tools/manifest.py update > /dev/null || stop "manifest update failed"
+     mac_checks || stop "a Mac-side check failed before the step"
+     links_ok || stop "the worktree's links are not as required"
+-    ts=$(stamp); errf=$ST/reg19_step_err_s${sd}_$ts.txt; outf=$ST/reg19_step_out_s${sd}_$ts.txt
++    recheck_ok $((2 * (sd - 14))); rc=$?
++    (( rc != 3 )) || stop "operational stop before the step of seed $sd: $MSG. No step is computed; the delegate marks, reruns and counts nothing; the owner decides"
++    (( rc == 0 )) || stop "the recheck before the step of seed $sd could not be run: $MSG"
++    echo "RECHECK before the step of seed $sd: runs and changed $RECHECK_COUNTS; ${RK:t}"
++    stamp; ts=$REPLY; errf=$ST/reg19_step_err_s${sd}_$ts.txt; outf=$ST/reg19_step_out_s${sd}_$ts.txt
+     [[ ! -e $errf && ! -e $outf ]] || stop "$outf exists"
+     (cd $W && $PY -m analysis.gate reg19_step > $outf 2> $errf); rc=$?
+     (( rc == 0 )) || stop "reg19_step failed (rc $rc; see $errf); no step is recorded"
+diff --git a/docs/probe/20261113_reg19/ops_r3/session_probe.sh b/docs/probe/20261113_reg19/ops_r3/session_probe.sh
+index 8845f94..b3289f4 100644
+--- a/docs/probe/20261113_reg19/ops_r3/session_probe.sh
++++ b/docs/probe/20261113_reg19/ops_r3/session_probe.sh
+@@ -5,13 +5,14 @@
+ # limit before and after is written to the probe. Writes state/session_boot_id.txt, which every launch compares with
+ # the VM's boot id: a reboot between runs stops the queue. A second probe replaces that tripwire, so it is refused
+ # unless RENEW=1 (after a reboot or another limit REG-19 stops the queue: a renewal needs a decisions.md entry); the
+-# replaced file is kept under another name.
++# replaced file is kept under another name. The kernel and the NVIDIA module of the boot before this one, read from
++# the journal, are recorded beside this boot's, so that a change across the reboot is on file before any run.
+ source ${0:A:h}/common.sh
+ mac_checks || exit 2
+ mkdir -p $ST
+ cur=$ST/session_boot_id.txt
+ [[ ! -e $cur || -n $RENEW ]] || { echo "STOP: a session probe exists ($cur); RENEW=1 replaces it, and only with a decisions.md entry"; exit 2; }
+-ts=$(stamp)
++stamp; ts=$REPLY
+ out=$PROBE_DIR/session_$ts.txt
+ [[ ! -e $out ]] || { echo "STOP: $out exists"; exit 2; }
+ dry=$(cd $R && uv sync --frozen --dry-run --offline 2>&1) || { echo "STOP: the dry-run sync of the Mac's environment failed"; exit 2; }
+@@ -23,7 +24,10 @@ n_add=$(print -r -- "$dry" | grep -c '^ [+~] '); n_extra=$(print -r -- "$dry" |
+     echo "driver $(nvidia-smi --query-gpu=driver_version --format=csv,noheader)";
+     echo "governor $(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo n/a)";
+     echo "limit_before $(nvidia-smi --query-gpu=power.limit --format=csv,noheader)";
+-    echo "apps $(nvidia-smi --query-compute-apps=pid --format=csv,noheader | wc -l)"'
++    echo "apps $(nvidia-smi --query-compute-apps=pid --format=csv,noheader | wc -l)";
++    echo "boots $(journalctl --list-boots 2>/dev/null | tail -3 | tr -s " " | tr "\n" ";")";
++    echo "prev_boot_kernel $(journalctl -b -1 -k --no-pager 2>/dev/null | grep -m1 -o "Linux version [^ ]*")";
++    echo "prev_boot_nvidia $(journalctl -b -1 -k --no-pager 2>/dev/null | grep -m1 -o "NVIDIA UNIX.*Kernel Module  *[0-9.]*")"'
+ } > $out || { echo "STOP: the VM could not be read"; exit 3; }
+ if [[ -n $SET ]]; then
+   if [[ $(grep '^apps ' $out | awk '{print $2}') == 0 ]]; then
+diff --git a/docs/probe/20261113_reg19/ops_r3/vm_state.py b/docs/probe/20261113_reg19/ops_r3/vm_state.py
+index d19a408..d2e6b47 100644
+--- a/docs/probe/20261113_reg19/ops_r3/vm_state.py
++++ b/docs/probe/20261113_reg19/ops_r3/vm_state.py
+@@ -1,31 +1,42 @@
+-"""Read-only, run on the VM (sent over ssh on stdin): for one config name, every run folder of that config under
+-~/aftershock-artifacts/runs and what its checks.json says. Only the fields `valid` and `failed` are read; nothing is
+-written. One line per folder: "<run id> valid|invalid|nochecks|unreadable <failed check names, comma-joined, or ->";
+-the last line is "END <config>", so a cut-off answer is not taken for a complete one."""
++"""Read-only, run on the VM (sent over ssh on stdin): for the config names given, every run folder of those configs
++under ~/aftershock-artifacts/runs and what its checks.json and env.json say. Read: the fields `valid` and `failed` of
++checks.json; for a failed `no_errors` check, whether any request ended with the status `client_error` (the names of
++the statuses, never their counts); and `git_commit` of env.json. Nothing is written. One line per folder:
++"<run id> valid|invalid|nochecks|unreadable <failed check names, comma-joined, or -> <commit or ->"; a failed
++`no_errors` is printed as `no_errors/client_error` or `no_errors/other`. The last line is "END <number of configs>",
++so a cut-off answer is not taken for a complete one."""
+ import json
+ import pathlib
+ import re
+ import sys
+ 
+-cfg = sys.argv[1]
++cfgs = sys.argv[1:]
+ root = pathlib.Path.home() / "aftershock-artifacts" / "runs"
+-if not root.is_dir():
+-    print("ERROR no runs directory")
++if not cfgs or not root.is_dir():
++    print("ERROR no config given or no runs directory")
+     sys.exit(3)
+-pat = re.compile(r"^\d{8}-\d{6}_" + re.escape(cfg) + r"$")
++pat = re.compile(r"^\d{8}-\d{6}_(" + "|".join(re.escape(c) for c in cfgs) + r")$")
+ for d in sorted(p for p in root.iterdir() if p.is_dir() and pat.match(p.name)):
++    try:
++        commit = str(json.loads((d / "env.json").read_text())["git_commit"]).strip() or "-"
++    except Exception:
++        commit = "-"
+     f = d / "checks.json"
+     if not f.is_file():
+-        print(d.name, "nochecks", "-")
++        print(d.name, "nochecks", "-", commit)
+         continue
+     try:
+         c = json.loads(f.read_text())
+-        valid, failed = c["valid"], c["failed"]
+-        ok = isinstance(valid, bool) and isinstance(failed, list) and valid == (not failed)
++        valid, failed = c["valid"], [str(x) for x in c["failed"]]
++        ok = isinstance(valid, bool) and valid == (not failed)
++        if ok and "no_errors" in failed:
++            detail = next(x["detail"] for x in c["checks"] if x["name"] == "no_errors")
++            kind = "client_error" if detail.get("client_error", 0) > 0 else "other"
++            failed = [f"no_errors/{kind}" if x == "no_errors" else x for x in failed]
+     except Exception:
+         ok = False
+     if not ok:
+-        print(d.name, "unreadable", "-")
++        print(d.name, "unreadable", "-", commit)
+     else:
+-        print(d.name, "valid" if valid else "invalid", ",".join(str(x) for x in failed) or "-")
+-print("END", cfg)
++        print(d.name, "valid" if valid else "invalid", ",".join(failed) or "-", commit)
++print("END", len(cfgs))
