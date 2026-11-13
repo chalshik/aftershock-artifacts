@@ -1,6 +1,6 @@
 #!/bin/zsh
-# Once before the queue: record the VM's session (boot id, uptime, kernel, driver, governor, limit, tree, disk) and the
-# Mac's environment against uv.lock, and require 350.00 W and the pinned, clean tree. Read-only, except that SET=1 first
+# Once before the queue: record the VM's session (boot id, uptime, kernel, driver, governor, limit, tree, lock, disk)
+# and the Mac's environment against uv.lock, and require 350.00 W, the pinned driver, and the pinned, clean tree and lock. Read-only, except that SET=1 first
 # runs the one allowed root command, `sudo -n nvidia-smi -pl 350`, and only when no compute process is on the GPU; the
 # limit before and after is written to the probe. Writes state/session_boot_id.txt, which every launch compares with
 # the VM's boot id: a reboot between runs stops the queue. A second probe replaces that tripwire, so it is refused
@@ -11,7 +11,7 @@ mac_checks || exit 2
 mkdir -p $ST
 cur=$ST/session_boot_id.txt
 [[ ! -e $cur || -n $RENEW ]] || { echo "STOP: a session probe exists ($cur); RENEW=1 replaces it, and only with a decisions.md entry"; exit 2; }
-ts=$(date -u +%Y%m%dT%H%M%SZ)
+ts=$(stamp)
 out=$PROBE_DIR/session_$ts.txt
 [[ ! -e $out ]] || { echo "STOP: $out exists"; exit 2; }
 dry=$(cd $R && uv sync --frozen --dry-run --offline 2>&1) || { echo "STOP: the dry-run sync of the Mac's environment failed"; exit 2; }
@@ -32,11 +32,13 @@ if [[ -n $SET ]]; then
     echo "set_skipped a compute process is on the GPU" >> $out
   fi
 fi
-ssh $K $H 'echo "limit_after $(nvidia-smi --query-gpu=power.limit --format=csv,noheader)"; cd ~/aftershock-artifacts && echo "tree $(git rev-parse HEAD) dirty $(git status --short | wc -l)"; echo "free_kb $(df -k --output=avail ~ | tail -1 | tr -d " ")"' >> $out || { echo "STOP: the VM could not be read (second read)"; exit 3; }
+ssh $K $H 'echo "limit_after $(nvidia-smi --query-gpu=power.limit --format=csv,noheader)"; cd ~/aftershock-artifacts && echo "tree $(git rev-parse HEAD) dirty $(git status --short | wc -l)"; echo "lock_blob $(git hash-object uv.lock)"; echo "free_kb $(df -k --output=avail ~ | tail -1 | tr -d " ")"' >> $out || { echo "STOP: the VM could not be read (second read)"; exit 3; }
 cat $out
 [[ $n_add == 0 ]] || { echo "STOP: the Mac's .venv lacks a locked package or holds another version ($n_add)"; exit 2; }
 [[ $(grep '^limit_after ' $out | awk '{print $2}') == 350.00 ]] || { echo "STOP: power limit is not 350.00 W"; exit 4; }
 [[ $(grep '^tree ' $out | awk '{print $2, $4}') == "$PIN 0" ]] || { echo "STOP: the VM's tree is not the pin, clean"; exit 2; }
+[[ $(grep '^driver ' $out | awk '{print $2}') == $DRIVER ]] || { echo "STOP: the VM's driver is not $DRIVER (PROTOCOL section 4)"; exit 2; }
+[[ $(grep '^lock_blob ' $out | awk '{print $2}') == $(git -C $R rev-parse ${PIN}:uv.lock) ]] || { echo "STOP: the VM's uv.lock is not the pin's"; exit 2; }
 boot=$(grep '^boot_id ' $out | awk '{print $2}')
 [[ $boot =~ '^[0-9a-f-]{36}$' ]] || { echo "STOP: no boot id read"; exit 3; }
 if [[ -e $cur ]]; then mv $cur $ST/session_boot_id_replaced_$ts.txt || { echo "STOP: the earlier session file could not be set aside"; exit 2; }; fi

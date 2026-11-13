@@ -26,7 +26,7 @@ for sd in $SEEDS; do
       cfg=${kind}_l1pl350cl_r2.0_w3000_s$sd
       decide $cfg || stop "$cfg: $MSG"
       if [[ -n $RID ]]; then echo "RUN $cfg $RID VALID (found on the VM; not launched)"; rids+=($RID); continue; fi
-      ts=$(date -u +%Y%m%dT%H%M%SZ); outf=$ST/launch_${cfg}_$ts.out
+      ts=$(stamp); outf=$ST/launch_${cfg}_$ts.out
       [[ ! -e $outf ]] || stop "$outf exists"
       out=$(zsh $S/launch.sh $cfg 2>&1); rc=$?
       print -r -- "$out" > $outf
@@ -54,7 +54,7 @@ for sd in $SEEDS; do
     python3 tools/manifest.py update > /dev/null || stop "manifest update failed"
     mac_checks || stop "a Mac-side check failed before the step"
     links_ok || stop "the worktree's links are not as required"
-    ts=$(date -u +%Y%m%dT%H%M%SZ); errf=$ST/reg19_step_err_s${sd}_$ts.txt; outf=$ST/reg19_step_out_s${sd}_$ts.txt
+    ts=$(stamp); errf=$ST/reg19_step_err_s${sd}_$ts.txt; outf=$ST/reg19_step_out_s${sd}_$ts.txt
     [[ ! -e $errf && ! -e $outf ]] || stop "$outf exists"
     (cd $W && $PY -m analysis.gate reg19_step > $outf 2> $errf); rc=$?
     (( rc == 0 )) || stop "reg19_step failed (rc $rc; see $errf); no step is recorded"

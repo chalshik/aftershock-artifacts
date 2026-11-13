@@ -14,10 +14,17 @@ K=(-i $HOME/.ssh/id_ed25519_vllm -o BatchMode=yes -o ConnectTimeout=10 -o Server
 MIN_FREE_KB=2097152                      # 2 GB free on the VM before a launch (about 240 MB per run)
 MAX_ATTEMPTS=3                           # REG-19: a run once, rerun unchanged at most twice
 SEEDS=(18 19)                            # the seeds left, in the registered order; not settable
+DRIVER=595.99.02                         # the pinned driver (PROTOCOL.md, section 4, Software)
+RECHECK_PAT='*_l1pl350cl_r2.0_w3000_s1[5-9]'   # REG-19's runs, both kinds, for analysis.recheck
+CHECKS_COMMIT=5ee6e38d3a15994da8bb6597b9b13ea8be08807c    # harness/checks.py as of this commit (the checks in force, A14)
+RECHECK_COMMIT=72fafb5991e036eddf1c4ce40b39bc1ca81fa74e   # analysis/recheck.py as of this commit
 SCRIPTS=(common.sh vm_state.py session_probe.sh launch.sh queue.sh final.sh)
 CONTROL_PAT='*_stage2_control_l1pl350cl_r2.0_w3000_s1[5-9]'
 BURST_PAT='*_burst_l1pl350cl_r2.0_w3000_s1[5-9]'
 ALLOWED="Allowed reads while diagnosing a stop: 'tmux has-session -t run'; the folder names under runs/; a run's checks.json (valid, failed); in a launch log only the lines holding 'run_id' or '[run] checks'. Nothing else of a log or a run folder (REG-19: no interim look)."
+
+# File-name stamp: UTC time plus the process id, so two starts in one second never share a name.
+stamp() { print -r -- "$(date -u +%Y%m%dT%H%M%SZ)_$$"; }
 
 # Mac-side checks before every launch, step and table: worktree at the pin and clean; the pin an ancestor of HEAD; the
 # files used from the Mac's working tree (manifest tool, lock files) equal to the pin's; these scripts tracked, equal to
@@ -79,9 +86,11 @@ vm_state() {
 #   - every launch is one attempt, whatever it left behind; at most MAX_ATTEMPTS attempts of a config;
 #   - a run folder on the VM without an attempt record stops the queue (a launch outside these scripts);
 #   - no rerun after `no_errors` (a client error), `manipulation` (the burst did not fill the pool) or `power_limit`
-#     (a limit other than 350 W); one rerun after `gpu_steady` (heat), a second heat failure stops the queue.
+#     (a limit other than 350 W); one rerun after `gpu_steady` (heat), a second heat failure stops the queue;
+#   - a run folder without checks.json (a lost run) is not rerun unless a decision allows it, recorded as
+#     state/lost_ok_<run id>.txt. The record for seed 18's control of 2026-11-12 is committed with these scripts.
 decide() {
-  local cfg=$1 line parts f n_valid=0 n_heat=0 norerun="" bad="" atts
+  local cfg=$1 line parts f n_valid=0 n_heat=0 norerun="" bad="" lost="" atts
   RID=""; LAUNCH=""; MSG=""
   vm_state $cfg || { MSG="the VM's run folders of $cfg could not be read"; return 2; }
   for line in $VMS; do
@@ -95,7 +104,7 @@ decide() {
             gpu_steady) n_heat=$((n_heat + 1));;
           esac
         done;;
-      nochecks) ;;
+      nochecks) [[ -f $ST/lost_ok_$parts[1].txt ]] || lost=$parts[1];;
       *) bad=$parts[1];;
     esac
   done
@@ -105,6 +114,7 @@ decide() {
   (( ${#VMS} <= ${#atts} )) || { RID=""; MSG="the VM holds ${#VMS} run folders of $cfg and only ${#atts} attempts are recorded in $ST"; return 2; }
   (( n_valid == 1 )) && return 0
   [[ -z $norerun ]] || { MSG="REG-19 registers no rerun after $norerun: the owner decides"; return 2; }
+  [[ -z $lost ]] || { MSG="$lost has no checks.json (lost or still running): a rerun needs its own decision, recorded as $ST/lost_ok_$lost.txt"; return 2; }
   (( n_heat < 2 )) || { MSG="second heat failure (gpu_steady) of $cfg: REG-19 stops the queue"; return 2; }
   (( ${#atts} < MAX_ATTEMPTS )) || { MSG="the $MAX_ATTEMPTS attempts of $cfg are spent: operational stop, no table, the owner decides"; return 2; }
   LAUNCH=$((${#atts} + 1))

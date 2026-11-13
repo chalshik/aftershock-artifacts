@@ -1,0 +1,4 @@
+The rerun of stage2_control_l1pl350cl_r2.0_w3000_s18 after this lost run (no checks.json; the VM went off) is allowed
+by decisions.md 2026-11-13 [DECISION] (delegate), REG-19 resume, item 1: it is attempt 2. The owner named this rerun in
+the delegation (decisions.md 2026-11-13 [DECISION], "seed-18 control rerun as attempt 2"). This record is void unless
+that delegate decision is in decisions.md.

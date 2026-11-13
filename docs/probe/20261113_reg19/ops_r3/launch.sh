@@ -16,7 +16,7 @@ CFG=$1
 decide $CFG || { echo "STOP: $MSG"; exit 2; }
 [[ -z $RID ]] || { echo "STOP: $RID is a valid run of $CFG: nothing to launch"; exit 2; }
 ATT=$LAUNCH; MARK=$ST/attempt_${CFG}_$ATT.txt
-ts=$(date -u +%Y%m%dT%H%M%SZ)
+ts=$(stamp)
 PROBE=$PROBE_DIR/prelaunch_reg19_${CFG}_$ts.txt; LOG="~/${CFG}_$ts.log"
 [[ ! -e $PROBE ]] || { echo "STOP: probe $PROBE exists"; exit 2; }
 for i in $(seq 1 60); do
