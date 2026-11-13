@@ -180,3 +180,6 @@ e6263307-6f64-4fde-8309-47d36a63889e.jsonl:514	false_positive	rule F round 12 gr
 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:16615	no_read	appends five labels to labels.tsv and runs classify2.py on the dry search output in the scratchpad; the label notes name a launch log's allowed lines as text; opens no run folder, log or note
 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:16687	names_only	runs at_append2.py on dry keys: it lists the REG-19 folder names and tests whether each holds checks.json (test -e), and prints keys built from git, the classification and the drafts; opens no file in a run folder
 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:16019	false_positive	appends five labels to labels.tsv; one label's note quotes the module-run text of REG-22's batch command; runs nothing
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:17941	false_positive	writes noteread_labels.tsv (CL15's hand labels); some label notes name REG-19 seeds as text; reads no run folder
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:18324	no_read	git add and commit of drafts, review and probe files, among them four prelaunch records whose file names hold REG-19 config names; reads no run folder
+1ac110f4-8b78-4e29-9013-2486502042ce.jsonl:563	false_positive	the E1 writer loops over grep patterns on docs/drafts/e1_draft6.md and prints line numbers; reads no run folder

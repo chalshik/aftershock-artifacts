@@ -1,0 +1,65 @@
+# CK10(b) (round 5 owner-proxy of REG-21, ruling on fca9a09): for each first-class hit of noteread.py, whether REG-21 [REG] (docs/drafts/reg21_draft27_ck.md) names it.
+# Columns: transcript:line, how (time: the [REG] names it by its time; range: a range the [REG] names holds its time; no), the [REG] text quoted verbatim. Drafted by rules, checked by hand, 2026-11-13.
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a080a44f9e9d53697.jsonl:79	time	at 2026-11-12 16:30:24 UTC, by a subagent of session fdf13821
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a625ca98c29ea904b.jsonl:130	range	whole at 2026-11-12 17:58–18:04 UTC
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a2058e8f5d4c1fd10.jsonl:177	range	whole at 2026-11-12 17:58–18:04 UTC
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-ad7b5aba70bdf01d4.jsonl:286	time	on 2026-11-12 at 18:01:51 UTC, by a subagent of session fdf13821
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a625ca98c29ea904b.jsonl:273	range	whole at 2026-11-12 17:58–18:04 UTC
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a625ca98c29ea904b.jsonl:316	time	at 18:07:10 UTC one of them copied it whole into a pack section
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a625ca98c29ea904b.jsonl:324	time	at 18:07:30, 18:07:47 and 18:07:53 UTC, by the subagent that made the copy
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a625ca98c29ea904b.jsonl:328	time	at 18:07:38 UTC printed that section's
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a625ca98c29ea904b.jsonl:332	time	at 18:07:30, 18:07:47 and 18:07:53 UTC, by the subagent that made the copy
+fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a625ca98c29ea904b.jsonl:336	time	at 18:07:30, 18:07:47 and 18:07:53 UTC, by the subagent that made the copy
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:4152	time	at 18:12:45 and 18:12:52 UTC, by session fdf13821
+fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:4156	time	at 18:12:45 and 18:12:52 UTC, by session fdf13821
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:112	time	by session 8c5f8396 at 18:24:32 UTC
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:265	time	the Read of the whole note at 2026-11-12 18:28:18 UTC
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:300	time	by Read at 2026-11-12 18:28:37 UTC
+4e055435-8eb9-470c-b0b4-3d021db3c5eb.jsonl:73	time	by Read at 2026-11-12 18:28, 18:43 and 19:23 UTC
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:800	time	at 18:50:58 UTC (the pack's lines naming
+49020ad6-a4cc-45ad-b1b0-ed861e407f83.jsonl:69	time	by Read at 2026-11-12 18:28, 18:43 and 19:23 UTC
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2302	time	the print of its first 1800 characters per line at 2026-11-12 20:28:32 UTC
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:2624	time	at 2026-11-13 00:30:03 UTC (the note's lines matching
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a2a5c2cef92be27bd.jsonl:131	time	and at 2026-11-13 00:39 UTC (with REG-19's queue outputs)
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a6a8a3241c8c5e416.jsonl:158	range	in parts at 2026-11-13 00:41–01:25 UTC by subagents of session 8c5f8396
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a6a8a3241c8c5e416.jsonl:164	range	in parts at 2026-11-13 00:41–01:25 UTC by subagents of session 8c5f8396
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-ad7f6f660bfdeb54d.jsonl:111	range	in parts at 2026-11-13 00:41–01:25 UTC by subagents of session 8c5f8396
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-ad7f6f660bfdeb54d.jsonl:237	time	at 2026-11-13 00:58:17 and 05:28:58 UTC
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a5f4a6d2ba3957cd7.jsonl:153	range	in parts at 2026-11-13 00:41–01:25 UTC by subagents of session 8c5f8396
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a5f4a6d2ba3957cd7.jsonl:165	time	at 01:25:05 UTC over `docs/probe`
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a4ca1db0b695fabcf.jsonl:154	time	at 2026-11-13 00:58:17 and 05:28:58 UTC
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:5940	no	
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a43b6d3c375ffd53e.jsonl:532	no	
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a43b6d3c375ffd53e.jsonl:543	no	
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a43b6d3c375ffd53e.jsonl:548	no	
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:6714	range	in parts, and once whole by Read at 12:23 UTC, at 2026-11-13 11:38–12:23 UTC
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:6720	range	in parts, and once whole by Read at 12:23 UTC, at 2026-11-13 11:38–12:23 UTC
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a43b6d3c375ffd53e.jsonl:612	range	in parts, and once whole by Read at 12:23 UTC, at 2026-11-13 11:38–12:23 UTC
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a43b6d3c375ffd53e.jsonl:644	range	in parts, and once whole by Read at 12:23 UTC, at 2026-11-13 11:38–12:23 UTC
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a43b6d3c375ffd53e.jsonl:649	range	in parts, and once whole by Read at 12:23 UTC, at 2026-11-13 11:38–12:23 UTC
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:7544	range	in parts, and once whole by Read at 12:23 UTC, at 2026-11-13 11:38–12:23 UTC
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a4122f052f465a926.jsonl:533	range	in parts, and once whole by Read at 12:23 UTC, at 2026-11-13 11:38–12:23 UTC
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:46	range	in parts, and once whole by Read at 12:23 UTC, at 2026-11-13 11:38–12:23 UTC
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:52	range	in parts, and once whole by Read at 12:23 UTC, at 2026-11-13 11:38–12:23 UTC
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:96	range	in parts, and once whole by Read at 12:23 UTC, at 2026-11-13 11:38–12:23 UTC
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-afe7a850230fb13ab.jsonl:135	time	once whole by Read at 12:23 UTC
+4c362d27-59ed-4e32-9da7-18d688ea29ef.jsonl:92	no	
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:9857	time	On 2026-11-13 at 15:32:08 UTC session 8c5f8396 printed up to 12 lines
+6cf5f627-7b92-40fe-963d-9bfdc272be0a.jsonl:129	no	
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:10294	time	a grep of the pack for "onset" at 2026-11-13 15:47:49 UTC
+7623a89b-d2e9-45fb-b6e4-318b49552b2e.jsonl:193	no	
+0ec2e539-fb6a-424d-bac1-c1fe28ca889c.jsonl:886	no	
+0ec2e539-fb6a-424d-bac1-c1fe28ca889c.jsonl:898	no	
+0ec2e539-fb6a-424d-bac1-c1fe28ca889c.jsonl:904	no	
+fa346d1a-a9c4-4607-bad4-9b34c206c996.jsonl:250	no	
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:14511	no	
+9fb0a805-9660-4a34-8cd0-40cdc274d7f6.jsonl:538	no	
+e1890469-fa93-4ca8-af9a-4c034439b43f.jsonl:834	no	
+e1890469-fa93-4ca8-af9a-4c034439b43f.jsonl:858	no	
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:15644	no	
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:15848	no	
+9fb0a805-9660-4a34-8cd0-40cdc274d7f6.jsonl:980	no	
+9fb0a805-9660-4a34-8cd0-40cdc274d7f6.jsonl:1000	no	
+9fb0a805-9660-4a34-8cd0-40cdc274d7f6.jsonl:1070	no	
+9fb0a805-9660-4a34-8cd0-40cdc274d7f6.jsonl:1086	no	
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:17787	no	
