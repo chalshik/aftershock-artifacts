@@ -1,0 +1,12 @@
+ok   1 False for d in runs/*w3000*; do python3 -c "import json;print(json.load(open('$d/checks.json')))
+ok   2 False for d in runs/*w3000*; do python3 -c "import json;c=json.load(open('$d/checks.json'));prin
+ok   3 False jq '.checks[1].detail' runs/20261112-135538_burst_l1pl350cl_r2.0_w3000_s17/checks.json
+ok   4 True for d in runs/*w3000*; do python3 -c "import json;print('$d', json.load(open('$d/checks.js
+ok   5 True for d in runs/*w3000*; do jq -r '.valid' $d/checks.json; done
+ok   6 True for d in runs/*w3000*; do jq -r '.failed' $d/checks.json; done
+ok   7 False for d in runs/*w3000*; do jq . $d/checks.json; done
+ok   8 True for d in runs/*w3000*; do [ -e $d/checks.json ] && echo $d; done
+ok   9 True for d in runs/*; do echo $d; done
+ok   10 False for d in runs/*w3000*; do python3 -c "import json;c=json.load(open('$d/checks.json'));prin
+ok   11 False for d in runs/*w3000*; do python3 -c "import json;c=json.load(open('$d/checks.json'));prin
+checks_ok self-test: 11 of 11 pass

@@ -82,3 +82,6 @@ fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2042	config_only	imports k3 for the R
 fdf13821-770b-43f6-866b-c82b3bbdc140.jsonl:2209	config_only	modelf_sim and k3 on simulated runs built from four non-REG-19 configs
 8c5f8396-cce6-43e6-b8a1-890bcd5373c5/subagents/agent-a43b6d3c375ffd53e.jsonl:737	false_positive	grep for the text "python -m analysis.c2" in docs/drafts/reg22_draft13.md
 8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:11716	false_positive	closure.py's docstring names analysis.k3; closure.py parses source and imports nothing of analysis
+8c5f8396-cce6-43e6-b8a1-890bcd5373c5.jsonl:12905	synthetic	REG-20 ops tests: test_sandbox.sh in a temp sandbox with fake ssh; test_control_due.py points load.RUNS at a temp folder and replaces load_run (docs/probe/20261113_reg20/ops/test_control_due.py lines 66-84)
+9aa8df0a-c677-484b-82aa-84c912041bf0.jsonl:1054	synthetic	rule F round 18's synthetic transcript (fake_tr in its scratchpad) for classify2: the commands are strings written to a fake jsonl, never run
+9e78b552-a745-40e5-9ea2-0b5792760e90.jsonl:652	false_positive	reg20-ops-writer greps for the text 'uv run python -m analysis.k1 reg20' in docs/probe/20261113_reg20/ops/final.sh

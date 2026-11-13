@@ -1,0 +1,30 @@
+# import closure of analysis/k3w.py in the working tree: 23 .py files
+analysis/__init__.py
+analysis/derived.py
+analysis/floor.py
+analysis/gate.py
+analysis/k1.py
+analysis/k3.py
+analysis/k3w.py
+analysis/load.py
+analysis/margin.py
+analysis/modelf.py
+analysis/modelf_sim.py
+analysis/stats.py
+analysis/tables.py
+analysis/withheld.py
+harness/__init__.py
+harness/checks.py
+harness/config.py
+harness/env_snapshot.py
+harness/loadgen.py
+harness/recorder.py
+harness/run.py
+harness/trigger.py
+harness/workload.py
+# environment: 3 files
+.python-version
+pyproject.toml
+uv.lock
+# total 26 files
+# dynamic import call in harness/env_snapshot.py at line(s) 38: check by hand

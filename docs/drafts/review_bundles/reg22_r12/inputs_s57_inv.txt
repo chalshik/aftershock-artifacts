@@ -1,0 +1,51 @@
+# Tool-call INPUTS (never outputs) of three calls by a context-pack subagent of session fdf13821 on 2026-11-12,
+# transcript fdf13821-770b-43f6-866b-c82b3bbdc140/subagents/agent-a48736828ce71b739.jsonl (outside the repository), lines 201, 205 and 209, copied verbatim by the agent on 2026-11-13.
+# No tool output was opened; the outputs of these calls are not in this file.
+
+=== line 201, 2026-11-12T17:59:38.541Z, tool Bash, input.command:
+mkdir -p /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/fdf13821-770b-43f6-866b-c82b3bbdc140/scratchpad/ctxpack && cat > /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/fdf13821-770b-43f6-866b-c82b3bbdc140/scratchpad/ctxpack/s57_inv.py <<'EOF'
+# read-only inventory: config.yaml + checks.json of every run folder
+import json, yaml
+from pathlib import Path
+RUNS = Path("runs")
+rows = []
+for d in sorted(RUNS.iterdir()):
+    if not d.is_dir(): continue
+    cfg = yaml.safe_load((d/"config.yaml").read_text()) if (d/"config.yaml").exists() else {}
+    ch = json.loads((d/"checks.json").read_text()) if (d/"checks.json").exists() else None
+    wl = cfg.get("workload", {}) or {}
+    s = wl.get("sessions") or {}
+    args = (cfg.get("server") or {}).get("args") or {}
+    trig = cfg.get("trigger") or {}
+    ok = None; unf = None
+    if ch:
+        for c in ch["checks"]:
+            if c["name"] == "no_errors" and isinstance(c.get("detail"), dict):
+                ok = c["detail"].get("ok"); unf = c["detail"].get("unfinished")
+    rows.append(dict(run=d.name, src=cfg.get("source_config"), parent=cfg.get("sweep_parent"), rate=wl.get("rate"),
+        seed=cfg.get("seed"), dur=wl.get("duration_s"), pc=bool(args.get("--enable-prefix-caching")),
+        kvbytes=args.get("--kv-cache-memory-bytes"), sys=s.get("system_tokens"), gap=(s.get("turn_gap_s") or {}).get("mean"),
+        cl=bool(s.get("closed_loop")), fc=bool(cfg.get("loadgen_force_close")), pl=(cfg.get("checks") or {}).get("expected_power_limit_w"),
+        trig=trig.get("kind","none"), trig_at=trig.get("at_s"), trig_dur=trig.get("duration_s"), trig_rate=trig.get("rate"),
+        trig_tok=trig.get("prompt_tokens"), steps=bool(wl.get("steps")), watch=(cfg.get("verdict") or {}).get("watch_s"),
+        ctl_t=(cfg.get("verdict") or {}).get("control_t_s"),
+        valid=None if ch is None else ch["valid"], failed=None if ch is None else ",".join(ch["failed"]), ok=ok, unf=unf,
+        files=len(list(d.iterdir()))))
+import pandas as pd
+pd.set_option("display.width", 400, "display.max_columns", 40, "display.max_rows", 400, "display.max_colwidth", 60)
+df = pd.DataFrame(rows)
+print(df.to_string(index=False))
+print(len(df), df.valid.value_counts(dropna=False).to_dict())
+EOF
+cd /Users/chalshik/Projects/aftershock-artifacts && uv run python /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/fdf13821-770b-43f6-866b-c82b3bbdc140/scratchpad/ctxpack/s57_inv.py > /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/fdf13821-770b-43f6-866b-c82b3bbdc140/scratchpad/ctxpack/s57_inv.out 2>&1; tail -3 /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/fdf13821-770b-43f6-866b-c82b3bbdc140/scratchpad/ctxpack/s57_inv.out
+
+=== line 205, 2026-11-12T17:59:48.202Z, tool Bash, input.command:
+cd /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/fdf13821-770b-43f6-866b-c82b3bbdc140/scratchpad/ctxpack && sed -i '' 's/ok=ok, unf=unf,/ok=(None if "w3000" in d.name else ok), unf=(None if "w3000" in d.name else unf),/' s57_inv.py && cd /Users/chalshik/Projects/aftershock-artifacts && uv run python /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/fdf13821-770b-43f6-866b-c82b3bbdc140/scratchpad/ctxpack/s57_inv.py > /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/fdf13821-770b-43f6-866b-c82b3bbdc140/scratchpad/ctxpack/s57_inv.out 2>&1; cut -c1-400 /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/fdf13821-770b-43f6-866b-c82b3bbdc140/scratchpad/ctxpack/s57_inv.out
+
+=== line 209, 2026-11-12T17:59:58.052Z, tool Bash, input.command:
+cd /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/fdf13821-770b-43f6-866b-c82b3bbdc140/scratchpad/ctxpack && cat >> s57_inv.py <<'EOF'
+print("=====COMPACT")
+for r in rows:
+    print("|".join(str(r[k]) for k in ("run","parent","rate","seed","dur","pc","kvbytes","sys","gap","cl","fc","pl","trig","trig_at","trig_dur","trig_rate","trig_tok","watch","ctl_t","valid","failed","ok","unf","files")))
+EOF
+cd /Users/chalshik/Projects/aftershock-artifacts && uv run python /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/fdf13821-770b-43f6-866b-c82b3bbdc140/scratchpad/ctxpack/s57_inv.py > /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/fdf13821-770b-43f6-866b-c82b3bbdc140/scratchpad/ctxpack/s57_inv.out 2>&1; sed -n '/=====COMPACT/,$p' /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/fdf13821-770b-43f6-866b-c82b3bbdc140/scratchpad/ctxpack/s57_inv.out | sed 's/^2026//'
