@@ -702,12 +702,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-13 · [DECISION] (owner) E1 goes to review now, so that it can run once REG-19's queue has ended
-
-- **The owner's choice** (this session, about 16:55 UTC), answering whether to send E1 through rule F and the owner-proxy now so that it can run after REG-19: "Yes, prepare E1 (Recommended)".
-- **What it allows:** the agent sends `docs/drafts/e1_draft4.md` (about 2.1 GPU h, FILE(docs/drafts/e1_draft4.md:59)) to a rule F review and an owner-proxy pass. If both clear, it registers E1 as delegate, under the delegation's rules.
-- **What it does not allow:** E1 is not run before its [REG] entry is committed, and not while REG-19's queue holds the GPU. E1 changes no decision about a shock matrix, as its own draft says first (FILE(docs/drafts/e1_draft4.md:13)).
-
 ### 2026-11-13 · [OPS] REG-19's queue started at 16:55:12 UTC; attempt 3 of seed 18's control is running as `20261113-165516_stage2_control_l1pl350cl_r2.0_w3000_s18`
 
 - **Start.** The queue's first line: `QUEUE START seeds 18 19; scripts fb0608878e8e909418d773e0bc769ad97cc841fd; pin a7bb77abc863adcaad9d4516815a5ddddf2908e9; 2026-11-13T16:55:12Z` (PROBE(docs/probe/20261113_reg19/queue_agent_20261113T180030Z.txt), the only line read). The pre-launch record is `docs/probe/20261113_reg19/prelaunch_reg19_stage2_control_l1pl350cl_r2.0_w3000_s18_20261113T165513Z_65728_1.txt` (not opened by the agent; written by `launch.sh`).
@@ -744,3 +738,7 @@ Every model used to choose a run or read a result, with its equations, the evide
   7. **BK-S6** (a stricter rule): item 5's check ("committed before the first commit that adds a `reg19_final_*` file") uses rule F round 11's BK2 commands: `find` over every working tree for `reg19_final_*`, filtered by `^reg19_final_(err_)?[0-9]{8}T[0-9]{6}Z`; `git log --all --full-history --no-renames --diff-filter=A` over `reg19_final_*`, filtered the same way, with each commit's time; and every table-file stamp quoted in `docs/decisions.md` (FILE(docs/drafts/reviews-2026-11-13/rulef-reg22-draft16-r11.md:238)).
 - **How the review of drafts 26 and 17 ends** (the plan's "stop iterating", FILE(docs/decisions.md:4342), with rule 5 above): rule F's required items are applied and recorded verbatim in the [REG]; the owner-proxy's APPROVE or REJECT decides, and a REJECT is binding (the delegation). There is no further round on batch 2.
 - **Not changed:** any threshold, code, run set or fact; the freeze of the 26 and 27 files (still no commit to them); REG-19's rules; the order (both entries before any batch and before the first REG-19 table file).
+
+### 2026-11-13 · [CORR] Commit 8f352b1's message miscounts the hand labels of the 79 `names_in_command` hits
+- **Error (the agent's):** the message of 8f352b1 says "9 names_or_validity, 7 names_only". The labels it adds are 58 `no_read`, 6 `names_or_validity`, 6 `names_only`, 5 `synthetic`, 2 `disclosed(i)`, 1 `disclosed(x)` and 1 `disclosed[CG5]`, 79 in all (DERIVED: `git show 8f352b1 -- docs/probe/20261113_transcript_search/labels.tsv`, the added record lines counted by their label field). The message's other counts are right. The labels themselves are unchanged, and nothing cites the message.
+- **Also recorded here:** labelling them by hand from the tool-call inputs found two reads that no draft listed. At 2026-11-12 18:07:10 UTC a context-pack subagent of session fdf13821 copied `docs/probe/20261111_reg19/ops/RESUME.md` (lines 1–34) whole into a pack section. At 18:07:38 UTC it printed that section's lines that name a REG-19 run together with "hit", "verdict", "stuck" or "pass_clear" (DERIVED from the inputs; the output was not opened). The drafts had given 17:58–18:04 UTC as the window of the note's whole reads. REG-21 draft 27 and REG-22 draft 18 now list both reads (8f352b1), and labels.tsv labels both `disclosed(i)`.
