@@ -4,15 +4,16 @@
 # Usage: zsh launch.sh sweep        the one harness invocation of configs/sweep_l1pl350cl_pc_off.yaml (six rates)
 #        zsh launch.sh <rate>       one rate from configs/sweep_l1pl350cl_pc_off_only_r<rate>.yaml
 # (called by queue.sh). By hand it applies the queue's own rules and no fewer: it launches only what `next_step`
-# (common.sh) says is next, with the attempt number it derives, so a launch by hand can pass neither E1's stopping
-# rule nor a pending settle or copy. It changes nothing on the VM but starting the run: the power limit is read, never
-# set (a limit other than 350.00 W stops), and the tree is checked, never moved. The pre-launch read goes to a
-# time-stamped probe file; a stop before the launch spends no attempt. The attempt record (state/attempt_sweep_1.txt or
-# state/attempt_r<rate>_<n>.txt) is written immediately before the launch command, so from that line on the attempt
-# is spent whatever happens. Exit codes: 2 a check failed, nothing launched (or the launch command itself failed,
-# attempt spent); 4 no run id in the log in time; 5 still running after the wait; 7 the VM stopped answering.
-# Exit 0 means only that the invocation has ended (the tmux session is gone); the queue then reads, from the launch
-# log, the run_id lines and, from each run's checks.json, `valid` and `failed`. Nothing else is read.
+# (common.sh) says is next, with the attempt number it derives, so a launch by hand can pass neither E1's stopping rule
+# nor a pending settle or copy, nor an invalid run not yet shown at a pause (draft 6, DA2). It changes nothing on the VM
+# but starting the run: the power limit is read, never set (a limit other than 350.00 W stops), and the tree is checked,
+# never moved. The pre-launch read goes to a time-stamped probe file; a stop before the launch spends no attempt. The
+# attempt record (state/attempt_sweep_1.txt or state/attempt_r<rate>_<n>.txt) is written immediately before the launch
+# command, so from that line on the attempt is spent whatever happens. Exit codes: 2 a check failed, nothing launched
+# (or the launch command itself failed, attempt spent); 4 no run id in the log in time; 5 still running after the wait;
+# 7 the VM stopped answering. Exit 0 means only that the invocation has ended (the tmux session is gone); the queue then
+# reads, from the launch log, the run_id lines and, from each run's checks.json, `valid` and `failed`. Nothing else is
+# read.
 source ${0:A:h}/common.sh
 die() { echo "STOP: $1"; echo "$ALLOWED"; exit ${2:-2}; }
 mac_checks || die "$MSG"
@@ -23,6 +24,7 @@ if [[ $WHAT == sweep ]]; then WAIT=${WAIT_MIN:-$SWEEP_WAIT_MIN}; else WAIT=${WAI
 [[ $WAIT == <-> ]] || die "WAIT_MIN is not a number"
 [[ -s $ST/session_boot_id.txt ]] || die "no session probe (run session_probe.sh first)"
 next_step || die "$MSG"
+[[ ! -e $ST/pause_pending.txt ]] || die "an invalid run has not been shown at a pause yet (state/pause_pending.txt): start the queue, which pauses first"
 [[ $ACT == launch && $ARG == $WHAT ]] || die "it is not the turn of '$WHAT': the next step is '$ACT $ARG' (the queue settles, copies and launches in E1's order)"
 ATT=$NEXT_ATT
 if [[ $WHAT == sweep ]]; then CFG=$SWEEP; FRATE=$RATES[1]; MARK=$ST/attempt_sweep_1.txt

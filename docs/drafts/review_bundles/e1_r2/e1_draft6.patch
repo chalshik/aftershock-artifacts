@@ -1,0 +1,40 @@
+--- a/analysis/e1.py
++++ b/analysis/e1.py
+@@ -151,14 +151,17 @@
+     """E1's floor: `gate.cold_floor`; if and only if that returns "not_monotone", `floor_tail`. Two statuses of its
+     own, neither a floor: "no_rows" when the sweep has no valid run at all (a sweep that was not read is not a sweep
+     that did not saturate), and, when the swept rates are given, "holes" when a swept rate at or above the floor's
+-    lam_sat has no valid run (the floor would average over a gap)."""
++    lam_sat, or between the highest valid row below lam_sat and lam_sat (rule F e1_r1, DA-O4: lam_sat could lie
++    there), has no valid run (the floor would average over a gap)."""
+     if not len(rows):
+         return {"mu_sat_off": math.nan, "lam_sat": math.nan, "n": 0, "status": "no_rows"}
+     f = saturated(rows)
+     f = floor_tail(rows) if f["status"] == "not_monotone" else f
+     if swept is not None and f["status"] in ("ok", "tail_ok"):
+         have = set(np.round(rows.rate.to_numpy(float), 6))
+-        missing = [float(x) for x in swept if x >= f["lam_sat"] - 1e-9 and round(float(x), 6) not in have]
++        below = [r for r in have if r < f["lam_sat"] - 1e-9]
++        lo = max(below) if below else f["lam_sat"]
++        missing = [float(x) for x in swept if x > lo + 1e-9 and round(float(x), 6) not in have]
+         if missing:
+             return {**f, "mu_sat_off": math.nan, "status": "holes", "missing_rates": missing}
+     return f
+@@ -189,6 +192,8 @@
+     cl, ol = cl.assign(kbar=[_kbar(r) for r in cl.run]), ol.assign(kbar=[_kbar(r) for r in ol.run])
+     res = {"floor": floor(cl, swept_rates(E1["sweeps"]["cl"])), "floor_ol": saturated(ol), "onset": onset(cl, ol),
+            "rows_cl": cl.to_dict("records"), "later_valid_runs_not_counted": dropped}
++    lam = res["floor"]["lam_sat"]
++    res["floor_slope_reported"] = fit(cl, "throughput", lam) if np.isfinite(lam) else None   # reported, never judged
+     if not math.isnan(res["onset"]):
+         res["tilt_reported"] = {col: tilt(cl, ol, col, res["onset"]) for col in READOUTS}
+     return res
+@@ -241,7 +246,7 @@
+     if not withheld.lifted("[RESULT] REG-21"):
+         raise RuntimeError("E1's report computes REG-21's statistic on REG-8's runs: it waits for REG-21's [RESULT]")
+     res = observed()
+-    cl, ol = sweep_rows(E1["sweeps"]["cl"]), sweep_rows(E1["sweeps"]["ol"])
++    cl, ol = first_valid(sweep_rows(E1["sweeps"]["cl"]))[0], sweep_rows(E1["sweeps"]["ol"])
+     res["work_cl"] = work_rates(cl, res["floor"]["lam_sat"])
+     res["work_ol"] = work_rates(ol, res["floor_ol"]["lam_sat"])
+     return res

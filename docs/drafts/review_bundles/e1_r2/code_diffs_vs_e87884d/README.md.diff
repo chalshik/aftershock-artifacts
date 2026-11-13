@@ -1,0 +1,35 @@
+diff --git a/docs/probe/20261113_e1/ops/README.md b/docs/probe/20261113_e1/ops/README.md
+index 7f6d759..e8476c1 100644
+--- a/docs/probe/20261113_e1/ops/README.md
++++ b/docs/probe/20261113_e1/ops/README.md
+@@ -1,5 +1,7 @@
+ # E1: operations scripts
+ 
++**Read with the registration as entered** (docs/decisions.md, `[REG] E1`, and `[DECISION] (delegate) E1 approved`); it rules wherever this folder differs. Stale: the citations of `docs/drafts/e1_draft4.md` below and in DESIGN_NOTES.md; "Nothing here is committed or reviewed" (draft 5's scripts were committed for review round 1, and draft 6's go to round 2); step 4's heading, which must now name ops_r3's end line, `REG-19: the queue ended (QUEUE DONE)` or `(QUEUE END futility stop)` (draft 6, DA-O1); and, in DESIGN_NOTES.md, I7 (the pause is now kept in `state/pause_pending.txt` until a queue start has shown it, draft 6, DA2), I3, I4 and R2 (a check other than `gpu_steady`, `no_errors` and `power_limit` in `failed` of two of E1's runs now stops E1, `MAX_SAME`, draft 6, DA1; the pause is no longer the only brake) and I15 (a failed pre-launch check launches nothing and spends no attempt, and is not a stop that ends E1, draft 6, DA3). The code waits for REG-19's queue end as recorded (`END19_PAT`, `ready_to_run`), as the registration says. The scripts were changed for draft 6 (rule F e1_r1: DA1, DA2, DA12, DA-O1, DA-O2) and are reviewed with it; what runs is their text at the registered commit (`mac_checks`). Step 5's move is approved by E1's approving decision.
++
+ Written 2026-11-13 by a teammate agent from REG-19's reviewed `docs/probe/20261113_reg19/ops_r3/`, which is unchanged. The registration is `docs/drafts/e1_draft4.md` (not yet registered). Its "Stopping rule" (FILE(docs/drafts/e1_draft4.md:41-47)) and "Pre-launch and launch" (FILE(docs/drafts/e1_draft4.md:55-56)) are what these scripts implement. 0 GPU h.
+ 
+ - The VM was not contacted.
+@@ -7,7 +9,7 @@ Written 2026-11-13 by a teammate agent from REG-19's reviewed `docs/probe/202611
+ - **Nothing here is committed or reviewed.**
+ - `DESIGN_NOTES.md` lists every place the draft had to be read and every difference from ops_r3, plus one open point about the harness E1 would run on.
+ 
+-Test, offline, on fakes: `zsh docs/probe/20261113_e1/ops/test_sandbox.sh`. 170 of 170 passed on 2026-11-13 after the queue-end gate (PROBE(docs/probe/20261113_e1/ops/sandbox_20261113T204859Z.txt)); 168 of 168 before it. It writes only to a temp folder; set `TMPDIR` to choose where.
++Test, offline, on fakes: `zsh docs/probe/20261113_e1/ops/test_sandbox.sh`. 184 of 184 passed on 2026-11-13 for draft 6 (PROBE(docs/probe/20261113_e1/ops/sandbox_20261113T214307Z.txt)); 170 of 170 passed on 2026-11-13 after the queue-end gate (PROBE(docs/probe/20261113_e1/ops/sandbox_20261113T204859Z.txt)); 168 of 168 before it. It writes only to a temp folder; set `TMPDIR` to choose where.
+ 
+ ## Files
+ 
+@@ -68,9 +70,12 @@ Test, offline, on fakes: `zsh docs/probe/20261113_e1/ops/test_sandbox.sh`. 170 o
+ 
+ | Stop | Cause | Needs |
+ |---|---|---|
+-| `after an invalid run (…)` | The pause, as REG-19's queue does (I7) | Start the queue again; it reruns by E1's rule |
++| `after an invalid run (…)` | The pause, as REG-19's queue does (I7) | Start the queue again only if no check name stands in `failed` of E1's runs at two or more different rates (registration, stopping rule); otherwise E1 stops for a new decision. Each restart gets an [OPS] entry quoting the `RUN … INVALID` lines |
+ | `has no checks.json …` | A run ended without `checks.json` (VM off, harness crash) | The owner's decision, then `state/lost_ok_<run id>.txt`, then start again |
+ | `E1 registers no rerun after no_errors / power_limit` | The registered stop | The owner |
++| `<check> is in failed of 2 of E1's runs` | The registered systematic-fault stop | The owner |
++| `an invalid run has not been shown at a pause yet` | `launch.sh` by hand while a pause is pending (draft 6, DA2) | Start the queue, which pauses first |
++| `the owner halted E1` | An entry headed `[DECISION] (owner) E1 halted` (draft 6, DA-O2) | The owner |
+ | `second heat failure (gpu_steady)` | The registered stop. See the open point: under the new checks `gpu_steady` is not only heat | The owner |
+ | `power limit '420.00'`, `rebooted since the session probe` | A reboot | Owner sets 350 W; `RENEW=1` probe with a decisions entry; start again |
+ | `GPU at '<t>' C`, `GPU compute process present`, `a tmux session exists`, `VM tree …`, `uv.lock …`, `kB free` | Other pre-launch checks; no attempt spent | Find the cause, then start again |

@@ -1,0 +1,31 @@
+diff --git a/docs/probe/20261113_e1/ops/DESIGN_NOTES.md b/docs/probe/20261113_e1/ops/DESIGN_NOTES.md
+index bdbf76f..364c52e 100644
+--- a/docs/probe/20261113_e1/ops/DESIGN_NOTES.md
++++ b/docs/probe/20261113_e1/ops/DESIGN_NOTES.md
+@@ -64,7 +64,7 @@ ops_r3 stopped instead.
+ - The draft says E1 "runs after REG-19's queue has ended and its [RESULT] is written" (FILE(docs/drafts/e1_draft4.md:9)).
+ - RUNBOOK §4 deploys `main` to the VM only after REG-19's `[RESULT]` (FILE(agent/RUNBOOK.md:50)).
+ - The owner's entry forbids only running E1 before its `[REG]` is committed, or while REG-19's queue holds the GPU (FILE(docs/decisions.md:4520)).
+-- The scripts implement the stricter rule, `RESULT19_PAT`.
++- Draft 5 drops that wait: the scripts wait for an `[OPS] REG-19: the queue ended` or `[RESULT] REG-19` heading (`END19_PAT`) and for REG-19's lock to be absent.
+ - REG-19's table waits for REG-21's and REG-22's entries (FILE(docs/status.md:11), "`final.sh` is not run until both entries are committed"). So the GPU may sit idle between REG-19's queue end and E1.
+ - Dropping the gate is one line in `common.sh`, but it changes the registration's text, so it is the owner's call.
+ 
+@@ -119,7 +119,7 @@ ops_r3 stopped instead.
+ 9. **The allowed-reads line prints on every stop**, on a line of its own, including Mac-side refusals. The sandbox checks this for every case that ends non-zero.
+ 10. **Scripts are tied to the registered commit.** The scripts must equal their text at the registered commit; `scripts_commit.txt` is gone. This is stricter: the reviewed, registered scripts are what runs.
+ 11. **`vm_checkout.sh` is new** (the lead's item 4; RUNBOOK §4).
+-12. **`ready_to_run`.** No queue, launch or checkout while REG-19's lock exists (existence only) or before REG-19's `[RESULT]` (I11).
++12. **`ready_to_run`.** No queue, launch or checkout while REG-19's lock exists (existence only) or before an `[OPS] REG-19: the queue ended` or `[RESULT] REG-19` heading is committed (I11).
+ 13. **Every parameter is in `common.sh`.** ops_r3's `launch.sh` had 45, 60, 30, 24, 5 and 120 written inline.
+ 14. **A zsh trap avoided.** `$VAR:` followed by a letter is a zsh modifier. Example: `$H:repos…` would have dropped `.50` from the VM's address. Every such case is written `${VAR}:`. The sandbox checks the real `common.sh`'s `H` and `VM_GIT`, because it replaces them.
+ 
+@@ -162,7 +162,7 @@ ops_r3 stopped instead.
+ 
+ This is BELIEF, from reading the diff; no run shows it.
+ 
+-**R6. The move off `a7bb77a` is the first deploy since REG-19.** RUNBOOK §4 allows a deploy only after REG-19's `[RESULT]` (I11).
++**R6. The move off `a7bb77a` is the first deploy since REG-19.** RUNBOOK §4 allowed a deploy only after REG-19's `[RESULT]`; the registration supersedes that for E1's move and amends RUNBOOK (DA5).
+ 
+ **Options for the reviewers (none chosen here).**
+ - (a) Accept: the pause bounds R2 to the sweep's 2.1 h before a person looks.

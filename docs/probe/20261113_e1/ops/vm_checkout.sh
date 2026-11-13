@@ -3,13 +3,14 @@
 # it is the one E1 script that changes the VM's tree (no other one does). Usage, from the Mac:
 #   zsh docs/probe/20261113_e1/ops/vm_checkout.sh
 # Refuses (nothing changed): while e1_commit.txt says UNSET, or any Mac-side check fails (common.sh `mac_checks`);
-# before REG-19's [RESULT] is in the committed log, or while REG-19's queue lock exists (only its existence is tested;
-# nothing under REG-19's state/ is opened); while E1's own queue lock exists; while the tmux session 'run' exists on the
-# VM or a compute process is on the GPU; when the VM's tree is dirty, or its commit is not an ancestor of E1's commit
-# on the Mac (a forward move only). Then, as agent/RUNBOOK.md section 4: push the Mac's main (which must hold E1's
-# commit) to the VM's bare repository, fetch it on the VM and check out E1's commit, detached; read back the commit, the
-# dirty count and uv.lock's blob, and run a dry-run `uv sync` (it must show no change). Everything goes to a
-# time-stamped probe file. No root command, no run, no other change on the VM.
+# before the committed log records REG-19's queue end ('[OPS] REG-19: the queue ended') or its [RESULT], or while
+# REG-19's queue lock exists (only its existence is tested; nothing under REG-19's state/ is opened); while E1's own
+# queue lock exists; while the tmux session 'run' exists on the VM or a compute process is on the GPU; when the VM's
+# tree is dirty, or its commit is not an ancestor of E1's commit on the Mac (a forward move only). Then, as
+# agent/RUNBOOK.md section 4: push the Mac's main (which must hold E1's commit) to the VM's bare repository, fetch it on
+# the VM and check out E1's commit, detached; read back the commit, the dirty count and uv.lock's blob, and run a
+# dry-run `uv sync` (it must show no change). Everything goes to a time-stamped probe file. No root command, no run, no
+# other change on the VM.
 source ${0:A:h}/common.sh
 die() { echo "STOP: $1"; echo "$ALLOWED"; exit ${2:-2}; }
 mac_checks || die "$MSG"

@@ -1,17 +1,19 @@
 #!/bin/zsh
-# E1's queue (registration: docs/drafts/e1_draft4.md until it is registered; README.md). One command, no settings:
+# E1's queue (registration: the [REG] E1 entry in docs/decisions.md; README.md). One command, no settings:
 #   zsh docs/probe/20261113_e1/ops/queue.sh        (in the background)
-# It starts only when e1_commit.txt names the commit that holds E1's approval, REG-19's [RESULT] is in the committed log
-# and REG-19's queue lock does not exist. It can be started again after any stop and launches nothing that is already
-# there. Each turn asks `next_step` (common.sh) what to do, from the records in state/, the settled launch logs and the
-# VM's checks.json files (valid, failed):
+# It starts only when e1_commit.txt names the commit that holds E1's approval, the committed log records REG-19's queue
+# end ('[OPS] REG-19: the queue ended') or its [RESULT], and REG-19's queue lock does not exist. It can be started again
+# after any stop and launches nothing that is already there. Each turn asks `next_step` (common.sh) what to do, from the
+# records in state/, the settled launch logs and the VM's checks.json files (valid, failed):
 #   - settle an invocation that has ended: its launch log's run_id lines name its runs; print each run as VALID,
 #     INVALID (with its failed checks) or NO CHECKS.JSON, and, for the sweep, each rate it never started;
 #   - copy every run with a checks.json (valid or invalid) to the Mac and compare every file's sha256 with the VM's;
 #   - launch the sweep (first, once), then, per rate in the sweep's order, the next attempt E1's stopping rule allows;
 #   - end: write state/queue_end.txt (one line per rate) and print it.
-# After an invalid run the queue stops before the next launch (as REG-19's does); starting it again applies the rerun
-# rule from checks.json alone. Every stop exits non-zero and prints the allowed reads. No result is computed here.
+# After an invalid run the queue stops before the next launch (as REG-19's does); the run waits in
+# state/pause_pending.txt until a queue start has shown it at that stop (draft 6, DA2), so another stop in between does
+# not consume the pause; starting it again applies the rerun rule from checks.json alone. Every stop exits non-zero and
+# prints the allowed reads. No result is computed here.
 source ${0:A:h}/common.sh
 mac_checks || { echo "QUEUE STOP $MSG"; echo "$ALLOWED"; exit 2; }
 ready_to_run || { echo "QUEUE STOP $MSG"; echo "$ALLOWED"; exit 2; }
@@ -29,7 +31,8 @@ stop() { echo "QUEUE STOP $1"; echo "$ALLOWED"; exit ${2:-1}; }
 echo "QUEUE START E1; scripts $SC; registered commit $E1; $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 cd $R || stop "no repo"
 
-# The runs an attempt's launch log names, as the VM's checks.json says them; an invalid one sets PAUSE.
+# The runs an attempt's launch log names, as the VM's checks.json says them; an invalid one is written to
+# state/pause_pending.txt (draft 6, rule F e1_r1 DA2), which the next launch turn shows and sets aside.
 report_settled() {
   local f=$ST/settled_${${1:t}%.txt}.txt line l2 parts id st fl r started=()
   for line in ${(f)"$(grep '^rid ' $f)"}; do
@@ -38,7 +41,7 @@ report_settled() {
     started+=($(rate_of $id))
     case $st in
       valid) echo "RUN $id VALID";;
-      invalid) echo "RUN $id INVALID failed=$fl"; PAUSE+="${PAUSE:+; }$id failed=$fl";;
+      invalid) echo "RUN $id INVALID failed=$fl"; print -r -- "$id failed=$fl" >> $ST/pause_pending.txt;;
       nochecks) echo "RUN $id NO CHECKS.JSON";;
       *) echo "RUN $id $st";;
     esac
@@ -61,7 +64,10 @@ for turn in {1..$MAX_TURNS}; do
     copy)
       copy_verify $ARG || stop "$MSG";;
     launch)
-      [[ -z $PAUSE ]] || stop "after an invalid run ($PAUSE). Starting the queue again applies E1's rerun rule from checks.json (valid, failed) alone"
+      if [[ -e $ST/pause_pending.txt ]]; then
+        stamp; mv $ST/pause_pending.txt $ST/pause_shown_$REPLY.txt || stop "the pause record could not be set aside"
+        stop "after an invalid run ($(tr '\n' ';' < $ST/pause_shown_$REPLY.txt)). Starting the queue again applies E1's rerun rule from checks.json (valid, failed) alone"
+      fi
       stamp; outf=$ST/launch_${ARG}_$REPLY.out
       [[ ! -e $outf ]] || stop "$outf exists"
       echo "LAUNCH $ARG attempt $NEXT_ATT"

@@ -1,0 +1,74 @@
+diff --git a/docs/probe/20261113_e1/ops/test_sandbox.sh b/docs/probe/20261113_e1/ops/test_sandbox.sh
+index 46ca56a..0f5e346 100644
+--- a/docs/probe/20261113_e1/ops/test_sandbox.sh
++++ b/docs/probe/20261113_e1/ops/test_sandbox.sh
+@@ -33,7 +33,7 @@ print -r -l -- "## 2026-11-14 · [REG] E1: sandbox" "text" "## 2026-11-14 · [DE
+ $G add -A && $G commit -q -m "E1 registered and approved, scripts with e1_commit.txt UNSET" || exit 99
+ E1H=$(git rev-parse HEAD)
+ print -r -- $E1H > $S/e1_commit.txt
+-print -r -- "## 2026-11-15 · [OPS] REG-19: the queue ended (sandbox)" >> docs/decisions.md
++print -r -- "## 2026-11-15 · [OPS] REG-19: the queue ended (QUEUE DONE)" >> docs/decisions.md
+ $G add -A && $G commit -q -m "e1_commit.txt set; REG-19's result" || exit 99
+ HEADH=$(git rev-parse HEAD); LOCKB=$(git rev-parse ${E1H}:uv.lock)
+ git init -q --bare $BARE && git push -q $BARE ${C0}:refs/heads/main && git clone -q $BARE $VM 2> /dev/null && (cd $VM && git checkout -q --detach $C0) && mkdir -p $VM/runs || exit 99
+@@ -194,14 +194,14 @@ chk "as attempt 2 of rate 2" is "$(nfiles "$S/state/attempt_r2_2.txt") $(tail -1
+ chk "the end record lists the valid rerun with 2 attempts" grep -q "^r2 .* attempts 2\$" $S/state/queue_end.txt
+ reset
+ run FAKE_FAIL="2:recorder" zsh $Q
+-case_ "the rerun is invalid again" "INVALID failed=recorder" 1 FAKE_FAIL="2:recorder" zsh $Q
+-case_ "attempt 3 invalid too: the rate is spent, no fourth launch; the queue ends with the hole" "QUEUE END rates without a valid run after 3 attempts: 2" 3 FAKE_FAIL="2:recorder" zsh $Q
++case_ "the rerun is invalid again" "INVALID failed=arrival_rate" 1 FAKE_FAIL="2:arrival_rate" zsh $Q
++case_ "attempt 3 invalid too: the rate is spent, no fourth launch; the queue ends with the hole" "QUEUE END rates without a valid run after 3 attempts: 2" 3 FAKE_FAIL="2:release_chain" zsh $Q
+ chk "three launches, no attempt 4" is "$(launches) $(nfiles "$S/state/attempt_r2_4.txt")" "3 0"
+ chk "the end record says rate 2 has none" grep -q '^r2 none: the 3 attempts are spent (3 invalid)' $S/state/queue_end.txt
+ case_ "started again: the same end, nothing launched" "QUEUE END rates without a valid run" 3 zsh $Q
+ chk "still three launches" is "$(launches)" 3
+ reset
+-run FAKE_SWEEP_RATES="1.5 2" FAKE_FAIL="2:recorder" zsh $Q; run FAKE_FAIL="2:recorder" zsh $Q; run FAKE_FAIL="2:recorder" zsh $Q
++run FAKE_SWEEP_RATES="1.5 2" FAKE_FAIL="2:recorder" zsh $Q; run FAKE_FAIL="2:arrival_rate" zsh $Q; run FAKE_FAIL="2:release_chain" zsh $Q
+ case_ "a spent rate does not hold back the rates still to run" "QUEUE END rates without a valid run after 3 attempts: 2" 3 zsh $Q
+ chk "rates 2.5 to 4 ran as first attempts: seven launches" is "$(launches) $(nfiles "$S/state/attempt_r4_1.txt")" "7 1"
+ 
+@@ -252,6 +252,7 @@ run FAKE_SWEEP_RATES="1.5 2 2.5 3" FAKE_NOCHECK="3" FAKE_FAIL="2:recorder" zsh $
+ case_ "a lost run at rate 3 stops E1 before rate 2's rerun" "has no checks.json" 1 zsh $Q
+ chk "rate 2 not rerun" is "$(launches) $(nfiles "$S/state/attempt_r2_2.txt")" "1 0"
+ echo "owner's decision (sandbox)" > $S/state/lost_ok_$(rid_of 3 1).txt
++case_ "with lost_ok: the pause not yet shown comes first" "QUEUE STOP after an invalid run" 1 zsh $Q
+ case_ "with lost_ok: the paused rerun of rate 2 goes first, in the sweep's order" "QUEUE DONE" 0 zsh $Q
+ chk "rate 2 attempt 2, rate 3 attempt 2, rates 3.5 and 4 attempt 1" test -e $S/state/attempt_r2_2.txt -a -e $S/state/attempt_r3_2.txt -a -e $S/state/attempt_r3.5_1.txt -a -e $S/state/attempt_r4_1.txt
+ reset
+@@ -443,6 +444,34 @@ case_ "refused when the VM's commit is not an ancestor of the registered one" "i
+ reset
+ case_ "a dry-run sync that would change packages stops after the move" "would change 1 packages" 2 FAKE_UV_VM_ADD=1 zsh $V
+ 
++echo "--- draft 6 (rule F e1_r1): DA1, the systematic-fault stop"
++reset
++run FAKE_FAIL="1.5:recorder 2:recorder 2.5:recorder 3:recorder 3.5:recorder 4:recorder" zsh $Q
++case_ "a check failing on two or more runs stops E1, no rerun" "recorder is in failed of 6 of E1's runs" 1 zsh $Q
++chk "one launch only" is "$(launches)" 1
++
++echo "--- draft 6 (rule F e1_r1): DA2, the pause survives another stop"
++reset
++case_ "an invalid run, then a failed copy" "copy failed" 1 FAKE_FAIL="2:recorder" FAKE_RSYNC_FAIL=1 zsh $Q
++chk "the invalid run was reported before the stop" is "$(print -r -- $out | grep -c 'INVALID failed=recorder')" 1
++case_ "the restart still pauses before the rerun" "QUEUE STOP after an invalid run" 1 zsh $Q
++chk "no rerun launched before the pause" is "$(launches)" 1
++
++echo "--- draft 6 (rule F e1_r1): DA-O1, the queue-end heading names ops_r3's end line (cases added by the draft-6 writer)"
++reset; gitc sh -c "grep -v 'OPS. REG-19: the queue ended' docs/decisions.md > d && echo '## 2026-11-15 · [OPS] REG-19: the queue ended (QUEUE END futility stop)' >> d && mv d docs/decisions.md"
++case_ "the futility-stop end passes the gate" "GATE OK" 0 zsh -c "source $S/common.sh; ready_to_run && echo GATE OK"
++reset; gitc sh -c "grep -v 'OPS. REG-19: the queue ended' docs/decisions.md > d && echo '## 2026-11-15 · [OPS] REG-19: the queue ended (QUEUE STOP copy failed)' >> d && mv d docs/decisions.md"
++case_ "an 'ended' heading that names a QUEUE STOP: the queue refuses" "no '[OPS] REG-19: the queue ended' or '[RESULT] REG-19' heading" 2 zsh $Q
++reset; gitc sh -c "grep -v 'OPS. REG-19: the queue ended' docs/decisions.md > d && echo '## 2026-11-15 · [OPS] REG-19: the queue ended' >> d && mv d docs/decisions.md"
++case_ "an 'ended' heading that names no end line: the queue refuses" "must end '(QUEUE DONE)' or '(QUEUE END futility stop)'" 2 zsh $Q
++
++echo "--- draft 6 (rule F e1_r1): DA-O2, the owner's halt (cases added by the draft-6 writer)"
++reset; gitc sh -c "echo '## 2026-11-16 · [DECISION] (owner) E1 halted: sandbox' >> docs/decisions.md"
++case_ "an owner's halt entry: the queue refuses" "the owner halted E1" 2 zsh $Q
++case_ "and launch.sh" "the owner halted E1" 2 zsh $L sweep
++case_ "and vm_checkout.sh" "the owner halted E1" 2 zsh $V
++chk "nothing launched, the VM's tree not moved" is "$(launches) $(git -C $VM rev-parse HEAD)" "0 $C0"
++
+ echo "--- every stop"
+ chk "every stop above printed the allowed reads (${#noallowed} did not: ${noallowed[*]})" is ${#noallowed} 0
+ 

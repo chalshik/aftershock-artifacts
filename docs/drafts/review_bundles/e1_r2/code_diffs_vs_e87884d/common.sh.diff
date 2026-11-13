@@ -1,0 +1,88 @@
+diff --git a/docs/probe/20261113_e1/ops/common.sh b/docs/probe/20261113_e1/ops/common.sh
+index d667588..1726e73 100644
+--- a/docs/probe/20261113_e1/ops/common.sh
++++ b/docs/probe/20261113_e1/ops/common.sh
+@@ -1,9 +1,10 @@
+ # Shared, fixed settings and functions of E1's operations scripts. Written 2026-11-13 by a teammate agent from REG-19's
+ # reviewed docs/probe/20261113_reg19/ops_r3/ (not changed), copied wherever E1 does not differ; DESIGN_NOTES.md lists
+-# every difference and every place where the registration (docs/drafts/e1_draft4.md, "Stopping rule" and "Pre-launch
+-# and launch") had to be read. Every parameter of the scripts is set here. Read from the environment: VM_HOST and
+-# WAIT_MIN only (session_probe.sh also reads SET and RENEW). Nobody types a rate, attempt number or run id: `next_step`
+-# derives them from the records in state/, the launch logs' run_id lines and the VM's run folders.
++# every difference and every place where the registration (read from draft 4, docs/drafts/e1_draft4.md; registered as
++# the [REG] E1 entry; "Stopping rule" and "Pre-launch and launch") had to be read. Every parameter of the scripts is
++# set here. Read from the environment: VM_HOST and WAIT_MIN only (session_probe.sh also reads SET and RENEW). Nobody
++# types a rate, attempt number or run id: `next_step` derives them from the records in state/, the launch logs' run_id
++# lines and the VM's run folders.
+ R=/Users/chalshik/Projects/aftershock-artifacts
+ REL=docs/probe/20261113_e1/ops                 # this folder, relative to the repo
+ S=$R/$REL
+@@ -20,6 +21,7 @@ ONLY=${SWEEP}_only_r                           # + rate: the single-rate configs
+ MAX_ATTEMPTS=3                                 # E1: every launch of a rate is one attempt, at most three
+ HEAT=gpu_steady                                # E1: a heat failure is rerun once ...
+ MAX_HEAT=2                                     # ... and the second among E1's runs stops the queue
++MAX_SAME=2                                     # E1 (rule F e1_r1): any other check in `failed` of this many of E1's runs stops the queue
+ NORERUN=(no_errors power_limit)                # E1: a run failing either check stops the queue, no rerun
+ LIMIT_W=350.00                                 # read before every launch, never set by a launch
+ TEMP_MAX_C=45                                  # GPU temperature before every launch
+@@ -33,7 +35,7 @@ MIN_FREE_KB=2097152                            # 2 GB free on the VM (an E1 run
+ DRIVER=595.99.02                               # the pinned driver (PROTOCOL.md, section 4, Software)
+ MAX_TURNS=100                                  # turns of the queue's loop (E1 needs at most 6 x 3 x 3 + 2)
+ SCRIPTS=(common.sh vm_state.py session_probe.sh launch.sh queue.sh vm_checkout.sh)
+-END19_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · (\[RESULT\] REG-19([^0-9]|$)|\[OPS\] REG-19: the queue ended)'   # E1 draft 5: the queue's end, recorded, or REG-19's result
++END19_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · (\[RESULT\] REG-19([^0-9]|$)|\[OPS\] REG-19: the queue ended \(QUEUE (DONE|END futility stop)\))'   # E1 draft 6 (rule F e1_r1, DA-O1): the queue's end line, recorded, or REG-19's result
+ REG_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[REG\] E1([^0-9]|$)'
+ APPROVE_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[DECISION\] \((owner|delegate)\) E1 approved'
+ ALLOWED="Allowed reads while diagnosing a stop: 'tmux has-session -t run'; the folder names under runs/; a run's checks.json (valid, failed); in a launch log only the lines holding 'run_id' or '[run] checks'. Nothing else of a log or a run folder (E1: no interim look at any rate's throughput, KV or floor)."
+@@ -93,12 +95,14 @@ mac_checks() {
+   return 0
+ }
+ 
+-# E1 runs after REG-19's queue has ended (registration draft 5, ID line): the committed log holds an [OPS] entry headed
+-# 'REG-19: the queue ended' (it quotes the queue's QUEUE DONE or QUEUE END line) or REG-19's [RESULT], and REG-19's queue
+-# lock does not exist. A QUEUE STOP leaves no such entry: REG-19 then waits for the owner, and E1 waits too.
++# E1 runs after REG-19's queue has ended (registration, ID line): the committed log holds an [OPS] entry headed
++# 'REG-19: the queue ended (QUEUE DONE)' or '... (QUEUE END futility stop)', ops_r3's two end lines (draft 6, DA-O1), or
++# REG-19's [RESULT], and REG-19's queue lock does not exist. A QUEUE STOP leaves no such entry: REG-19 then waits for
++# the owner, and E1 waits too. An owner's entry headed '[DECISION] (owner) E1 halted' stops everything (draft 6, DA-O2).
+ ready_to_run() {
+   MSG=""
+-  git -C $R grep -q -E "$END19_PAT" HEAD -- docs/decisions.md || { MSG="no '[OPS] REG-19: the queue ended' or '[RESULT] REG-19' heading in the committed docs/decisions.md: E1 runs after REG-19's queue has ended"; return 2; }
++  git -C $R grep -q -E '^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[(DECISION|CORR)\] \(owner\) E1 halted' HEAD -- docs/decisions.md && { MSG="the owner halted E1 (a '[DECISION] (owner) E1 halted' heading)"; return 2; }
++  git -C $R grep -q -E "$END19_PAT" HEAD -- docs/decisions.md || { MSG="no '[OPS] REG-19: the queue ended' or '[RESULT] REG-19' heading in the committed docs/decisions.md (the [OPS] heading must end '(QUEUE DONE)' or '(QUEUE END futility stop)'): E1 runs after REG-19's queue has ended"; return 2; }
+   [[ ! -e $REG19_LOCK && ! -L $REG19_LOCK ]] || { MSG="REG-19's queue lock exists ($REG19_LOCK; only its existence is tested): REG-19's queue may be running. If it has ended and left its lock, the owner decides"; return 2; }
+   return 0
+ }
+@@ -175,11 +179,12 @@ settle() {
+ #   - a run without checks.json, at any rate, stops the queue until state/lost_ok_<run id>.txt records a new
+ #     decision (the finished runs are copied first);
+ #   - a rate with a valid run is done; two or more valid runs are all listed, and nothing is launched;
+-#   - `no_errors` or `power_limit` in any E1 run's `failed` stops the queue; so does a second `gpu_steady` among them;
++#   - `no_errors` or `power_limit` in any E1 run's `failed` stops the queue; so does a second `gpu_steady` among them,
++#     and so does any other check in `failed` of MAX_SAME of them, at any rates (draft 6, rule F e1_r1 DA1);
+ #   - a rate with MAX_ATTEMPTS attempts spent is not launched again (listed in SPENT); the other rates go on.
+ next_step() {
+   local rec f stem line l2 parts id c r rate name s att n a ids valid inval lost=() stopper="" n_heat=0
+-  local -A NAMED per
++  local -A NAMED per nfail
+   ACT=""; ARG=""; NEXT_ATT=""; MSG=""; SUMMARY=(); SPENT=()
+   vm_tmux || return 2
+   (( ! TMUX_ON )) || { MSG="the tmux session 'run' is alive on the VM: an invocation is running (E1's or another). Start the queue again after it ends"; return 2; }
+@@ -227,6 +232,7 @@ next_step() {
+     for f in ${(s:,:)parts[3]}; do
+       [[ $f == $HEAT ]] && n_heat=$((n_heat + 1))
+       [[ ${NORERUN[(Ie)$f]} -gt 0 ]] && stopper="$f ($parts[1])"
++      [[ $f == - || $f == $HEAT || ${NORERUN[(Ie)$f]} -gt 0 ]] || nfail[$f]=$(( ${nfail[$f]:-0} + 1 ))
+     done
+     [[ $parts[2] == nochecks && ! -f $ST/lost_ok_$parts[1].txt ]] && lost+=($parts[1])
+   done
+@@ -251,6 +257,9 @@ next_step() {
+     if (( att >= MAX_ATTEMPTS )); then SPENT+=($rate); SUMMARY+=("r$rate none: the $MAX_ATTEMPTS attempts are spent (${#inval} invalid)"); continue; fi
+     [[ -z $stopper ]] || { MSG="E1 registers no rerun after $stopper: E1 stops; the owner decides"; return 2; }
+     (( n_heat < MAX_HEAT )) || { MSG="second heat failure ($HEAT) among E1's runs: E1 stops; the owner decides"; return 2; }
++    for f in ${(k)nfail}; do
++      (( nfail[$f] < MAX_SAME )) || { MSG="$f is in failed of ${nfail[$f]} of E1's runs: a check that fails twice is a question about the harness, not a rerun. E1 stops; the owner decides"; return 2; }
++    done
+     ACT=launch; ARG=$rate; NEXT_ATT=$((att + 1))
+     [[ ! -e $ST/attempt_r${rate}_$NEXT_ATT.txt ]] || { MSG="attempt record $NEXT_ATT of rate $rate exists"; ACT=""; return 2; }
+     return 0
