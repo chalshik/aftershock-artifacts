@@ -26,7 +26,11 @@ overrides a rule. A hit no rule or hand label covers is printed as UNLABELLED; t
                         search2 found in it no path into a REG-19 folder, no `cd` or loop under runs/, and no run reader.
   names_or_validity     a loop, glob or `cd` under runs/ whose command names no run file other than `checks.json` and
                         no size or count tool (`du`, `stat`, `wc`, `ls -l`), does not `cd` into one run folder, and reads
-                        nothing through `xargs`, `rsync` or `scp`: folder names and validity only.
+                        nothing through `xargs`, `rsync` or `scp`: folder names and validity only. Where the command
+                        names `checks.json`, every read of it must take `valid` or `failed` by name or test that the
+                        file exists, and no other field may be named (`detail`, `checks`, `ok`, `unfinished`, a whole-file
+                        print, `jq` beyond those two fields); otherwise the record is labelled by hand with the fields it
+                        prints (rule F round 18, BI6; owner-proxy on REG-22 draft 16, BL3a).
   no_run_read           (`ran` lines) python that, by search2's syntax-tree test, calls no run reader and opens no path
                         under runs/ (the call has no `script_reads_runs` hit, `stubbed` included), and is not a
                         `-m analysis.X` module run.
@@ -109,7 +113,7 @@ def rule(ts, where, tool, classes, details, cmd):
     if set(classes) <= {"runs_glob_loop", "cd_run", "names_reg19_run"} and cmd and not CD_INTO_RUN.search(cmd) \
             and not PIPED_READ.search(cmd):
         runs_part = " ".join(seg for seg in re.split(r"[;&|]+", cmd) if re.search(r"\bruns\b|\$d\b|\$r\b|checks\.json", seg))
-        if not DATAFILE.search(runs_part) and not SIZETOOL.search(runs_part):
+        if not DATAFILE.search(runs_part) and not SIZETOOL.search(runs_part) and checks_ok(cmd):
             return "names_or_validity", "auto"
     return None, ""
 
@@ -119,6 +123,17 @@ def rule(ts, where, tool, classes, details, cmd):
 CD_INTO_RUN = re.compile(r"\bcd\s+[^;&|]*runs/(\$\{?\w+\}?|[0-9]{8}-[0-9]{6}_\S+)")
 OWN_TOOL = re.compile(r"^script \S*docs/probe/20261113_(transcript_search/(search2?|classify2)|freeze/closure)\.py ")
 PIPED_READ = re.compile(r"xargs\s+(-\S+\s+)*(sha256sum|shasum|md5|cat|head|tail|wc|grep)\b|\brsync\b|\bscp\b")
+# BI6/BL3a: a read of checks.json counts as validity only if it takes `valid` or `failed` by name or tests that the
+# file exists, and the command names no other field of it
+CHECKS_FIELD = re.compile(r"""\[['"](valid|failed)['"]\]|\.get\(['"](valid|failed)['"]|\bjq\s+(-\S+\s+)*['"]?\.(valid|failed)\b""")
+CHECKS_EXIST = re.compile(r"-[ef]\s+\S*checks\.json|checks\.json['\"]?\)?\.(exists|is_file)\(\)")
+CHECKS_OTHER = re.compile(r"""\bdetail\b|['"]checks['"]|\.checks\b|\bunfinished\b|['"]ok['"]|json\.dumps|pprint|print\(\s*json\.load|\bjq\s+(-\S+\s+)*['"]?\.(?!valid\b|failed\b)|\bjq\s+(-\S+\s+)*['"]?\.['"]?\s""")
+
+
+def checks_ok(cmd):
+    if "checks.json" not in cmd:
+        return True
+    return bool(CHECKS_FIELD.search(cmd) or CHECKS_EXIST.search(cmd)) and not CHECKS_OTHER.search(cmd)
 
 
 def main(argv):
