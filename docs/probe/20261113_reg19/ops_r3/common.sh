@@ -17,7 +17,7 @@ MAX_ATTEMPTS=3                           # REG-19: a run once, rerun unchanged a
 SEEDS=(18 19)                            # the seeds left, in the registered order; not settable
 ALLCFG=(); for sd in 15 16 17 18 19; do ALLCFG+=(stage2_control_l1pl350cl_r2.0_w3000_s$sd burst_l1pl350cl_r2.0_w3000_s$sd); done
 LEFT=(${ALLCFG[7,10]})                   # the four configs of seeds 18 and 19: nothing else is ever launched
-DECISION_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[DECISION\] \(delegate\) REG-19 resumes for seeds 18 and 19'
+DECISION_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[DECISION\] \((delegate|owner)\) REG-19 resumes for seeds 18 and 19'   # (owner) added 2026-11-13: the owner approved the resume directly
 # Hours (UTC, HHMM) in which no run is started because it would run into the time of day at which the VM has been
 # powered off from outside: five of the six recorded power-offs fell between 14:35 and 17:37 UTC (BELIEF as to a
 # pattern; decisions.md 2026-11-05 [OPS] and docs/probe/20261113_reg19/poweroff_20261112_*.txt). A control is not
