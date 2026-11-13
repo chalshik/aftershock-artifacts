@@ -3,7 +3,7 @@
 Any fresh session resumes from this file alone. Read it, then `agent/PLAN.md`, then the last block of `agent/LOG.md`.
 Rules: `docs/FABLE_PROMPT.md` (the start prompt), `CLAUDE.md`, `PROTOCOL.md`, `docs/process.md`. The plan in force: the owner-approved plan of 2026-11-13 (session 8c5f8396; copy at `/Users/chalshik/.claude/plans/lexical-petting-thunder.md`, summarised under "Next three").
 
-Last updated: 2026-11-13 ≈ 15:45 UTC (session 8c5f8396). The update blocks of 05:15 to 12:10 UTC were moved to `_to_delete/agent/STATE_blocks_to_2026-11-13.md` (FOR_AUTHOR, "Things moved"); their content is in `agent/LOG.md` and `docs/decisions.md`.
+Last updated: 2026-11-13 ≈ 16:10 UTC (session 8c5f8396). The update blocks of 05:15 to 12:10 UTC were moved to `_to_delete/agent/STATE_blocks_to_2026-11-13.md` (FOR_AUTHOR, "Things moved"); their content is in `agent/LOG.md` and `docs/decisions.md`.
 
 ## Phase
 
@@ -19,15 +19,15 @@ Last updated: 2026-11-13 ≈ 15:45 UTC (session 8c5f8396). The update blocks of 
   - **Review-stop rule** (decisions.md 2026-11-13 [DECISION] (delegate), settled): at most three rounds on the freeze; after drafts 24/15 a change to the facts is allowed only if wording, a tag, stricter or a reporting duty; a round-2 NOT READY on batch 2's standing with a design item, or a round-3 NOT READY on it, means batch 1 alone and batch 2 retrospective by design (still computed once with the frozen code), with its own rule F and proxy.
   - **The freeze binds from the entry:** no commit to the 23 frozen files (k3w/c2 import closure, pyproject.toml, uv.lock) until both batch 2s are computed or declared not computed. REG-20 code, SEALS changes (arm B), everything new: new files only.
   - The transcript search (`docs/probe/20261113_transcript_search/search.py`) is rerun at the append; the [DECISION] (delegate) maps every proxy condition (BD9) and repeats the statement on REG-19 readings.
-- **REG-23** (K5): round 1 back (saved): rule F NOT READY CA1–CA6 (k5.py changes: L_rel comparator, paired lead over A, `too_few_events` and failure reasons, `alarm_share` and bounds); owner-proxy APPROVE on CB1–CB8. Draft 5 + k5.py changes are next; k5.py is outside the frozen closure.
+- **REG-23** (K5): draft 5 (`docs/drafts/reg23_k5_draft5.md`, commit `ea762b9`), code `63e8c65` (k5.py: Lr comparator and `leads_slo_only`, paired lead over A with the 120 s hurdle and ≥ 5 A onsets, `too_few_events` and `REASONS`, `alarm_share`, Poisson upper bounds per load, CP bounds, scan-start/recovery flags, peak A sent/planned; 15 tests). **Round 2 running:** `rulef-reg23-r2` (CC), `proxy-reg23-d5` (CD), bundle `reg23_r2`. Pending wording fix for draft 6 / the assembly: alternative 8 is already answered by S8 (FILE(docs/open-questions.md:33); source re-verified 2026-11-13, tarball sha256 matches), so it is a fact, not a BELIEF.
 - **E1:** draft 4; launch scripts not written. **E0/E2:** draft 3, NOT READY, needs a redesign.
-- **REG-20:** registered and approved by the owner; gate after REG-19's [RESULT] and before both batch 2s. The ops worker stopped at the usage limit: `docs/probe/20261113_reg20/ops/PIN_DECISION_DRAFT.md` and `DESIGN_NOTES.md` (untracked, unreviewed; seven open points, e.g. no per-run reading mid-matrix, the arm-B seal heading); the six scripts and the sandbox are not written.
+- **REG-20:** registered and approved by the owner; gate after REG-19's [RESULT] and before both batch 2s (arm A ≈ 0.2 by its own prediction; on a gate failure with ≥ 3 closed runs cold the tree says REG-20b, which reuses the same ops). **`reg20-ops-writer` running** (since ≈ 16:10 UTC): writes `common.sh`, `vm_state.py`, `session_probe.sh`, `launch.sh`, `queue.sh`, `final.sh`, `control_due.py`, `test_sandbox.sh`, README into `docs/probe/20261113_reg20/ops/`, new files only, nothing committed. The design points I fixed in its brief (pin `1cface7`; gate heading pattern; drift run after the third burst run and its control; `control_due.py` printing only `CONTROL_DUE yes|no|unclear`, unclear = no control; client error = stop; ulimit ≥ 4096 for the open arm; quiet hours with a two-run fit for open burst runs; arm B out of scope) are proposals: they need a [DECISION] (delegate) with rule F and an owner-proxy pass before any REG-20 run.
 
 ## Next three
 
 1. When round 2 returns: save each verbatim (the teammate message, from the main transcript), commit, apply the review-stop rule. If cleared: dry-run the assembly through check_docs (the relative `FILE(delegation.md:…)`/`FILE(round1_rule_f.md:…)` refs in `proxy-reg21-draft4.md` need an annotated path), rerun the transcript search, then register REG-22 and REG-21 ([REG] + [DECISION] (delegate) mapping every proxy condition), with definitions, ledger rows, the status notice and FOR_AUTHOR in the same commit.
 2. Batch 1 of each, once, stamped files under `docs/probe/reg21/` and `docs/probe/reg22/`, each committed alone; [RESULT]s. Then `final.sh` once the queue has ended (end kit C).
-3. REG-23 draft 5 (CA1–CA6 in k5.py with tests; CB1–CB7 in text) to its second review; then REG-20 ops scripts, E1 scripts, the preprint.
+3. When REG-23's round 2 returns: save both verbatim, apply; register if READY and APPROVE (with S8 replacing alternative 8). When `reg20-ops-writer` returns: review its scripts and sandbox, write the REG-20 ops [DECISION] (delegate) draft (pin and the design points), send it to rule F and the owner-proxy. Then E1 scripts, the preprint.
 
 ## Blockers
 
