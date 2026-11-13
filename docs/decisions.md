@@ -4309,3 +4309,12 @@ Ends when the owner writes an entry ending it.
 - **Not done by the agent:** no second queue, no rerun, no read of the VM (it is still off: both addresses time out). A draft for the owner on the third attempt is in `docs/drafts/reg19_attempt3_decision_draft1.md`; open question A18 asks what sends the power-key events (five of the seven recorded ends of a boot fell during a GPU run).
 - **Needed from the owner:** the VM on, 350 W, a decision on attempt 3, and, if possible, a look at the host's logs first.
 - **Not changed:** any run, config, threshold, script or registered rule.
+
+## 2026-11-13 · [CORR] Commit b0ff529 was made while `tools/check_docs.py` failed: the entry above names a run folder that exists only on the VM and was not listed as such
+
+- **What was wrong:** the [OPS] entry above quotes the queue's stop line, which holds the full id of the lost run of attempt 2, `20261113-033842_stage2_control_l1pl350cl_r2.0_w3000_s18`. `check_docs` requires every run id named in the docs to be in `runs/` or in `manifests/pending_copy.txt`, and it reported the failure. The commit was made all the same: the agent's command read the check's last line through a pipe, so the command chain did not stop on the check's exit status.
+- **Since when:** commit `b0ff529`, for a few minutes on 2026-11-13.
+- **Which results it affects:** none. No number, run, threshold or decision.
+- **Fix:** the run id is listed in `manifests/pending_copy.txt`: the folder exists only on the VM and goes into `runs/` only after REG-19's [RESULT], like the first lost run. The check passes again (`check_docs: OK (0 problems)`, the agent's run after the fix).
+- **Not checked:** whether an earlier commit of this session went in the same way. Every earlier one printed "OK (0 problems)" before its commit line in the session's record, and the check passes on the present tree.
+- **Rule that would have caught it (process.md §7):** I, the docs check before every commit; the agent now runs it as its own command and stops on its exit status.

@@ -699,19 +699,6 @@ Every model used to choose a run or read a result, with its equations, the evide
 
 ## Last decisions
 
-### 2026-11-13 · [CORR] Four choices the owner made on 2026-11-12 for E0, E1 and REG-21 were never logged here; they are recorded now from the files that hold them
-- **What was wrong:** `docs/status.md` (FILE(docs/status.md:15)) says "the owner chose "Floor only"" and "E0 gained 2.2 on E2's warm grid", and a config comment says "2.2 added after the E0/E1 rule F review, owner 2026-11-12" (FILE(configs/sweep_l1t16pl350cl_pc_on.yaml:3)), but no entry of this file records either choice, nor the owner's two choices for REG-21. The commit that brought the code (`9958414`) calls its message an "[OPS]" entry; a commit message is not an entry and not evidence (rule B). Found by the 2026-11-12 snapshot (its §12.2, item 3) and checked today with `grep -n "Floor only\|Add 2.2\|mix primary\|per-run sim" docs/decisions.md`: no match before this entry.
-- **The choices, as the drafts written that day record them** (the drafts lived in a session scratchpad and are now in `docs/drafts/scratchpad-2026-11-12/`; the owner's words are quoted from them, the agent did not hear them):
-  1. **E1, "Floor only"** (FILE(docs/drafts/scratchpad-2026-11-12/e0_e1_draft2.md:2)): after the rule F review showed that the served-mix tilt is the same for any saturated closed-loop server, E1 carries no K3 test; it measures K2's 8-turn closed-loop floor, and the tilt is reported and never judged.
-  2. **E0, "Add 2.2"** (FILE(docs/drafts/scratchpad-2026-11-12/e0_e1_draft2.md:28)): E2's cache-on grid gains the rate 2.2, and the label "widens" needs the warm side to gain too (warm₁₆ > warm₈); a window that widens only because the floor falls is labelled "floor_only".
-  3. **REG-21, "Register now, mix primary"** (FILE(docs/drafts/scratchpad-2026-11-12/reg21_draft.md:2)): step B was to be registered before REG-19 reports, with the served-turn mix as its primary readout.
-  4. **REG-21, "Rebuild around per-run sim"** (FILE(docs/drafts/scratchpad-2026-11-12/reg21_draft2.md:2)): after the review of the first draft, model F is replayed on each run's own schedule instead of being read at its long-run values.
-- **Since when:** 2026-11-12, the day the choices were made.
-- **Which results it affects:** none. E0, E1 and REG-21 were not registered and nothing was computed under them. The E2 cache-on config has not been used by a run, so its grid is as the owner chose it.
-- **Re-check done:** the three sweep configs named in the drafts exist and are unused (`ls runs` has no folder of `sweep_l1pl350cl_pc_off`, `sweep_l1t16pl350cl_pc_on` or `sweep_l1t16pl350cl_pc_off`); `analysis/e1.py` has no `judge` function (choice 1); `k2.decide` has the label "floor_only" (choice 2; FILE(analysis/k2.py:86)).
-- **What the delegate does with them:** choices 1 and 2 are kept as they are in the E0 and E1 registrations. Choice 4 is kept for the reported readouts of REG-21. Choice 3 is **not** kept: the registration proposed today judges the stuck server's uncached-token work rate, not the mix, because two review rounds showed that the mix follows from queue kinematics and from the time a request stays in the running batch. That departure is stated in the [REG] and listed for the owner.
-- **Rule that would have caught it (process.md §7):** E, every decision gets a `[DECISION]` entry when it is made; and I, a statement in status.md about an owner's choice must point at an entry.
-
 ### 2026-11-13 · [OPS] REG-19: the interim look of 2026-11-12 is recorded before the queue resumes (a deviation from "No interim look beyond `reg19_step`'s `continue` flag")
 
 - **What happened:** on 2026-11-12, about 11:44 UTC, the queue stopped with a false "TMUX GONE, no checks.json" for seed 17's control (`20261112-103423_stage2_control_l1pl350cl_r2.0_w3000_s17`). While diagnosing it, the session that ran the queue read about the last 15 lines of that run's harness log on the VM, which showed a live hit rate after the arrivals had ended (FILE(docs/probe/20261111_reg19/ops/RESUME.md:18)). The run was valid and was adopted (FILE(docs/probe/20261111_reg19/ops/queue_run3_output.txt:1)).
@@ -750,3 +737,12 @@ Every model used to choose a run or read a result, with its equations, the evide
 - **Not done by the agent:** no second queue, no rerun, no read of the VM (it is still off: both addresses time out). A draft for the owner on the third attempt is in `docs/drafts/reg19_attempt3_decision_draft1.md`; open question A18 asks what sends the power-key events (five of the seven recorded ends of a boot fell during a GPU run).
 - **Needed from the owner:** the VM on, 350 W, a decision on attempt 3, and, if possible, a look at the host's logs first.
 - **Not changed:** any run, config, threshold, script or registered rule.
+
+### 2026-11-13 · [CORR] Commit b0ff529 was made while `tools/check_docs.py` failed: the entry above names a run folder that exists only on the VM and was not listed as such
+
+- **What was wrong:** the [OPS] entry above quotes the queue's stop line, which holds the full id of the lost run of attempt 2, `20261113-033842_stage2_control_l1pl350cl_r2.0_w3000_s18`. `check_docs` requires every run id named in the docs to be in `runs/` or in `manifests/pending_copy.txt`, and it reported the failure. The commit was made all the same: the agent's command read the check's last line through a pipe, so the command chain did not stop on the check's exit status.
+- **Since when:** commit `b0ff529`, for a few minutes on 2026-11-13.
+- **Which results it affects:** none. No number, run, threshold or decision.
+- **Fix:** the run id is listed in `manifests/pending_copy.txt`: the folder exists only on the VM and goes into `runs/` only after REG-19's [RESULT], like the first lost run. The check passes again (`check_docs: OK (0 problems)`, the agent's run after the fix).
+- **Not checked:** whether an earlier commit of this session went in the same way. Every earlier one printed "OK (0 problems)" before its commit line in the session's record, and the check passes on the present tree.
+- **Rule that would have caught it (process.md §7):** I, the docs check before every commit; the agent now runs it as its own command and stops on its exit status.
