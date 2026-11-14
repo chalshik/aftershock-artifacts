@@ -3,7 +3,7 @@
 Any fresh session resumes from this file alone. Read it, then `agent/PLAN.md`, then the last block of `agent/LOG.md`.
 Rules: `docs/FABLE_PROMPT.md` (the start prompt), `CLAUDE.md`, `PROTOCOL.md`, `docs/process.md`. The plan in force: the owner-approved plan of 2026-11-13 (session 8c5f8396; copy at `/Users/chalshik/.claude/plans/lexical-petting-thunder.md`, summarised under "Next three").
 
-Last updated: 2026-11-14 ≈ 02:58 UTC (session 8c5f8396; "Next three" item 0000000000 is current). The update blocks of 05:15 to 12:10 UTC were moved to `_to_delete/agent/STATE_blocks_to_2026-11-13.md` (FOR_AUTHOR, "Things moved"); their content is in `agent/LOG.md` and `docs/decisions.md`.
+Last updated: 2026-11-14 ≈ 03:45 UTC (session 8c5f8396; "Next three" item 00000000000 is current). The update blocks of 05:15 to 12:10 UTC were moved to `_to_delete/agent/STATE_blocks_to_2026-11-13.md` (FOR_AUTHOR, "Things moved"); their content is in `agent/LOG.md` and `docs/decisions.md`.
 
 ## Phase
 
@@ -32,6 +32,8 @@ Last updated: 2026-11-14 ≈ 02:58 UTC (session 8c5f8396; "Next three" item 0000
 - The 79 `names_in_command` hits are hand-labelled (8f352b1; 0 UNLABELLED); two new reads were found and disclosed (the note copied whole at 18:07:10, its lines printed at 18:07:38; [CORR] 285584f).
 
 ## Next three
+
+00000000000. **(2026-11-14 03:45 UTC; first written as 03:50 at 03:44:56, fixed before commit)** E1 still running (sweep attempt 1). D1 draft 2 committed `ab281db` → rule F round 2 running (`<scratchpad>/reviews_r3/rulef-d1-draft2-r2.md`), then its owner-proxy. REG-24 draft 2 committed `872bc18` → rule F round 2 running (`<scratchpad>/reviews_r3/rulef-reg24-draft2-r2.md`); its approval waits for the owner's drop ruling (−18). REG-20 arm A ops rule F round 3 still running. FOR_AUTHOR −20 now carries D1's and REG-24's disk needs. Tool ready: `agent/bin/vm_verify_list.zsh` (`b2fa956`), run after E1's end entry. (Item 0000000000's time 02:58 was written at 02:57:27 and committed at 02:57:50: a guess ≈ 30 s ahead.)
 
 0000000000. **(2026-11-14 02:58 UTC)** E1 still running (sweep attempt 1, GPU 100 %, 350 W at 02:53). **VM disk blocks REG-20 arm A** (`e788191`: [OPS] VM disk, 4,051,176 kB free vs 4,524,512 kB needed; FOR_AUTHOR −20; owner notified). Committed in `e788191`: REG-20 ops draft 3 and its files; rule F round 1 on D1 (NOT READY, DG1–DG11). Running: rule F round 3 on REG-20 ops draft 3 (output `<scratchpad>/reviews_r3/rulef-reg20-ops-draft3-r3.md`), then its owner-proxy delta; D1 draft 2 writer (`docs/drafts/d1_draft2.md`, `d1_r2/`), then rule F round 2 on D1, then its proxy. On E1's QUEUE DONE/END: commit ops/state, manifests, probes, the queue output with `[OPS] E1: the queue ended (…)`, update status.md's inventory, compute nothing; then list VM folders that verify against `manifests/runs.sha256` (read-only) for the owner's disk freeing. REG-24 draft 2 (RE1–RE9) waits; the drop length is the owner's (−18).
 
