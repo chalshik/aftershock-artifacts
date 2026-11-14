@@ -114,9 +114,9 @@ Steps:
 
 ## Runs on record
 
-186 run folders: 158 VALID, 24 INVALID, 4 without checks (2026-11-13 ≈ 21:50 UTC, after REG-19's queue copied seed 19's control and burst run; `tools/check_docs.py` inventory). All kept; none counts unless VALID.
+187 run folders: 158 VALID, 24 INVALID, 5 without checks (2026-11-14 01:30 UTC, after seed 18's lost control was copied from the VM; `tools/check_docs.py` inventory). All kept; none counts unless VALID.
 
-- **No checks:** `20261030-114021_first_real` (failed start, no load sent); `20261031-025032_tau` (VM shut down 140 s in); `20261104-134159_long_pc_off_r3_s0` (REG-6 seed 0, VM powered off at t = 3168 s of 3600, DERIVED: power key 14:35:45.08 − planned load start 13:42:56.74 from `events.jsonl` `load_t0_planned`; copied 2026-11-05).
+- **No checks:** `20261030-114021_first_real` (failed start, no load sent); `20261031-025032_tau` (VM shut down 140 s in); `20261104-134159_long_pc_off_r3_s0` (REG-6 seed 0, VM powered off at t = 3168 s of 3600, DERIVED: power key 14:35:45.08 − planned load start 13:42:56.74 from `events.jsonl` `load_t0_planned`; copied 2026-11-05); `20261113-033842_stage2_control_l1pl350cl_r2.0_w3000_s18` (REG-19 seed 18's control, attempt 2: the VM stopped answering during it and the queue stopped with launch rc 7, FILE(docs/decisions.md:12866); copied 2026-11-14 01:28 UTC, 9 files, the VM's and the Mac's sha256 lists equal, PROBE(docs/probe/20261114_copy_s18/copy_20261114T012845Z.txt); no `checks.json`).
 - **No checks, REG-7 G2:** `20261105-181511_sweep_l1_pc_off_r2` (stopped by the owner at t = 247 s).
 - **Invalid, Stage 1:** `20261023-145613_smoke` (`gpu_steady`, before the check was refined); `20261030-145339_sweep_pc_on_r8` (`accounting`); `20261030-175458_sweep_pc_off_r10` (`recorder`).
 - **Invalid, Stage 2:** `20261101-151707_stage2_control_r1.5` (stopped on request); `20261101-182452_stage2_control_cap_r3`, `20261102-045827_wipe_preempt_r3_s1`, `20261102-062040_wipe_preempt_r3_s3`, `20261102-080323_wipe_preempt_r3_s3` (hardware thermal samples, before the backplate fan); `20261102-093229_wipe_preempt_r3_s3` (stopped on request after a thermal sample).
