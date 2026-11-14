@@ -1,0 +1,43 @@
+# REG-20 ops draft 3: import closures (agent, 2026-11-14T02:39:30Z), run in a scratch tree = git archive of 40948ba (analysis/ and harness/ equal HEAD 5f9f442's: git_facts_20261114.txt)
+$ python3 -I docs/probe/20261113_freeze/closure.py analysis/k1.py
+# import closure of analysis/k1.py in the working tree: 19 .py files
+analysis/__init__.py
+analysis/derived.py
+analysis/floor.py
+analysis/gate.py
+analysis/k1.py
+analysis/load.py
+analysis/margin.py
+analysis/stats.py
+analysis/tables.py
+analysis/withheld.py
+harness/__init__.py
+harness/checks.py
+harness/config.py
+harness/env_snapshot.py
+harness/loadgen.py
+harness/recorder.py
+harness/run.py
+harness/trigger.py
+harness/workload.py
+# environment: 3 files
+.python-version
+pyproject.toml
+uv.lock
+# total 22 files
+# dynamic import call in harness/env_snapshot.py at line(s) 38: check by hand
+$ python3 -I docs/probe/20261113_freeze/closure.py analysis/recheck.py
+# import closure of analysis/recheck.py in the working tree: 8 .py files
+analysis/__init__.py
+analysis/load.py
+analysis/recheck.py
+analysis/withheld.py
+harness/__init__.py
+harness/checks.py
+harness/config.py
+harness/workload.py
+# environment: 3 files
+.python-version
+pyproject.toml
+uv.lock
+# total 11 files

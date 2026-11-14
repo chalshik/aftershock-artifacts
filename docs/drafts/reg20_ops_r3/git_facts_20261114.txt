@@ -1,0 +1,28 @@
+# REG-20 ops draft 3: git facts (agent, read-only, Mac main checkout, 2026-11-14T02:39:13Z); HEAD 5f9f44271be5b49fb73defbf5e5ecafee87c5344
+$ git merge-base --is-ancestor 1cface77ca001cdf5d90de9313ddd4a3af4569a1 ce5f8421d2667e52c3db99f445de00519b73473c && echo yes
+yes
+$ git merge-base --is-ancestor 1cface77ca001cdf5d90de9313ddd4a3af4569a1 HEAD && echo yes
+yes
+$ git rev-parse 1cface77ca001cdf5d90de9313ddd4a3af4569a1:uv.lock ce5f8421d2667e52c3db99f445de00519b73473c:uv.lock HEAD:uv.lock
+8b1c04b402b6741cf9c1837b060c4e39b64bbcff
+8b1c04b402b6741cf9c1837b060c4e39b64bbcff
+8b1c04b402b6741cf9c1837b060c4e39b64bbcff
+$ git diff --stat 5ee6e38 HEAD -- harness/ | wc -l
+       0
+$ git diff --stat 1cface77ca001cdf5d90de9313ddd4a3af4569a1 HEAD -- configs/defaults.yaml .python-version tools/manifest.py pyproject.toml uv.lock | wc -l
+       0
+$ git diff --stat 56820bd HEAD -- docs/probe/20261113_reg20/ops | wc -l
+       0
+$ git diff --stat 40948ba HEAD -- analysis harness configs tools pyproject.toml uv.lock .python-version docs/probe/20261113_reg20 docs/decisions.md agent/RUNBOOK.md | wc -l
+       0
+$ git log -1 --format='%H %cI %s' -- docs/probe/20261113_reg20/ops/common.sh
+56820bd87c3301f65fecfac86e507f681cf20a99 2026-11-14T07:22:22+06:00 [OPS] Drafts for review, none approved: E1 draft 7 with its patches (e1.py, test_e1.py, ops scripts; applied nowhere) and bundle e1_r3; REG-20 arm A ops decision draft 2 with its draft scripts (owner_rulings.txt all unset, so they refuse to start) and bundle reg20_ops_r2; REG-24 draft 1 (C1's confirmation at λ = 2.0) with its patch
+$ git ls-tree -r --name-only HEAD -- docs/probe/reg20/
+docs/probe/reg20/gate_20261113T230307Z.txt
+docs/probe/reg20/gate_err_20261113T230307Z.txt
+$ git diff --stat 1cface77ca001cdf5d90de9313ddd4a3af4569a1 ce5f8421d2667e52c3db99f445de00519b73473c -- harness/ | tail -1
+ 4 files changed, 163 insertions(+), 29 deletions(-)
+$ git cat-file -t ce5f8421d2667e52c3db99f445de00519b73473c
+commit
+$ git diff --stat 5ee6e38 ce5f8421d2667e52c3db99f445de00519b73473c -- harness/ | wc -l
+       0

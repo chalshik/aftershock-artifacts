@@ -1,0 +1,5 @@
+# REG-20 ops draft 3: test_control_due.py on the scratch tree (40948ba + ops_draft3.patch), 20261114T024844Z
+$ PYTHONDONTWRITEBYTECODE=1 /Users/chalshik/Projects/aftershock-artifacts/.venv/bin/python -m pytest -q -p no:cacheprovider docs/probe/20261113_reg20/ops/test_control_due.py
+...............................................                          [100%]
+47 passed in 0.76s
+exit 0

@@ -1,0 +1,11 @@
+# REG-20 ops draft 3: syntax checks on the patched scripts (scratch tree = 40948ba + ops_draft3.patch), 2026-11-14T02:46:23Z
+zsh -n common.sh: ok
+zsh -n session_probe.sh: ok
+zsh -n launch.sh: ok
+zsh -n queue.sh: ok
+zsh -n final.sh: ok
+zsh -n vm_checkout.sh: ok
+zsh -n test_sandbox.sh: ok
+ast.parse recheck_one.py: ok
+ast.parse control_due.py: ok
+ast.parse vm_state.py: ok

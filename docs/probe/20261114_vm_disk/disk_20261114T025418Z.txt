@@ -1,0 +1,15 @@
+# VM disk, read-only (df; du of top-level dirs). Taken 20261114T025418Z while E1 runs; no file content read.
+# Header corrected before commit: the first version said "E1's folders not walked", which is false; `du -sk runs` counts
+# E1's running folder's size (metadata only) inside one total with 85 other folders; no per-folder size was printed.
+$ df -k /
+Filesystem                        1K-blocks     Used Available Use% Mounted on
+/dev/mapper/ubuntu--vg-ubuntu--lv  64163468 56820544   4051176  94% /
+$ du -sk (top-level, runs/ as a whole)
+11154100	aftershock-artifacts/runs
+17658956	aftershock-artifacts/.venv
+11845620	.cache/huggingface
+96060	.cache/vllm
+92436	.cache/uv
+27000	repos
+$ ls runs | wc -l
+86

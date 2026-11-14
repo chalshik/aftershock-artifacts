@@ -1,0 +1,720 @@
+diff -ruN a/docs/probe/20261113_reg20/ops/README.md b/docs/probe/20261113_reg20/ops/README.md
+--- a/docs/probe/20261113_reg20/ops/README.md	2026-11-14 08:17:15
++++ b/docs/probe/20261113_reg20/ops/README.md	2026-11-14 08:50:27
+@@ -2,11 +2,10 @@
+ 
+ **Status (2026-11-14).**
+ - The first version of these scripts (draft 1 of the operations decision) is committed in c8b482d. README:3 of that commit said "Nothing here is committed", which was false (rule F round 1, RA7).
+-- This folder now holds **draft 2's scripts**: c8b482d's files changed in the working tree after rule F round 1 (`docs/drafts/reviews-2026-11-13/rulef-reg20-ops-draft1-r1.md`, RA1–RA7, RA-O1–RA-O9) and owner-proxy round 1 (`docs/drafts/reviews-2026-11-13/proxy-reg20-ops-draft1.md`, RB1–RB15).
+-- Draft 2 adds two new files: `recheck_one.py` and `owner_rulings.txt`.
+-- A third new file, `gate.sh`, was written for RB5 (ii) and then withdrawn, because the gate had already been computed once: commit 3c8e5dc holds `docs/probe/reg20/gate_20261113T230307Z.txt` and its stderr file. The scripts now read that committed file. The decision draft, point 14, gives the details.
+-- **Draft 2 is not committed and not reviewed.**
+-- The decision text is `docs/drafts/reg20_ops_decision_draft2.md`. Where each review item went is in `docs/drafts/reg20_ops_draft2_itemmap.md`.
++- Draft 2's scripts are committed in 56820bd ("[OPS] Drafts for review, none approved"), with `owner_rulings.txt` all `unset`, so they refuse to start. Draft 2 added `recheck_one.py` and `owner_rulings.txt`; `gate.sh` was written for RB5 (ii) and withdrawn, because the gate had already been computed once (commit 3c8e5dc, `docs/probe/reg20/gate_20261113T230307Z.txt` and its stderr file; the decision, point 14).
++- **Draft 2 is committed in 56820bd and not approved.** (RC8, verbatim.)
++- This folder's **draft 3** changes are the patch `docs/drafts/reg20_ops_r3/ops_draft3.patch` against 40948ba, after rule F round 2 (`docs/drafts/reviews-2026-11-13/rulef-reg20-ops-draft2-r2.md`, NOT READY on RC1–RC8) and owner-proxy round 2 (`docs/drafts/reviews-2026-11-13/proxy-reg20-ops-draft2.md`, APPROVE with RD1–RD10). Draft 3 adds one new file, `vm_checkout.sh` (RC-O10, point 18). **Draft 3 is not committed and not reviewed.** The [DECISION] names the commit that holds the scripts, with `scripts_commit.txt` and the sandbox count, and quotes `git diff --stat 56820bd <that commit> -- docs/probe/20261113_reg20/ops` (RD1).
++- The decision text is `docs/drafts/reg20_ops_decision_draft3.md`; the item map is `docs/drafts/reg20_ops_decision_draft3_itemmap.md`.
+ - 0 GPU h. The VM was not contacted. Nothing under `runs/` was opened beyond folder names, and no `state/` folder or queue output was opened.
+ 
+ REG-20's registration is FILE(docs/decisions.md:4045-4165). The owner's approval is FILE(docs/decisions.md:4166-4171).
+@@ -14,8 +13,8 @@
+ `DESIGN_NOTES.md` and `PIN_DECISION_DRAFT.md` are an earlier worker's notes, superseded as their headers say.
+ 
+ **Tests (fakes only, never `runs/`):**
+-- `zsh docs/probe/20261113_reg20/ops/test_sandbox.sh`: 350 of 350 passed, `sandbox_20261113T231823Z.txt` in this folder.
+-- `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider docs/probe/20261113_reg20/ops/test_control_due.py`: 46 of 46 passed, `test_control_due_20261113T231828Z.txt`.
++- `zsh docs/probe/20261113_reg20/ops/test_sandbox.sh`: draft 2, 350 of 350 passed, `sandbox_20261113T231823Z.txt` in this folder; draft 3, 428 of 428 passed, exit 0, `docs/drafts/reg20_ops_r3/sandbox_20261114T023449Z.txt` (on a scratch copy of 40948ba with the patch applied).
++- `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider docs/probe/20261113_reg20/ops/test_control_due.py`: draft 2, 46 of 46 passed, `test_control_due_20261113T231828Z.txt`; draft 3, 47 of 47 passed, exit 0, `docs/drafts/reg20_ops_r3/test_control_due_20261114T024844Z.txt`.
+ 
+ ## Scripts
+ 
+@@ -31,37 +30,42 @@
+ - the heading patterns and the judged code.
+ 
+ Functions:
+-- `mac_checks`, unchanged from draft 1. It checks that:
++- `mac_checks`, unchanged from draft 1 but for `vm_checkout.sh` in `SCRIPTS`. It checks that:
+   - the pin is an ancestor of HEAD;
+   - the lock files and `tools/manifest.py` equal the pin's;
+   - all eleven configs exist at the pin;
+   - k1's import closure equals the pin's;
+   - the two seal files are the recorded blobs;
+   - the scripts are committed and named in `scripts_commit.txt`.
+-- `rulings_ok`: every point in `owner_rulings.txt` holds an answer it may take, and the file is tracked and equal to its commit (RA5).
+-- `gate_in_log`: four conditions.
+-  - REG-19's [RESULT] heading, the owner's rulings heading and, after both, `… REG-20 arm A starts: k1.reg20_a_may_start passed` (anchored, RA1).
+-  - No stop heading after the start (RA-O3).
++- `rulings_ok`: every point in `owner_rulings.txt` holds an answer it may take, and the file is tracked and equal to its commit (RA5); and the last commit that changed the file adds a rulings heading to `docs/decisions.md` (RC2), the owner's or the delegate's (RD1).
++- `e1_ended` (draft 3, point 18): HEAD's `docs/decisions.md` holds E1's end entry (`E1_END_PAT`: `[OPS] E1: the queue ended (QUEUE DONE)`, `… (QUEUE END)` or `[OPS] E1 ended by a stop: …`), and E1's queue lock `docs/probe/20261113_e1/ops/state/queue.lock` does not exist (its existence only is tested).
++- `gate_in_log`: six conditions.
++  - REG-19's [RESULT] heading, a rulings heading and, after both, `… REG-20 arm A starts: k1.reg20_a_may_start passed` (anchored, RA1). The rulings heading is `(owner) … the owner's rulings` or `(delegate) … the rulings on the owner's points` (RD1).
++  - A delegate's rulings heading at most once, as the first rulings heading (RD2).
++  - No stop heading after the start (RA-O3); `STOP_PAT` also takes `halted`, `is halted` (RC-O3) and `ended by a stop` (point 18).
+   - Exactly one committed gate file in `docs/probe/reg20/` (`gate_<stamp>.txt`, from 3c8e5dc), whose one line reads `'may_start': True`, with its stderr file and no `withheld:` line (RB5).
+   - `rulings_ok`.
++  - `e1_ended`.
+ - `vm_state`.
+ - `decide`, the rerun rule.
+ - `next_step`.
+-- `copy_verify`: copy to the holding folder, compare sha256s, recheck, apply ruling 2a, then move into `runs/` (or hold), compare again and update the manifest.
+-- `recheck_one`, `recheck_apply`, `recheck_guards`.
++- `copy_verify`: copy to the holding folder, compare sha256s, recheck, apply ruling 2a, then move into `runs/` (or hold), compare again and update the manifest. Draft 3 (RC6 (ii)): a run held or set aside gets its per-file sha256 list beside it, `<holding folder>/<run id>.sha256`, and the queue prints `SHA256 LIST <path> sha256 <its sha256>` for the [OPS] entry that names the record.
++- `recheck_one`, `recheck_apply`, `recheck_guards`. Draft 3: `recheck_guards` also holds all of `harness/` to `5ee6e38` (RD-O1).
+ 
+ **The gate is not computed by these scripts.** It was computed once, after REG-19's [RESULT], in commit 3c8e5dc. No script runs `reg20_a_may_start`, and the sandbox fails if any script tries.
+ 
+ **`recheck_one.py`** (new, RB2 and RA2 (b)) applies `harness.checks.run_checks` to one folder in the holding folder:
+ - it is read-only, and it refuses a folder inside `runs/`;
+-- it prints only `run`, `stored_valid`, `stored_failed`, `now_valid`, `now_failed`, `changed`, and `error` when the folder cannot be read;
++- it prints only `run`, `stored_valid`, `stored_failed`, `now_valid`, `now_failed`, `changed`, and `error` when the folder cannot be read (draft 3: the exception's type name only, its text on stderr, RC-O11);
+ - it imports no analysis module.
+ 
+ **`owner_rulings.txt`** (new, RA5) holds one line per owner's point: `2a`, `6`, `7`, `8`, `9`, `16`.
+-- Every point reads `unset`. The scripts refuse to start until the owner's entry sets every point and commits the file.
++- Every point reads `unset`. The scripts refuse to start until a rulings entry sets every point and commits the file in the same commit: `## <date> · [DECISION] (owner) REG-20 arm A operations: the owner's rulings`, or `## <date> · [DECISION] (delegate) REG-20 arm A operations: the rulings on the owner's points` (RD1). The values the owner-proxy picked (RD2) are the patch `docs/drafts/reg20_ops_r3/owner_rulings_rd2.patch`, for that commit only.
+ 
+-**`vm_state.py`** and **`session_probe.sh`** are unchanged from draft 1.
++**`vm_checkout.sh`** (new in draft 3, RC-O10, point 18) moves the VM's tree back to the pin, after E1's end entry. It refuses before every heading the queue needs (`gate_in_log`, with `e1_ended`), under either queue lock, with a compute process or a tmux session on the VM, from a dirty tree, or from a commit that the pin is not an ancestor of. It runs `git checkout --detach <pin>` on the VM, with no push or fetch, and writes `docs/probe/20261113_reg20/vm_checkout_<stamp>.txt`.
+ 
++**`vm_state.py`** is unchanged from draft 1. **`session_probe.sh`** is draft 1's, plus one line: it refuses before `e1_ended` (draft 3, point 18).
++
+ **`launch.sh <config>`** is draft 1's, plus three lines in the attempt record:
+ - `arm open|closed`;
+ - `log <path>`;
+@@ -98,37 +102,38 @@
+ 
+ Hand-written records are text files in `state/`, one "key value" per line. Each needs `under <the decision, ruling or [OPS] entry>` and `by owner|delegate`. The scripts check that the writer is one the rulings allow.
+ 
++Each hand-written record is named in an [OPS] entry committed when it is written; that commit's time is the record's time. (RC4, verbatim.)
++
+ | Record | Lines | Who may write it |
+ |---|---|---|
+ | `rerun_ok_<rid>.txt` | `lifts <failure>`, one line per failure lifted (RA-O4) | the owner; under 6(b), the delegate for `no_errors/client_error` when the run's log read nofile ≥ 4096 and the boot is unchanged |
+ | `lost_ok_<rid>.txt` | `count yes\|no` (ruling 8) | after a power-off: 8(a) `count yes` by either; 8(b) `count no` by either, or `count yes` by the owner; without a reboot: the owner |
+-| `settle_<rid>.txt` | `label not_run\|lost_open\|control_not_run\|drift_not_run` (RB3) | the owner. The delegate may write it: in RA3's case for the label ruling 7 names; for `control_not_run` after the spent attempts under 9(b) |
++| `settle_<rid>.txt` | `label not_run\|lost_open\|control_not_run\|drift_not_run` (RB3) | the owner. The delegate may write it: in RA3's case for the label ruling 7 names, except that under 7 `not_run` the delegate's `not_run` needs every invalid attempt to have failed only setup checks, and in the mixed case the delegate's label is `lost_open` (RC3); for `control_not_run` after the spent attempts under 9(b) |
+ | `attempt_ok_<cfg>_<n>.txt` | none beyond `under` and `by` | the owner; the delegate for a control's third attempt under 9(a) |
+ | `nofile_ok_<rid>.txt` | none beyond `under` and `by` (RB15) | either, logged in an [OPS] entry |
+ | `recheck_ok_<rid>.txt` | `answer keep\|setaside` (ruling 2a `stop`) | the owner |
+ 
+ The queue writes these records itself:
+ - `copied_<rid>.txt`;
+-- `held_<rid>.txt` and `setaside_<rid>.txt`, for runs kept in the holding folder;
++- `held_<rid>.txt` and `setaside_<rid>.txt`, for runs kept in the holding folder (each with `<holding folder>/<rid>.sha256` beside the folder, RC6 (ii); nothing in the holding folder is opened, moved or deleted before REG-20's [RESULT] except by the scripts, RD8);
+ - `recheck_<rid>.json`, which holds validity fields only;
+ - `control_due.txt`;
+ - `queue_done.txt`.
+ 
+-## Launch order (only after: review rounds 2, the owner's rulings, the commit, REG-19's [RESULT] and the gate)
++## Launch order (only after: review rounds 3, the rulings, the commit, REG-19's [RESULT], the gate and E1's end entry)
+ 
+-1. Commit this folder. Write `git log -1 --format=%H -- docs/probe/20261113_reg20/ops/{common.sh,vm_state.py,session_probe.sh,launch.sh,queue.sh,final.sh,control_due.py,recheck_one.py}` into `ops/scripts_commit.txt` and commit that file.
+-2. The owner's entry `## <date> · [DECISION] (owner) REG-20 arm A operations: the owner's rulings`. It quotes `owner_rulings.txt`, and is committed with it.
+-3. The gate is already computed (3c8e5dc). Only if `docs/probe/reg20/gate_20261113T230307Z.txt` reads `'may_start': True`: write the entry `## <date> · [DECISION] (owner|delegate) REG-20 arm A starts: k1.reg20_a_may_start passed`. The entry quotes the file verbatim, and states how the gate's command differed from RB5 (ii) (decision draft, point 14).
+-4. The VM, never while a run is in progress (RB6, RA-O7):
+-   1. Push main to the VM's bare repo (RUNBOOK §4, step 1).
+-   2. On the VM, run `git fetch origin && git checkout --detach 1cface77ca001cdf5d90de9313ddd4a3af4569a1`.
+-   3. Check that `git rev-parse HEAD` equals the pin and that `git status --short` is empty.
++1. Commit this folder. Write `git log -1 --format=%H -- docs/probe/20261113_reg20/ops/{common.sh,vm_state.py,session_probe.sh,launch.sh,queue.sh,final.sh,control_due.py,recheck_one.py,vm_checkout.sh}` into `ops/scripts_commit.txt` and commit that file.
++2. The rulings entry, `## <date> · [DECISION] (owner) REG-20 arm A operations: the owner's rulings` or `## <date> · [DECISION] (delegate) REG-20 arm A operations: the rulings on the owner's points` (RD1). It quotes `owner_rulings.txt`, and is committed with it, in the same commit (RC2).
++3. The gate is already computed (3c8e5dc). Only if `docs/probe/reg20/gate_20261113T230307Z.txt` reads `'may_start': True`: write the entry `## <date> · [DECISION] (owner|delegate) REG-20 arm A starts: k1.reg20_a_may_start passed`. The entry quotes the file verbatim, and states how the gate's command differed from RB5 (ii) (decision draft, point 14; RD7).
++4. Only if E1 has not started, or E1's end entry is committed and E1's queue lock is absent (point 18): (RC7 (c), verbatim.) The VM, never while a run is in progress (RB6, RA-O7): `zsh docs/probe/20261113_reg20/ops/vm_checkout.sh` (it refuses before E1's end entry, under E1's lock, and while a run may be in progress), then commit its probe file with an [OPS] entry. It replaces RB6's hand steps (push, fetch, checkout), which are kept in the decision, point 18, as the record of what it does.
+ 5. Run `zsh docs/probe/20261113_reg20/ops/session_probe.sh`, with `SET=1` if allowed.
+ 6. Run `nohup caffeinate -i zsh docs/probe/20261113_reg20/ops/queue.sh > docs/probe/20261113_reg20/queue_<stamp>.txt 2>&1 &`
+ 7. After `QUEUE DONE`: run `zsh docs/probe/20261113_reg20/ops/final.sh` once, then commit its files at once, alone.
+ 
+-While arm A runs, no commit may change k1's closure, `analysis/load.py` or `analysis/withheld.py` (RA-O1). Any such commit stops the queue until `common.sh` is updated by a reviewed commit. REG-21's and REG-22's freeze already bars these files until both batch 2s are computed or declared not computed.
++While arm A runs, the arm A hold applies (decision, "The arm A hold"): no commit to its files and no uncommitted edit under `analysis/` or `harness/` in the main checkout. A breach stops the queue until `common.sh` is updated by a reviewed commit or the change is reverted. REG-21's and REG-22's freeze has ended (both batch 2s are computed). (RC1 (f), verbatim.)
+ 
++From the commit of the start heading until final.sh's two output files are committed, or an entry ends arm A, no commit, and no uncommitted change in the Mac's main checkout, touches the files the decision's "The arm A hold" lists (RD4's first bullet, with its list in the decision). No VM folder of arm A's eleven configs is removed from the VM before REG-20's [RESULT] (RD8).
++
+ ## Deviations from ops_r3, and why
+ 
+ 1. **No pinned worktree and no links.** Analysis runs from the repo root, and the judged code is checked instead.
+@@ -147,6 +152,6 @@
+ 
+ ## Not settled
+ 
+-See the decision draft, "For the owner, before the first launch" (points 2a, 6, 7, 8, 9, 16), and "Not settled".
++See the decision draft, "For the owner, before the first launch" (points 2a, 6, 7, 8, 9, 16, G, and the VM's disk, D), and "Not settled".
+ 
+ **Arm B is out of scope** (point 16).
+diff -ruN a/docs/probe/20261113_reg20/ops/common.sh b/docs/probe/20261113_reg20/ops/common.sh
+--- a/docs/probe/20261113_reg20/ops/common.sh	2026-11-14 08:17:15
++++ b/docs/probe/20261113_reg20/ops/common.sh	2026-11-14 08:32:05
+@@ -1,4 +1,4 @@
+-# Shared, fixed settings and functions of REG-20's arm A scripts (draft 2, 2026-11-14; first written 2026-11-13 from
++# Shared, fixed settings and functions of REG-20's arm A scripts (draft 3, 2026-11-14; first written 2026-11-13 from
+ # REG-19's ops_r3, which they copy wherever REG-20 does not differ; README.md lists every difference). Read from the
+ # environment: VM_HOST and WAIT_MIN only (session_probe.sh also reads SET and RENEW). No seed, attempt number, run id or
+ # control decision is typed by anyone: `next_step` derives them from the records in state/, the owner's rulings in
+@@ -31,15 +31,25 @@
+ PLAN=(${B}15 ${B}16 ${B}17 $DRIFT ${B}18 ${B}19)
+ # The patterns of analysis.recheck over the Mac's runs/ before the table: the open runs (burst runs and controls) and the drift run.
+ RECHECK_PATS=('*_l1pl350ol_r2.0_w3000_s1[5-9]' "*_$DRIFT")
+-# Headings in the committed docs/decisions.md. Arm A starts only when REG-19's [RESULT], the owner's rulings and the start
++# Headings in the committed docs/decisions.md. Arm A starts only when REG-19's [RESULT], the rulings and the start
+ # decision are there, the start after both, and no stop heading follows the start. The scripts never compute REG-20's
+ # gate: it was computed once after REG-19's [RESULT], in commit 3c8e5dc (docs/probe/reg20/gate_<stamp>.txt and its
+ # stderr file, committed alone), and that committed file must read 'may_start': True on its one line. "([^0-9]|$)" keeps
+ # "[RESULT] REG-190" out; "([^0-9A-Za-z]|$)" keeps "starts: k1.reg20_a_may_start passed" from matching a longer word.
++# The rulings heading is the owner's or, in its own words, the delegate's (owner-proxy RD1); a delegate's rulings
++# heading may be only the first rulings heading: after it, a ruling changes only with an owner's entry (RD2).
++# STOP_PAT also takes "halted" (rule F RC-O3) and "ended by a stop", arm A's end by a stop (point 18; RC7, RD5).
+ RESULT_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[RESULT\] REG-19([^0-9]|$)'
+-RULINGS_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[DECISION\] \(owner\) REG-20 arm A operations: the owner.s rulings([^0-9A-Za-z]|$)'
++RULINGS_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[DECISION\] (\(owner\) REG-20 arm A operations: the owner.s rulings|\(delegate\) REG-20 arm A operations: the rulings on the owner.s points)([^0-9A-Za-z]|$)'
++RULINGS_DLG_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[DECISION\] \(delegate\) REG-20 arm A operations: the rulings on the owner.s points([^0-9A-Za-z]|$)'
+ START_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[DECISION\] \((owner|delegate)\) REG-20 arm A starts: k1\.reg20_a_may_start passed([^0-9A-Za-z]|$)'
+-STOP_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[(DECISION|CORR|OPS)\]( \((owner|delegate)\))? REG-20 arm A (stops|is stopped)([^0-9A-Za-z]|$)'
++STOP_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[(DECISION|CORR|OPS)\]( \((owner|delegate)\))? REG-20 arm A (stops|is stopped|halted|is halted|ended by a stop)([^0-9A-Za-z]|$)'
++# E1 runs first (decisions.md 2026-11-14 [DECISION] (delegate) E1 approved, DF9 (g)). Its end entry is one of the three
++# headings of E1's registration ("E1 holds the VM"); until it is committed, and while E1's queue lock exists (tested for
++# existence only: nothing under E1's state/ is opened), arm A neither starts its queue, nor launches, nor runs its
++# session probe, nor moves the VM's tree (point 18; e1_ended).
++E1_END_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[OPS\] E1(: the queue ended \(QUEUE (DONE|END)\)| ended by a stop: [^ ].*)'
++E1_LOCK=$R/docs/probe/20261113_e1/ops/state/queue.lock
+ GATE_DIR=docs/probe/reg20               # where REG-20's gate output is committed (3c8e5dc): gate_<stamp>.txt, gate_err_<stamp>.txt
+ GATE_FILE_RE='^gate_[0-9]{8}T[0-9]{6}Z\.txt$'
+ GATE_LINE_RE="^[{]'k_closed': [0-9]+, 'n': [0-9]+, 'best_p': [0-9.e+-]+, 'may_start': True[}]\$"
+@@ -47,7 +57,7 @@
+ RULINGS=$S/owner_rulings.txt
+ RULING_KEYS=(2a 6 7 8 9 16)
+ DRIVER=595.99.02                         # the pinned driver (PROTOCOL.md, section 4, Software)
+-SCRIPTS=(common.sh vm_state.py session_probe.sh launch.sh queue.sh final.sh control_due.py recheck_one.py)
++SCRIPTS=(common.sh vm_state.py session_probe.sh launch.sh queue.sh final.sh control_due.py recheck_one.py vm_checkout.sh)
+ # The code control_due.py and final.sh run on the Mac, from the repo root: k1.py's import closure at the pin,
+ # plus the seal (analysis/load.py's guard and analysis/withheld.py), which the pin predates, at the blobs of 2026-11-13.
+ JUDGED=(analysis/__init__.py analysis/k1.py analysis/gate.py analysis/margin.py analysis/derived.py analysis/floor.py analysis/stats.py)
+@@ -98,7 +108,7 @@
+ 
+ # Every point the owner rules (RA5) has an answer it may take, in a tracked, committed owner_rulings.txt. Sets MSG.
+ rulings_ok() {
+-  local k v rel=${RULINGS#$R/}
++  local k v rel=${RULINGS#$R/} rc
+   local -a allowed
+   MSG=""
+   [[ -f $RULINGS ]] || { MSG="no owner_rulings.txt"; return 2; }
+@@ -116,26 +126,43 @@
+     [[ -n $v && ${allowed[(Ie)$v]} -gt 0 ]] || { MSG="the owner's ruling on point $k reads '${v:-none}' in owner_rulings.txt, not one of: ${allowed[*]}: arm A does not start (RA5)"; return 2; }
+   done
+   [[ $(ruling 2a) != pin_head ]] || { MSG="the owner chose a pin at or after 5ee6e38 (point 2a): common.sh's PIN changes by a reviewed commit first"; return 2; }
++  # RC: the rulings change only in the commit of an owner's rulings entry (RA5): the last commit that touched the file
++  # must add that heading to docs/decisions.md. A later rulings heading also moves `gl`, so the start heading must follow it.
++  # RD1: the heading may be the delegate's, in its own words; gate_in_log allows that once, first (RD2).
++  rc=$(git -C $R log -1 --format=%H -- $rel)
++  git -C $R show --format= $rc -- docs/decisions.md 2> /dev/null | sed -n 's/^+//p' | grep -qE "$RULINGS_PAT" || { MSG="the last commit that changed owner_rulings.txt (${rc:-none}) adds no rulings heading ('[DECISION] (owner) REG-20 arm A operations: the owner's rulings' or '[DECISION] (delegate) REG-20 arm A operations: the rulings on the owner's points'): a ruling changes only with the owner's entry, or once with the delegate's (RA5, RC2, RD1, RD2)"; return 2; }
+   return 0
+ }
+ 
+-# Arm A may start only when HEAD's docs/decisions.md holds REG-19's [RESULT] heading, the owner's rulings heading and,
+-# on a later line than both, the start decision's heading, with no stop heading after it; HEAD holds exactly one gate
+-# file in docs/probe/reg20/ whose one line reads 'may_start': True, with its stderr file and no `withheld:` line there; and every
+-# owner's ruling is recorded. Sets MSG and returns 2 when not.
++# E1's end entry is in HEAD's docs/decisions.md and E1's queue lock does not exist (point 18). Sets MSG.
++e1_ended() {
++  MSG=""
++  git -C $R show HEAD:docs/decisions.md 2> /dev/null | grep -qE "$E1_END_PAT" || { MSG="no E1 end entry ('[OPS] E1: the queue ended (QUEUE DONE)', '[OPS] E1: the queue ended (QUEUE END)' or '[OPS] E1 ended by a stop: …') in the committed docs/decisions.md: E1 holds the VM, and arm A waits for its end entry (point 18)"; return 2; }
++  [[ ! -e $E1_LOCK && ! -L $E1_LOCK ]] || { MSG="E1's queue lock exists ($E1_LOCK; only its existence is tested): E1's queue may be running, and arm A waits (point 18)"; return 2; }
++  return 0
++}
++
++# Arm A may start only when HEAD's docs/decisions.md holds REG-19's [RESULT] heading, the rulings heading and,
++# on a later line than both, the start decision's heading, with no stop heading after it, and a delegate's rulings
++# heading at most once, as the first rulings heading (RD2); HEAD holds exactly one gate file in docs/probe/reg20/ whose
++# one line reads 'may_start': True, with its stderr file and no `withheld:` line there; every ruling is recorded; and
++# E1 has ended (e1_ended, point 18). Sets MSG and returns 2 when not.
+ gate_in_log() {
+-  local log rl gl sl tl f ge body
+-  local -a files gf
++  local log rl gl sl tl f ge body fl
++  local -a files gf dl
+   MSG=""
+   log=$(git -C $R show HEAD:docs/decisions.md 2> /dev/null) || { MSG="the committed docs/decisions.md cannot be read"; return 2; }
+   rl=$(print -r -- "$log" | grep -n -E "$RESULT_PAT" | head -1 | cut -d: -f1)
+   [[ -n $rl ]] || { MSG="no '[RESULT] REG-19' heading in the committed docs/decisions.md: arm A does not start"; return 2; }
+   gl=$(print -r -- "$log" | grep -n -E "$RULINGS_PAT" | tail -1 | cut -d: -f1)
+-  [[ -n $gl ]] || { MSG="no '[DECISION] (owner) REG-20 arm A operations: the owner's rulings' heading in the committed docs/decisions.md: arm A does not start (RA5)"; return 2; }
++  [[ -n $gl ]] || { MSG="no rulings heading ('[DECISION] (owner) REG-20 arm A operations: the owner's rulings' or '[DECISION] (delegate) REG-20 arm A operations: the rulings on the owner's points') in the committed docs/decisions.md: arm A does not start (RA5)"; return 2; }
++  fl=$(print -r -- "$log" | grep -n -E "$RULINGS_PAT" | head -1 | cut -d: -f1)
++  dl=(${(f)"$(print -r -- "$log" | grep -n -E "$RULINGS_DLG_PAT" | cut -d: -f1)"})
++  (( ${#dl} == 0 )) || (( ${#dl} == 1 && dl[1] == fl )) || { MSG="a delegate's rulings heading (line(s) ${(j:,:)dl}) is not the first and only one of its kind (first rulings heading at line $fl): after the first rulings entry a ruling changes only with an owner's entry (RD2): arm A does not start"; return 2; }
+   sl=$(print -r -- "$log" | grep -n -E "$START_PAT" | tail -1 | cut -d: -f1)
+   [[ -n $sl ]] || { MSG="no '[DECISION] (owner|delegate) REG-20 arm A starts: k1.reg20_a_may_start passed' heading in the committed docs/decisions.md: arm A does not start"; return 2; }
+   (( sl > rl )) || { MSG="the heading that starts arm A (line $sl) is not after REG-19's [RESULT] (line $rl): arm A does not start"; return 2; }
+-  (( sl > gl )) || { MSG="the heading that starts arm A (line $sl) is not after the owner's rulings (line $gl): arm A does not start"; return 2; }
++  (( sl > gl )) || { MSG="the heading that starts arm A (line $sl) is not after the rulings (line $gl): arm A does not start"; return 2; }
+   tl=$(print -r -- "$log" | grep -n -E "$STOP_PAT" | tail -1 | cut -d: -f1)
+   [[ -z $tl ]] || (( tl < sl )) || { MSG="a heading that stops arm A (line $tl) follows the one that starts it (line $sl): arm A does not start"; return 2; }
+   files=(${(f)"$(git -C $R ls-tree --name-only HEAD -- $GATE_DIR/ 2> /dev/null)"})
+@@ -147,6 +174,7 @@
+   [[ $(print -r -- "$body" | grep -c .) == 1 && $(print -r -- "$body" | grep -c -E "$GATE_LINE_RE") == 1 ]] || { MSG="the gate file ${gf[1]:t} does not read 'may_start': True on its one line: arm A does not start"; return 2; }
+   if git -C $R show HEAD:$ge | grep -q '^withheld:'; then MSG="the gate's stderr file ${ge:t} holds a 'withheld:' line: arm A does not start"; return 2; fi
+   rulings_ok || return 2
++  e1_ended || return 2
+   return 0
+ }
+ 
+@@ -244,7 +272,7 @@
+ #     unless either attempt failed only checks of SETUP_CLASS (RA3): then the queue stops, and a settle record under
+ #     ruling 7 says lost_open or not_run; a control or the drift run with its attempts spent stops the queue.
+ decide() {
+-  local cfg=$1 line id st failed f n_valid=0 n_heat=0 norerun="" bad="" lost="" commit="" only nmax extra n counted sf slab okrec setup_case
++  local cfg=$1 line id st failed f n_valid=0 n_heat=0 norerun="" bad="" lost="" commit="" only nmax extra n counted sf slab okrec setup_case setup_all
+   local -a parts atts inval setup setas lostp cinval settles
+   RID=""; LAUNCH=""; LOST=""; SETTLED=""; SRID=""; MSG=""; MINE=(); inval=(); setup=(); setas=(); lostp=()
+   for line in $VMS; do
+@@ -302,6 +330,9 @@
+   nmax=$((MAX_ATTEMPTS + extra))
+   counted=$((${#atts} - ${#lostp}))
+   setup_case=""; [[ $cfg == ${B}* ]] && (( counted >= nmax && ${#inval} >= 2 && ${#setup} > 0 )) && setup_case=1
++  # RC: every invalid attempt failed only setup checks. Only then may a delegate settle not_run; in the mixed case
++  # (one attempt failed a check outside the class) the delegate's label is REG-20's registered lost_open (RB7, T3).
++  setup_all=""; (( ${#inval} > 0 && ${#setup} == ${#inval} )) && setup_all=1
+   # A slot settled by a settle record (RB3): not_run, lost_open (RA3's case only), control_not_run, drift_not_run.
+   if (( ${#settles} )); then
+     (( ${#settles} == 1 )) || { MSG="$cfg has ${#settles} settle records: the owner decides"; return 2; }
+@@ -311,14 +342,14 @@
+       ${B}*)
+         case $slab in
+           not_run)
+-            { rec_by $sf owner || { [[ -n $setup_case && $(ruling 7) == not_run ]] && rec_by $sf delegate; }; } || { MSG="${sf:t}: label not_run needs an owner's record, or a delegate's in RA3's case under ruling 7 not_run"; return 2; }
++            { rec_by $sf owner || { [[ -n $setup_case && -n $setup_all && $(ruling 7) == not_run ]] && rec_by $sf delegate; }; } || { MSG="${sf:t}: label not_run needs an owner's record, or a delegate's in RA3's case under ruling 7 not_run when every invalid attempt failed only setup checks (${SETUP_CLASS[*]})"; return 2; }
+             # k1 reads lost_open from two invalid folders of the config in runs/, so at most one may ever be there.
+             cinval=(); for id in $inval; do [[ -f $ST/copied_$id.txt ]] && cinval+=($id); done
+             (( ${#cinval} == 0 )) || [[ ${#cinval} == 1 && $cinval[1] == $SRID ]] || { MSG="${sf:t}: label not_run, but $cinval[1] is already in runs/ and the record names $SRID: k1 would read lost_open; the owner decides"; return 2; }
+             SETTLED=not_run;;
+           lost_open)
+             (( ${#inval} >= 2 )) || { MSG="${sf:t}: label lost_open needs two invalid runs of $cfg (k1 reads it from them)"; return 2; }
+-            { rec_by $sf owner || { [[ -n $setup_case && $(ruling 7) == lost_open ]] && rec_by $sf delegate; }; } || { MSG="${sf:t}: label lost_open needs an owner's record, or a delegate's in RA3's case under ruling 7 lost_open"; return 2; }
++            { rec_by $sf owner || { [[ -n $setup_case ]] && { [[ $(ruling 7) == lost_open ]] || [[ $(ruling 7) == not_run && -z $setup_all ]]; } && rec_by $sf delegate; }; } || { MSG="${sf:t}: label lost_open needs an owner's record, or a delegate's in RA3's case under ruling 7 lost_open, or under ruling 7 not_run when an attempt failed a check outside the setup class"; return 2; }
+             LOST="${inval[*]}";;
+           *) MSG="${sf:t}: label '$slab' is not not_run or lost_open"; return 2;;
+         esac;;
+@@ -492,6 +523,8 @@
+ recheck_guards() {
+   cd $R || { MSG="no repo at $R"; return 2; }
+   git diff --quiet $CHECKS_COMMIT -- harness/checks.py && git diff --quiet $RECHECK_COMMIT -- analysis/recheck.py || { MSG="harness/checks.py or analysis/recheck.py differ in the working tree from the commits named for the recheck"; return 2; }
++  # RD-O1: all of harness/ (the recheck's closure holds harness/{__init__,checks,config,workload}.py) equals the checks' commit.
++  git diff --quiet $CHECKS_COMMIT -- harness/ || { MSG="harness/ differs in the working tree from $CHECKS_COMMIT, whose harness/ the recheck runs (RD-O1; the arm A hold)"; return 2; }
+   git diff --quiet HEAD -- analysis harness configs/defaults.yaml || { MSG="analysis/, harness/ or configs/defaults.yaml differ in the working tree from the Mac's HEAD"; return 2; }
+   return 0
+ }
+@@ -556,8 +589,14 @@
+     [[ -n $lb && $a == $b ]] || { MSG="checksum mismatch $rid (vm [$a] holding folder [$b])"; return 2; }
+     if [[ ! -f $ST/recheck_$rid.json ]]; then recheck_one $rid || return 2; fi
+     recheck_apply $rid; rc=$?
++    if (( rc == 3 )); then   # set aside (RC6 (ii)): its per-file sha256 list beside it, outside runs/ and the manifest
++      print -r -- "$lb" > $STAGE/$rid.sha256.tmp && mv $STAGE/$rid.sha256.tmp $STAGE/$rid.sha256 || { MSG="the sha256 list of the set-aside $rid could not be written"; return 2; }
++      echo "SHA256 LIST $STAGE/$rid.sha256 sha256 $(shasum -a 256 < $STAGE/$rid.sha256 | cut -d' ' -f1)"
++    fi
+     (( rc == 0 )) || return $rc
+     if [[ $how == hold ]]; then
++      print -r -- "$lb" > $STAGE/$rid.sha256.tmp && mv $STAGE/$rid.sha256.tmp $STAGE/$rid.sha256 || { MSG="the sha256 list of the held $rid could not be written"; return 2; }   # RC6 (ii)
++      echo "SHA256 LIST $STAGE/$rid.sha256 sha256 $(shasum -a 256 < $STAGE/$rid.sha256 | cut -d' ' -f1)"
+       print -r -l -- "rid $rid" "files ${#${(f)la}}" "sha_of_sums $a" "where $STAGE/$rid" "why its slot is settled not_run (settle record) and k1 must not read it before REG-20's [RESULT]" "time $(now)" > $ST/held_$rid.tmp && mv $ST/held_$rid.tmp $ST/held_$rid.txt || { MSG="the hold record of $rid could not be written"; return 2; }
+       echo "HELD $rid ${#${(f)la}} files sha-of-sums $a (not in runs/)"
+       return 0
+diff -ruN a/docs/probe/20261113_reg20/ops/owner_rulings.txt b/docs/probe/20261113_reg20/ops/owner_rulings.txt
+--- a/docs/probe/20261113_reg20/ops/owner_rulings.txt	2026-11-14 08:17:15
++++ b/docs/probe/20261113_reg20/ops/owner_rulings.txt	2026-11-14 08:25:26
+@@ -1,10 +1,12 @@
+-# The owner's rulings on REG-20 arm A's operations points (docs/drafts/reg20_ops_decision_draft2.md, "For the owner,
+-# before the first launch"). One line per point, "<point> <answer>"; a line starting with # is a comment. The queue,
+-# launch.sh and final.sh refuse to run while any point reads `unset` or an answer it may not take (common.sh
+-# `rulings_ok`, RA5). This file is changed only in the commit of the owner's entry
+-# "## <date> · [DECISION] (owner) REG-20 arm A operations: the owner's rulings", which quotes it.
++# The rulings on REG-20 arm A's operations points (docs/drafts/reg20_ops_decision_draft3.md, "For the owner, before
++# the first launch"). One line per point, "<point> <answer>"; a line starting with # is a comment. The queue,
++# launch.sh, final.sh and vm_checkout.sh refuse to run while any point reads `unset` or an answer it may not take
++# (common.sh `rulings_ok`, RA5). This file is changed only in the commit of a rulings entry, which quotes it: the owner's
++# "## <date> · [DECISION] (owner) REG-20 arm A operations: the owner's rulings", or, once and first, the delegate's
++# "## <date> · [DECISION] (delegate) REG-20 arm A operations: the rulings on the owner's points" (RD1, RD2). The last
++# commit that changed this file must add one of these headings (RC2), and the start heading must follow it.
+ #   2a: keep | setaside | stop | pin_head    (a run that today's checks flag at its copy)
+-#   6:  a | b                                (a client error in an open burst run)
++#   6:  a | b                                (a client error in an open-loop run of arm A: a burst run or its control, RD6)
+ #   7:  lost_open | not_run | per_stop       (an open burst run invalid twice, one attempt failing only setup checks, RA3)
+ #   8:  a | b                                (a lost attempt, no checks.json)
+ #   9:  a | b                                (a control with both attempts invalid)
+diff -ruN a/docs/probe/20261113_reg20/ops/recheck_one.py b/docs/probe/20261113_reg20/ops/recheck_one.py
+--- a/docs/probe/20261113_reg20/ops/recheck_one.py	2026-11-14 08:17:15
++++ b/docs/probe/20261113_reg20/ops/recheck_one.py	2026-11-14 08:25:05
+@@ -10,7 +10,8 @@
+ 
+ It prints one JSON object with the validity fields only: run, stored_valid, now_valid, stored_failed, now_failed,
+ changed (True when the verdict or the list of failed checks differs, as analysis.recheck.changed), or `error` when
+-today's code cannot read the folder (listed, not hidden, as analysis.recheck does). No check detail is printed: the
++today's code cannot read the folder (listed, not hidden, as analysis.recheck does; the exception's type name only, its
++text on stderr, draft 3, RC-O11). No check detail is printed: the
+ details could hint at an outcome. It refuses a folder inside the repository's runs/ (analysis.recheck covers those) and
+ writes nothing. It imports harness.checks only (no analysis module, so the seal is not involved; harness.checks reads
+ no analysis code).
+@@ -44,7 +45,10 @@
+     try:
+         now = run_checks(d)
+     except Exception as e:  # a folder today's code cannot read is listed, not hidden
+-        row.update({"now_valid": None, "now_failed": None, "changed": True, "error": f"{type(e).__name__}: {e}"[:200]})
++        # Only the exception's type goes into the record (rule F round 2, RC-O11): its text can carry values read from
++        # the run, so it goes to stderr, which common.sh writes to state/recheck_err_*.txt (not an allowed read).
++        print(f"recheck_one: {type(e).__name__}: {e}", file=sys.stderr)
++        row.update({"now_valid": None, "now_failed": None, "changed": True, "error": type(e).__name__})
+     else:
+         row.update({"now_valid": now["valid"], "now_failed": now["failed"],
+                     "changed": row["stored_valid"] != now["valid"]
+diff -ruN a/docs/probe/20261113_reg20/ops/session_probe.sh b/docs/probe/20261113_reg20/ops/session_probe.sh
+--- a/docs/probe/20261113_reg20/ops/session_probe.sh	2026-11-14 08:17:15
++++ b/docs/probe/20261113_reg20/ops/session_probe.sh	2026-11-14 08:24:25
+@@ -1,5 +1,6 @@
+ #!/bin/zsh
+-# REG-20, once before the queue (copied from ops_r3/session_probe.sh; only the pin, the paths and the wording differ):
++# REG-20, once before the queue (copied from ops_r3/session_probe.sh; only the pin, the paths, the wording and, in draft 3,
++# the wait for E1's end entry (common.sh `e1_ended`, point 18) differ):
+ # record the VM's session (boot id, uptime, kernel, driver, governor, limit, tree, lock, disk) and the Mac's environment
+ # against uv.lock, and require 350.00 W, the pinned driver, and the pinned, clean tree and lock. Read-only, except that
+ # SET=1 first runs the one allowed root command, `sudo -n nvidia-smi -pl 350`, and only when no compute process is on
+@@ -10,6 +11,7 @@
+ # beside this boot's, so that a change across the reboot is on file before any run.
+ source ${0:A:h}/common.sh
+ mac_checks || exit 2
++e1_ended || { echo "STOP: $MSG"; exit 2; }     # point 18: no REG-20 session probe while E1 holds the VM
+ mkdir -p $ST
+ cur=$ST/session_boot_id.txt
+ [[ ! -e $cur || -n $RENEW ]] || { echo "STOP: a session probe exists ($cur); RENEW=1 replaces it, and only with a decisions.md entry"; exit 2; }
+diff -ruN a/docs/probe/20261113_reg20/ops/test_control_due.py b/docs/probe/20261113_reg20/ops/test_control_due.py
+--- a/docs/probe/20261113_reg20/ops/test_control_due.py	2026-11-14 08:17:15
++++ b/docs/probe/20261113_reg20/ops/test_control_due.py	2026-11-14 08:25:05
+@@ -238,10 +238,19 @@
+ 
+ 
+ def test_recheck_one_lists_a_folder_todays_code_cannot_read(held, monkeypatch, capsys):
+-    rc, out, _, _ = recheck(monkeypatch, capsys, ["recheck_one.py", str(held)], exc=KeyError("schedule.parquet"))
++    rc, out, err, _ = recheck(monkeypatch, capsys, ["recheck_one.py", str(held)], exc=KeyError("schedule.parquet"))
+     row = __import__("json").loads(out)
+-    assert rc == 0 and row["changed"] is True and row["now_valid"] is None and row["error"].startswith("KeyError")
++    assert rc == 0 and row["changed"] is True and row["now_valid"] is None and row["error"] == "KeyError"
+     assert set(row) == FIELDS | {"error"}
++
++
++def test_recheck_one_keeps_the_exception_text_out_of_the_record(held, monkeypatch, capsys):
++    """RC-O11 (draft 3): an exception's text can carry values read from the run; the record keeps only its type."""
++    rc, out, err, _ = recheck(monkeypatch, capsys, ["recheck_one.py", str(held)],
++                              exc=ValueError("queue length 961.5 at t=3480"))
++    row = __import__("json").loads(out)
++    assert rc == 0 and row["error"] == "ValueError"
++    assert "961.5" not in out and "3480" not in out and "961.5" in err
+ 
+ 
+ def test_recheck_one_refuses_a_folder_in_runs(tmp_path, monkeypatch, capsys):
+diff -ruN a/docs/probe/20261113_reg20/ops/test_sandbox.sh b/docs/probe/20261113_reg20/ops/test_sandbox.sh
+--- a/docs/probe/20261113_reg20/ops/test_sandbox.sh	2026-11-14 08:17:15
++++ b/docs/probe/20261113_reg20/ops/test_sandbox.sh	2026-11-14 08:34:41
+@@ -1,5 +1,5 @@
+ #!/bin/zsh
+-# Sandbox test of REG-20's arm A scripts, draft 2 of the operations decision (in the style of ops_r3/test_sandbox.sh).
++# Sandbox test of REG-20's arm A scripts, draft 3 of the operations decision (in the style of ops_r3/test_sandbox.sh).
+ # Nothing real is touched: a throwaway git repo stands in for the Mac's (so the REAL mac_checks, gate_in_log,
+ # rulings_ok, next_step, decide, copy_verify and recheck_apply run), a folder tree stands in for the VM (so the REAL
+ # vm_state.py runs against it), and ssh, rsync, sleep, the hour of date, uv, the manifest tool and the Python of .venv
+@@ -37,7 +37,7 @@
+ $G add -A && $G commit -q -m pin || exit 99
+ PINH=$(git rev-parse HEAD); LOCKB=$(git rev-parse ${PINH}:uv.lock)
+ LOADB=$(git hash-object analysis/load.py); WHB=$(git hash-object analysis/withheld.py)
+-cp $SRC/vm_state.py $SRC/session_probe.sh $SRC/launch.sh $SRC/queue.sh $SRC/final.sh $SRC/control_due.py $SRC/recheck_one.py $S/
++cp $SRC/vm_state.py $SRC/session_probe.sh $SRC/launch.sh $SRC/queue.sh $SRC/final.sh $SRC/control_due.py $SRC/recheck_one.py $SRC/vm_checkout.sh $S/
+ sed -e "s|^R=.*|R=$T/repo|" -e "s|^PY=.*|PY=$T/bin/fakepy|" -e "s|^PIN=.*|PIN=$PINH|" \
+     -e "s|^SEAL_BLOBS=.*|SEAL_BLOBS=($LOADB $WHB)|" -e "s|^CHECKS_COMMIT=.*|CHECKS_COMMIT=$PINH|" \
+     -e "s|^RECHECK_COMMIT=.*|RECHECK_COMMIT=$PINH|" $SRC/common.sh > $S/common.sh
+@@ -52,10 +52,12 @@
+ H_RES="## 2026-11-20 · [RESULT] REG-19: sandbox"
+ H_RUL="## 2026-11-20 · [DECISION] (owner) REG-20 arm A operations: the owner's rulings (sandbox)"
+ H_START="## 2026-11-20 · [DECISION] (owner) REG-20 arm A starts: k1.reg20_a_may_start passed (sandbox)"
+-LOGOK=("$H_RES" "" "$H_RUL" "" "$H_START")
++H_E1END="## 2026-11-20 · [OPS] E1: the queue ended (QUEUE DONE)"   # draft 3, point 18: E1 runs first; arm A waits for its end entry
++LOGOK0=("$H_RES" "" "$H_RUL" "" "$H_START")
++LOGOK=($LOGOK0 "" "$H_E1END")
+ print -r -l -- $LOGOK > docs/decisions.md
+ $G add -A && $G commit -q -m scripts || exit 99
+-git log -1 --format=%H -- docs/probe/20261113_reg20/ops/{common.sh,vm_state.py,session_probe.sh,launch.sh,queue.sh,final.sh,control_due.py,recheck_one.py} > $S/scripts_commit.txt
++git log -1 --format=%H -- docs/probe/20261113_reg20/ops/{common.sh,vm_state.py,session_probe.sh,launch.sh,queue.sh,final.sh,control_due.py,recheck_one.py,vm_checkout.sh} > $S/scripts_commit.txt
+ $G add -A && $G commit -q -m scripts_commit || exit 99
+ HEADH=$(git rev-parse HEAD)
+ 
+@@ -190,6 +192,16 @@
+   *"xargs sha256sum"*)
+     [[ -n $FAKE_SHA_FAIL ]] && exit 255
+     rid=$(print -r -- $cmd | sed -n 's|.*runs/\([^ ]*\) &&.*|\1|p'); cd $VM/runs/$rid && find . -type f | LC_ALL=C sort | xargs shasum -a 256; [[ -n $FAKE_BAD_SHA ]] && echo corrupt; true;;
++  *"vm_checkout read"*)          # draft 3: vm_checkout.sh's one read
++    [[ -n $FAKE_VMCO_READ_FAIL ]] && exit 255
++    echo "# vm_checkout read (agent, read-only)"; echo "${FAKE_APPS_N:-0}"; echo "${FAKE_TREE:-__PIN__}"; echo "${FAKE_DIRTY:-0}"; echo "# tmux:"
++    [[ -n $FAKE_TMUX_EXISTS ]] && echo "run: 1 windows" || echo "no server running on /tmp/tmux-1000/default";;
++  *"checkout -q --detach"*)
++    [[ -n $FAKE_CHECKOUT_FAIL ]] && { echo "error: pathspec did not match"; exit 1; }
++    print -r -- ${${cmd##*--detach }%% *} > $ST/vm_checked_out
++    echo "head ${FAKE_AFTER_HEAD:-__PIN__}"; echo "dirty 0"; echo "lock_blob ${FAKE_LOCK:-__LOCK__}";;
++  *"uv sync --frozen --extra server --dry-run"*)
++    echo "Would use project environment at: .venv"; echo "Checked 213 packages in 29ms"; [[ -n $FAKE_VM_UV_CHANGE ]] && echo " + c==2"; echo "Would make no changes";;
+   *) echo "fake ssh: unhandled: $cmd" >&2; exit 9;;
+ esac
+ EOS
+@@ -231,12 +243,14 @@
+ dues() { print -l -- "$@" > $T/state/due; }
+ outs() { print -l -- "$@" > $T/state/outcomes; }
+ rid_of() { echo 20261120-$(printf %06d $1)_$2; }   # the run id the fake gives launch number $1 of config $2
+-setlog() { (cd $T/repo && print -r -l -- "$@" > docs/decisions.md && $G commit -q -am log); }
+-setrul() { (cd $T/repo && sed -i '' "s/^$1 .*/$1 $2/" $S/owner_rulings.txt && $G commit -q -am "ruling $1 $2"); }
++setlog0() { (cd $T/repo && print -r -l -- "$@" > docs/decisions.md && $G commit -q -am log); }   # exactly these lines
++setlog() { setlog0 "$@" "" "$H_E1END"; }        # draft 3: with E1's end entry last (point 18), unless a case says otherwise
++rulcommit() { local k=$1 v=$2; shift 2; (cd $T/repo && sed -i '' "s/^$k .*/$k $v/" $S/owner_rulings.txt && print -r -l -- "$@" > docs/decisions.md && $G commit -q -am "rulings $k $v"); }   # a rulings entry's commit: one ruling and the log
++setrul() { (cd $T/repo && sed -i '' "s/^$1 .*/$1 $2/" $S/owner_rulings.txt && print -r -l -- "" "## 2026-11-21 · [DECISION] (owner) REG-20 arm A operations: the owner's rulings (sandbox: $1 $2)" "" "## 2026-11-21 · [DECISION] (owner) REG-20 arm A starts: k1.reg20_a_may_start passed (sandbox, after the ruling)" >> docs/decisions.md && $G commit -q -am "ruling $1 $2"); }   # RC: a ruling changes only with the owner's rulings heading in the same commit
+ gatefiles() { (cd $T/repo && git rm -q --cached $GD/gate_*.txt > /dev/null && rm -f $GD/gate_*.txt && { [[ $# == 0 ]] || print -r -- "$1" > $GD/gate_20261113T230307Z.txt; } && { [[ $# == 0 ]] || print -r -- "${2:-}" > $GD/gate_err_20261113T230307Z.txt; } && $G add -A docs && $G commit -q -m gatefiles); }
+ reboot_to() { print -r -- $1 > $S/state/session_boot_id.txt; }   # what RENEW=1 of the session probe leaves after a reboot
+ q() { env PATH=$T/bin:$PATH "$@" zsh $Q > /dev/null 2>&1; }      # run the queue quietly, for set-ups
+-Q=$S/queue.sh; L=$S/launch.sh; F=$S/final.sh; P=$S/session_probe.sh
++Q=$S/queue.sh; L=$S/launch.sh; F=$S/final.sh; P=$S/session_probe.sh; V=$S/vm_checkout.sh
+ 
+ echo "--- the gate: REG-19's [RESULT], the owner's rulings, then the start decision (RA1, RA5, RA-O3)"
+ reset; setlog "$H_RUL" "$H_START"
+@@ -260,11 +274,11 @@
+ reset; setlog "$H_RES" "$H_RUL" "## 2026-11-15 · [DECISION] (delegate) REG-20 arm A starts: k1.reg20_a_may_start passedover"
+ case_ "RA1: 'passed' must end the words: no queue" "arm A starts: k1.reg20_a_may_start passed' heading" 2 zsh $Q
+ reset; setlog "$H_RES" "$H_START"
+-case_ "RA5: no owner's rulings heading: no queue" "the owner's rulings' heading" 2 zsh $Q
++case_ "RA5: no rulings heading: no queue" "no rulings heading (" 2 zsh $Q
+ reset; setlog "$H_RES" "## 2026-11-20 · [DECISION] (delegate) REG-20 arm A operations: the owner's rulings" "$H_START"
+-case_ "RA5: the rulings heading must be the owner's" "the owner's rulings' heading" 2 zsh $Q
++case_ "RA5, RD1: a delegate's heading in the owner's words is not a rulings heading" "no rulings heading (" 2 zsh $Q
+ reset; setlog "$H_RES" "$H_START" "$H_RUL"
+-case_ "RA5: the start heading before the owner's rulings: no queue" "is not after the owner's rulings" 2 zsh $Q
++case_ "RA5: the start heading before the rulings: no queue" "is not after the rulings" 2 zsh $Q
+ reset; setlog $LOGOK "## 2026-11-21 · [DECISION] (owner) REG-20 arm A stops: sandbox"
+ case_ "RA-O3: an owner's stop heading after the start: no queue" "a heading that stops arm A" 2 zsh $Q
+ reset; setlog $LOGOK "## 2026-11-21 · [CORR] REG-20 arm A is stopped"
+@@ -304,6 +318,82 @@
+ case_ "a ruling changed but not committed: no queue" "owner_rulings.txt differs from its committed text" 2 zsh $Q
+ chk "none of these launched anything" is "$(launches)" 0
+ 
++
++echo "--- draft 3: the rulings heading is the owner's, or once and first the delegate's (RD1, RC2, RD2)"
++H_DLG="## 2026-11-20 · [DECISION] (delegate) REG-20 arm A operations: the rulings on the owner's points (sandbox)"
++H_DLGBAD="## 2026-11-20 · [DECISION] (delegate) REG-20 arm A operations: the owner's rulings (sandbox)"
++H_START2="## 2026-11-21 · [DECISION] (delegate) REG-20 arm A starts: k1.reg20_a_may_start passed (sandbox, after the new rulings)"
++reset; rulcommit 9 b "$H_RES" "" "$H_DLG" "" "$H_START" "" "$H_E1END"
++case_ "RD1: the delegate's rulings heading, in its own words, committed with the file: the queue runs" "QUEUE DONE" 0 zsh $Q
++chk "the ruling of that commit is in force" grep -qx "rulings 2a=keep 6=b 7=per_stop 8=b 9=b 16=a" $S/state/queue_done.txt
++reset; rulcommit 9 b "$H_RES" "" "$H_DLGBAD" "" "$H_START" "" "$H_E1END"
++case_ "RD1: a delegate's heading in the owner's words, committed with the file: no queue" "no rulings heading (" 2 zsh $Q
++reset; rulcommit 9 b $LOGOK "" "## 2026-11-21 · [DECISION] (delegate) REG-20 arm A operations: the rulings on the owner's points (sandbox, after the owner's)" "" "$H_START2"
++case_ "RD2: a delegate's rulings heading after an owner's: no queue" "is not the first and only one of its kind" 2 zsh $Q
++case_ "and no launch by hand" "is not the first and only one of its kind" 2 zsh $L ${B}15
++reset; rulcommit 9 b "$H_RES" "" "$H_DLG" "" "$H_START" "" "$H_E1END"
++rulcommit 9 a "$H_RES" "" "$H_DLG" "" "$H_START" "" "$H_E1END" "" "## 2026-11-21 · [DECISION] (delegate) REG-20 arm A operations: the rulings on the owner's points (sandbox, a second time)" "" "$H_START2"
++case_ "RD2: a second delegate's rulings heading: no queue" "is not the first and only one of its kind" 2 zsh $Q
++reset; rulcommit 9 b "$H_RES" "" "$H_DLG" "" "$H_START" "" "$H_E1END"
++rulcommit 9 a "$H_RES" "" "$H_DLG" "" "$H_START" "" "$H_E1END" "" "## 2026-11-21 · [DECISION] (owner) REG-20 arm A operations: the owner's rulings (sandbox, overrules the delegate's)" "" "## 2026-11-21 · [DECISION] (owner) REG-20 arm A starts: k1.reg20_a_may_start passed (sandbox, after the owner's rulings)"
++case_ "RD2: the owner overrules the delegate's rulings with an owner's entry: the queue runs" "QUEUE DONE" 0 zsh $Q
++chk "the owner's ruling is in force" grep -qx "rulings 2a=keep 6=b 7=per_stop 8=b 9=a 16=a" $S/state/queue_done.txt
++reset; rulcommit 9 b "$H_RES" "" "$H_DLG" "" "$H_START" "" "$H_E1END"; (cd $T/repo && sed -i '' "s/^7 .*/7 not_run/" $S/owner_rulings.txt && $G commit -q -am "ruling 7 alone")
++case_ "RC2 with RD1: after the delegate's entry, a ruling changed by a commit with no rulings heading: no queue" "a ruling changes only with the owner's entry" 2 zsh $Q
++case_ "and no table" "a ruling changes only with the owner's entry" 2 zsh $F
++reset; rulcommit 9 b "$H_RES" "" "$H_START" "" "$H_E1END" "" "$H_DLG"
++case_ "RD1: the delegate's rulings heading after the start heading: no queue" "is not after the rulings" 2 zsh $Q
++chk "the last of these launched nothing" is "$(launches)" 0
++
++echo "--- draft 3, point 18: E1 runs first; arm A waits for E1's end entry and for E1's queue lock to be gone (RC7, RD5, RC-O2)"
++reset; setlog0 $LOGOK0
++case_ "no E1 end entry: no queue" "no E1 end entry" 2 zsh $Q
++case_ "and no launch by hand" "STOP: no E1 end entry" 2 zsh $L ${B}15
++case_ "and no table" "STOP: no E1 end entry" 2 zsh $F
++case_ "and no checkout of the VM" "STOP: no E1 end entry" 2 FAKE_TREE=$HEADH zsh $V
++rm $S/state/session_boot_id.txt
++case_ "and no session probe" "STOP: no E1 end entry" 2 zsh $P
++chk "which wrote no boot id and no probe file" sh -c "[ ! -e $S/state/session_boot_id.txt ] && [ \$(ls $PD | grep -c '^session_') = 0 ]"
++chk "none of these launched anything or moved the VM" sh -c "[ \$(cat $T/state/launch_n 2>/dev/null || echo 0) = 0 ] && [ ! -e $T/state/vm_checked_out ]"
++for h in "## 2026-11-20 · [OPS] E1: the queue ended (QUEUE STOP after an invalid run)" "## 2026-11-20 · [OPS] E10: the queue ended (QUEUE DONE)" "## 2026-11-20 · [OPS] E1: the queue ended (QUEUE END futility stop)" "## 2026-11-20 · [DECISION] (owner) E1 halted" "## 2026-11-20 · [OPS] E1 ended by a stop: " "- [OPS] E1: the queue ended (QUEUE DONE), quoted in a list"; do
++  reset; setlog0 $LOGOK0 "" "$h"
++  case_ "not an E1 end entry ('${h[1,72]}'): no queue" "no E1 end entry" 2 zsh $Q
++done
++for h in "## 2026-11-20 · [OPS] E1: the queue ended (QUEUE END)" "## 2026-11-20 · [OPS] E1 ended by a stop: QUEUE STOP second heat failure (gpu_steady) among E1's runs"; do
++  reset; setlog0 $LOGOK0 "" "$h"
++  case_ "E1's end entry ('${h[16,72]}…'): the queue runs" "QUEUE DONE" 0 zsh $Q
++done
++reset; setlog0 "$H_RES" "" "$H_E1END" "" "$H_RUL" "" "$H_START"
++case_ "E1's end entry before the rulings and the start: the queue runs (its place is not judged)" "QUEUE DONE" 0 zsh $Q
++reset; setlog0 $LOGOK0; print -r -l -- $LOGOK > $T/repo/docs/decisions.md
++case_ "E1's end entry in the working tree only: no queue" "no E1 end entry" 2 zsh $Q
++reset; mkdir -p $T/repo/docs/probe/20261113_e1/ops/state/queue.lock
++case_ "E1's queue lock exists, its end entry committed: no queue" "E1's queue lock exists" 2 zsh $Q
++case_ "and no launch by hand" "E1's queue lock exists" 2 zsh $L ${B}15
++case_ "and no checkout of the VM" "E1's queue lock exists" 2 FAKE_TREE=$HEADH zsh $V
++rm $S/state/session_boot_id.txt
++case_ "and no session probe" "E1's queue lock exists" 2 zsh $P
++[[ $T == *reg20_sandbox.* ]] && rm -rf $T/repo/docs/probe/20261113_e1
++reboot_to $BOOTA
++case_ "with E1's lock gone the queue runs" "QUEUE DONE" 0 zsh $Q
++reset
++case_ "the VM at E1's commit ce5f8421d2667e52c3db99f445de00519b73473c: no launch, no attempt spent" "STOP: VM tree 'ce5f8421d2667e52c3db99f445de00519b73473c'" 1 FAKE_TREE=ce5f8421d2667e52c3db99f445de00519b73473c zsh $Q
++chk "no attempt record" test ! -e $S/state/attempt_${B}15_1.txt
++rm $S/state/session_boot_id.txt
++case_ "the VM at E1's commit: no session" "tree is not the pin" 2 FAKE_TREE=ce5f8421d2667e52c3db99f445de00519b73473c zsh $P
++
++echo "--- draft 3: STOP_PAT takes 'halted' (RC-O3) and 'ended by a stop' (point 18); arm A's QUEUE DONE end entry is not a stop"
++reset; setlog $LOGOK0 "" "## 2026-11-21 · [DECISION] (owner) REG-20 arm A halted"
++case_ "RC-O3: an owner's 'halted' heading after the start: no queue" "a heading that stops arm A" 2 zsh $Q
++reset; setlog $LOGOK0 "" "## 2026-11-21 · [DECISION] (owner) REG-20 arm A is halted: sandbox"
++case_ "RC-O3: 'is halted': no queue" "a heading that stops arm A" 2 zsh $Q
++reset; setlog $LOGOK0 "" "## 2026-11-21 · [OPS] REG-20 arm A ended by a stop: QUEUE STOP after an invalid run"
++case_ "point 18: an 'ended by a stop' end entry after the start: no queue" "a heading that stops arm A" 2 zsh $Q
++case_ "and no checkout of the VM" "a heading that stops arm A" 2 FAKE_TREE=$HEADH zsh $V
++reset; setlog $LOGOK0 "" "## 2026-11-21 · [OPS] REG-20 arm A: the queue ended (QUEUE DONE)"
++case_ "point 18: arm A's QUEUE DONE end entry stops nothing (final.sh follows it)" "QUEUE DONE" 0 zsh $Q
++case_ "and final.sh runs after it" "{'fake': 'table'" 0 zsh $F
++
+ echo "--- the order: 15, 16, 17, the drift run, 18, 19; a control right after its burst run only when due"
+ reset; dues no no no no no
+ case_ "no control due anywhere" "QUEUE DONE" 0 zsh $Q
+@@ -389,6 +479,8 @@
+ case_ "2a setaside: a stored-valid run that today's checks fail is set aside, and the queue stops" "after a run set aside by the recheck" 1 FAKE_RECHECK_FOR=$(rid_of 1 ${B}15) zsh $Q
+ chk "the SET ASIDE line" has "SET ASIDE $(rid_of 1 ${B}15): stored valid, now invalid (failed=recorder)"
+ chk "it is in the holding folder, not in runs/, and has no copy record" sh -c "[ -d $HOLD/$(rid_of 1 ${B}15) ] && [ ! -e $T/repo/runs/$(rid_of 1 ${B}15) ] && [ ! -e $S/state/copied_$(rid_of 1 ${B}15).txt ]"
++chk "draft 3, RC6 (ii): beside it, its per-file sha256 list, equal to the folder's" sh -c "cd $HOLD/$(rid_of 1 ${B}15) && find . -type f | LC_ALL=C sort | xargs shasum -a 256 | cmp -s - $HOLD/$(rid_of 1 ${B}15).sha256"
++chk "and the SHA256 LIST line names it" has "SHA256 LIST $HOLD/$(rid_of 1 ${B}15).sha256 sha256 "
+ chk "no control decision on it" is "$(looks)" 0
+ case_ "started again: its config is rerun as attempt 2, and the queue goes on" "QUEUE DONE" 0 zsh $Q
+ chk "attempt 2 of seed 15" test -e $S/state/attempt_${B}15_2.txt
+@@ -421,6 +513,9 @@
+ case_ "any change in analysis/ (here outside k1's closure) stops the recheck (ops_r3's guard)" "analysis/, harness/ or configs/defaults.yaml differ in the working tree from the Mac's HEAD" 1 zsh $Q
+ reset; echo "# y" >> $T/repo/configs/defaults.yaml
+ case_ "configs/defaults.yaml changed: no recheck" "differ in the working tree from the Mac's HEAD" 1 zsh $Q
++reset; (cd $T/repo && echo "# y" >> harness/config.py && $G commit -q -am "harness/config.py moved")
++case_ "RD-O1: a commit to harness/config.py (in the recheck's closure, not in mac_checks) stops the recheck" "harness/ differs in the working tree from $PINH" 1 zsh $Q
++chk "and nothing entered runs/" is "$(nfiles "$T/repo/runs/*")" 0
+ 
+ echo "--- reruns: one, then a stop; the records name what they lift and who wrote them (RA3, RA-O4, RB3, RB7)"
+ reset; outs client_lag
+@@ -482,20 +577,40 @@
+ rec $S/state/settle_$(rid_of 2 ${B}15).txt "label lost_open" "under sandbox" "by owner"
+ case_ "the owner's lost_open lets it go on" "QUEUE DONE" 0 zsh $Q
+ chk "the slot reads lost_open with both runs, both on the Mac" sh -c "grep -qx 's15 lost_open $(rid_of 1 ${B}15) $(rid_of 2 ${B}15)' $S/state/queue_done.txt && [ -e $S/state/copied_$(rid_of 2 ${B}15).txt ]"
+-reset; setrul 7 not_run; outs client_lag trigger; q; q
+-case_ "RA3: either attempt setup-only (here the second, trigger) stops as well" "failed only checks of the setup class" 1 zsh $Q
++reset; setrul 7 not_run; outs trigger kv_capacity; q; q
++case_ "RA3: both attempts setup-only (trigger, then kv_capacity) stop as well" "failed only checks of the setup class" 1 zsh $Q
+ rec $S/state/settle_$(rid_of 2 ${B}15).txt "label not_run" "under sandbox ruling 7" "by delegate"
+ case_ "not_run naming the second run while the first is in runs/ is refused (k1 would read lost_open)" "k1 would read lost_open" 1 zsh $Q
+ rm $S/state/settle_$(rid_of 2 ${B}15).txt; rec $S/state/settle_$(rid_of 1 ${B}15).txt "label not_run" "under sandbox ruling 7" "by delegate"
+ case_ "under ruling 7 not_run a delegate's not_run naming the copied run settles it" "HELD $(rid_of 2 ${B}15)" 0 zsh $Q
+ chk "the slot reads not_run" grep -qx "s15 not_run $(rid_of 1 ${B}15)" $S/state/queue_done.txt
+ chk "the second run is held, not in runs/" sh -c "[ -d $HOLD/$(rid_of 2 ${B}15) ] && [ ! -e $T/repo/runs/$(rid_of 2 ${B}15) ] && grep -qx 'held $(rid_of 2 ${B}15) settled' $S/state/queue_done.txt"
++chk "draft 3, RC6 (ii): beside the held run, its per-file sha256 list, equal to the folder's" sh -c "cd $HOLD/$(rid_of 2 ${B}15) && find . -type f | LC_ALL=C sort | xargs shasum -a 256 | cmp -s - $HOLD/$(rid_of 2 ${B}15).sha256"
++chk "and none beside the copied run (it is in runs/, under the manifest)" test ! -e $HOLD/$(rid_of 1 ${B}15).sha256
+ case_ "and final.sh accepts the folder set" "{'fake': 'table'" 0 zsh $F
+-reset; setrul 7 not_run; outs client_lag trigger; q; q
++reset; setrul 7 not_run; outs trigger kv_capacity; q; q
+ rec $S/state/settle_$(rid_of 1 ${B}15).txt "label not_run" "under sandbox ruling 7" "by delegate"
+ case_ "a held run that today's checks change" "HELD $(rid_of 2 ${B}15)" 0 FAKE_RECHECK_FOR=$(rid_of 2 ${B}15) zsh $Q
+ chk "is listed as held, not kept" sh -c "grep -qx 'recheck_changed $(rid_of 2 ${B}15) held' $S/state/queue_done.txt && ! grep -q ' kept\$' $S/state/queue_done.txt"
+ case_ "and final.sh accepts it (it is not in runs/)" "{'fake': 'table'" 0 zsh $F
++# RC (rule F round 2): the mixed case, one attempt outside the setup class (T3's client_lag), the other setup-only.
++reset; setrul 7 not_run; outs client_lag trigger; q; q
++case_ "RC: mixed case (client_lag, then trigger) stops for a settle record" "failed only checks of the setup class" 1 zsh $Q
++rec $S/state/settle_$(rid_of 1 ${B}15).txt "label not_run" "under sandbox ruling 7" "by delegate"
++case_ "RC: under ruling 7 not_run a delegate's not_run is refused in the mixed case" "when every invalid attempt failed only setup checks" 1 zsh $Q
++rec $S/state/settle_$(rid_of 1 ${B}15).txt "label lost_open" "under sandbox ruling 7" "by delegate"
++case_ "RC: and the delegate's lost_open (the registered label) is taken" "QUEUE DONE" 0 zsh $Q
++chk "RC: the slot reads lost_open with both runs, both on the Mac" sh -c "grep -qx 's15 lost_open $(rid_of 1 ${B}15) $(rid_of 2 ${B}15)' $S/state/queue_done.txt && [ -e $S/state/copied_$(rid_of 2 ${B}15).txt ]"
++reset; setrul 7 per_stop; outs client_lag trigger; q; q
++rec $S/state/settle_$(rid_of 1 ${B}15).txt "label lost_open" "under sandbox ruling 7" "by delegate"
++case_ "RC: under ruling 7 per_stop the mixed case stays the owner's" "label lost_open needs an owner's record" 1 zsh $Q
++# RC (rule F round 2): a commit that changes owner_rulings.txt without the owner's rulings heading stops everything.
++reset; (cd $T/repo && sed -i '' "s/^7 .*/7 not_run/" $S/owner_rulings.txt && $G commit -q -am "ruling 7 changed alone")
++case_ "RC: a ruling changed by a commit with no owner's rulings heading stops the queue" "a ruling changes only with the owner's entry" 2 zsh $Q
++case_ "RC: and launch.sh" "a ruling changes only with the owner's entry" 2 zsh $S/launch.sh ${B}15
++case_ "RC: and final.sh" "a ruling changes only with the owner's entry" 2 zsh $F
++reset; (cd $T/repo && sed -i '' "s/^7 .*/7 not_run/" $S/owner_rulings.txt && print -r -l -- "" "## 2026-11-21 · [DECISION] (owner) REG-20 arm A operations: the owner's rulings (sandbox, 7 not_run)" >> docs/decisions.md && $G commit -q -am "ruling 7 with the owner's heading, no new start")
++case_ "RC: a new rulings heading after the start needs a new start heading after it" "is not after the rulings" 2 zsh $Q
+ reset; setrul 7 lost_open; outs kv_capacity client_lag; q; q
+ rec $S/state/settle_$(rid_of 2 ${B}15).txt "label not_run" "under sandbox" "by delegate"
+ case_ "under ruling 7 lost_open a delegate's not_run is refused" "label not_run needs an owner's record" 1 zsh $Q
+@@ -794,7 +909,36 @@
+ case_ "a failed table stops and keeps its files" "STOP: reg20 failed" 1 FAKE_FINAL_RC=1 zsh $F
+ case_ "and a second try is refused" "already computed or tried" 2 zsh $F
+ reset; q; setlog "$H_RES"
+-case_ "not without the gate's headings" "the owner's rulings' heading" 2 zsh $F
++case_ "not without the gate's headings" "no rulings heading (" 2 zsh $F
++
++echo "--- draft 3: vm_checkout.sh, the VM back to the pin after E1's end entry (point 18, RC-O10)"
++reset
++case_ "from E1's commit (here a descendant of the pin), clean and idle: checked out at the pin" "VM AT THE PIN $PINH, clean" 0 FAKE_TREE=$HEADH zsh $V
++chk "the probe file records the commit before and after, and no package change" sh -c "grep -qx 'before $HEADH dirty 0' $PD/vm_checkout_*.txt && grep -qx 'head $PINH' $PD/vm_checkout_*.txt && grep -qx 'uv_changes 0' $PD/vm_checkout_*.txt"
++chk "its one checkout command named the pin" is "$(cat $T/state/vm_checked_out 2>/dev/null)" $PINH
++reset
++case_ "already at the pin: nothing is changed" "VM ALREADY AT THE PIN $PINH" 0 zsh $V
++chk "no checkout command" test ! -e $T/state/vm_checked_out
++reset; mkdir -p $S/state/queue.lock; echo $$ > $S/state/queue.lock/pid
++case_ "not under REG-20's queue lock" "REG-20's queue lock exists" 2 FAKE_TREE=$HEADH zsh $V
++reset
++case_ "not with a compute process on the GPU" "a compute process is on the GPU ('1')" 2 FAKE_TREE=$HEADH FAKE_APPS_N=1 zsh $V
++case_ "not while a tmux session exists" "a tmux session exists on the VM" 2 FAKE_TREE=$HEADH FAKE_TMUX_EXISTS=1 zsh $V
++case_ "not from a dirty tree" "the VM's tree is dirty ('2' entries)" 2 FAKE_TREE=$HEADH FAKE_DIRTY=2 zsh $V
++ORPH=$(cd $T/repo && $G commit-tree $(git mktree < /dev/null) -m "orphan (sandbox)")
++case_ "not from a commit the pin is not an ancestor of" "is not one the pin" 2 FAKE_TREE=$ORPH zsh $V
++case_ "not from a commit unknown on the Mac" "is not one the pin" 2 FAKE_TREE=0123456789abcdef0123456789abcdef01234567 zsh $V
++case_ "not when the VM cannot be read" "the VM could not be read" 2 FAKE_TREE=$HEADH FAKE_VMCO_READ_FAIL=1 zsh $V
++chk "none of these ran a checkout" test ! -e $T/state/vm_checked_out
++case_ "a checkout that fails on the VM stops" "the checkout on the VM failed" 2 FAKE_TREE=$HEADH FAKE_CHECKOUT_FAIL=1 zsh $V
++case_ "a tree that is not the pin after the checkout stops" "is not the pin, clean, after the checkout" 2 FAKE_TREE=$HEADH FAKE_AFTER_HEAD=$HEADH zsh $V
++case_ "another uv.lock after the checkout stops" "uv.lock is not the pin's after the checkout" 2 FAKE_TREE=$HEADH FAKE_LOCK=abc zsh $V
++case_ "a dry-run sync that would change packages stops" "would change 1 packages" 2 FAKE_TREE=$HEADH FAKE_VM_UV_CHANGE=1 zsh $V
++reset; setlog "$H_RES" "$H_RUL"
++case_ "not before the start heading" "REG-20 arm A starts: k1.reg20_a_may_start passed' heading" 2 FAKE_TREE=$HEADH zsh $V
++reset; echo "# y" >> $S/vm_checkout.sh
++case_ "vm_checkout.sh is one of the scripts mac_checks holds to their commit" "differs from its committed text" 2 FAKE_TREE=$HEADH zsh $V
++chk "no script but vm_checkout.sh ever changes the VM's tree" sh -c "! grep -n 'checkout' $S/common.sh $S/launch.sh $S/queue.sh $S/final.sh $S/session_probe.sh | grep -v '^[^:]*:[0-9]*:#' | grep -q 'git checkout'"
+ 
+ chk "no script ever tried to compute the gate (computed once, 3c8e5dc)" test ! -e $T/gate_calls
+ echo "passed $pass, failed $fail  (sandbox $T)"
+diff -ruN a/docs/probe/20261113_reg20/ops/vm_checkout.sh b/docs/probe/20261113_reg20/ops/vm_checkout.sh
+--- a/docs/probe/20261113_reg20/ops/vm_checkout.sh	1970-01-01 06:00:00
++++ b/docs/probe/20261113_reg20/ops/vm_checkout.sh	2026-11-14 08:24:48
+@@ -0,0 +1,40 @@
++#!/bin/zsh
++# REG-20 arm A: moves the VM's tree back to the pin 1cface7 (README step 4; the operations decision draft 3, point 18;
++# ported from E1's vm_checkout.sh, rule F round 2's RC-O10). It is the one REG-20 script that changes the VM's tree (no
++# other one does). Usage, from the Mac, after E1's end entry is committed:
++#   zsh docs/probe/20261113_reg20/ops/vm_checkout.sh
++# Refuses, changing nothing on the VM: when a Mac-side check fails (common.sh `mac_checks`); before HEAD's
++# docs/decisions.md holds every heading arm A's queue needs, E1's end entry among them, or while E1's queue lock exists
++# (`gate_in_log`, which calls `e1_ended`); while REG-20's own queue lock exists; while a compute process is on the GPU
++# or any tmux session exists on the VM; when the VM's tree is dirty, or its commit is not one that the pin is an
++# ancestor of on the Mac. The move is backward (from E1's ce5f842, or from a later HEAD deployed after E1's end entry,
++# to its ancestor 1cface7), and point 18 covers it from such a commit only; anything else is the owner's. Then, on the
++# VM only, `git checkout --detach <pin>`: no push and no fetch (E1's checkout fetched a descendant of the pin into the
++# VM's clone; the checkout fails otherwise); read back the commit, the dirty count and uv.lock's blob, and run a
++# dry-run `uv sync`, which must show no change. Everything goes to a time-stamped probe file in
++# docs/probe/20261113_reg20/, to be committed with an [OPS] entry. No root command, no run, no other change on the VM.
++source ${0:A:h}/common.sh
++die() { echo "STOP: $1"; exit ${2:-2}; }
++mac_checks || exit 2
++gate_in_log || die "$MSG"
++[[ ! -e $ST/queue.lock ]] || die "REG-20's queue lock exists ($ST/queue.lock): no checkout under a queue"
++rd=$(ssh $K $H "echo '# vm_checkout read (agent, read-only)'; nvidia-smi --query-compute-apps=pid --format=csv,noheader | wc -l; cd ~/aftershock-artifacts && git rev-parse HEAD && git status --short | wc -l; echo '# tmux:'; tmux ls 2>&1 || true") || die "the VM could not be read"
++apps=${${(f)rd}[2]// /}; vh=${${(f)rd}[3]}; vd=${${(f)rd}[4]// /}
++[[ $apps == 0 ]] || die "a compute process is on the GPU ('$apps')"
++print -r -- "$rd" | sed -n '/# tmux:/,$p' | grep -q "no server running\|No such file or directory\|error connecting" || die "a tmux session exists on the VM: no checkout while a run may be in progress"
++[[ $vd == 0 ]] || die "the VM's tree is dirty ('$vd' entries): the owner decides"
++mkdir -p $PROBE_DIR
++stamp; out=$PROBE_DIR/vm_checkout_$REPLY.txt
++[[ ! -e $out ]] || die "$out exists"
++print -r -l -- "# REG-20 arm A: vm_checkout (agent, under the operations decision, point 18). scripts $SC; Mac HEAD $(git -C $R rev-parse HEAD); pin $PIN" "before $vh dirty $vd" > $out
++if [[ $vh == $PIN ]]; then echo "already_at_pin" >> $out; cat $out; echo "VM ALREADY AT THE PIN $PIN, clean"; exit 0; fi
++git -C $R cat-file -e "${vh}^{commit}" 2> /dev/null && git -C $R merge-base --is-ancestor $PIN $vh || die "the VM's commit '$vh' is not one the pin $PIN is an ancestor of on the Mac: point 18 covers the move back only from such a commit; the owner decides"
++ssh $K $H "cd ~/aftershock-artifacts && git checkout -q --detach $PIN && echo \"head \$(git rev-parse HEAD)\" && echo \"dirty \$(git status --short | wc -l)\" && echo \"lock_blob \$(git hash-object uv.lock)\"" >> $out 2>&1 || die "the checkout on the VM failed (see ${out:t})"
++dry=$(ssh $K $H "cd ~/aftershock-artifacts && ~/.local/bin/uv sync --frozen --extra server --dry-run 2>&1") || die "the VM's dry-run sync failed"
++n_chg=$(print -r -- "$dry" | grep -c '^ [-+~] ')
++print -r -l -- "# uv sync --frozen --extra server --dry-run on the VM:" "$dry" "uv_changes $n_chg" >> $out
++cat $out
++[[ $(grep '^head ' $out | awk '{print $2}') == $PIN && $(grep '^dirty ' $out | awk '{print $2}') == 0 ]] || die "the VM's tree is not the pin, clean, after the checkout (see ${out:t})"
++[[ $(grep '^lock_blob ' $out | awk '{print $2}') == $(git -C $R rev-parse ${PIN}:uv.lock) ]] || die "the VM's uv.lock is not the pin's after the checkout"
++[[ $n_chg == 0 ]] || die "the dry-run sync on the VM would change $n_chg packages: the owner decides before any run"
++echo "VM AT THE PIN $PIN, clean; uv.lock the pin's; next: session_probe.sh (SET=1 if allowed; RENEW=1 only with a decisions.md entry)"

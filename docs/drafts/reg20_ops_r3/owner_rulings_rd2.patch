@@ -1,0 +1,18 @@
+--- a/docs/probe/20261113_reg20/ops/owner_rulings.txt	2026-11-14 08:38:16
++++ b/docs/probe/20261113_reg20/ops/owner_rulings.txt	2026-11-14 08:38:16
+@@ -11,9 +11,9 @@
+ #   8:  a | b                                (a lost attempt, no checks.json)
+ #   9:  a | b                                (a control with both attempts invalid)
+ #   16: a | b | c                            (arm B's seal and how arm A's result is headed)
+-2a unset
+-6 unset
+-7 unset
+-8 unset
+-9 unset
+-16 unset
++2a setaside
++6 b
++7 lost_open
++8 b
++9 a
++16 a

@@ -1,0 +1,25 @@
+# REG-20 ops draft 3: sha256 (shasum -a 256), 2026-11-14T02:51:32Z. The patches apply cleanly to a fresh git archive of 40948ba and of HEAD 5f9f442; the results are byte-equal to the tested scratch files (cmp).
+# (1) the eight files ops_draft3.patch produces (owner_rulings.txt before owner_rulings_rd2.patch):
+f267951a54c0d322da969bd65890d47f1874f24486da555eb296d38c58ab0cb1  docs/probe/20261113_reg20/ops/README.md
+e5b10a2738670d56c25821433aaed68b2a02dab73f87fc7afd26c4d8d01d5052  docs/probe/20261113_reg20/ops/common.sh
+d1f6bf4f854ad0d3fbbfc181ca8ee04aef997bfe08b7b3ad822b25041ae2241b  docs/probe/20261113_reg20/ops/owner_rulings.txt
+058e5b64684b149f4ed5fb277a646eaf9cd7fdb566abb8d3a350dd257df28197  docs/probe/20261113_reg20/ops/recheck_one.py
+34ab1030521b348caaa02553af7b7ed9ba272fc92e8939c9301787230141e7ed  docs/probe/20261113_reg20/ops/session_probe.sh
+fc3da23d36d229929653858fa1b39f8a835bbd14772d57f303121d6f524a4e08  docs/probe/20261113_reg20/ops/test_control_due.py
+8d39ebfc3458fdd2e2b6d4d97d43b9a01356a16e3db2b1dd92e65a1673d25d3d  docs/probe/20261113_reg20/ops/test_sandbox.sh
+9a634cc6ebdd4c1f1e10e67166b9e25c1f7946e8cc8f1a4b7accacd431dbc229  docs/probe/20261113_reg20/ops/vm_checkout.sh
+# (2) owner_rulings.txt after owner_rulings_rd2.patch, and agent/RUNBOOK.md after runbook_heading1.patch:
+2daacec363e3edc7015ef6a6a66a5dc55280047709629516de9d32e9403b3976  docs/probe/20261113_reg20/ops/owner_rulings.txt
+bc84c57d35edfd988cc4d808e24c69fbf950997eee2fc5357c0971c19a89c8b9  agent/RUNBOOK.md
+# (3) the patches, the probes and the test outputs in this folder, and the two drafts:
+31dbea7c1fecb25d3e65f25489d7d688e9debc4c166f5655111dd0d23e3b175d  docs/drafts/reg20_ops_r3/ops_draft3.patch
+18d0bb21c9a48b01c98b837d943d11f2522371ed1aa2b3ec7508cac03df4a475  docs/drafts/reg20_ops_r3/owner_rulings_rd2.patch
+4e92970e53b6bd2735b807c8665eec3e3dbb1b5738434eaf91ca1ceb27837fe9  docs/drafts/reg20_ops_r3/runbook_heading1.patch
+b56a9ac19570306ea7b9dbf168817cce61644b26d0d79238c4b8398f26a427c4  docs/drafts/reg20_ops_r3/disk_probe_20261114.txt
+7b02fcd7d24fd8b0515670eb241256a2324039bcbec95d5c3e8857039dd6516b  docs/drafts/reg20_ops_r3/git_facts_20261114.txt
+429c5b56f8c40afdbc12d473946752fd09a339d33c84916e091fdf8f1795c826  docs/drafts/reg20_ops_r3/closure_20261114.txt
+7f0cf137fdb3ef9cbc9d775c9ceb2981bb21c865ada0572fe7f2dadd1dfc15cc  docs/drafts/reg20_ops_r3/syntax_20261114.txt
+1df96e7403922c3b7504caf312b96039ad5daa8ae551ef2e0e0f0213480fd79d  docs/drafts/reg20_ops_r3/sandbox_20261114T023449Z.txt
+89441ac50a0aa7c862c5647e850561736af5b1642685684a709ce3aeffcaeabd  docs/drafts/reg20_ops_r3/test_control_due_20261114T024844Z.txt
+331ee2f77f7cffa0c95d65e8b59cec1a99bf403843fc557f542e21403b141132  docs/drafts/reg20_ops_decision_draft3.md
+25be1a8cea8730baf6f51f9365b7a2220414009106c9c4a3d9000083614144e5  docs/drafts/reg20_ops_decision_draft3_itemmap.md

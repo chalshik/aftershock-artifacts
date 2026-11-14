@@ -1,0 +1,10 @@
+# REG-20 ops draft 3, disk input (agent, read-only, 2026-11-14 02:37:54Z): size of REG-19's seed 15 closed burst run, a reported, unsealed 4080 s run (decisions.md [RESULT] REG-19). Only du and find -type f | wc -l; no file opened. On the Mac (APFS), not the VM.
+$ du -sk runs/20261112-061951_burst_l1pl350cl_r2.0_w3000_s15
+242736	runs/20261112-061951_burst_l1pl350cl_r2.0_w3000_s15
+$ du -sk -A runs/20261112-061951_burst_l1pl350cl_r2.0_w3000_s15   (apparent size)
+242722	runs/20261112-061951_burst_l1pl350cl_r2.0_w3000_s15
+$ find runs/20261112-061951_burst_l1pl350cl_r2.0_w3000_s15 -type f | wc -l
+10
+# E1's session probe free space, from HEAD's blob (git show, read-only):
+$ git show HEAD:docs/probe/20261113_e1/session_20261114T021434Z_30853_1.txt | grep -A1 -i free
+free_kb 4171272
