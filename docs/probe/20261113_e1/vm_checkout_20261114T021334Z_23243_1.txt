@@ -1,0 +1,12 @@
+# E1: vm_checkout (agent, with the owner's approval). scripts 8b118843f3d74d3b983fa5841e8f0271c90a4b0e; Mac HEAD 8b118843f3d74d3b983fa5841e8f0271c90a4b0e; registered commit ce5f8421d2667e52c3db99f445de00519b73473c
+before a7bb77abc863adcaad9d4516815a5ddddf2908e9 dirty 0
+To 100.83.53.50:repos/aftershock-artifacts.git
+   a7bb77a..8b11884  main -> main
+head ce5f8421d2667e52c3db99f445de00519b73473c
+dirty 0
+lock_blob 8b1c04b402b6741cf9c1837b060c4e39b64bbcff
+# uv sync --frozen --extra server --dry-run on the VM:
+Would use project environment at: .venv
+Checked 213 packages in 29ms
+Would make no changes
+uv_changes 0

@@ -19390,3 +19390,61 @@ Row 2a, REG-20 arm A, is not edited here: the same rule belongs in REG-20's ops 
 >   - FILE(agent/RUNBOOK.md:48) is not edited; it is left to REG-20's RB6.
 >
 >   Both anchors are unchanged since `f43a5a1`.
+
+## 2026-11-14 · [OPS] E1: the VM checked out at E1's registered commit ce5f842 by `vm_checkout.sh` (from `a7bb77a`, clean, `uv sync` dry run no change), after DD9's two checks held at that commit
+
+- **DD9** (the approving decision, FILE(docs/decisions.md:18286)), run at 2026-11-14 02:13:08 UTC with `<E1 commit>` read from `e1_commit.txt` (set and committed alone in `8b11884`). Both held: the closure at the registered commit lists the same 24 .py files and three environment files as the decision quotes under DF9 (c) (compared by `diff`, the header line aside), and the harness and config diff from `9e249b1` printed 0. Verbatim:
+
+    # DD9 at 2026-11-14T02:13:08Z, <E1 commit> = ce5f8421d2667e52c3db99f445de00519b73473c (e1_commit.txt), HEAD 8b118843f3d74d3b983fa5841e8f0271c90a4b0e
+    $ python3 docs/probe/20261113_freeze/closure.py --at ce5f8421d2667e52c3db99f445de00519b73473c analysis/e1.py
+    # import closure of analysis/e1.py at ce5f8421d2667e52c3db99f445de00519b73473c: 24 .py files
+    analysis/__init__.py
+    analysis/derived.py
+    analysis/e1.py
+    analysis/floor.py
+    analysis/gate.py
+    analysis/k1.py
+    analysis/k3.py
+    analysis/k3w.py
+    analysis/load.py
+    analysis/margin.py
+    analysis/modelf.py
+    analysis/modelf_sim.py
+    analysis/stats.py
+    analysis/tables.py
+    analysis/withheld.py
+    harness/__init__.py
+    harness/checks.py
+    harness/config.py
+    harness/env_snapshot.py
+    harness/loadgen.py
+    harness/recorder.py
+    harness/run.py
+    harness/trigger.py
+    harness/workload.py
+    # environment: 3 files
+    .python-version
+    pyproject.toml
+    uv.lock
+    # total 27 files
+    # dynamic import call in harness/env_snapshot.py at line(s) 38: check by hand
+    [exit 0]
+    $ git diff --quiet 9e249b1 ce5f8421d2667e52c3db99f445de00519b73473c -- harness/ pyproject.toml uv.lock .python-version configs/defaults.yaml configs/base.yaml configs/gap5_base.yaml configs/l1_base.yaml configs/l1_pl350_base.yaml configs/sweep_l1pl350_pc_off.yaml configs/sweep_l1pl350cl_pc_off.yaml 'configs/sweep_l1pl350cl_pc_off_only_r*.yaml'; echo $?
+    0
+
+- **The checkout,** `zsh docs/probe/20261113_e1/ops/vm_checkout.sh` at 02:13:34 UTC; its probe file PROBE(docs/probe/20261113_e1/vm_checkout_20261114T021334Z_23243_1.txt), verbatim:
+
+    # E1: vm_checkout (agent, with the owner's approval). scripts 8b118843f3d74d3b983fa5841e8f0271c90a4b0e; Mac HEAD 8b118843f3d74d3b983fa5841e8f0271c90a4b0e; registered commit ce5f8421d2667e52c3db99f445de00519b73473c
+    before a7bb77abc863adcaad9d4516815a5ddddf2908e9 dirty 0
+    To 100.83.53.50:repos/aftershock-artifacts.git
+       a7bb77a..8b11884  main -> main
+    head ce5f8421d2667e52c3db99f445de00519b73473c
+    dirty 0
+    lock_blob 8b1c04b402b6741cf9c1837b060c4e39b64bbcff
+    # uv sync --frozen --extra server --dry-run on the VM:
+    Would use project environment at: .venv
+    Checked 213 packages in 29ms
+    Would make no changes
+    uv_changes 0
+
+- **Order with REG-20 arm A:** E1 is first (the approving decision, DF9 (g)); no REG-20 operations heading exists, so DE3's `git grep` of REG-20's end entry does not arise. RUNBOOK §4's heading now forbids a deploy of `main` while E1 holds the VM, which it does from this checkout until E1's end entry. Next: 350 W (the watcher reads 350.00 W), the session probe, the queue.
