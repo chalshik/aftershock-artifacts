@@ -1,0 +1,162 @@
+diff --git a/analysis/confirm.py b/analysis/confirm.py
+index dd14d86..7ad2a6a 100644
+--- a/analysis/confirm.py
++++ b/analysis/confirm.py
+@@ -431,8 +431,9 @@ def burst_outcome(v5: str, broken: bool, emptied_watch: bool, emptied_drop: bool
+     - emptied_in_watch: stuck, never `recovered`, but the waiting line emptied in the watch (REG-19's test: stuck
+       through the watch means the line never empties);
+     - inconclusive: the cold side (`cold`) is NaN;
+-    - stuck_not_cold: the completion rate over [burst end + 600 s, watch end) is not below min(λ, λp): the total line
+-      was not growing, so the `stuck` verdict may be a long drain (REG-19's `stuck_not_cold`; rule F round 1, RE1);
++    - stuck_not_cold: the completion rate over [burst end + 600 s, watch end), or over the verdict's end window, is
++      not below min(λ, λp): the total line was not growing, so the `stuck` verdict may be a long drain (REG-19's
++      `stuck_not_cold`; rule F round 1, RE1; the end window, rule F round 2, DK1);
+     - drop_inconclusive: `emptied_drop` False: in the drop, no 30 s zero of the waiting gauge, or the total line never
+       back at its level at the trigger (`drained_at`; rule F round 1, RE3); condition 6 inconclusive, PROTOCOL §3;
+     - inconclusive: the return's end has a missing value;
+@@ -624,7 +625,14 @@ def burst_table(run: dict | None = None, control: dict | None = None) -> dict:
+     e_all = emptyings(run, ph["burst_end"], de)
+     e_watch, e_drop = [t for t in e_all if t < we], [t for t in e_all if t >= we]
+     back = G.recovered_against(run, base, *ph["return_end"])
++    jw = judged_windows(run["cfg"])
+     cs = cold_side(run, ph["burst_end"] + G.REG19["window"][0], we)                       # RE1: REG-19's W start
++    # rule F round 2, DK1: the same test over the verdict's end window, so that a total line that shrinks over the
++    # watch's last windows (a partial re-warm at λ, which the closed-loop waiting gauge shows only as a slow fall) is
++    # not averaged away by the cold part of W. A cold server completes at most its all-miss rate, below min(λ, λp).
++    cs_end = cold_side(run, *jw["end"])
++    both = (cs["holds"], cs_end["holds"])
++    cold = False if False in both else (None if None in both else True)
+     # RE3: the drain both models predict: the total line back at its level at the trigger. Condition (g) needs it as
+     # well as a 30 s zero of the waiting gauge; it is K3's measured value, and the re-warming is read from it, so that
+     # `cold_after_empty` means a cold cache with the line drained
+@@ -632,11 +640,18 @@ def burst_table(run: dict | None = None, control: dict | None = None) -> dict:
+     owed0 = G.owed_backlog(run, t0)
+     t_d = drained_at(run, we, de, owed0)
+     emptied_drop = bool(e_drop) and bool(np.isfinite(t_d))
+-    label = burst_outcome(v["verdict"], brk["broken"], bool(e_watch), emptied_drop, back, cold=cs["holds"])
++    label = burst_outcome(v["verdict"], brk["broken"], bool(e_watch), emptied_drop, back, cold=cold)
+     out = {"run": run["dir"].name, "v5": v["verdict"], "baseline": base, "watch_end_level": v["end"],
+            "watch_broken": brk, "emptyings_watch": e_watch, "emptyings_drop": e_drop, "return_recovered": back,
+-           "return_end_level": _level(run, *ph["return_end"]), "outcome": label, "phases": ph, "cold_side": cs}
+-    out["owed"] = {"trigger": owed0, "watch_end": G.owed_backlog(run, we)}
++           "return_end_level": _level(run, *ph["return_end"]), "outcome": label, "phases": ph, "cold_side": cs,
++           "cold_side_end": cs_end}
++    # rule F round 2, DK2: the total line at the drop's end and its lowest point in the drop (with when), which the
++    # `drop_inconclusive` sentence reads ("which part, server or clients, held")
++    gd = np.arange(we, de, REG24["grid_s"])
++    od = owed_series(run, gd)
++    out["owed"] = {"trigger": owed0, "watch_end": G.owed_backlog(run, we), "drop_end": G.owed_backlog(run, de),
++                   "min_drop": int(od.min()) if len(od) else None,
++                   "t_min_drop_s": float(gd[od.argmin()] - we) if len(od) else math.nan}
+     t_e = e_drop[0] if e_drop else math.nan
+     out["first_empty_drop_s"] = t_e - we if np.isfinite(t_e) else math.nan
+     if np.isfinite(t_e):
+@@ -657,7 +672,6 @@ def burst_table(run: dict | None = None, control: dict | None = None) -> dict:
+     out["loop"] = {"kv": loop["kv"], "n": loop["n"], "n_over_base": loop["n"] / base["n"], "n_max": n_max,
+                    "n_cap": REG24["n_cap"]}
+     out["release_delay"] = G.release_delay(run, [(we - 300, we), (de - 300, de), ph["return_end"]], end=0.0)
+-    jw = judged_windows(run["cfg"])
+     out["judged_lam_p"] = {k: G.planned_session_rate(run, *w) for k, w in jw.items()}
+     # RE-O1: how much of the end window was served in the drop (T4 of rule F round 1): `load._level` takes pf by
+     # t_planned, and under closed-loop turns the end window's requests are released up to the total line's lag later
+@@ -684,6 +698,10 @@ def table() -> dict:
+     stopped the queue): the control's table, the burst run's table, the pair's outcome, and the baseline pair
+     (`gate.reg19_baseline_pair`, the run-order readout)."""
+     from analysis.load import find_runs
++    # rule F round 2, DK-O1: no valid control after its attempts gives `control_missing` (the stopping rule), not an
++    # exception
++    if not find_runs("*_" + REG24["control_name"].format(seed=REG24["seed"])):
++        return {"control": None, "burst": None, "outcome": pair_outcome(None, None)}
+     ctl_run = _one("control")
+     ctl = control_table(ctl_run)
+     pat = "*_" + REG24["burst_name"].format(seed=REG24["seed"])
+diff --git a/tests/test_confirm.py b/tests/test_confirm.py
+index 28e140b..dbff9f0 100644
+--- a/tests/test_confirm.py
++++ b/tests/test_confirm.py
+@@ -524,3 +524,85 @@ def test_request_model_on_reg19s_schedules():
+     assert [round(r[4080.0]["expected"]) for r in rows] == [1342, 1271, 1539, 1049, 1171]
+     assert [round(r[1680.0]["expected"]) for r in rows] == [577, 601, 860, 655, 466]
+     assert [round(r[4080.0]["pessimistic"]) for r in rows] == [1596, 1525, 1793, 1303, 1425]
++
++
++# ---------------------------------------------------------------- rule F round 2 on draft 2
++
++def _late_rewarm_run(cfg, t_rewarm, c_cold=0.85, c_warm=1.15, c_drop=1.4):
++    """Rule F round 2, trace T-A: cold from the burst to `t_rewarm`, then partly warm (hit 0.72 against 0.84) and
++    completing faster than the planned rate (1 req/s) to the watch's end, so that the total line shrinks over the
++    watch's last windows while the closed-loop waiting gauge falls only slowly (it counts sessions in service, not
++    owed turns); then the drop drains the line and the return is warm. Requests served behind a queue are slow."""
++    we = 5580.0
++    dur = float(cfg["workload"]["duration_s"])
++    tp = np.arange(0.5, dur, 1.0)
++    te, free = tp + 1.2, 900.0
++    for i in np.flatnonzero(tp >= 900.0):
++        s = max(free, tp[i])
++        free = s + 1.0 / (c_cold if s < t_rewarm else c_warm if s < we else c_drop)
++        te[i] = free if free > tp[i] + 1.2 else tp[i] + 1.2
++    r = pd.DataFrame({"t_planned": tp, "t_sent": tp, "t_released": tp, "turn": 1, "session_id": np.arange(len(tp)),
++                      "status": "ok", "prompt_tokens_planned": 3000, "t_end": te})
++    owed0 = G.owed_backlog({"requests": r}, 900.0)
++    t_drain = next(t for t in np.arange(we, dur, 10.0) if G.owed_backlog({"requests": r}, t) <= owed0)
++    r["t_first_token"] = np.where(r.t_end - r.t_planned > 3.0, r.t_end - 1.0, r.t_planned + 0.2)
++    r["ttft"] = r.t_first_token - r.t_released
++    t = np.arange(0.0, dur + 1.0, 1.0)
++    hit = lambda x: 0.84 if x < 900 or x >= t_drain else (0.0 if x < t_rewarm else 0.72 if x < we else 0.3)
++    q = lambda x: (0.0 if x < 900 or x >= t_drain else 50.0 + 150.0 * (x - 900) / (t_rewarm - 900) if x < t_rewarm
++                   else 200.0 - 0.033 * (x - t_rewarm) if x < we else max(1.0, 160.0 * (t_drain - x) / (t_drain - we)))
++    h = np.array([hit(x) for x in t])
++    m = pd.DataFrame({"t": t, "vllm:prefix_cache_queries_total": 100.0 * t,
++                      "vllm:prefix_cache_hits_total": np.concatenate([[0.0], np.cumsum(100.0 * h[1:])]),
++                      "vllm:num_requests_waiting": [q(x) for x in t], "vllm:num_requests_running": 10.0,
++                      "vllm:kv_cache_usage_perc": 0.9})
++    return {"dir": Path("x"), "cfg": cfg, "metrics": m, "requests": r, "trigger": pd.DataFrame(),
++            "checks": {"valid": True}}
++
++
++def test_end_window_cold_side_catches_a_late_rewarm(monkeypatch):
++    """Rule F round 2, DK1 (trace T-A): a partial re-warm at λ from 4380 s. `load.verdict` stays `stuck` (no hit climb
++    between its windows, pf 0 in both, the gauge's fall too slow for the 3600 s horizon) and the whole-window cold side
++    holds (0.942 < 1), but the total line shrinks over the last 1200 s at a rate that would empty it within 3600 s.
++    Draft 2 gave `confirms`; with the end window's cold side the label is `stuck_not_cold`. A run cold to the watch's
++    end is unchanged."""
++    cfg = C.burst_cfg(15, 5400.0)
++    monkeypatch.setitem(C.REG24, "seed", 15)
++    monkeypatch.setitem(C.REG24, "drop_s", 5400.0)
++    monkeypatch.setattr(C, "inputs", lambda seed, drop: {"empty_s": {"tokens": 900.0, "tokens_optimistic": 700.0,
++                                                                     "tokens_pessimistic": 1500.0}})
++    run = _late_rewarm_run(cfg, 4380.0)
++    out = C.burst_table(run)
++    v = C.verdict(run)["end"]
++    assert out["v5"] == "stuck" and v["q"] / -v["q_slope"] > 3600.0 and not out["watch_broken"]["broken"]
++    assert out["cold_side"]["holds"] is True and round(out["cold_side"]["c"], 3) == 0.942
++    assert out["cold_side_end"]["window"] == (4980.0, 5580.0) and out["cold_side_end"]["holds"] is False
++    owed = lambda t: G.owed_backlog(run, t)
++    shrink = (owed(4380.0) - owed(5580.0)) / 1200.0
++    assert shrink > 0 and (owed(5580.0) - owed(900.0)) / shrink < 3600.0      # would empty at λ within the horizon
++    assert out["outcome"] == "stuck_not_cold"
++    cold_to_end = C.burst_table(_late_rewarm_run(cfg, 5580.0))
++    assert cold_to_end["cold_side_end"]["holds"] is True and cold_to_end["outcome"] == "confirms"
++    assert set(cold_to_end["owed"]) >= {"drop_end", "min_drop", "t_min_drop_s"}                         # DK2
++    assert cold_to_end["owed"]["min_drop"] <= cold_to_end["owed"]["trigger"]
++    assert cold_to_end["owed"]["t_min_drop_s"] >= cold_to_end["drained_drop_s"]
++
++
++def test_emptyings_are_reg19s_on_reg19s_window():
++    """Rule J (draft 2's ⚠ on "emptying"): `confirm.emptyings` over [burst end, end of arrivals) is `gate.reg19_emptyings`
++    shifted to absolute time, so the two codes are one rule with the window as a parameter."""
++    cfg = C.burst_cfg(15, 5400.0)
++    zeros = [(1500, 1540), (1600, 1620), (2000, 2100), (2110, 2150), (12440, 12480), (12470, 12480)]
++    q = lambda t: 0.0 if t < 900 or any(a <= t < b for a, b in zeros) else 5.0
++    run = _synthetic_run(cfg, q, lambda t: 0.84)
++    end, dur = G.burst_end(run), float(cfg["workload"]["duration_s"])
++    mine = C.emptyings(run, end, dur)
++    assert mine == [end + x for x in G.reg19_emptyings(run)] and mine == [1500.0, 2000.0, 2110.0, 12440.0]
++    # the one difference in use: REG-24's pass ends at the drop's end, so a zero whose 30 s hold would cross it is left out
++    assert C.emptyings(run, end, 12460.0) == [1500.0, 2000.0, 2110.0]
++
++
++def test_table_gives_control_missing_without_a_valid_control(monkeypatch):
++    import analysis.load as L
++    monkeypatch.setattr(L, "find_runs", lambda pat: [])
++    assert C.table()["outcome"] == "control_missing"
