@@ -1,0 +1,7 @@
+# d1.inputs() on a scratch copy of HEAD (47b8e06) with docs/drafts/d1_r1/*.patch applied; configs only, no run folder read.
+# command: PYTHONPATH=. .venv/bin/python -c 'import json; from analysis import d1; print(json.dumps(d1.inputs(), default=str))'
+# at 2026-11-14T02:08:56Z
+{"seeds": [{"seed": 15, "capped_equals_burst": true, "sessions_equal_control": true, "n_session": 8253, "n_burst": 425, "differs": ["name", "workload.sessions.cap"]}, {"seed": 16, "capped_equals_burst": true, "sessions_equal_control": true, "n_session": 8160, "n_burst": 466, "differs": ["name", "workload.sessions.cap"]}, {"seed": 17, "capped_equals_burst": true, "sessions_equal_control": true, "n_session": 8420, "n_burst": 441, "differs": ["name", "workload.sessions.cap"]}, {"seed": 18, "capped_equals_burst": true, "sessions_equal_control": true, "n_session": 8048, "n_burst": 438, "differs": ["name", "workload.sessions.cap"]}, {"seed": 19, "capped_equals_burst": true, "sessions_equal_control": true, "n_session": 8082, "n_burst": 431, "differs": ["name", "workload.sessions.cap"]}]}
+# first_order(cap) for caps 20..40 (prediction only, BELIEF as a model)
+{"20": 0.357, "21": 0.388, "22": 0.42, "23": 0.452, "24": 0.483, "25": 0.515, "26": 0.547, "27": 0.579, "28": 0.61, "29": 0.642, "30": 0.674, "31": 0.705, "32": 0.737, "33": 0.769, "34": 0.8, "35": 0.832, "36": 0.864, "37": 0.896, "38": 0.927, "39": 0.959, "40": 0.991}
+{"think": 8.75, "cap_kv_080": 33.987, "cap_kv_095": 38.718}

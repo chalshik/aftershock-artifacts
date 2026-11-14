@@ -1,0 +1,527 @@
+--- /dev/null
++++ b/analysis/d1.py
+@@ -0,0 +1,524 @@
++"""C2, the session-cap arm: D1 (draft; not registered: docs/drafts/d1_draft1.md). Step D of docs/experiment-plan.md;
++the cap's rule is decisions.md 2026-11-12 [DECISION] (design choices, item 2), the cap itself decisions.md 2026-11-12
++[DECISION] (session cap). Never writes into runs/.
++
++The cap's value for a seed is the highest number of sessions in service at once in that seed's REG-19 control
++(`cap.max_sessions_in_service`; in service: first turn sent to last reply, burst requests excluded). The capped arm is
++REG-19's burst config with `workload.sessions.cap` set to that value, the only change (`config_text`). Burst requests
++are not session chains and pass the cap (harness/loadgen.py), so the trigger is the one REG-19's burst runs had.
++
++Each capped run is read against its own pre-burst baseline [300, 900) s, in the end window [3480, 4080) s of its 3000 s
++watch (`k1.windows`), with the verdict's registered thresholds (configs/stage2_base.yaml, stage2_cap_base.yaml):
++  server side: reuse of later turns (`c2.reuse_in`, at least c2.C2["min_turns"] turns; not the hit counter, whose
++               served mix shifts with first turns, REG-20 review T1) and mean waiting (`load._level` q);
++  client side: the queue of sessions waiting at the cap (`cap_queue`), its mean against its own baseline mean plus
++               recovered_q_excess, and, when above, its slope against drain_horizon_s (as `load.verdict` reads a line);
++  the pool:    mean KV in the end window (`c2.gauge`) against condition 4's min_kv (0.80), which splits a run that stays
++               cold into one whose pool the cap kept below full and one whose pool it did not.
++Labels (`label`), in this order: unclear (a missing baseline pf), bad_baseline, unclear (a missing input),
++recovered, recovered_cap_draining, server_only, rewarming, unclear, stuck_kv_full, stuck_kv_free, unclear.
++The matrix (`outcome`): too_few, refutes, cap_did_not_cut, supports, admission_only, mixed.
++A run whose records show more sessions holding a slot than the cap, or a session waiting at the cap while a slot is free
++in more than max_idle_share of the waiting grid seconds (`slots`, `harness_fault`), is labelled harness_fault and leaves n.
++Readouts, never judged: `load.verdict` of the capped run and of REG-19's uncapped one (percent fast counts turns never
++sent as misses, and the cap's wait is not in latency), per 300 s span after the burst's end (`spans`), the separation
++readout (`load_reading`), the waits (`cap.cap_wait`, before the burst apart), condition 4's levels (`c2.levels`), the
++eviction readout (`c2.eviction_readout`), the shock (`gate.shock_size`), the baseline pair (`gate.reg19_baseline_pair`).
++"""
++from __future__ import annotations
++
++import json
++import math
++from pathlib import Path
++
++import numpy as np
++import yaml
++
++from analysis import cap as capa
++from analysis.c2 import C2, KV, N, gauge, last_burst_end, levels, reuse_in, turn_spacing
++from analysis.k1 import later_turns, mcnemar_one_sided, sessions_in_service, windows
++from analysis.load import _level
++from analysis.margin import is_burst_request
++from analysis.stats import cp_upper
++
++REPO = Path(__file__).resolve().parent.parent
++CONFIGS = REPO / "configs"
++
++D1 = {
++    "seeds": (15, 16, 17, 18, 19),            # REG-19's seeds; run in this order (a rule fixed before any capped run)
++    # REG-19's counted runs (decisions.md 2026-11-13 [RESULT] REG-19, its per-seed table). Seed 18's lost attempt-2
++    # control (20261113-033842_...) is outside every count and is never read here.
++    "controls": {15: "20261112-050920_stage2_control_l1pl350cl_r2.0_w3000_s15",
++                 16: "20261112-073516_stage2_control_l1pl350cl_r2.0_w3000_s16",
++                 17: "20261112-103423_stage2_control_l1pl350cl_r2.0_w3000_s17",
++                 18: "20261113-165516_stage2_control_l1pl350cl_r2.0_w3000_s18",
++                 19: "20261113-192110_stage2_control_l1pl350cl_r2.0_w3000_s19"},
++    "uncapped": {15: "20261112-061951_burst_l1pl350cl_r2.0_w3000_s15",
++                 16: "20261112-084533_burst_l1pl350cl_r2.0_w3000_s16",
++                 17: "20261112-135538_burst_l1pl350cl_r2.0_w3000_s17",
++                 18: "20261113-180511_burst_l1pl350cl_r2.0_w3000_s18",
++                 19: "20261113-203108_burst_l1pl350cl_r2.0_w3000_s19"},
++    "lam": 2.0, "duration_s": 4080.0, "watch_s": 3000.0,
++    "most": 3,                                # REG-18's and REG-19's "most seeds" (3 of 5)
++    "conf": 0.95,                             # one-sided Clopper-Pearson (rule H)
++    "span_s": 300.0, "n_spans": 10,           # readouts: 300 s spans from the burst's end to the watch's end
++    "grid_s": 1.0,                            # the cap queue is read on this grid (the recorder's scrape interval)
++    "max_idle_share": 0.05,                   # harness_fault above this share of waiting grid seconds with a slot free
++                                              # (a hand-over takes milliseconds; a slot that leaks keeps one free for good)
++    "floor_ol": 1.681,                        # req/s, REG-8's open-loop cache-off floor (k2.E0["floor_8"]); readout only
++    "warm_cl": 2.4,                           # req/s, REG-13's closed-loop warm capacity (k2.E0["warm_cl_8"]); readout only
++    # First-order model of the cold state under a cap (`first_order`; prediction only, BELIEF as a model):
++    "x_cold": 1.75,                           # req/s, REG-19's cold completion rate over W, 1.740-1.758 (FILE decisions.md:16533)
++    "gap_s": 5.0,                             # mean think time, configs/gap5_base.yaml (exponential)
++    "kv_per_running": 0.951 / 30.0,           # KV share per running request in the cold state: REG-22 batch 2's end windows
++                                              # (KV 0.950-0.952 at N 29.80-30.29, FILE decisions.md:16752-16756)
++}
++LABELS = ("recovered", "recovered_cap_draining", "server_only", "rewarming", "stuck_kv_full", "stuck_kv_free",
++          "bad_baseline", "unclear")
++CUT = ("recovered", "recovered_cap_draining")       # the server warm and the cap's queue back to (or draining to) its base
++
++
++def config_name(seed: int) -> str:
++    return f"burst_l1pl350cl_r2.0_w3000_s{seed}_cap"
++
++
++def run_pattern(seed: int) -> str:
++    """The capped runs' folders. It matches none of the patterns REG-19, REG-20, REG-21, REG-22 or E1 select or seal
++    (tests/test_d1.py), since the name ends in `_cap`."""
++    return f"*_{config_name(seed)}"
++
++
++# ---------------------------------------------------------------- the cap's value (registered computation, once)
++
++def _check_control(r: dict, seed: int) -> None:
++    c, name = r["cfg"], r["dir"].name
++    if not (r["checks"] and r["checks"]["valid"]):
++        raise ValueError(f"{name}: not valid")
++    wl = c["workload"]
++    ses = wl.get("sessions") or {}
++    bad = {"seed": c["seed"] != seed, "name": c["name"] != f"stage2_control_l1pl350cl_r2.0_w3000_s{seed}",
++           "trigger": c.get("trigger") is not None, "closed_loop": ses.get("closed_loop") is not True,
++           "cap": ses.get("cap") is not None, "rate": float(wl["rate"]) != D1["lam"],
++           "duration": float(wl["duration_s"]) != D1["duration_s"]}
++    if any(bad.values()):
++        raise ValueError(f"{name}: not REG-19's seed-{seed} control: {[k for k, v in bad.items() if v]}")
++
++
++def control_run(seed: int) -> dict:
++    from analysis.load import RUNS, load_run
++    r = load_run(RUNS / D1["controls"][seed])
++    _check_control(r, seed)
++    return r
++
++
++def in_service_steps(run: dict) -> tuple[np.ndarray, np.ndarray]:
++    """The in-service count after each event, events in time order with ends before starts at equal times (the same
++    sweep as `cap.max_sessions_in_service`)."""
++    start, done = capa._intervals(run)
++    t = np.concatenate([start, done])
++    step = np.concatenate([np.ones(len(start)), -np.ones(len(done))])
++    order = np.lexsort((step, t))
++    return t[order], np.cumsum(step[order])
++
++
++def peak(run: dict, before: float) -> dict:
++    """The peak (= `cap.max_sessions_in_service`), the first time it is reached, and the peak over [0, before)."""
++    t, n = in_service_steps(run)
++    if not len(t):
++        return {"value": 0, "t_first": math.nan, "before": 0}
++    i = int(np.argmax(n))
++    pre = n[t < before]
++    return {"value": int(n[i]), "t_first": float(t[i]), "before": int(pre.max()) if len(pre) else 0}
++
++
++def cap_value(control: dict) -> int:
++    v = capa.max_sessions_in_service(control)
++    if v < 1:
++        raise ValueError(f"{control['dir'].name}: no session in service, no cap")
++    return v
++
++
++def first_order(cap: int) -> dict:
++    """Prediction only (BELIEF as a model): a cold server saturated at x_cold under a binding cap holds x_cold * gap_s
++    sessions in think time (Little's law on that stage), so at most cap - x_cold * gap_s requests are in flight; at the
++    cold state's KV per running request that bounds KV. Returns the bound and the caps at which it reaches 0.80 / 0.95."""
++    think = D1["x_cold"] * D1["gap_s"]
++    kv = max(0.0, cap - think) * D1["kv_per_running"]
++    return {"think": think, "in_flight_max": max(0.0, cap - think), "kv_max": kv,
++            "cap_kv_080": think + C2["min_kv"] / D1["kv_per_running"], "cap_kv_095": think + 0.95 / D1["kv_per_running"]}
++
++
++def cap_values() -> dict:
++    """D1's registered computation on REG-19's five controls, run once after D1's [REG]: per seed the cap, when the
++    control first reached it, its peak before the burst's start (900 s), its mean sessions in service over the baseline,
++    and the first-order KV bound at that cap (a prediction readout). The last key, `caps`, feeds `write_configs`."""
++    at = float(_burst_cfg(D1["seeds"][0])["trigger"]["at_s"])
++    rows = []
++    for sd in D1["seeds"]:
++        r = control_run(sd)
++        p = peak(r, at)
++        if p["value"] != cap_value(r):
++            raise AssertionError("peak and cap.max_sessions_in_service disagree")
++        rows.append({"seed": sd, "control": r["dir"].name, "cap": p["value"], "t_peak": p["t_first"],
++                     "peak_before_burst": p["before"], "mean_in_service_baseline": sessions_in_service(r, at - 600, at),
++                     "first_order": first_order(p["value"])})
++    return {"rows": rows, "caps": {r["seed"]: r["cap"] for r in rows}}
++
++
++# ---------------------------------------------------------------- the five capped configs
++
++def _burst_cfg(seed: int) -> dict:
++    from harness.config import load_config, with_defaults
++    from harness.run import expand
++    return expand(with_defaults(load_config(CONFIGS / f"burst_l1pl350cl_r2.0_w3000_s{seed}.yaml")))[0]
++
++
++def config_text(seed: int, cap: int) -> str:
++    if seed not in D1["seeds"]:
++        raise ValueError(f"seed {seed} is not one of REG-19's")
++    if not isinstance(cap, int) or isinstance(cap, bool) or cap < 1:
++        raise ValueError(f"cap must be a positive integer, got {cap!r}")
++    return (f"# D1 (docs/decisions.md [REG] D1): REG-19's burst run at seed {seed} with the session cap on, the only change.\n"
++            f"# cap = the highest number of sessions in service at once in seed {seed}'s REG-19 control\n"
++            f"# {D1['controls'][seed]} (d1.cap_values, computed once after D1's [REG]).\n"
++            f"# Written by `python -m analysis.d1 configs <caps file>`. Needs the approval of D1 to run.\n"
++            f"extends: burst_l1pl350cl_r2.0_w3000_s{seed}.yaml\n"
++            f"name: {config_name(seed)}\n"
++            f"workload:\n"
++            f"  sessions:\n"
++            f"    cap: {cap}\n")
++
++
++def resolved(seed: int, cap: int) -> dict:
++    """The resolved config `config_text(seed, cap)` gives, without writing it (its parent is resolved from configs/)."""
++    from harness.config import _merge, load_config, with_defaults
++    from harness.run import expand
++    raw = yaml.safe_load(config_text(seed, cap))
++    parent = raw.pop("extends")
++    return expand(with_defaults(_merge(load_config(CONFIGS / parent), raw)))[0]
++
++
++def write_configs(caps: dict, configs_dir: Path | None = None) -> list[Path]:
++    """Writes the five capped configs as new files; refuses if any exists (a used config is never edited)."""
++    d = configs_dir or CONFIGS
++    caps = {int(k): v for k, v in caps.items()}
++    if sorted(caps) != sorted(D1["seeds"]):
++        raise ValueError(f"need a cap for each of seeds {D1['seeds']}, got {sorted(caps)}")
++    paths = [d / f"{config_name(sd)}.yaml" for sd in D1["seeds"]]
++    if any(p.exists() for p in paths):
++        raise FileExistsError([str(p) for p in paths if p.exists()])
++    texts = [config_text(sd, caps[sd]) for sd in D1["seeds"]]
++    for p, txt in zip(paths, texts):
++        p.write_text(txt)
++    return paths
++
++
++def caps_from_file(path: Path) -> dict:
++    """The `caps` of the last JSON line of a saved `cap_values` output."""
++    lines = [ln for ln in Path(path).read_text().splitlines() if ln.strip().startswith("{")]
++    return {int(k): int(v) for k, v in json.loads(lines[-1])["caps"].items()}
++
++
++def inputs() -> dict:
++    """Design inputs from the configs alone (no run): per seed, whether the capped config's planned schedule equals
++    REG-19's burst config's row for row (the cap is not read by the schedule) and its session rows the control's; the
++    resolved keys in which the capped config differs from REG-19's burst config (with a placeholder cap)."""
++    from harness.workload import build_schedule
++    from harness.config import load_config, with_defaults
++    from harness.run import expand
++    out = []
++    for sd in D1["seeds"]:
++        b, k = _burst_cfg(sd), resolved(sd, 1)
++        c = expand(with_defaults(load_config(CONFIGS / f"stage2_control_l1pl350cl_r2.0_w3000_s{sd}.yaml")))[0]
++        sb, _ = build_schedule(b["workload"], b["seed"], b["trigger"])
++        sk, _ = build_schedule(k["workload"], k["seed"], k["trigger"])
++        sc, _ = build_schedule(c["workload"], c["seed"], c.get("trigger"))
++        s = sk[~sk.burst].reset_index(drop=True)
++        out.append({"seed": sd, "capped_equals_burst": bool(sb.equals(sk)),
++                    "sessions_equal_control": bool(len(s) == len(sc) and (s.t_planned.values == sc.t_planned.values).all()
++                                                   and (s.prompt_len.values == sc.prompt_len.values).all()),
++                    "n_session": int(len(s)), "n_burst": int(sk.burst.sum()), "differs": _diff_keys(b, k)})
++    return {"seeds": out}
++
++
++def _flat(d: dict, p: str = "") -> dict:
++    out = {}
++    for key, v in d.items():
++        out.update(_flat(v, f"{p}{key}.")) if isinstance(v, dict) else out.__setitem__(f"{p}{key}", v)
++    return out
++
++
++def _diff_keys(a: dict, b: dict) -> list[str]:
++    fa, fb = _flat(a), _flat(b)
++    return sorted(k for k in set(fa) | set(fb) if fa.get(k) != fb.get(k))
++
++
++# ---------------------------------------------------------------- readouts of one capped run
++
++def cap_queue(run: dict, t: np.ndarray) -> np.ndarray:
++    """Sessions waiting at the cap at each time t: turn 0 (no burst row) with t_arrived <= t < t_admitted; a session
++    never admitted waits to the end of the record. NaN everywhere if the run has no `t_arrived` (no cap)."""
++    q = run["requests"]
++    t = np.asarray(t, float)
++    if "t_arrived" not in q:
++        return np.full(len(t), np.nan)
++    s = q[(q.turn == 0) & q.t_arrived.notna() & ~is_burst_request(run)]
++    arr = np.sort(s.t_arrived.to_numpy(float))
++    adm = s.t_admitted.to_numpy(float) if "t_admitted" in s else np.full(len(s), np.nan)
++    adm = np.sort(np.where(np.isnan(adm), np.inf, adm))
++    return (np.searchsorted(arr, t, side="right") - np.searchsorted(adm, t, side="right")).astype(float)
++
++
++def cap_queue_level(run: dict, a: float, b: float) -> dict:
++    """Mean and least-squares slope (sessions/s) of the cap's queue on a grid over [a, b)."""
++    g = np.arange(a, b, D1["grid_s"])
++    x = cap_queue(run, g)
++    if not len(g) or np.isnan(x).any():
++        return {"mean": math.nan, "slope": math.nan}
++    return {"mean": float(x.mean()), "slope": float(np.polyfit(g, x, 1)[0]) if len(g) >= 2 else math.nan}
++
++
++def label(run: dict) -> dict:
++    """D1's label for one capped run (module docstring), with the values it used."""
++    v, w = run["cfg"]["verdict"], windows(run["cfg"])
++    (b0, b1), (e0, e1) = w["base"], w["end"]
++    prev = (e0 - float(v["end_s"]), e0)
++    turns = later_turns(run)
++    ru = {"base": reuse_in(turns, b0, b1, C2["min_turns"]), "prev": reuse_in(turns, *prev, C2["min_turns"]),
++          "end": reuse_in(turns, e0, e1, C2["min_turns"])}
++    lb, le = _level(run, b0, b1), _level(run, e0, e1)
++    cq = {"base": cap_queue_level(run, b0, b1), "end": cap_queue_level(run, e0, e1)}
++    kv_end = gauge(run, KV, e0, e1)
++    vals = {"reuse": ru, "q": {"base": lb["q"], "end": le["q"]}, "pf": {"base": lb["pf"], "end": le["pf"]},
++            "hit": {"base": lb["hit"], "end": le["hit"]}, "cap_queue": cq, "kv_end": kv_end, "windows": w}
++    nan = lambda *x: any(isinstance(y, float) and math.isnan(y) for y in x)
++    if nan(lb["pf"]):
++        lab = "unclear"
++    elif lb["pf"] < v["min_baseline_pf"]:
++        lab = "bad_baseline"
++    elif nan(ru["base"], ru["end"], lb["q"], le["q"], cq["base"]["mean"], cq["end"]["mean"]):
++        lab = "unclear"
++    elif ru["end"] >= ru["base"] - v["recovered_hit_drop"] and le["q"] <= lb["q"] + v["recovered_q_excess"]:
++        c_end, c_base, sl = cq["end"]["mean"], cq["base"]["mean"], cq["end"]["slope"]
++        if c_end <= c_base + v["recovered_q_excess"]:
++            lab = "recovered"
++        elif nan(sl):
++            lab = "unclear"
++        elif sl < 0 and c_end / -sl <= v["drain_horizon_s"]:
++            lab = "recovered_cap_draining"
++        else:
++            lab = "server_only"
++    elif nan(ru["prev"]):
++        lab = "unclear"            # a climb cannot be ruled out
++    elif ru["end"] - ru["prev"] >= v["hit_climb"]:
++        lab = "rewarming"
++    elif ru["end"] <= ru["base"] - v["stuck_hit_drop"]:
++        lab = "unclear" if nan(kv_end) else ("stuck_kv_full" if kv_end >= C2["min_kv"] else "stuck_kv_free")
++    else:
++        lab = "unclear"
++    return {"label": lab, **vals}
++
++
++def server_rate(run: dict, a: float, b: float) -> float:
++    """Requests (session and burst) sent to the server per second in [a, b), by t_sent: the load the server was offered."""
++    q = run["requests"]
++    return float(((q.t_sent >= a) & (q.t_sent < b)).sum() / (b - a))
++
++
++def spans(run: dict) -> list[dict]:
++    """Reported, never judged: per 300 s span from the burst's end, reuse (min turns), the server-side arrival rate,
++    completions, waiting, N and KV (`c2.gauge`), the cap's queue, sessions in service, turn spacing."""
++    from analysis.gate import burst_end, completion_rate
++    end, out = burst_end(run), []
++    for i in range(D1["n_spans"]):
++        a, b = end + i * D1["span_s"], end + (i + 1) * D1["span_s"]
++        out.append({"span": (a, b), "reuse": reuse_in(later_turns(run), a, b, C2["min_turns"]),
++                    "server_rate": server_rate(run, a, b), "completion_rate": completion_rate(run, a, b),
++                    "waiting": gauge(run, "vllm:num_requests_waiting", a, b), "n": gauge(run, N, a, b),
++                    "kv": gauge(run, KV, a, b), "cap_queue": cap_queue_level(run, a, b)["mean"],
++                    "in_service": sessions_in_service(run, a, b), "turn_spacing": turn_spacing(run, a, b)})
++    return out
++
++
++def load_reading(capped_spans: list[dict], uncapped_spans: list[dict] | None, base_reuse: float, rules: dict) -> dict:
++    """Reported, never judged (the separation readout). Over the spans from the burst's end up to the first span whose
++    reuse is back within recovered_hit_drop of the baseline: the cold spans (reuse <= baseline - stuck_hit_drop), and in
++    each the server-side arrival rate against the open-loop floor and against the same seed's uncapped REG-19 burst run
++    in the same span. `reading`: never_cold (no cold span before the re-warm), no_rewarm, in_window (the server was
++    offered at least the open-loop floor in every cold span before the re-warm), below_floor, or undefined (NaN)."""
++    if math.isnan(base_reuse):
++        return {"reading": "undefined", "rewarm_span": None, "cold": []}
++    up = uncapped_spans or [None] * len(capped_spans)
++    rew = next((i for i, s in enumerate(capped_spans)
++                if not math.isnan(s["reuse"]) and s["reuse"] >= base_reuse - rules["recovered_hit_drop"]), None)
++    upto = capped_spans if rew is None else capped_spans[:rew]
++    if any(math.isnan(s["reuse"]) for s in upto):
++        return {"reading": "undefined", "rewarm_span": rew, "cold": []}
++    cold = [{"span": s.get("span"), "server_rate": s["server_rate"],
++             "uncapped_server_rate": None if u is None else u["server_rate"],
++             "below_floor": s["server_rate"] < D1["floor_ol"]}
++            for s, u in zip(upto, up) if s["reuse"] <= base_reuse - rules["stuck_hit_drop"]]
++    if rew is None:
++        reading = "no_rewarm"
++    elif not cold:
++        reading = "never_cold"
++    else:
++        reading = "below_floor" if any(c["below_floor"] for c in cold) else "in_window"
++    return {"reading": reading, "rewarm_span": rew, "cold": cold}
++
++
++def slots(run: dict, cap: int) -> dict:
++    """The cap's invariant, read from the records: sessions holding a slot (from admission, else first send, to the
++    last reply) never exceed the cap (`max_held`, exact); and, reported only, the share of grid seconds with a session
++    waiting at the cap while a slot was free (`idle_share`; a hand-over takes milliseconds, so not exactly 0)."""
++    q = run["requests"]
++    q = q[~is_burst_request(run)]
++    g = q.groupby("session_id")
++    t0 = q[q.turn == 0].set_index("session_id")
++    held_from = (t0.t_admitted if "t_admitted" in t0 else t0.t_sent).fillna(t0.t_sent)
++    done = g.t_end.max().where(g.t_end.apply(lambda s: s.notna().all()), np.inf)
++    start = held_from.reindex(done.index)
++    keep = start.notna()
++    s, d = start[keep].to_numpy(float), done[keep].to_numpy(float)
++    t = np.concatenate([s, d])
++    step = np.concatenate([np.ones(len(s)), -np.ones(len(d))])
++    order = np.lexsort((step, t))
++    max_held = int(np.cumsum(step[order]).max()) if len(t) else 0
++    grid = np.arange(0.0, float(run["cfg"]["workload"]["duration_s"]), D1["grid_s"])
++    held = np.searchsorted(np.sort(s), grid, side="right") - np.searchsorted(np.sort(d), grid, side="right")
++    waiting = cap_queue(run, grid)
++    busy = waiting > 0
++    return {"cap": cap, "max_held": max_held, "holds": max_held <= cap,
++            "idle_share": float(((held < cap) & busy).sum() / busy.sum()) if busy.any() else 0.0}
++
++
++def harness_fault(sl: dict) -> bool:
++    """The cap did not do what harness/loadgen.py says: more sessions held a slot than the cap, or sessions waited at
++    the cap while a slot stood free (a leaked slot). Read from the records; `slots` output."""
++    return (not sl["holds"]) or sl["idle_share"] > D1["max_idle_share"]
++
++
++def waits(run: dict) -> dict:
++    """`cap.cap_wait` over all sessions, and apart for the sessions that reached the cap before the burst's start."""
++    q = run["requests"]
++    at = float(run["cfg"]["trigger"]["at_s"])
++    pre = {**run, "requests": q[~((q.turn == 0) & q.t_arrived.notna() & (q.t_arrived >= at))]} if "t_arrived" in q else run
++    return {"all": capa.cap_wait(run), "before_burst": capa.cap_wait(pre)}
++
++
++# ---------------------------------------------------------------- the result
++
++def _check_capped(r: dict, seed: int, cap: int) -> None:
++    name = r["dir"].name
++    if not (r["checks"] and r["checks"]["valid"]):
++        raise ValueError(f"{name}: not valid")
++    got = {k: v for k, v in r["cfg"].items() if k not in ("run_id", "source_config")}
++    diff = _diff_keys(got, resolved(seed, cap))
++    if diff:
++        raise ValueError(f"{name}: config differs from D1's at {diff}")
++
++
++def capped_run(seed: int, cap: int) -> dict:
++    from analysis.gate import reg12_only
++    from analysis.load import find_runs
++    r = reg12_only(find_runs(run_pattern(seed)), run_pattern(seed))
++    _check_capped(r, seed, cap)
++    return r
++
++
++def row(seed: int) -> dict:
++    """One seed: the cap from its control, the one valid capped run, its label and readouts, and REG-19's uncapped
++    burst run's spans for the separation readout."""
++    from analysis.gate import reg19_baseline_pair, shock_size
++    from analysis.c2 import eviction_readout
++    from analysis.load import RUNS, load_run, verdict
++    control = control_run(seed)
++    cap = cap_value(control)
++    run = capped_run(seed, cap)
++    un = load_run(RUNS / D1["uncapped"][seed])
++    lab = label(run)
++    sp, sp_un = spans(run), spans(un)
++    sl = slots(run, cap)
++    return {"seed": seed, "cap": cap, "run": run["dir"].name, "control": control["dir"].name, "uncapped": un["dir"].name,
++            "label": "harness_fault" if harness_fault(sl) else lab["label"], "label_values": lab,
++            "verdict": verdict(run)["verdict"], "verdict_uncapped": verdict(un)["verdict"],
++            "load_reading": load_reading(sp, sp_un, lab["reuse"]["base"], run["cfg"]["verdict"]),
++            "spans": sp, "uncapped_spans": sp_un, "slots": sl, "waits": waits(run),
++            "exit": last_burst_end(run), "exit_uncapped": last_burst_end(un),
++            "levels": levels(run), "shock": shock_size(run), "shock_uncapped": shock_size(un),
++            "baseline_pair": reg19_baseline_pair(control, run), "eviction": eviction_readout(run)}
++
++
++def outcome(labels: list[str], n_seeds: int | None = None) -> dict:
++    """The registered decision on the labels of the valid capped runs (one per seed run). `harness_fault` leaves n and
++    is listed. Rules, in this order: too_few (n < most) -> refutes (stuck_kv_free >= most) -> cap_did_not_cut
++    (stuck_kv_full >= most) -> supports (no stuck label at all and recovered + recovered_cap_draining >= most) ->
++    admission_only (server_only >= most) -> mixed. Bounds: one-sided Clopper-Pearson upper bounds (rule H) on the share
++    stuck under the cap and on the share cut, and the lower bound on the share cut; McNemar's exact one-sided p with
++    the cut seeds as discordant pairs against REG-19's 5 of 5 stuck (readout, never judged); `k_cut_server_side`, the
++    count with server_only taken as cut (the owner's rule read on the server side alone; readout, never judged)."""
++    kept = [lab for lab in labels if lab != "harness_fault"]
++    n = len(kept)
++    k_cut = sum(lab in CUT for lab in kept)
++    k_free, k_full = kept.count("stuck_kv_free"), kept.count("stuck_kv_full")
++    k_stuck, k_srv = k_free + k_full, kept.count("server_only")
++    most = D1["most"]
++    if n < most:
++        dec = "too_few"
++    elif k_free >= most:
++        dec = "refutes"
++    elif k_full >= most:
++        dec = "cap_did_not_cut"
++    elif k_stuck == 0 and k_cut >= most:
++        dec = "supports"
++    elif k_srv >= most:
++        dec = "admission_only"
++    else:
++        dec = "mixed"
++    ub = (lambda k: cp_upper(k, n, D1["conf"])) if n else (lambda k: math.nan)
++    return {"decision": dec, "n": n, "n_seeds": len(labels) if n_seeds is None else n_seeds,
++            "harness_faults": len(labels) - n, "k_cut": k_cut, "k_stuck": k_stuck, "k_stuck_kv_free": k_free,
++            "k_stuck_kv_full": k_full, "k_server_only": k_srv,
++            # readout, never judged: the owner's rule read on the server side alone (decisions.md 2026-11-12, item 2:
++            # "judged on the server's hit rate and waiting line"), under which server_only would count as cut
++            "k_cut_server_side": k_cut + k_srv,
++            "cp_upper_stuck": ub(k_stuck), "cp_upper_cut": ub(k_cut), "cp_lower_cut": _cp_lower(k_cut, n),
++            "mcnemar_p": mcnemar_one_sided(k_cut, 0) if n else math.nan,
++            "counts": {lab: kept.count(lab) for lab in sorted(set(kept))}}
++
++
++def _cp_lower(k: int, n: int) -> float:
++    """One-sided 95 % Clopper-Pearson lower bound, as 1 - cp_upper(n - k, n)."""
++    return math.nan if not n else 1.0 - cp_upper(n - k, n, D1["conf"])
++
++
++def table() -> dict:
++    """D1's result: one row per seed with a valid capped run, in D1's order, then `outcome`. A seed with no valid run
++    (attempts spent, or the stopping rule ended D1 first) is listed in `not_run`."""
++    from analysis.load import find_runs
++    rows, not_run = [], []
++    for sd in D1["seeds"]:
++        if not find_runs(run_pattern(sd)):
++            not_run.append(sd)
++            continue
++        rows.append(row(sd))
++    dec = outcome([r["label"] for r in rows], n_seeds=len(D1["seeds"]))
++    return {**dec, "not_run": not_run, "rows": rows}
++
++
++if __name__ == "__main__":
++    import sys
++    cmd = sys.argv[1]
++    if cmd == "caps":
++        res = cap_values()
++        for r in res["rows"]:
++            print(json.dumps(r, default=str))
++        print(json.dumps({"caps": res["caps"]}))
++    elif cmd == "configs":
++        print([str(p) for p in write_configs(caps_from_file(Path(sys.argv[2])))])
++    elif cmd == "inputs":
++        print(json.dumps(inputs(), default=str))
++    elif cmd == "d1":
++        print(json.dumps(table(), default=str))
++    else:
++        raise SystemExit("usage: python -m analysis.d1 caps | configs <caps file> | inputs | d1")

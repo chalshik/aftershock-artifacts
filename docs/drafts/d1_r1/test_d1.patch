@@ -1,0 +1,326 @@
+--- /dev/null
++++ b/tests/test_d1.py
+@@ -0,0 +1,323 @@
++"""analysis/d1.py (D1 draft, C2's session-cap arm) on configs and synthetic runs only; one end-to-end pair against
++tests/fake_vllm.py. No test reads runs/."""
++import fnmatch
++import json
++import math
++from pathlib import Path
++
++import numpy as np
++import pandas as pd
++import pytest
++
++import analysis.d1 as D
++from analysis import cap as capa
++from analysis import withheld as W
++
++VERDICT = {"baseline_s": 600, "watch_s": 3000, "end_s": 600, "min_baseline_pf": 0.98, "recovered_pf_drop": 0.02,
++           "recovered_hit_drop": 0.06, "recovered_q_excess": 1.0, "stuck_pf_drop": 0.10, "stuck_hit_drop": 0.06,
++           "pf_climb": 0.05, "hit_climb": 0.06, "drain_horizon_s": 3600}
++
++
++def make_run(reuse_after=1.0, q_after=0.0, kv_after=0.5, wait=lambda t: 0.0, hit_after=None, base_pf=1.0,
++             reuse_prev=None, gauge_gap=None):
++    """Sessions start every 4 s (0.25/s), 8 turns 5 s apart (2 req/s); before the burst's end (1080 s) every later turn
++    reuses its whole previous prompt; after it, `reuse_after` (`reuse_prev` in the previous window [2880, 3480) if
++    given). Turn 0 of the session arriving at t waits `wait(t)` s at the cap (np.inf: never admitted). Server: hit 0.8,
++    no line, KV 0.5 before; after, `hit_after` (default reuse_after), `q_after`, `kv_after`."""
++    t = np.arange(0.0, 4081.0)
++    after = t >= 1080
++    h = reuse_after if hit_after is None else hit_after
++    m = pd.DataFrame({"t": t, "vllm:prefix_cache_hits_total": np.cumsum(np.where(after, 100 * h, 80.0)),
++                      "vllm:prefix_cache_queries_total": 100.0 * (t + 1),
++                      "vllm:num_requests_waiting": np.where(after, q_after, 0.0), "vllm:num_requests_running": 20.0,
++                      "vllm:kv_cache_usage_perc": np.where(after, kv_after, 0.5)})
++    if gauge_gap is not None:
++        m.loc[(m.t > gauge_gap[0]) & (m.t < gauge_gap[1]), "vllm:kv_cache_usage_perc"] = np.nan
++    rows, rid = [], 0
++    for sid, t0 in enumerate(np.arange(0.0, 4040.0, 4.0)):
++        w = wait(t0)
++        for k in range(8):
++            ts = t0 + 5 * k
++            prev = 2176 + 256 * (k - 1)
++            share = 1.0 if ts + 0.3 < 1080 else (reuse_prev if reuse_prev is not None and 2880 <= ts + 0.3 < 3480
++                                                  else reuse_after)
++            ok = not (ts < 900 and rid % 10 == 0 and base_pf < 1.0)
++            r = {"request_id": rid, "session_id": sid, "turn": k, "t_planned": ts, "t_sent": ts, "t_first_token": ts + 0.3,
++                 "t_end": ts + 2.0, "status": "ok", "ttft": 0.3 if ok else 5.0, "prompt_tokens": 2176 + 256 * k,
++                 "prompt_tokens_planned": 2176 + 256 * k, "cached_tokens": 0 if k == 0 else int(share * prev)}
++            if k == 0:
++                r["t_arrived"], r["t_admitted"] = t0, (np.nan if np.isinf(w) else t0 + w)
++            rows.append(r)
++            rid += 1
++    cfg = {"trigger": {"kind": "burst", "at_s": 900, "duration_s": 180, "prompt_tokens": 2944}, "verdict": VERDICT,
++           "slo": {"ttft_s": 1.0}, "checks": {"max_scrape_gap_s": 2.0}, "workload": {"duration_s": 4080}}
++    return {"cfg": cfg, "metrics": m, "requests": pd.DataFrame(rows), "dir": Path("synthetic")}
++
++
++# ---------------------------------------------------------------- configs (no run)
++
++def test_capped_config_is_reg19s_burst_config_with_the_cap_alone():
++    for sd in D.D1["seeds"]:
++        assert D._diff_keys(D._burst_cfg(sd), D.resolved(sd, 27)) == ["name", "workload.sessions.cap"]
++        k = D.resolved(sd, 27)
++        assert k["name"] == D.config_name(sd) and k["workload"]["sessions"]["cap"] == 27 and k["seed"] == sd
++        assert k["workload"]["sessions"]["closed_loop"] is True and k["trigger"]["kind"] == "burst"
++
++
++def test_capped_schedule_equals_the_burst_runs_and_its_sessions_the_controls():
++    rows = D.inputs()["seeds"]
++    assert [r["seed"] for r in rows] == list(D.D1["seeds"])
++    assert all(r["capped_equals_burst"] and r["sessions_equal_control"] for r in rows)
++    assert all(r["differs"] == ["name", "workload.sessions.cap"] for r in rows)
++
++
++@pytest.mark.parametrize("seed, cap", [(14, 20), (15, 0), (15, -3), (15, 2.5), (15, True), (15, "20")])
++def test_config_text_refuses_other_seeds_and_bad_caps(seed, cap):
++    with pytest.raises(ValueError):
++        D.config_text(seed, cap)
++
++
++def test_write_configs_writes_new_files_only(tmp_path):
++    caps = {15: 26, 16: 25, 17: 28, 18: 24, 19: 27}
++    f = tmp_path / "caps.txt"
++    f.write_text('{"seed": 15, "cap": 26}\n' + json.dumps({"caps": {str(k): v for k, v in caps.items()}}) + "\n")
++    assert D.caps_from_file(f) == caps
++    paths = D.write_configs(D.caps_from_file(f), tmp_path)
++    assert [p.name for p in paths] == [f"burst_l1pl350cl_r2.0_w3000_s{s}_cap.yaml" for s in D.D1["seeds"]]
++    assert [p.read_text() for p in paths] == [D.config_text(s, caps[s]) for s in D.D1["seeds"]]
++    with pytest.raises(FileExistsError):
++        D.write_configs(caps, tmp_path)
++    with pytest.raises(ValueError):
++        D.write_configs({15: 26}, tmp_path / "x")
++
++
++def test_the_capped_folders_match_no_other_registrations_pattern():
++    from analysis import gate, k1, k3, k3w
++    names = [f"20261120-000000_{D.config_name(s)}" for s in D.D1["seeds"]]
++    others = ([gate.reg19_spec(s)[k] for s in D.D1["seeds"] for k in ("control", "burst")]
++              + [k1.closed_pattern(s) for s in D.D1["seeds"]] + [k1.open_pattern(2.0, s) for s in D.D1["seeds"]]
++              + [k3.REG21["batch2_pattern"], k3w.REG21["batch2_pattern"]] + [p for reg, p, _ in W.SEALS if reg != "D1"])
++    assert not [(n, p) for n in names for p in others if fnmatch.fnmatchcase(n, p)]
++    assert all(fnmatch.fnmatchcase(n, D.run_pattern(s)) for n, s in zip(names, D.D1["seeds"]))
++    for sd, name in D.D1["controls"].items():                                 # REG-19's ten are not D1's
++        assert not fnmatch.fnmatchcase(name, D.run_pattern(sd))
++        assert not fnmatch.fnmatchcase(D.D1["uncapped"][sd], D.run_pattern(sd))
++
++
++def test_d1_seal_covers_its_five_names_and_lifts_on_its_result(tmp_path, monkeypatch):
++    d = tmp_path / "decisions.md"
++    d.write_text("## 2026-11-14 · [REG] D1: draft\n- names [RESULT] D1 in a body line\n## 2026-11-15 · [RESULT] D10: x\n")
++    monkeypatch.setattr(W, "DECISIONS", d)
++    monkeypatch.delenv("AFTERSHOCK_UNSEAL", raising=False)
++    names = [f"20261120-000000_{D.config_name(s)}" for s in D.D1["seeds"]]
++    assert [W.sealed_by(n) for n in names] == ["D1"] * 5
++    assert W.sealed_by("20261120-000000_burst_l1pl350cl_r2.0_w3000_s14_cap") is None
++    assert W.sealed_by("20261112-061951_burst_l1pl350cl_r2.0_w3000_s15") != "D1"
++    monkeypatch.setenv("AFTERSHOCK_UNSEAL", "D1")
++    assert W.sealed_by(names[0]) is None
++    monkeypatch.delenv("AFTERSHOCK_UNSEAL")
++    d.write_text(d.read_text() + "## 2026-11-16 · [RESULT] D1: supports, 5 of 5\n")
++    assert W.sealed_by(names[0]) is None
++
++
++def test_pinned_runs_are_reg19s_counted_ten():
++    assert D.D1["seeds"] == (15, 16, 17, 18, 19)
++    for sd in D.D1["seeds"]:
++        assert D.D1["controls"][sd].endswith(f"_stage2_control_l1pl350cl_r2.0_w3000_s{sd}")
++        assert D.D1["uncapped"][sd].endswith(f"_burst_l1pl350cl_r2.0_w3000_s{sd}")
++    assert D.D1["controls"][18] == "20261113-165516_stage2_control_l1pl350cl_r2.0_w3000_s18"   # attempt 3, not 2
++
++
++def test_constants_are_the_ones_on_record():
++    from analysis.k2 import E0
++    from analysis.c2 import C2
++    assert D.D1["floor_ol"] == E0["floor_8"] and D.D1["warm_cl"] == E0["warm_cl_8"] and C2["min_kv"] == 0.80
++
++
++def test_first_order_bound():
++    f = D.first_order(26)
++    assert f["think"] == pytest.approx(8.75) and f["kv_max"] == pytest.approx((26 - 8.75) * 0.951 / 30)
++    assert f["cap_kv_080"] == pytest.approx(8.75 + 0.80 * 30 / 0.951) and 33.9 < f["cap_kv_080"] < 34.1
++    assert 38.6 < f["cap_kv_095"] < 38.8 and D.first_order(5)["kv_max"] == 0.0
++
++
++# ---------------------------------------------------------------- the cap's value
++
++def _q(rows):
++    q = pd.DataFrame(rows, columns=["request_id", "session_id", "turn", "t_sent", "t_end", "t_arrived", "t_admitted"])
++    q["prompt_tokens_planned"] = np.where(q.session_id >= 90, 64, 2176)
++    return {"requests": q, "cfg": {"trigger": {"kind": "burst", "at_s": 10.0, "prompt_tokens": 64},
++                                   "workload": {"duration_s": 20.0}}, "dir": Path("synthetic")}
++
++
++SMALL = _q([[1, 0, 0, 0.0, 1.0, 0.0, 0.0], [2, 0, 1, 2.0, 3.0, None, None],     # session 0: [0, 3)
++            [3, 1, 0, 1.0, 2.0, 1.0, 1.0], [4, 1, 1, 3.0, 4.0, None, None],     # session 1: [1, 4)
++            [5, 2, 0, 2.5, None, 2.5, 2.5],                                     # session 2: [2.5, inf)
++            [6, 3, 0, 12.0, 12.5, 11.0, 12.0],                                  # session 3: waited 1 s, [12, 12.5)
++            [7, 4, 0, None, None, 12.2, None],                                  # session 4: never admitted
++            [8, 90, 0, 1.5, 1.6, None, None]])                                  # a burst request
++
++
++def test_peak_is_cap_max_with_its_time_and_the_pre_burst_peak():
++    p = D.peak(SMALL, before=10.0)
++    assert p["value"] == capa.max_sessions_in_service(SMALL) == 3 and p["t_first"] == 2.5 and p["before"] == 3
++    assert D.peak(SMALL, before=2.0)["before"] == 2
++
++
++def test_cap_value_refuses_a_run_without_sessions():
++    empty = _q([[8, 90, 0, 1.5, 1.6, None, None]])
++    with pytest.raises(ValueError):
++        D.cap_value(empty)
++
++
++def test_cap_queue_counts_sessions_between_arrival_and_admission():
++    x = D.cap_queue(SMALL, np.array([0.5, 11.5, 12.1, 12.3, 19.0]))
++    assert list(x) == [0, 1, 0, 1, 1]          # session 3 waits [11, 12); session 4 from 12.2 to the end
++    assert np.isnan(D.cap_queue({**SMALL, "requests": SMALL["requests"].drop(columns=["t_arrived"])}, [1.0])).all()
++
++
++def test_slots_invariant_and_idle_share():
++    s = D.slots(SMALL, cap=3)
++    assert s["max_held"] == 3 and s["holds"] is True
++    assert D.slots(SMALL, cap=2)["holds"] is False
++    assert 0.0 <= s["idle_share"] <= 1.0
++    assert D.harness_fault(s) is (s["idle_share"] > D.D1["max_idle_share"])
++    assert D.harness_fault({"holds": False, "idle_share": 0.0}) is True                 # over the cap
++    assert D.harness_fault({"holds": True, "idle_share": 0.2}) is True                  # a slot left free while waiting
++    assert D.harness_fault({"holds": True, "idle_share": 0.01}) is False
++
++
++def test_waits_apart_before_the_burst():
++    w = D.waits(SMALL)
++    assert w["all"]["n_sessions"] == 5 and w["all"]["n_never_admitted"] == 1 and w["all"]["max_s"] == 1.0
++    assert w["before_burst"]["n_sessions"] == 3 and w["before_burst"]["n_waited"] == 0
++
++
++# ---------------------------------------------------------------- the label
++
++def lab(**kw):
++    return D.label(make_run(**kw))["label"]
++
++
++def test_warm_server_and_empty_cap_queue_is_recovered():
++    out = D.label(make_run(wait=lambda t: 300.0 if 900 <= t < 1500 else 0.0))
++    assert out["label"] == "recovered" and out["cap_queue"]["end"]["mean"] == 0.0
++    assert out["windows"] == {"base": (300.0, 900.0), "end": (3480.0, 4080.0)}
++
++
++def test_warm_server_with_a_shrinking_cap_queue_is_recovered_cap_draining():
++    w = lambda t: max(0.0, 400.0 - 350.0 * (t - 900.0) / 3180.0) if t >= 900 else 0.0
++    out = D.label(make_run(wait=w))
++    assert out["label"] == "recovered_cap_draining" and out["cap_queue"]["end"]["slope"] < 0
++
++
++def test_warm_server_with_a_growing_cap_queue_is_server_only():
++    assert lab(wait=lambda t: 0.4 * (t - 900.0) if t >= 900 else 0.0) == "server_only"
++    assert lab(wait=lambda t: np.inf if t >= 3000 else 0.0) == "server_only"     # never admitted from 3000 s
++
++
++def test_cold_reuse_with_an_empty_server_line_is_stuck_not_recovered():
++    """The cap bounds the server's line, so an empty line must not make a cold cache a recovery."""
++    assert lab(reuse_after=0.0, q_after=0.0, kv_after=0.6) == "stuck_kv_free"
++    assert lab(reuse_after=0.0, q_after=5.0, kv_after=0.95) == "stuck_kv_full"
++
++
++def test_a_climb_rules_out_stuck():
++    assert lab(reuse_after=0.5, reuse_prev=0.3, kv_after=0.6) == "rewarming"
++    assert lab(reuse_after=0.3, reuse_prev=0.3, kv_after=0.6) == "stuck_kv_free"
++
++
++def test_the_label_reads_reuse_not_the_hit_counter():
++    assert lab(hit_after=0.6) == "recovered"                       # extra first turns lower hit, not reuse
++    assert lab(reuse_after=0.0, hit_after=0.85, kv_after=0.6) == "stuck_kv_free"
++
++
++def test_a_server_line_above_baseline_is_not_recovered():
++    assert lab(q_after=3.0) == "unclear"
++
++
++def test_bad_baseline_and_missing_values():
++    assert lab(base_pf=0.9) == "bad_baseline"
++    assert lab(reuse_after=0.0, kv_after=0.6, gauge_gap=(3500, 3600)) == "unclear"   # KV does not cover the end window
++    r = make_run()
++    r["requests"] = r["requests"].drop(columns=["t_arrived", "t_admitted"])
++    assert D.label(r)["label"] == "unclear"                                     # no cap queue: not a capped run
++
++
++# ---------------------------------------------------------------- readouts
++
++def test_spans_and_the_load_reading():
++    r = make_run(reuse_after=1.0)
++    sp = D.spans(r)
++    assert len(sp) == 10 and sp[0]["span"] == (1080.0, 1380.0) and sp[-1]["span"] == (3780.0, 4080.0)
++    assert sp[3]["server_rate"] == pytest.approx(2.0, abs=0.02) and sp[3]["reuse"] == pytest.approx(1.0)
++    v = r["cfg"]["verdict"]
++    cold = lambda rate: {"reuse": 0.0, "server_rate": rate}
++    warm = {"reuse": 1.0, "server_rate": 2.0}
++    assert D.load_reading([warm] * 10, None, 1.0, v)["reading"] == "never_cold"
++    assert D.load_reading([cold(1.75)] * 2 + [warm] * 8, [cold(1.8)] * 10, 1.0, v)["reading"] == "in_window"
++    got = D.load_reading([cold(1.75), cold(1.5)] + [warm] * 8, [cold(1.8)] * 10, 1.0, v)
++    assert got["reading"] == "below_floor" and got["rewarm_span"] == 2 and got["cold"][0]["uncapped_server_rate"] == 1.8
++    assert D.load_reading([cold(1.75)] * 10, None, 1.0, v)["reading"] == "no_rewarm"
++    assert D.load_reading([{"reuse": math.nan, "server_rate": 1.7}] + [warm] * 9, None, 1.0, v)["reading"] == "undefined"
++    assert D.load_reading([warm] * 10, None, math.nan, v)["reading"] == "undefined"
++
++
++# ---------------------------------------------------------------- the matrix
++
++@pytest.mark.parametrize("labels, want", [
++    (["recovered"] * 5, "supports"),
++    (["recovered", "recovered", "recovered_cap_draining", "unclear", "rewarming"], "supports"),
++    (["recovered"] * 4 + ["stuck_kv_free"], "mixed"),             # one seed stuck under the cap blocks `supports`
++    (["stuck_kv_free"] * 3 + ["recovered"] * 2, "refutes"),
++    (["stuck_kv_full"] * 3 + ["recovered"] * 2, "cap_did_not_cut"),
++    (["server_only"] * 3 + ["recovered"] * 2, "admission_only"),
++    (["recovered", "recovered", "unclear", "unclear", "bad_baseline"], "mixed"),
++    (["recovered", "recovered"], "too_few"),
++    (["recovered", "recovered", "harness_fault", "harness_fault", "recovered"], "supports"),
++    (["recovered", "harness_fault", "harness_fault", "harness_fault", "recovered"], "too_few"),
++])
++def test_outcome_rules(labels, want):
++    assert D.outcome(labels)["decision"] == want
++
++
++def test_outcome_bounds():
++    o = D.outcome(["recovered"] * 5)
++    assert o["k_cut"] == 5 and o["k_stuck"] == 0 and o["n"] == 5
++    assert o["cp_upper_stuck"] == pytest.approx(1 - 0.05 ** 0.2, abs=1e-6)          # 0.451
++    assert o["cp_lower_cut"] == pytest.approx(0.05 ** 0.2, abs=1e-6) and o["mcnemar_p"] == pytest.approx(1 / 32)
++    o = D.outcome(["recovered"] * 4 + ["stuck_kv_free"])
++    assert o["cp_upper_stuck"] == pytest.approx(0.6574, abs=1e-3) and o["mcnemar_p"] == pytest.approx(1 / 16)
++    o = D.outcome(["harness_fault"] + ["recovered"] * 4)
++    assert o["harness_faults"] == 1 and o["n"] == 4
++    o = D.outcome(["server_only"] * 3 + ["recovered", "recovered_cap_draining"])
++    assert o["decision"] == "admission_only" and o["k_cut"] == 2 and o["k_cut_server_side"] == 5
++
++
++# ---------------------------------------------------------------- end to end against fake_vllm
++
++def test_end_to_end_cap_from_a_fake_control_then_a_capped_burst_run(tmp_path):
++    from analysis.load import load_run
++    from tests.test_e2e_fake import run_fake
++    wl = {"rate": 12.0, "duration_s": 24, "warmup_s": 5, "output_tokens": 8,
++          "sessions": {"turns": 3, "closed_loop": True, "turn_gap_s": {"dist": "exponential", "mean": 2.0}}}
++    verdict = {**VERDICT, "baseline_s": 3, "watch_s": 10, "end_s": 3, "control_t_s": 10}
++    common = {"slo": {"ttft_s": 1.0}, "verdict": verdict}
++    (tmp_path / "c").mkdir()
++    (tmp_path / "b").mkdir()
++    control = load_run(run_fake(tmp_path / "c", workload=wl, **common))
++    cap = D.cap_value(control)
++    assert isinstance(cap, int) and cap >= 1
++    burst = {"kind": "burst", "at_s": 8, "duration_s": 2, "rate": 6.0, "prompt_tokens": 64}
++    run_dir = run_fake(tmp_path / "b", workload={**wl, "sessions": {**wl["sessions"], "cap": cap}}, trigger=burst,
++                       **common)
++    assert json.loads((run_dir / "checks.json").read_text())["valid"]
++    run = load_run(run_dir)
++    assert D.label(run)["label"] in D.LABELS
++    assert D.slots(run, cap)["holds"] and not D.harness_fault(D.slots(run, cap))
++    assert D.cap_queue(run, np.array([0.0]))[0] == 0
++    w = D.waits(run)
++    assert w["all"]["n_sessions"] >= w["before_burst"]["n_sessions"] >= 1
++    assert len(D.spans(run)) == D.D1["n_spans"]
++    from analysis.load import verdict            # `row`'s readout: load.verdict runs on a capped run's records
++    assert isinstance(verdict(run)["verdict"], str)
