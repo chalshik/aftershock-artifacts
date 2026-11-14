@@ -142,9 +142,11 @@ vm_state() {
 # Once the invocation of attempt record $1 has ended: the lines of its launch log that hold run_id (an allowed read)
 # are reduced to the run id and the commit the same line names (`[run] start {'run_id': ..., 'git_commit': ...}`,
 # harness/run.py:143), and written to state/settled_<attempt>.txt, once. A log that does not exist names no run.
+# Before that record, each run it names that the VM's checks.json calls invalid is written to state/pause_pending.txt
+# (draft 6, DA2; e1_r2, DC-O1), so a queue that dies after `settle` still pauses.
 SETTLE_END=END_OF_RUN_ID_LINES
 settle() {
-  local rec=$1 f log out line id c lines recs=()
+  local rec=$1 f log out line id c lines recs=() l2 p
   MSG=""
   f=$ST/settled_${${rec:t}%.txt}.txt
   [[ ! -e $f ]] || { MSG="${f:t} exists"; return 2; }
@@ -158,6 +160,10 @@ settle() {
     c=$(print -r -- "$line" | grep -o "'git_commit': '[^']*'" | head -1 | cut -d"'" -f4)
     [[ -n $id ]] || { MSG="a run_id line of the launch log of ${rec:t} holds no run id"; return 2; }
     recs+=("rid $id ${c:--}")
+  done
+  for line in $recs; do                          # the pause (draft 6, DA2), written before the settle record (e1_r2, DC-O1)
+    id=${${=line}[2]}
+    for l2 in $VMS; do p=(${=l2}); [[ $p[1] == $id && $p[2] == invalid ]] && print -r -- "$id failed=$p[3]" >> $ST/pause_pending.txt; done
   done
   print -r -l -- $recs "time $(date -u +%Y-%m-%dT%H:%M:%SZ)" "scripts $SC" > $f.tmp && mv $f.tmp $f || { MSG="${f:t} could not be written"; return 2; }
   return 0
@@ -183,7 +189,7 @@ settle() {
 #     and so does any other check in `failed` of MAX_SAME of them, at any rates (draft 6, rule F e1_r1 DA1);
 #   - a rate with MAX_ATTEMPTS attempts spent is not launched again (listed in SPENT); the other rates go on.
 next_step() {
-  local rec f stem line l2 parts id c r rate name s att n a ids valid inval lost=() stopper="" n_heat=0
+  local rec f stem line l2 parts id c r rate name s att n a ids valid inval lost=() stopper="" n_heat=0 n_norun=0
   local -A NAMED per nfail
   ACT=""; ARG=""; NEXT_ATT=""; MSG=""; SUMMARY=(); SPENT=()
   vm_tmux || return 2
@@ -204,6 +210,7 @@ next_step() {
       [[ $c == $E1 ]] || { MSG="$id was made at commit '$c' (its launch log's run_id line), not at the registered commit $E1: the owner decides"; return 2; }
       per[$r]=$id; NAMED[$id]=$stem
     done
+    grep -q '^rid ' $f || n_norun=$((n_norun + 1))   # a launch whose log names no run (e1_r2, DC-O2)
   done
   ids=()
   for line in $VMS; do
@@ -260,6 +267,7 @@ next_step() {
     for f in ${(k)nfail}; do
       (( nfail[$f] < MAX_SAME )) || { MSG="$f is in failed of ${nfail[$f]} of E1's runs: a check that fails twice is a question about the harness, not a rerun. E1 stops; the owner decides"; return 2; }
     done
+    (( n_norun < MAX_SAME )) || { MSG="$n_norun launches of E1 named no run (no run_id line in their logs): a question about the harness or the VM, not a rerun. E1 stops; the owner decides"; return 2; }
     ACT=launch; ARG=$rate; NEXT_ATT=$((att + 1))
     [[ ! -e $ST/attempt_r${rate}_$NEXT_ATT.txt ]] || { MSG="attempt record $NEXT_ATT of rate $rate exists"; ACT=""; return 2; }
     return 0

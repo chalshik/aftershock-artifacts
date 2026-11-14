@@ -17016,3 +17016,2377 @@ The sentence does not attribute the excess of the completion rate over 1.681 to 
 - **What:** `20261113-033842_stage2_control_l1pl350cl_r2.0_w3000_s18`, the control whose queue stopped at launch with rc 7 when the VM stopped answering (FILE(docs/decisions.md:12866)). Copied at 2026-11-14 01:28:45 UTC with the queue's own procedure (`rsync -a`, then the VM's `sha256sum` list against the Mac's `shasum -a 256` list over `find . -type f | LC_ALL=C sort`, FILE(docs/probe/20261113_reg19/ops_r3/queue.sh:60)): 9 files, sha-of-sums `e5d424e6c51f7c2a` on both sides, PROBE(docs/probe/20261114_copy_s18/copy_20261114T012845Z.txt). The folder has no `checks.json` (`ls`, 2026-11-14), so it is listed under "No checks" in `docs/status.md`; nothing was written into it.
 - **Then:** `python3 tools/manifest.py update` appended its 9 lines ("1871 files already listed and unchanged; 9 appended"); the id is removed from `manifests/pending_copy.txt`, which is now empty of ids. The VM's copy stays (rule 4's exception needs the Mac's copy checksum-verified, which it now is; removing the VM copy is not done here).
 - **Not done:** RUNBOOK step 6's next two items, deploying HEAD to the VM and `analysis.recheck '*_w3000_s1[5-9]'`. The VM tree stays at `a7bb77a`, because E1's ops check out their own commit on the VM (FILE(docs/probe/20261113_e1/ops/vm_checkout.sh:1)) and REG-20 arm A's ops expect the pin `1cface7` (FILE(docs/probe/20261113_reg20/ops/common.sh:13)); neither is approved, and a deploy of HEAD now would only have to be undone; the recheck waits for that deploy. No content of the folder was read beyond its file names and the checksums.
+
+## 2026-11-14 · [REG] E1: the closed-loop cache-off sweep of L1 at 350 W, which measures the 8-turn closed-loop cold floor (GPU, ≈ 2.1 h)
+
+- **ID:** E1 (step E1 of `docs/experiment-plan.md`, "Stage 2, revised"). Runs after REG-19's queue has ended: the committed log holds an [OPS] entry headed `REG-19: the queue ended (QUEUE DONE)` or `(QUEUE END futility stop)`, which quotes the queue's `QUEUE DONE` or `QUEUE END` line, or REG-19's [RESULT], and REG-19's queue lock does not exist (FILE(docs/probe/20261113_e1/ops/common.sh:98-108)). It needs no REG-19 result. That entry exists: FILE(docs/decisions.md:4611) (commit 302d431, headed `[OPS] REG-19: the queue ended (QUEUE DONE)`, quoting `QUEUE DONE (all five seeds run). Next: final.sh, once`), which restates FILE(docs/decisions.md:4571) and records no new event. REG-19's [RESULT] has since been written as well (FILE(docs/decisions.md:16517), commit 6748c26), and its heading also matches the gate (DERIVED: `END19_PAT`, FILE(docs/probe/20261113_e1/ops/common.sh:38), against that line). A `QUEUE STOP` leaves no such entry: REG-19 then waits for the owner, and E1 waits with it. The owner's entry on E1 forbids only a run while REG-19's queue holds the GPU (FILE(docs/decisions.md:4520)). REG-19's pin rule says more: "The VM stays at `a7bb77a` with a clean tree until REG-19's [RESULT] is written" (FILE(docs/drafts/reg19_resume_decision_draft5.md:41), approved by the owner as part of that plan, FILE(docs/decisions.md:4287), and kept unchanged by FILE(docs/decisions.md:4400)). **That clause is now met:** REG-19's [RESULT] is written (FILE(docs/decisions.md:16517)), from the table that `final.sh` computed on the Mac from the worktree at `a7bb77a` (FILE(docs/probe/20261113_reg19/ops_r3/final.sh:2); its output committed in 047b95e), which needed nothing of the VM's tree. So the VM may leave `a7bb77a` under the pin rule as written. Draft 6's amendment of that clause (under the delegation's "the pin rule", FILE(docs/decisions.md:4233)), which let the VM leave before REG-19's [RESULT] so that the GPU would not sit idle (the owner: "whenever its available use it", FILE(docs/decisions.md:4506)), is dropped: nothing is left for it to amend. An owner's entry that stops E1 is seen by the scripts only when it is headed as the owner's halt (the stopping rule, FILE(docs/probe/20261113_e1/ops/common.sh:104)); an entry of any other form is applied by hand: no queue start and no launch after its commit. **The VM then moves to this entry's commit** (`vm_checkout.sh`) from the commit it is at: REG-19's pin `a7bb77a`; HEAD of the day, if RUNBOOK §3 item 6's deploy (§4) ran after REG-19's [RESULT]; or, if REG-20 arm A runs first ("E1 holds the VM"), the commit REG-20 left it at; `vm_checkout.sh`'s probe file records which (its `before` line); `vm_checkout.sh` moves it only forward, from a commit that is an ancestor of E1's, and otherwise refuses for the owner (FILE(docs/probe/20261113_e1/ops/vm_checkout.sh:33), after draft 7's script patch). REG-19's launch refuses any other tree (FILE(docs/probe/20261113_reg19/ops_r3/launch.sh:45)), so a later REG-19 rerun, if the owner allows one, needs the VM moved back first: only while no tmux session `run` exists, by RUNBOOK §4's steps with `git checkout --detach a7bb77abc863adcaad9d4516815a5ddddf2908e9`, recorded in an [OPS] entry; E1's next pre-launch read then stops on the tree (no attempt spent), and `vm_checkout.sh` later moves it forward again (a7bb77a is an ancestor of E1's commit); nothing of REG-19 is lost: `vm_checkout.sh` changes no file under `runs/` (gitignored and untracked), so REG-19's folders on the VM stay as they are, including those only the VM holds (ops_r3 copies valid runs only, FILE(docs/probe/20261113_reg19/ops_r3/queue.sh:54-60); the lost seed-18 folder is copied after REG-19's [RESULT], FILE(agent/RUNBOOK.md:48), which is now written). RUNBOOK §4's "never before REG-19's [RESULT]" is met now that the [RESULT] is written; this entry's commit amends `agent/RUNBOOK.md` for E1 as the section "RUNBOOK, for the approval commit" below says. The move back is not covered by this entry's approval: it needs its own entry, as the REG-19 rerun it serves does.
+- **Owner's choice (2026-11-12, logged in decisions.md 2026-11-13 [CORR]):** "Floor only": E1 carries no K3 test.
+- **Question:** what does the saturated L1 server complete per second with caching off when turns are closed-loop?
+- **Claim served:** K2 (`docs/claims.md`), as a measurement: the 8-turn closed-loop floor, so that 1.681 req/s (RUN(REG-8's 7 cache-off runs, `sweep_l1pl350_pc_off`, gate.reg8_zone)) is written as "the open-loop floor" only and closed-loop margins are stated against a closed-loop floor.
+- **What E1 can and cannot do (rule A1), said first:** E1's floor is K2's 8-turn reference: the denominator of the 8-turn window ratio that E0's gate compares the 16-turn ratio against (FILE(docs/experiment-plan.md:427-428); FILE(docs/decisions.md:4040); FILE(docs/claims.md:56)). As committed, `k2.decide` takes it as `f8` in R = (warm16/f16)/(warm8/f8) and returns "missing" (no matrix) when it is undefined (FILE(analysis/k2.py:102-109)), and `k2.observed` computes it from E1's runs (FILE(analysis/k2.py:179)). The draft-3 rule F review argued that the label is set by the 16-turn cache-on sweep alone; that is an argument about a gate that is not registered (BELIEF until E0's [REG] shows it), and it does not hold for E1's outcomes without a floor, which make the committed label "missing". So E1 can change the 16-turn matrix decision and K2's "does not widen" reading, through E0. E1 runs before E0 is registered, which departs from "E0 … registers … the gate factor before any sweep (rule G)" (FILE(docs/decisions.md:4040)). To keep rule A5 for E0's gate, no part of E1's floor (status, value, n, rates, slope) is computed, quoted or used before E0's [REG] is committed, or before an entry records that E0's gate takes no input from E1's runs. This guard is kept by hand on top of the seal: E1's folders are sealed in code until `[RESULT] E1` (FILE(analysis/withheld.py:30)), so only a command that sets `AFTERSHOCK_UNSEAL=E1` reads them, and none is run before then. The [RESULT] quotes `git grep -n` of E0's [REG] heading, or of that entry, at the commit before its first such command, and states that no earlier command set `AFTERSHOCK_UNSEAL=E1`. An entry recording that E0's gate takes no input from E1's runs changes K2's staged test (FILE(docs/claims.md:56)), so it is the owner's, or a [DECISION] (delegate) with its own rule F review and owner-proxy pass. E0's registration discloses the one bit per rate that the allowed reads show (stopping rule, first bullet), and takes E1's floor as E1's [RESULT] reports it (the registered code, "holes" included), not recomputed by another rule (`k2.observed` calls `e1.floor` without `first_valid` or the swept rates, FILE(analysis/k2.py:179)). Apart from E0's gate, E1 is proposed as K2's measurement and as the floor every closed-loop margin in the paper is quoted against, and for nothing else. Rule A1 and `docs/process.md` §3 say a run whose outcomes change no decision is not proposed; E1's outcomes change one (above), and the owner has twice decided that this run is made in any case, and sent it to review: the L1 closed-loop cache-off sweep "is run in any case" (FILE(docs/decisions.md:4037)), "run whatever step B finds" (FILE(docs/decisions.md:4040)), and the owner sent E1 to review on draft 4's statement that "E1 changes no decision about a shock matrix" (FILE(docs/decisions.md:4520)). Rule F round 2 found that statement false (DC1), so this registration rests on the owner's two choices above and on the delegation (FILE(docs/decisions.md:4233)), not on that premise. Its departure from the plan's order, E1 run before E0's [REG] ("E0 … registers … the gate factor before any sweep", FILE(docs/decisions.md:4040)), is the delegate's, made under DC1's guard; the approving entry states it among its notes for the owner, who may reverse it with one entry. The decisions E1's outcomes do change are E0's gate input (above) and the wording ones under "Decision under each outcome". E1's validity record changes one more, about other runs on this harness (the same section, "In neither case").
+- **Config:** `configs/sweep_l1pl350cl_pc_off.yaml` (committed, unused). It is REG-8's cache-off sweep (seed 0, 900 s per rate, warm-up 240 s, drain 300 s) with REG-13's two changes, closed-loop turns and `loadgen_force_close: true`, at REG-8 part b's rates [1.5, 2, 2.5, 3, 3.5, 4]. At every rate the planned schedule equals REG-8's (FILE(tests/test_e1.py), `test_e1_schedules_equal_reg8_part_b_at_every_rate`). The longest prompt is 3968 tokens (DERIVED: 2176 + 7 × 256).
+- **Single-rate configs** (`configs/sweep_l1pl350cl_pc_off_only_r<rate>.yaml`, six, committed, unused): each expands to the sweep's own run at that rate and nothing else (FILE(tests/test_e1.py), `test_each_single_rate_config_is_the_sweeps_own_run_at_that_rate`: one run each, equal to the sweep's own run at that rate in every key but `sweep`). They exist so that every run E1 can ever need is in the commit that holds this registration.
+
+### The harness E1 runs on: the first GPU run since `5ee6e38`
+- **Facts.** REG-19 runs at `a7bb77a` (FILE(docs/probe/20261113_reg19/ops_r3/common.sh:11)). E1 runs at this entry's commit, whose harness includes `5ee6e38`: a recorder that survives a half-written line and logs its death, stricter `recorder` and `gpu_steady` checks, and a session cap in the load generator that is off unless `workload.sessions.cap` is set (FILE(docs/decisions.md:4200) for the recorder and checks; FILE(docs/decisions.md:4209) for the session cap). E1's configs set no cap (DERIVED: `workload.sessions.cap` is absent from the expanded config of every rate of the sweep and of the six single-rate configs). `git diff --stat a7bb77a 9e249b1 -- harness/` gives 4 files, 163 lines in and 29 out; `pyproject.toml` and `uv.lock` are the same at both. The reviewed harness is the one that runs: `git diff --quiet 9e249b1 <registered commit> -- harness/ pyproject.toml uv.lock .python-version configs/defaults.yaml configs/base.yaml configs/gap5_base.yaml configs/l1_base.yaml configs/l1_pl350_base.yaml configs/sweep_l1pl350_pc_off.yaml configs/sweep_l1pl350cl_pc_off.yaml 'configs/sweep_l1pl350cl_pc_off_only_r*.yaml'` exits 0, and the approval entry quotes it; otherwise the registration goes back to rule F. No GPU run has used this harness yet (FILE(docs/decisions.md:4201): "Nothing is deployed to the VM"; REG-19's launches require `a7bb77a`, FILE(docs/probe/20261113_reg19/ops_r3/launch.sh:45)).
+- **Risks, and how this entry bounds them** (DESIGN_NOTES.md, R1–R6):
+  - R1, a fault that crashes a run: it leaves a folder without `checks.json`, and E1 stops there (the stopping rule). Cost: at most one run.
+  - R2, a fault that fails `recorder` on every run without crashing: the six sweep rates come back invalid after about 2.1 h. **The queue pauses after any invalid run** (each invalid run is written to `state/pause_pending.txt` when its launch log is settled; no launch, by the queue or by hand, proceeds until a queue start has printed it and set it aside, so another stop in between does not consume the pause; starting the queue again then applies the rerun rule; `common.sh`'s `settle` writes it before its settle record, so a queue that dies after settling still pauses (round 2, DC-O1); `queue.sh`'s `launch` branch; `launch.sh`), and a check in `failed` of two of E1's runs stops E1 (the stopping rule), so a systematic failure costs the sweep's 2.1 h and no rerun.
+  - R3, `gpu_steady` is no longer only heat: since `5ee6e38` it also fails when the GPU samples do not cover [warm-up, duration] with no gap above `max_scrape_gap_s` = 2.0 s, or when no sample is busy (FILE(harness/checks.py:127), FILE(configs/base.yaml:55)). E1 reads only the names in `failed`, so it cannot tell a coverage failure from heat; **either one gets the heat rule's single rerun and counts toward "a second heat failure stops E1"**. That is stricter than a rule for heat alone, never looser. The [RESULT] names each `gpu_steady` failure "heat, SM-clock steadiness or sample coverage" until its detail is read (the fields listed under "In neither case"), then says which.
+  - R4: the recheck of 182 folders under the new checks (FILE(docs/decisions.md:4205)) shows that the old recorder's output passes them, not that the new recorder produces such output on the GPU.
+  - R5: E1's floor is compared with REG-8's 1.681 req/s, measured under the harness of 2026-11-07 ("Confounds, named").
+  - R6: this may be the first move of the VM off `a7bb77a` since REG-19 began (the ID line); it is not if RUNBOOK §3 item 6's deploy of HEAD, or REG-20 arm A ("E1 holds the VM"), moved it first. Either way `vm_checkout.sh` moves it only from an ancestor of E1's commit, and its probe file records the commit it starts from.
+- **Not done:** a smoke run on the new harness before E1. It would be a GPU run with its own registration; the pause bounds R2 to the sweep's 2.1 h before a person looks, which this entry accepts.
+- **The harness is frozen meanwhile** (disclosed; rule F round 2, "Bundle and limits"): `harness/checks.py`, `run.py`, `recorder.py`, `loadgen.py` and the other harness modules E1 runs on are among REG-21's and REG-22's frozen files (FILE(docs/decisions.md:9834), FILE(docs/decisions.md:4748)) until both batch 2s are computed or declared not computed (expected on 2026-11-13/14). A harness fault that E1's validity record finds ("In neither case") cannot be fixed before then. That freeze has since ended: both batch 2s are computed and their [RESULT]s committed (FILE(docs/decisions.md:16571), FILE(docs/decisions.md:16798), commit 7230ae8), so this disclosure is moot and is kept as a record.
+
+### What is measured: the closed-loop cold floor (`e1.floor`)
+- **Rule:** `gate.cold_floor` with REG-8's settings (mean KV ≥ 0.85, at least 2 runs, throughput < 0.95 × planned rate).
+- **Registered fallback:** if and only if that rule returns "not_monotone", `e1.floor_tail`: λ_sat is the lowest rate from which every row is saturated, and the floor is the mean over those rows, from at least 2. Its status is "tail_ok", "tail_too_few" or "tail_unsaturated", so a fallback floor cannot be mistaken for the rule's own. Where it matters: the 1.5 row plans 1.606 req/s, so it counts as saturated only below 1.526 (DERIVED: 0.95 × 1.606).
+- **Holes:** a swept rate with no valid run gives the status "holes" and no floor when it lies at or above λ_sat, or below λ_sat with no valid row between it and λ_sat (λ_sat could lie there; with no valid row below λ_sat, every swept rate below it without a valid run is such a hole). A row with a non-finite rate, throughput, planned rate or KV mean, which `gate.cold_floor` drops, counts as no valid run. The missing rates are listed.
+- **Two valid runs at one rate** (a rate launched again by mistake): the earliest counts (`e1.first_valid`; run ids start with their launch time); the later ones are listed by name.
+- **No rows at all** gives "no_rows", and the commands raise: a sweep that was not read is not a sweep that did not saturate.
+- **A floor exists** only with status "ok" or "tail_ok". The result reports n and the rates used, and labels the floor "single seed (seed 0), one run per rate": no seed-to-seed spread is measured, and the SE of `floor_slope_reported` is across rates, not seeds (rule H). The floor pools its rows under REG-8's assumption that a saturated cache-off server completes requests at one rate whatever the offered load. E1's own prediction says closed-loop rows break that assumption by a slope of about 0.04 req/s per req/s (FILE(tests/test_e1.py:59), BELIEF as to the model), so the result states the assumption beside the floor, with the slope as the evidence on it.
+
+### Prediction (BELIEF)
+P(status "ok") ≈ 0.75; P("tail_ok") ≈ 0.2; floor 1.70 to 1.80 req/s. Model F's replay of E1's config at 1.681 over rates ≥ 2.0 gives 1.744 (fixed cost) or 1.771 (proportional) (`k2.closed_loop_floors`, DERIVED; model BELIEF). The closed-loop cold spans on record point the same way: 1.73 to 1.81 req/s at λ = 2.0 and 2.2 (RUN(20261110-182920_burst_l1pl350cl_r2.0_s2, gate.reg17_gate), RUN(20261110-063647_burst_l1pl350cl_r2.2_s2, gate.reg14_gate)). The status figures assume a valid run at every rate. **E1's validity record** (the decision under "In neither case"; rule A1 asks for a number): P(clean: every launched run ends with a `checks.json`, and neither `recorder` nor `gpu_steady` is in any run's `failed`) ≈ 0.7; P(not clean) ≈ 0.3, of which a run lost to a power-off ≈ 0.2 and a `recorder` or `gpu_steady` failure ≈ 0.1. BELIEF: the VM went off twice during REG-19's runs, at 15:51 UTC on 2026-11-12 and at 04:39 UTC on 2026-11-13, and every boot end the journal keeps was a power-key press (FILE(docs/decisions.md:4383); open question A18); no run of REG-8's cache-off sweep failed a check (FILE(docs/decisions.md:1744)), and the recheck of 182 folders under the new checks changed no valid verdict (FILE(docs/decisions.md:4205)), but no GPU run has used the new recorder.
+
+### Decision under each outcome (rule A1)
+- **A floor ("ok" or "tail_ok"):** the paper and `docs/model.md` may quote it as the closed-loop cold floor at 8 turns, with its status, n and rates; closed-loop margins (λ ÷ floor) are restated against it, each with the floor's rates and the slope of throughput on rate over them (`floor_slope_reported`, with its SE; reported, never judged), and, at λ = 2.0, also against E1's own 2.0 row (one run, labelled as such). Closed-loop throughput is predicted to rise with the rate (the served mix tilts toward early, shorter turns; FILE(tests/test_e1.py:59), BELIEF as to the model), so the floor is a mean over a rate range, not a constant of the server. Each such edit is its own decision.
+- **No floor:** K2's 8-turn closed-loop floor is reported as unmeasured on this grid; closed-loop margins keep the open-loop floor, named as such. A new grid is a new registration. Under E0's gate as committed, the label is then "missing": no 16-turn matrix, the owner decides (FILE(analysis/k2.py:94-95,102-103)).
+- **In neither case** does E1's floor start, stop or size a run other than through E0's gate ("What E1 can and cannot do", which is why that paragraph comes first). **E1's validity record is another matter:** it is the first GPU evidence on `5ee6e38`'s harness (with the session cap off, so the cap's path is not exercised). If `recorder` or `gpu_steady` is in `failed` of any E1 run, or a run ends without `checks.json` on an unchanged boot id, no registration runs on this harness until the cause is found and recorded in an [OPS] or [CORR] entry. After E1's queue has printed `QUEUE DONE` or `QUEUE END`, or has stopped on one of these rules: `no_errors` or `power_limit` in a run's `failed`, a second `gpu_steady`, one check in `failed` of two runs, or the owner's halt (each such stop waits for a decision and is E1's end only once an entry says so, "E1 holds the VM"; these reads may inform that decision and may be made before it), and only for the runs that have that check in `failed`, only these fields of a failed check may be read for that: `recorder`'s `first_ok_scrape_t`, `last_ok_scrape_t`, `end_ref_t`, `end_ref`, `recorder_died`, `max_gap_s`, `failed_scrapes`, `counter_decreases`; `gpu_steady`'s `window_max_gap_s`, `window_samples`, `busy_samples`, `busy_sm_clock_cv`, `hw_throttle_samples`, `sw_thermal_frac`, `max_temp_c`, or its detail text when the detail is not a dict ("no gpu.jsonl data"). These are every input of the two checks' pass conditions (FILE(harness/checks.py:106-110,134-138)). None of them holds a request count, throughput or KV. Disclosed: `end_ref_t` is the time of `load_end`, which comes early for a run whose sessions all ended before the drain deadline, and `busy_samples` counts the samples with the GPU at least 50 % busy. For a failed run, both show the same one bit per rate as the stopping rule's first bullet, and no more. `end_ref_t` and `last_ok_scrape_t` show when that run's load ended, so they carry the same one bit per rate as the run ids (the stopping rule, "Disclosed"). The read is one command that prints these fields and nothing else; the command and its output are quoted in the [OPS] or [CORR] entry that records the cause, and the [RESULT] lists every such read. These reads may be made once the stop line is printed, before E1's end entry ("E1 holds the VM"): they serve the decision on that stop, and they neither end E1 nor free the VM. A launch whose log names no run (the stopping rule) leaves no `checks.json`, so its stop allows no such read. If every run is valid, the next registration on this harness cites E1's run ids for R4.
+
+### Reported, never judged
+- The served-mix tilt against REG-8 (`e1.tilt`, over the rates both sweeps have from their common onset), with `e1.prediction` as its description. Round 1 showed it is the same for any saturated closed-loop server, so it cannot test model F.
+- The uncached-token work rate U of both sweeps' saturated runs (`e1.work_rates`, REG-21's statistic). On REG-8's runs that is REG-21's reference, so **`e1.report` raises until REG-21's first [RESULT] is in `docs/decisions.md`**, and E1's result is computed after it. If an entry withdraws REG-21, E1's result is the worktree floor and `e1.observed()` without the work rates, by a [DECISION] entry made before it is computed. REG-21's first [RESULT] (batch 1) is now in the log (FILE(docs/decisions.md:16421)), under a heading that `withheld.lifted("[RESULT] REG-21")` accepts (DERIVED: its pattern, FILE(analysis/withheld.py:46), against that line), so this wait is met; the wait for E0's [REG] ("Result, computed once") remains.
+- Preemptions per second and the mean running batch of E1's saturated runs beside REG-8's (the review's alternative to the mix: a different running batch in closed loop).
+
+- For each counted row: whether it came from the sweep or from a later single-rate launch, and that launch's pre-launch GPU temperature (its attempt record); after the result, each saturated row's busy SM-clock mean from `gpu.jsonl`; and U ÷ throughput (with caching off, the mean served prompt, DERIVED from `e1.work_rates` and the row) beside REG-8's rows. None of these is judged; they separate a thermal or a served-mix cause from a capacity cause of any difference from 1.681.
+
+### Confounds, named
+E1 opens a new connection per request and REG-8 did not. REG-8 ran on 2026-11-07 under the code of that day; E1 runs under this entry's (the recorder fix, the stricter `recorder` and `gpu_steady` checks and the load generator's session cap, off here, of 2026-11-12; "The harness E1 runs on"). Both sweeps run their rates in ascending order, so drift within a sweep enters any slope. The 900 s per rate includes the transient. All of these touch the comparison of E1's floor with 1.681 and the reported tilt; none can be removed by E1.
+
+### Stopping rule (REG-13's, completed)
+- **One harness invocation of the sweep** (`configs/sweep_l1pl350cl_pc_off.yaml`), launched at most once ever; if it fails before its first rate starts, every rate counts as never started. No interim look at any rate's throughput, KV or floor before the result is computed. Disclosed: the allowed reads still show one bit per rate. Run ids carry their launch time, and a run whose sessions all ended before the drain deadline ends early, so the gaps between consecutive run ids of the sweep, and a single-rate run's `LAUNCHED`/`ENDED` times, show whether the server kept up with that rate. No step of the stopping rule uses this, and the [RESULT] says so.
+- **Attempts.** A rate's attempts are 1 if the sweep started it (the sweep's launch log has a `run_id` line for it) plus each single-rate launch of it; every launch is one attempt, whatever it left behind.
+- **A rate the invocation never started** (the VM went off, the harness stopped): it is run from its single-rate config. That is its first attempt, not a rerun.
+- **An invalid rate** is rerun unchanged from its single-rate config, at most twice. A heat-invalid run (`gpu_steady`) once, after cooling to ≤ 45 °C; a second heat failure stops the sweep. A client error (`no_errors`) or a limit other than 350 W (`power_limit`) in a run's `failed` stops it. Every launch of a rate is one attempt, at most three; a run that ends without `checks.json` stops the sweep until a new decision. **"Stops the sweep" stops E1:** no further launch at any rate; E1's result is then computed from the runs made. A pre-launch check that fails (the limit read, the temperature after 30 min, a compute process, a tmux session, the tree, `uv.lock`, the boot id, free disk) is not such a stop: it launches nothing, spends no attempt, and the queue is started again once the cause is removed (after a reboot: 350 W set and a `RENEW=1` session probe recorded in a decisions entry). A second heat failure is counted over all of E1's runs, not per rate. Likewise any other check (not `gpu_steady`, `no_errors` or `power_limit`) that is in `failed` of two of E1's runs, at any rates, stops E1: on the first GPU runs of a new harness a check that fails twice is a question about the harness, not a rerun. Any `no_errors` in `failed` stops E1 (the details that would separate a client error from another are not read). A launch whose log names no run (no `run_id` line: its command failed, or the harness stopped before its first folder) spends its attempt; a second such launch, at any rate, stops E1 for a new decision. A rate whose three attempts are spent is not launched again; the other rates still run, and the queue ends with `QUEUE END`, naming the rates without a valid run (not each of them is a hole of `e1.floor`: "Holes"). **After any invalid run the queue pauses** ("The harness E1 runs on", R2). **The queue is started again only if no check name stands in `failed` of E1's runs at two or more different rates;** otherwise E1 stops for a new decision, since one failure at several rates points to the harness's first GPU use (R2) or to the cell, and an unchanged rerun would repeat it. The check is made from the queue's `RUN … INVALID failed=…` lines alone, and each restart is recorded in an [OPS] entry that quotes those lines. The scripts enforce this restart rule and are stricter than it in one case: a check other than `gpu_steady`, `no_errors` and `power_limit` in `failed` of two runs at one rate stops E1 (`MAX_SAME`, FILE(docs/probe/20261113_e1/ops/common.sh:24,267-269), lines after draft 7's script patch), where this restart rule would allow a restart; `gpu_steady` in two runs stops by the heat rule, at one rate or two, and one `no_errors` or `power_limit` stops at once. So every case this restart rule stops, the scripts stop too, before any launch. Two valid runs at one rate: nothing is launched and both are listed, the earliest counting. A folder that no launch log of these scripts names, a named run missing from the VM, or a run made at another commit (read from the harness's start line, which holds `run_id` and `git_commit`, FILE(harness/run.py:143), printed by FILE(harness/run.py:80)) stops E1 for the owner. Every run with a `checks.json`, valid or invalid, is copied and checksum-verified; a run without one is copied by a separate step. No E1 run is removed from the VM before E1's end entry (the queue stops when the Mac holds an E1 folder that the VM does not list, FILE(docs/probe/20261113_e1/ops/common.sh:224-226)).
+- **A rerun decision reads only the fields `valid` and `failed` of `checks.json`.** The details in that file (counts of ok and unfinished requests) are outcome data and are not read.
+- **Reads allowed while diagnosing a stop:** `tmux has-session`, folder names, `valid` and `failed`, and in a launch log only the lines holding `run_id` or `[run] checks`.
+- The owner halts E1 by an entry headed `## <date> · [DECISION] (owner) E1 halted`; no launch follows its commit.
+- **E1 holds the VM** from `vm_checkout.sh` until its end is recorded by an entry headed `## <date> · [OPS] E1: the queue ended (QUEUE DONE)`, `## <date> · [OPS] E1: the queue ended (QUEUE END)`, or `## <date> · [OPS] E1 ended by a stop: <the stop line>` (a stop that an entry has decided ends E1). A pause, or a stop that waits for a decision, is not an end. Until the end entry, no other registration's run is launched, and the VM's tree is moved only by E1's scripts or under an owner's entry. The approval commit amends RUNBOOK §5's order to match: E1 and REG-20 arm A: whichever has its ops approved first runs first; the other launches only after the first's end entry. "Approved first" is read from the committed `docs/decisions.md`: the item whose last required heading has the earlier line is first; an item's required headings are those its scripts need before their first launch (E1's approval heading `[DECISION] (owner|delegate) E1 approved`; for REG-20 arm A, every heading its operations scripts require, as below), so a REG-20 operations heading that still waits for the owner's rulings does not make arm A first. E1's end entry is one of the three headings above. REG-20 arm A's end entry, for this rule, is REG-20's [RESULT] heading, or an [OPS] entry that quotes REG-20's `QUEUE DONE` line or records a stop of REG-20 that an entry has decided ends arm A, or the end heading REG-20's ops decision names, if it names one. If REG-20 arm A runs first, E1's `vm_checkout.sh` is not run, and E1's queue is not started, before REG-20's end entry; E1's scripts do not read REG-20's entries, so this is kept by hand, and the [OPS] entry that commits `vm_checkout.sh`'s output quotes `git grep -n` of that end entry's heading at the Mac's HEAD (E1's pre-launch checks still refuse a launch while the tmux session `run` exists, a compute process is on the GPU or the VM's tree is not E1's commit, "Pre-launch and launch"). If E1 runs first, REG-20's scripts do not read E1's entries either (rule F e1_r2, DC4), so the approving decision asks that REG-20's ops decision carry this rule's other side, and until it does REG-20 arm A is not launched before E1's end entry, by hand. An item's ops are approved when every entry its scripts require before their first launch is committed: for E1, the approving decision after this entry (`[DECISION] (delegate) E1 approved`, or the owner's); for REG-20 arm A, every heading its operations scripts require before their first launch (its operations decision draft 2 names three: the delegate's operations decision, the owner's rulings, and `[DECISION] (owner|delegate) REG-20 arm A starts`). An approval that still waits for an owner's ruling does not make an item first, so the GPU does not wait for an item that cannot start. E1's approving decision states which item is first, from `git grep -n` of those headings at its commit. The second item neither launches, nor moves the VM's tree, nor starts its queue before the first's end entry. An owner's entry may change the order.
+- **The VM's tree** is clean at the commit that holds this registration's approval. That commit already holds the single-rate configs, so no later commit is needed for a rerun. The scripts recognise the approval only by a heading of the form `## <date> · [DECISION] (owner|delegate) E1 approved` after this entry, at the commit named in `docs/probe/20261113_e1/ops/e1_commit.txt` (FILE(docs/probe/20261113_e1/ops/common.sh:40)); from then on they refuse if any of them differs from its text at that commit.
+
+### Withheld until the [RESULT] of E1
+The sweep's run folders (`*_sweep_l1pl350cl_pc_off_r*`; `analysis/withheld.py`, seal "E1").
+
+### Result, computed once
+After every rate has a valid run or the stopping rule has ended, after REG-21's first [RESULT], and after E0's [REG] is committed or an entry records that E0's gate takes no input from E1's runs ("What E1 can and cannot do"; no computation in this section, and no `e1.observed`, `e1.floor_status` or `k2.observed` on E1's runs, runs before then): `AFTERSHOCK_UNSEAL=E1 uv run python -m analysis.e1 floor`. It prints `e1.report`: the floor with its status, n, rates, the slope of throughput on rate over those rates with its SE (`floor_slope_reported`) and any later valid run not counted; the open-loop floor recomputed by `gate.cold_floor` with REG-8's settings (`e1.saturated`, as REG-8 computed it: no tail fallback and no holes check); the common onset; the tilt (`tilt_reported`); the work rates of both sweeps. The tilt's model-F description, `e1.prediction()`, reads no run. `e1.report` does not print it; it is quoted beside the tilt from `python -c 'import json; from analysis import e1; print(json.dumps(e1.prediction(), default=str))'`, run from the same code. The tilt is present only when `gate.cold_floor` gives "ok" on both sweeps, since otherwise there is no common onset; the prediction is computed once, beside the result, as `uv run python -c '…'` (the command above with `uv run` in front), and reported as the tilt's description. From committed code, with `analysis/` and `tests/` clean and `uv run pytest` passing; the [RESULT] names the commit. **The code is the registered code:** the files printed by `python3 docs/probe/20261113_freeze/closure.py --at <registered commit> analysis/e1.py` (24 .py files and three environment files at e87884d; the output is quoted in the approval entry) are unchanged from the registered commit to the commit the [RESULT] names, except for rows added to `analysis/withheld.py`'s `SEALS`; the [RESULT] quotes `git diff --stat <registered commit> <its commit> -- <those files>`. Any other change is a [CORR] entry made before the result is computed, and the result then reports `e1.observed()["floor"]` from both codes, the registered code's first (the worktree computation below, whose `runs/` is a real directory holding links to E1's and REG-8's cache-off sweep folders only, as REG-19's `links_ok` builds its own, FILE(docs/probe/20261113_reg19/ops_r3/common.sh:88-102); never a link to the whole of the Mac's `runs/`: the registered code's `analysis/withheld.py` does not know seals added after the registered commit, and `gate.sweep_rows` loads every run folder it can see, FILE(analysis/load.py:41-44)). **The floor is also computed from the registered code** (`agent/RUNBOOK.md` §5): from a worktree at the commit that holds this entry's approval (`git worktree add --detach ../aftershock-e1-pin <commit>`), with the run folders `*_sweep_l1pl350cl_pc_off_r*` and `*_sweep_l1pl350_pc_off_r*` of the Mac's `runs/` linked into its `runs/`, run from its root with the repo's interpreter: `AFTERSHOCK_UNSEAL=E1 /Users/chalshik/Projects/aftershock-artifacts/.venv/bin/python -c 'import json; from analysis import e1; print(e1.__file__); print(json.dumps(e1.observed()["floor"], default=str))'` (the floor needs no REG-21 statistic). The printed path must lie in the worktree. The worktree's floor (status, n, rates, value) is E1's floor; if the result commit's differs in any of these, the [RESULT] reports both and names the commits between the two that touch `analysis/`. The two rules give one order: with the frozen files unchanged both computations run the same code, and after a [CORR] that changed them the registered code's floor is E1's floor and is reported first.
+
+### Pre-launch and launch (`docs/probe/20261113_e1/ops/`, reviewed with this text)
+As REG-19's resume, with the differences DESIGN_NOTES.md lists: a session probe once per boot (boot id, driver 595.99.02, the VM's tree and `uv.lock` at the registered commit, 350.00 W read, not set by the launch; a renewal needs a decisions entry); before every launch a read-only check of the limit, temperature ≤ 45 °C (waiting up to 30 min, which spends no attempt), an idle GPU, no tmux session, the tree, `uv.lock`'s blob, free disk and the boot id; an attempt record written immediately before the launch command; validity read from `checks.json`'s `valid` and `failed` only (`vm_state.py`); a valid run found on the VM is used, not relaunched; copies checksum-verified, one run at a time. The VM moves from the commit it is at (`a7bb77a`, HEAD deployed under RUNBOOK §3 item 6, or REG-20 arm A's commit if that runs first: "E1 holds the VM"; it must be an ancestor of the registered commit) to the registered commit by `vm_checkout.sh` (detached HEAD, its output saved and committed with an [OPS] entry). **The owner must set 350 W** unless a sudoers rule for `nvidia-smi -pl 350` exists by then. Run order: `README.md`, "Run order".
+
+### Cost
+6 runs × (900 + 300 + about 60 s) ≈ 2.1 GPU h (DERIVED: every rate's planned schedule ends at 900 s, so a saturated closed-loop run lasts to its 1200 s deadline; REG-8 part b's saturated runs started 21 min apart, FILE(docs/decisions.md:1745-1751)); ≈ 4.2 h with one rerun per rate; at most 18 runs, 6.3 h (DERIVED: 6 × 3 × 1260 s), and with the systematic-fault stop at most the sweep and a few runs when one check fails throughout. Waits for ≤ 45 °C before a launch (up to 30 min each) keep the GPU idle and are not counted. Every other stop only lowers that ceiling.
+
+### Code and tests
+`analysis/e1.py` (`floor`, `floor_tail`, `first_valid`, `swept_rates`, `floor_status`, `saturated`, `onset`, `observed`, `report`; reported only: `tilt`, `fit`, `prediction`, `replay_rows`, `work_rates`, and `observed`'s `floor_slope_reported`); `tests/test_e1.py`, 16 tests; the seal test in `tests/test_withheld.py`. `work_rates` gives, beside U, the running batch, waiting line, KV, preemptions per second and the redo proxy of each saturated run. `e1.floor_status`, the flag E2 reads between its sweeps, applies the same holes rule (rule F e1_r2, DC2), and `k2.observed` calls `e1.floor` without the swept rates, so without it (FILE(analysis/k2.py:179)); E2's and E0's registrations cite both.
+
+### Adversarial review (rule F, `docs/process.md` §3), verbatim
+
+> # rulef-e1-draft5-r1 (rulef-e1-r1), verbatim
+> 
+> Saved by the agent from the reviewer's own final text (its session a7b61c6b, line 558, timestamp 2026-11-13T21:19:16.276Z), which the reviewer ended its turn with and did not send by SendMessage, so it never reached the main session (checked by the agent on 2026-11-13 21:33 UTC: no SendMessage call in that session). The rule F round 1 on E1 draft 5 (bundle e1_r1).
+> 
+> ---
+> 
+> Rule F review, round 1, of E1 draft 5 (bundle `docs/drafts/review_bundles/e1_r1/`)
+> 
+> **Verdict: NOT READY.** Twelve required items, DA1 to DA12. Three of them change code (DA1, DA2, DA6). The rest are text. Two script defects are confirmed in a scratch copy of the sandbox: a harness fault that fails one check on every run can spend 6.3 GPU h with no automatic stop (DA1), and the pause after an invalid run is lost if the queue stops for any other reason first (DA2). Both fixes were applied in the scratch copy and pass.
+> 
+> **Bundle and limits**
+> - MANIFEST: 28 of 28 sha256 lines OK.
+> - The bundle's scripts, `e1.py`, `test_e1.py` and draft 5 are byte-equal to the repo's files at e87884d (cmp).
+> - `harness_diff_a7bb77a_to_HEAD.diff` equals `git diff a7bb77a e87884d -- harness/`.
+> - Nothing under `runs/` was opened beyond folder names (`ls runs | grep`, `ls -d` of the two RUN-tagged folders).
+> - Nothing under `docs/probe/**/state/` was opened. File names under `docs/probe/20261113_reg19/ops_r3/state/` did appear in git-status output twice: once in the context injected at session start, and once from a `git status --short | head` I ran after the sandbox to confirm the repo was untouched. Only names, no content.
+> - I read `agent/RUNBOOK.md` lines 40–56 (§3 items 2–6 and the §4 heading). That file is not on the lead's list and not forbidden; I read it because DESIGN_NOTES cites FILE(agent/RUNBOOK.md:48,50).
+> - I did not read `docs/context-pack.md`, `status.md` (beyond the session-start digest a hook put into my context), `model.md`, `claims.md` or `open-questions.md`. That is on purpose: rule F's pass sees the registration and the code.
+> - No VM contact.
+> 
+> **What I ran**
+> - The sandbox, in a temp dir under my scratchpad: 170 of 170.
+> - A scratch copy of the sandbox with six trace cases: 176 of 176. Output: `/private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/a7b61c6b-f3e3-42e5-9c96-081c8a6cb2a9/scratchpad/e1r1/sandbox_reviewer.txt`.
+> - That copy with the DA1 and DA2 patches and the changed cases: 177 of 177. Output: `/private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/a7b61c6b-f3e3-42e5-9c96-081c8a6cb2a9/scratchpad/e1r1/sandbox_patched2.txt`.
+> - Patches as diffs: `/private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/a7b61c6b-f3e3-42e5-9c96-081c8a6cb2a9/scratchpad/e1r1/patch_common.sh.diff`, `/private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/a7b61c6b-f3e3-42e5-9c96-081c8a6cb2a9/scratchpad/e1r1/patch_queue.sh.diff`, `/private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/a7b61c6b-f3e3-42e5-9c96-081c8a6cb2a9/scratchpad/e1r1/patch_launch.sh.diff`, `/private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/a7b61c6b-f3e3-42e5-9c96-081c8a6cb2a9/scratchpad/e1r1/patch_test_sandbox.sh.diff`.
+> - `.venv/bin/python -m pytest tests/test_e1.py -q -p no:cacheprovider`: 12 passed.
+> - `python3 docs/probe/20261113_freeze/closure.py analysis/e1.py`: 24 .py files. `e1.py` is in neither REG-21's nor REG-22's closure.
+> - A schedule computation from the configs through `harness.workload.build_schedule`. It reads no runs.
+> - Python may have refreshed gitignored `__pycache__` files. Nothing else in the repo was written.
+> 
+> ---
+> 
+> ### Required items
+> 
+> **DA1. A harness fault that fails one check on every run spends 6.3 GPU h; the pause decides nothing**
+> - **Trace.**
+>   - The new harness fails `recorder` on every run without crashing (R2). For example, the last good scrape comes before `load_end` − 2 s.
+>   - The sweep returns six invalid runs (2.1 h) and the queue pauses.
+>   - For that stop, README says "Start the queue again; it reruns by E1's rule" (FILE(docs/probe/20261113_e1/ops/README.md:71)). No registered sentence says when not to restart.
+>   - Each restart launches one rerun, which fails and pauses again. After 12 restarts every rate has spent 3 attempts: 18 runs, 6.3 GPU h (DERIVED: 18 × 1260 s). The queue prints `QUEUE END` with six holes and there is no floor.
+>   - Reproduced in the scratch sandbox: `FAKE_FAIL` on all six rates, restarted at every pause, gives 13 launches (the sweep plus 12 single rates), then `QUEUE END rates without a valid run after 3 attempts: 1.5 2 2.5 3 3.5 4`.
+>   - Only `gpu_steady` is bounded (`MAX_HEAT`=2). So R2's sentence "a systematic failure is seen before the reruns spend about 4.2 h more" holds only if someone declines to restart, and that decision is not registered.
+> - **Class:** stricter rule, with a code fix.
+> - **Text.**
+>   - Anchor: `A second heat failure is counted over all of E1's runs, not per rate.`
+>   - Replace with: `A second heat failure is counted over all of E1's runs, not per rate. Likewise any other check (not `gpu_steady`, `no_errors` or `power_limit`) that is in `failed` of two of E1's runs, at any rates, stops E1: on the first GPU runs of a new harness a check that fails twice is a question about the harness, not a rerun.`
+>   - Anchor: `so a systematic failure is seen before the reruns spend about 4.2 h more.`
+>   - Replace with: `and a check in `failed` of two of E1's runs stops E1 (the stopping rule), so a systematic failure costs the sweep's 2.1 h and no rerun.`
+> - **Code, `common.sh`** (tested):
+>   - After the line `MAX_HEAT=2                                     # ... and the second among E1's runs stops the queue` add:
+>     `MAX_SAME=2                                     # E1 (rule F e1_r1): any other check in `failed` of this many of E1's runs stops the queue`
+>   - Replace `  local -A NAMED per` with `  local -A NAMED per nfail`.
+>   - After the line `      [[ ${NORERUN[(Ie)$f]} -gt 0 ]] && stopper="$f ($parts[1])"` add:
+>     `      [[ $f == - || $f == $HEAT || ${NORERUN[(Ie)$f]} -gt 0 ]] || nfail[$f]=$(( ${nfail[$f]:-0} + 1 ))`
+>   - After the line `    (( n_heat < MAX_HEAT )) || { MSG="second heat failure ($HEAT) among E1's runs: E1 stops; the owner decides"; return 2; }` add:
+>     ```
+>         for f in ${(k)nfail}; do
+>           (( nfail[$f] < MAX_SAME )) || { MSG="$f is in failed of ${nfail[$f]} of E1's runs: a check that fails twice is a question about the harness, not a rerun. E1 stops; the owner decides"; return 2; }
+>         done
+>     ```
+> - **Sandbox, `test_sandbox.sh`:**
+>   - In `case_ "the rerun is invalid again" ...` use `"INVALID failed=arrival_rate" 1 FAKE_FAIL="2:arrival_rate"`.
+>   - In `case_ "attempt 3 invalid too: ..."` use `FAKE_FAIL="2:release_chain"`.
+>   - In `run FAKE_SWEEP_RATES="1.5 2" FAKE_FAIL="2:recorder" zsh $Q; run FAKE_FAIL="2:recorder" zsh $Q; run FAKE_FAIL="2:recorder" zsh $Q` make the second and third `2:arrival_rate` and `2:release_chain`.
+>   - Add:
+>     ```
+>     reset
+>     run FAKE_FAIL="1.5:recorder 2:recorder 2.5:recorder 3:recorder 3.5:recorder 4:recorder" zsh $Q
+>     case_ "a check failing on two or more runs stops E1, no rerun" "recorder is in failed of 6 of E1's runs" 1 zsh $Q
+>     chk "one launch only" is "$(launches)" 1
+>     ```
+> - **README stop table:** add the row `| `<check> is in failed of 2 of E1's runs` | The registered systematic-fault stop | The owner |`.
+> 
+> **DA2. The pause is lost when any other stop comes between the settle and the next launch**
+> - **Trace.**
+>   - The sweep ends. `report_settled` prints `RUN …_r2 INVALID failed=recorder` and sets the shell variable `PAUSE`.
+>   - The next turn's copy of `…_r1.5` fails, giving `QUEUE STOP copy failed`. README says to find the cause and start again.
+>   - On restart the settle is already done, so `PAUSE` is empty. The queue copies the runs and launches rate 2's attempt 2 with no pause.
+>   - Reproduced: `FAKE_FAIL="2:recorder" FAKE_RSYNC_FAIL=1`, then a plain restart, gives `QUEUE DONE` with 2 launches.
+>   - The same happens after a checksum mismatch, a manifest failure, a VM read failure or the lost-run stop. `launch.sh` run by hand also launches with no pause.
+>   - So "After any invalid run the queue pauses" and R2's "(it copies what is pending and stops before the next launch …)" are false on this trace.
+> - **Class:** code fix.
+> - **Code, `queue.sh`** (tested):
+>   - Replace `      invalid) echo "RUN $id INVALID failed=$fl"; PAUSE+="${PAUSE:+; }$id failed=$fl";;`
+>     with `      invalid) echo "RUN $id INVALID failed=$fl"; print -r -- "$id failed=$fl" >> $ST/pause_pending.txt;;`
+>   - Replace `      [[ -z $PAUSE ]] || stop "after an invalid run ($PAUSE). Starting the queue again applies E1's rerun rule from checks.json (valid, failed) alone"` with:
+>     ```
+>           if [[ -e $ST/pause_pending.txt ]]; then
+>             stamp; mv $ST/pause_pending.txt $ST/pause_shown_$REPLY.txt || stop "the pause record could not be set aside"
+>             stop "after an invalid run ($(tr '\n' ';' < $ST/pause_shown_$REPLY.txt)). Starting the queue again applies E1's rerun rule from checks.json (valid, failed) alone"
+>           fi
+>     ```
+>   - `PAUSE=""` can stay; it is now unused.
+> - **Code, `launch.sh`:** after `next_step || die "$MSG"` add
+>   `[[ ! -e $ST/pause_pending.txt ]] || die "an invalid run has not been shown at a pause yet (state/pause_pending.txt): start the queue, which pauses first"`
+> - **Sandbox:**
+>   - Before `case_ "with lost_ok: the paused rerun of rate 2 goes first, in the sweep's order" "QUEUE DONE" 0 zsh $Q` insert
+>     `case_ "with lost_ok: the pause not yet shown comes first" "QUEUE STOP after an invalid run" 1 zsh $Q`
+>   - Add:
+>     ```
+>     reset
+>     case_ "an invalid run, then a failed copy" "copy failed" 1 FAKE_FAIL="2:recorder" FAKE_RSYNC_FAIL=1 zsh $Q
+>     chk "the invalid run was reported before the stop" is "$(print -r -- $out | grep -c 'INVALID failed=recorder')" 1
+>     case_ "the restart still pauses before the rerun" "QUEUE STOP after an invalid run" 1 zsh $Q
+>     chk "no rerun launched before the pause" is "$(launches)" 1
+>     ```
+>   - With DA1 and DA2 together the sandbox passes 177 of 177 (scratch run).
+> - **Text.**
+>   - Anchor: `(it copies what is pending and stops before the next launch; starting it again applies the rerun rule; FILE(docs/probe/20261113_e1/ops/queue.sh:41))`
+>   - Replace with: `(each invalid run is written to `state/pause_pending.txt` when its launch log is settled; no launch, by the queue or by hand, proceeds until a queue start has printed it and set it aside, so another stop in between does not consume the pause; starting the queue again then applies the rerun rule; `queue.sh`, `report_settled` and the `launch` branch; `launch.sh`)`
+> 
+> **DA3. The text says a pre-launch check ends E1; the scripts and README restart after it**
+> - **Trace.**
+>   - The VM reboots between two launches. This is likely: per the status file, open question A18 records that five of the seven recorded boot ends fell during a GPU run.
+>   - The next pre-launch read sees a new boot id and 420 W, so the launch stops with no attempt spent.
+>   - By the text, that is "an unexpected pre-launch check", which "stops E1: no further launch at any rate". E1 then ends with holes, and with no floor if the holes are at or above λ_sat.
+>   - By README (FILE(docs/probe/20261113_e1/ops/README.md:75-76)) and DESIGN_NOTES I15, the owner sets 350 W, a `RENEW=1` probe is recorded, and E1 goes on. The scripts allow this.
+>   - So whoever reads the stop decides after the fact which rule applies. The same holds for a GPU still hot after 30 min, low disk, or a stray tmux session.
+> - **Class:** wording.
+> - **Text.**
+>   - Anchor: `A client error (`no_errors`), a limit other than 350 W (`power_limit`) or an unexpected pre-launch check stops it.`
+>   - Replace with: `A client error (`no_errors`) or a limit other than 350 W (`power_limit`) in a run's `failed` stops it.`
+>   - Anchor: `**"Stops the sweep" stops E1:** no further launch at any rate.`
+>   - Replace with: `**"Stops the sweep" stops E1:** no further launch at any rate; E1's result is then computed from the runs made. A pre-launch check that fails (the limit read, the temperature after 30 min, a compute process, a tmux session, the tree, `uv.lock`, the boot id, free disk) is not such a stop: it launches nothing, spends no attempt, and the queue is started again once the cause is removed (after a reboot: 350 W set and a `RENEW=1` session probe recorded in a decisions entry).`
+> 
+> **DA4. The code that computes the floor is not frozen, so the result can move after the data exist**
+> - **Trace.**
+>   - E1's runs are on the Mac when the queue ends. The [RESULT] waits for REG-21's [RESULT], which may take days.
+>   - REG-21's and REG-22's freeze ends at their batch 2. REG-23 is "NOT READY on six items that need code changes" (status digest).
+>   - A commit in that window could change `analysis/load.py`'s `window` or `summarize` (the KV mean and the throughput window `gate.sweep_rows` uses, FILE(analysis/gate.py:198-205)), or `gate.cold_floor`.
+>   - The text asks only for "committed code … `uv run pytest` passing". The draft-3 review's B3/B4 shows the size of the stake: the 1.5 row's KV at 0.84 against 0.85 moves the floor from 1.725 ("ok") to 1.770 ("tail_ok"), 2.6 %.
+>   - `analysis/e1.py`'s import closure is 24 .py files plus `.python-version`, `pyproject.toml` and `uv.lock` (PROBE: `closure.py analysis/e1.py`, run by this review at e87884d).
+> - **Class:** stricter rule.
+> - **Text.**
+>   - Anchor: `From committed code, with `analysis/` and `tests/` clean and `uv run pytest` passing; the [RESULT] names the commit.`
+>   - Replace with: `From committed code, with `analysis/` and `tests/` clean and `uv run pytest` passing; the [RESULT] names the commit. **The code is the registered code:** the files printed by `python3 docs/probe/20261113_freeze/closure.py --at <registered commit> analysis/e1.py` (24 .py files and three environment files at e87884d; the output is quoted in the approval entry) are unchanged from the registered commit to the commit the [RESULT] names, except for rows added to `analysis/withheld.py`'s `SEALS`; the [RESULT] quotes `git diff --stat <registered commit> <its commit> -- <those files>`. Any other change is a [CORR] entry made before the result is computed, and the result then reports `e1.observed()["floor"]` from both codes, the registered code's first (run from a worktree at the registered commit whose `runs/` links to the Mac's).`
+> 
+> **DA5. The ID line's REG-19 sentence is false, and the gate contradicts RUNBOOK §3 item 6 and §4**
+> - **Trace (a).**
+>   - The text says "nothing of REG-19 is lost, since its runs are copied and verified".
+>   - ops_r3 copies valid runs only: only `valid` ids enter `rids`, which the copy loop walks (FILE(docs/probe/20261113_reg19/ops_r3/queue.sh:54-60)).
+>   - The lost seed-18 folder is still to be copied "After the [RESULT]" (FILE(agent/RUNBOOK.md:48)). Those folders exist only on the VM.
+>   - `vm_checkout.sh` leaves them alone: `runs/` is gitignored and untracked, and `git checkout` keeps untracked files. So nothing is lost, but for that reason, not the stated one.
+> - **Trace (b).**
+>   - RUNBOOK §4's heading allows a deploy "never before REG-19's [RESULT]" (FILE(agent/RUNBOOK.md:50)). E1 moves the VM before that.
+>   - After REG-19's [RESULT], §3 item 6 has the agent "deploy HEAD (§4)" with `git pull origin main`. On E1's detached HEAD that either fails, or, after `git checkout main`, moves the VM off E1.
+>   - If E1 is then paused or waiting for a `lost_ok` decision, its next pre-launch read stops on the tree. `vm_checkout.sh` then refuses to move forward again (the VM's commit is not an ancestor of E1's), so the owner must decide.
+>   - Two files give contradicting orders (CLAUDE.md D).
+> - **Class:** wording and disclosure; RUNBOOK is amended in the registration commit.
+> - **Text.**
+>   - Anchor: `nothing of REG-19 is lost, since its runs are copied and verified and `runs/` is outside git.`
+>   - Replace with: `nothing of REG-19 is lost: `vm_checkout.sh` changes no file under `runs/` (gitignored and untracked), so REG-19's folders on the VM stay as they are, including those only the VM holds (ops_r3 copies valid runs only, FILE(docs/probe/20261113_reg19/ops_r3/queue.sh:54-60); the lost seed-18 folder is copied after REG-19's [RESULT], FILE(agent/RUNBOOK.md:48)). This entry supersedes RUNBOOK §4's "never before REG-19's [RESULT]" for E1's move only, and its commit amends `agent/RUNBOOK.md` to match.`
+> - **RUNBOOK.**
+>   - Anchor: `## 4. Deploying `main` to the VM (only between items, never during a run, never before REG-19's [RESULT])`
+>   - Replace with: `## 4. Deploying `main` to the VM (only between items, never during a run; never before REG-19's queue has ended (E1's gate); never while E1 has not ended: E1 moves the VM only with its own `docs/probe/20261113_e1/ops/vm_checkout.sh`)`
+>   - Anchor: `then deploy HEAD (§4);`
+>   - Replace with: `then, once E1 has ended (its queue printed QUEUE DONE or QUEUE END, or a stop that ends E1 is recorded), deploy HEAD (§4, after `git checkout main` on the VM, whose HEAD E1 leaves detached);`
+> 
+> **DA6. The floor is a mean over a rate range, and closed-loop throughput is predicted to rise with the rate**
+> - **Trace.**
+>   - Model F's replay of E1's config puts the closed-loop throughput slope on rate more than 0.04 req/s per req/s above the open-loop one (FILE(tests/test_e1.py:59), passing; BELIEF as to the model). The draft-3 review found the same tilt for FIFO, LIFO, many slots and superlinear cost.
+>   - With rows 2.0–4.0 on a line of slope 0.04–0.06, the floor (their mean) sits 0.04–0.06 req/s, 2.4–3.5 %, above the 2.0 row (DERIVED, synthetic rows in this review: 1.74 or 1.76 against 1.70).
+>   - If λ_sat is 2.5, it is 0.01–0.015 higher still. That can happen if the 2.0 row's KV mean stays below 0.85, because a closed loop fills slowly from an empty start just above its floor.
+>   - "Closed-loop margins (λ ÷ floor) are restated against it" at λ = 2.0 and 2.2, the operating points, would understate those margins by that much, under the label "the closed-loop cold floor", and nothing in the result would show it.
+> - **Class:** reporting duty, with a small code change.
+> - **Text (decision).**
+>   - Anchor: `closed-loop margins (λ ÷ floor) are restated against it. Each such edit is its own decision.`
+>   - Replace with: `closed-loop margins (λ ÷ floor) are restated against it, each with the floor's rates and the slope of throughput on rate over them (`floor_slope_reported`, with its SE; reported, never judged), and, at λ = 2.0, also against E1's own 2.0 row (one run, labelled as such). Closed-loop throughput is predicted to rise with the rate (the served mix tilts toward early, shorter turns; FILE(tests/test_e1.py:59), BELIEF as to the model), so the floor is a mean over a rate range, not a constant of the server. Each such edit is its own decision.`
+> - **Text (result).**
+>   - Anchor: `the floor with its status, n, rates and any later valid run not counted;`
+>   - Replace with: `the floor with its status, n, rates, the slope of throughput on rate over those rates with its SE (`floor_slope_reported`) and any later valid run not counted;`
+> - **Code, `analysis/e1.py`, `observed`:** after `           "rows_cl": cl.to_dict("records"), "later_valid_runs_not_counted": dropped}` add:
+>   ```
+>       lam = res["floor"]["lam_sat"]
+>       res["floor_slope_reported"] = fit(cl, "throughput", lam) if np.isfinite(lam) else None   # reported, never judged
+>   ```
+>   Checked on synthetic rows through the real `observed`: status "ok", λ_sat 2.0, slope 0.04, n 4.
+> 
+> **DA7. "In neither case does E1 start, stop or size another run" leaves out the one decision E1 can change**
+> - **Trace.**
+>   - E1 is the first GPU run on 5ee6e38's harness (R1–R4). The session-cap arm (step D) will run on that harness.
+>   - If E1's runs have `recorder` or `gpu_steady` in `failed` (both now include coverage), a later registration would be proposed on a recorder known to fail on the GPU.
+>   - If every E1 run is valid, R4's gap closes for the cap-off path.
+>   - Either way this is a decision about other runs, read from allowed fields.
+> - **Class:** wording.
+> - **Text.**
+>   - Anchor: `- **In neither case** does E1 start, stop or size another run. That is why the paragraph "What E1 cannot do" comes first.`
+>   - Replace with: `- **In neither case** does E1's floor start, stop or size another run. That is why the paragraph "What E1 cannot do" comes first. **E1's validity record is another matter:** it is the first GPU evidence on `5ee6e38`'s harness (with the session cap off, so the cap's path is not exercised). If `recorder` or `gpu_steady` is in `failed` of any E1 run, or a run ends without `checks.json` on an unchanged boot id, no registration runs on this harness until the cause is found and recorded in an [OPS] or [CORR] entry. After E1's queue has ended, only these fields of a failed check may be read for that: `recorder`'s `first_ok_scrape_t`, `last_ok_scrape_t`, `end_ref_t`, `recorder_died`, `max_gap_s`, `failed_scrapes`; `gpu_steady`'s `window_max_gap_s`, `hw_throttle_samples`, `sw_thermal_frac`, `max_temp_c`. None of them holds a request count, throughput or KV. If every run is valid, the next registration on this harness cites E1's run ids for R4.`
+> 
+> **DA8. The allowed reads show, for each rate, whether the server kept up**
+> - **Trace.**
+>   - Run ids begin with their launch time (FILE(harness/run.py:136)).
+>   - In the sweep each run starts when the previous one ends.
+>   - The load generator exits as soon as every session chain is done (FILE(harness/loadgen.py:237-239)). So a rate the server keeps up with (1.5 plans 1.606 req/s, below the predicted 1.70–1.80 floor) ends early, while a saturated rate runs to its 1200 s deadline.
+>   - REG-8's open-loop 1.5 run lasted 16 min 55 s against about 21 min for the saturated ones (DERIVED from the start times at FILE(docs/decisions.md:1746-1751)).
+>   - So consecutive run ids, and a single-rate run's `LAUNCHED`/`ENDED` lines, show one bit of each rate's throughput. At 1.5 that is the bit that separates "ok" from "tail_ok".
+> - **Class:** disclosure.
+> - **Text.**
+>   - Anchor: `No interim look at any rate's throughput, KV or floor before the result is computed.`
+>   - Replace with: `No interim look at any rate's throughput, KV or floor before the result is computed. Disclosed: the allowed reads still show one bit per rate. Run ids carry their launch time, and a run whose sessions all ended before the drain deadline ends early, so the gaps between consecutive run ids of the sweep, and a single-rate run's `LAUNCHED`/`ENDED` times, show whether the server kept up with that rate. No step of the stopping rule uses this, and the [RESULT] says so.`
+> 
+> **DA9. The cost gives no ceiling**
+> - **Class:** wording (cost).
+> - **Text.**
+>   - Anchor: `6 runs × (900 + 300 + about 60 s) ≈ 2.1 GPU h (DERIVED); ≈ 4.2 h with one rerun per rate.`
+>   - Replace with: `6 runs × (900 + 300 + about 60 s) ≈ 2.1 GPU h (DERIVED: every rate's planned schedule ends at 900 s, so a saturated closed-loop run lasts to its 1200 s deadline; REG-8 part b's saturated runs started 21 min apart, FILE(docs/decisions.md:1745-1751)); ≈ 4.2 h with one rerun per rate; at most 18 launches, 6.3 h (DERIVED: 6 × 3 × 1260 s), and with the systematic-fault stop at most the sweep and a few runs when one check fails throughout. Waits for ≤ 45 °C before a launch (up to 30 min each) keep the GPU idle and are not counted.`
+> - Checked: maximum planned time 899.2–900.0 s at every rate, from `build_schedule` on the configs. 2.1 h and 4.2 h are correct.
+> 
+> **DA10. Tags**
+> - **Class:** tag.
+> - `(FILE(docs/decisions.md:4200))` → `(FILE(docs/decisions.md:4200) for the recorder and checks; FILE(docs/decisions.md:4209) for the session cap)`.
+> - `E1's configs set no cap.` → `E1's configs set no cap (DERIVED: `workload.sessions.cap` is absent from the expanded config of every rate of the sweep and of the six single-rate configs).`
+> - `No GPU run has used this harness yet.` → `No GPU run has used this harness yet (FILE(docs/decisions.md:4201): "Nothing is deployed to the VM"; REG-19's launches require `a7bb77a`, FILE(docs/probe/20261113_reg19/ops_r3/launch.sh:45)).`
+> - `FILE(docs/probe/20261113_e1/ops/common.sh:96)` → `FILE(docs/probe/20261113_e1/ops/common.sh:96-104)`.
+> - `FILE(harness/run.py:143))` → `FILE(harness/run.py:143), printed by FILE(harness/run.py:80))`.
+> - `RUN(the 13 REG-8 runs, gate.reg8_zone)` → `RUN(REG-8's 7 cache-off runs, `sweep_l1pl350_pc_off`, gate.reg8_zone)`. 1.681 comes from those 7 runs (FILE(docs/decisions.md:1744-1752)).
+> - All other FILE tags checked and correct: decisions.md:4205, 4516, 4520; ops_r3/common.sh:11; ops_r3/launch.sh:45; checks.py:127; base.yaml:55; common.sh:38. Also DESIGN_NOTES' run.py:136-143, 218, 243, RUNBOOK:48/50, and ops_r3 common.sh:136, vm_state.py:21/32-35, queue.sh:55, launch.sh:76.
+> 
+> **DA11. The harness that runs is not tied to the harness reviewed**
+> - **Trace.**
+>   - This review saw the harness at 9e249b1, whose `harness/` tree is e8a3e1e7425da486327884d093055e0846229d38 (the same at e87884d).
+>   - The registered commit comes later. The text says only "`git diff --stat a7bb77a HEAD …`", with HEAD unnamed.
+>   - A harness commit before registration (for step D, or a REG-23 fix) would run on the GPU unreviewed, as "the first GPU run on 5ee6e38".
+> - **Class:** stricter rule.
+> - **Text.**
+>   - Anchor: `` `git diff --stat a7bb77a HEAD -- harness/` gives 4 files, 163 lines in and 29 out; `pyproject.toml` and `uv.lock` are the same at both. ``
+>   - Replace with: `` `git diff --stat a7bb77a 9e249b1 -- harness/` gives 4 files, 163 lines in and 29 out; `pyproject.toml` and `uv.lock` are the same at both. The reviewed harness is the one that runs: `git diff --quiet 9e249b1 <registered commit> -- harness/ pyproject.toml uv.lock .python-version configs/defaults.yaml configs/base.yaml configs/gap5_base.yaml configs/l1_base.yaml configs/l1_pl350_base.yaml configs/sweep_l1pl350_pc_off.yaml configs/sweep_l1pl350cl_pc_off.yaml 'configs/sweep_l1pl350cl_pc_off_only_r*.yaml'` exits 0, and the approval entry quotes it; otherwise the registration goes back to rule F. ``
+> - This holds now: exit 0 against e87884d. The config chain is also unchanged since a7bb77a.
+> 
+> **DA12. Stale comments in the scripts that the registration will freeze**
+> - **Class:** wording.
+> - `queue.sh:2`: `# E1's queue (registration: docs/drafts/e1_draft4.md until it is registered; README.md).` → `# E1's queue (registration: the [REG] E1 entry in docs/decisions.md; README.md).`
+> - `queue.sh:4`: `REG-19's [RESULT] is in the committed log` → `the committed log records REG-19's queue end ('[OPS] REG-19: the queue ended') or its [RESULT],`
+> - `vm_checkout.sh:6`: `# before REG-19's [RESULT] is in the committed log, or while REG-19's queue lock exists` → `# before the committed log records REG-19's queue end ('[OPS] REG-19: the queue ended') or its [RESULT], or while REG-19's queue lock exists`
+> - `common.sh:3`: `the registration (docs/drafts/e1_draft4.md,` → `the registration (read from draft 4, docs/drafts/e1_draft4.md; registered as the [REG] E1 entry;`
+> - `DESIGN_NOTES.md:67`: `- The scripts implement the stricter rule, `RESULT19_PAT`.` (no such variable exists) → `- Draft 5 drops that wait: the scripts wait for an `[OPS] REG-19: the queue ended` or `[RESULT] REG-19` heading (`END19_PAT`) and for REG-19's lock to be absent.`
+> - DESIGN_NOTES §2 item 12: `or before REG-19's `[RESULT]` (I11)` → `or before an `[OPS] REG-19: the queue ended` or `[RESULT] REG-19` heading is committed (I11)`.
+> - DESIGN_NOTES R6: `RUNBOOK §4 allows a deploy only after REG-19's `[RESULT]` (I11).` → `RUNBOOK §4 allowed a deploy only after REG-19's `[RESULT]`; the registration supersedes that for E1's move and amends RUNBOOK (DA5).`
+> 
+> ---
+> 
+> ### Optional items
+> 
+> **DA-O1. The gate trusts a heading that a QUEUE STOP could carry**
+> - **Trace:** an `[OPS] REG-19: the queue ended` entry written by mistake after a `QUEUE STOP` passes `END19_PAT`. The VM then leaves the pin while REG-19 waits for the owner.
+> - **Class:** code fix plus heading form.
+> - **Code, `common.sh`:**
+>   - Anchor: `END19_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · (\[RESULT\] REG-19([^0-9]|$)|\[OPS\] REG-19: the queue ended)'`
+>   - Replace with: `END19_PAT='^## [0-9]{4}-[0-9]{2}-[0-9]{2} · (\[RESULT\] REG-19([^0-9]|$)|\[OPS\] REG-19: the queue ended \(QUEUE (DONE|END futility stop)\))'`
+>   - Tested with grep -E: it matches `(QUEUE DONE)` and `(QUEUE END futility stop)`; it rejects `(QUEUE STOP …)`, a bare heading and `REG-190`. These are ops_r3's two end lines (FILE(docs/probe/20261113_reg19/ops_r3/queue.sh:91)).
+> - **Sandbox:** the heading becomes `## 2026-11-15 · [OPS] REG-19: the queue ended (QUEUE DONE)`.
+> - **Text (ID line):** `an [OPS] entry headed `REG-19: the queue ended`` → `an [OPS] entry headed `REG-19: the queue ended (QUEUE DONE)` or `(QUEUE END futility stop)``.
+> 
+> **DA-O2. An owner's overrule cannot be seen by the scripts**
+> - **Trace:** the delegation says the owner may overrule a delegate decision by an entry (FILE(docs/decisions.md:4231-4238)). The scripts check the approval only at E1's commit.
+> - **Class:** code fix.
+> - **Code, `ready_to_run`, first line after `MSG=""`:**
+>   `git -C $R grep -q -E '^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[(DECISION|CORR)\] \(owner\) E1 halted' HEAD -- docs/decisions.md && { MSG="the owner halted E1 (a '[DECISION] (owner) E1 halted' heading)"; return 2; }`
+> - **Text (stopping rule):** add `The owner halts E1 by an entry headed `## <date> · [DECISION] (owner) E1 halted`; no launch follows its commit.`
+> 
+> **DA-O3. Register the default for a run lost to a power-off (A18) instead of a new decision each time**
+> - **Class:** stricter rule.
+> - **Text.**
+>   - Anchor: `a run that ends without `checks.json` stops the sweep until a new decision.`
+>   - Replace with: `a run that ends without `checks.json` stops the sweep until a new decision; if the VM's boot id changed during it (a power-off), the decision is fixed in advance: the run counts as one attempt, its rate is launched again under the attempt limit once 350 W is set and a `RENEW=1` probe is recorded, and an [OPS] entry and `state/lost_ok_<run id>.txt` record it; on an unchanged boot id (a harness fault, R1) the owner decides.`
+> 
+> **DA-O4. A hole just below λ_sat goes unreported**
+> - **Trace:** 2.0 has no valid run (three attempts spent), 1.5 is valid and kept up, 2.5–4.0 are saturated. `floor()` returns "ok" with λ_sat 2.5 and n 4, although λ_sat lies somewhere in (1.5, 2.5]. Scratch check on synthetic rows: registered code gives `ok`, 1.735; the patch gives `holes`, missing [2.0].
+> - **Class:** code fix.
+> - **Code, `e1.floor`:**
+>   - Anchor: `        missing = [float(x) for x in swept if x >= f["lam_sat"] - 1e-9 and round(float(x), 6) not in have]`
+>   - Replace with:
+>     ```
+>             below = [r for r in have if r < f["lam_sat"] - 1e-9]
+>             lo = max(below) if below else f["lam_sat"]
+>             missing = [float(x) for x in swept if x > lo + 1e-9 and round(float(x), 6) not in have]
+>     ```
+>   - The existing holes tests pass unchanged (1.5 missing: ok; 3.0 missing: holes [3.0]).
+> - **Text ("Holes"):** add `, or a swept rate between the highest valid row below λ_sat and λ_sat`.
+> 
+> **DA-O5. Say what a `gpu_steady` failure was**
+> - **Class:** reporting duty.
+> - **Text, append to R3:** `The [RESULT] names each `gpu_steady` failure "heat or sample coverage" until its detail is read (DA7's fields), then says which.`
+> 
+> **DA-O6. `report()` counts runs that `first_valid` excludes**
+> - **Class:** code fix.
+> - **Code:**
+>   - Anchor: `    cl, ol = sweep_rows(E1["sweeps"]["cl"]), sweep_rows(E1["sweeps"]["ol"])` in `report`.
+>   - Replace with: `    cl, ol = first_valid(sweep_rows(E1["sweeps"]["cl"]))[0], sweep_rows(E1["sweeps"]["ol"])`.
+> 
+> **DA-O7. Name the move back to the pin for a REG-19 rerun**
+> - **Class:** wording.
+> - **Text.**
+>   - Anchor: `needs the VM moved back first;`
+>   - Replace with: `needs the VM moved back first: only while no tmux session `run` exists, by RUNBOOK §4's steps with `git checkout --detach a7bb77abc863adcaad9d4516815a5ddddf2908e9`, recorded in an [OPS] entry; E1's next pre-launch read then stops on the tree (no attempt spent), and `vm_checkout.sh` later moves it forward again (a7bb77a is an ancestor of E1's commit);`
+> 
+> ---
+> 
+> ### 3. Strongest alternative explanation for the floor E1 would report
+> 
+> The floor is the mean, over the saturated rows from λ_sat to 4.0, of ok completions per second in [240, 900). The registration reads it as the closed-loop server's cold capacity. The strongest alternative is that it differs from 1.681, and from the cold throughput at λ = 2.0–2.2, mostly because of what is counted, not because of what the server can do:
+> 
+> - **The served mix tilts toward early turns.**
+>   - Closed loop serves a session's early turns first, and cold prompts grow with the turn (2176 + 256·k tokens). So completions per second rise with the load at a fixed token rate.
+>   - Model F puts the closed-loop throughput slope more than 0.04 req/s per req/s above the open-loop one (FILE(tests/test_e1.py:59)). The draft-3 review found the same tilt for any work-conserving server with within-session precedence.
+>   - The floor therefore depends on the grid and on λ_sat. Averaged over 2.0–4.0 it sits about 0.04–0.06 req/s above the 2.0 row (DERIVED, synthetic rows), and 0.01–0.015 higher if the 2.0 row's KV keeps λ_sat at 2.5.
+>   - Separating evidence: per-row throughput and its slope (DA6), k̄ per row, and U per row against REG-8's (both reported). A flat U equal to REG-8's, with rising req/s, means mix. A different U means the server: running batch, preemptions, a new connection per request, code, or day.
+> - **Drift between 2026-11-07 and E1's day at 350 W** (SM clock, thermal state after back-to-back runs) would move the absolute level against 1.681. Separating evidence: each saturated run's busy SM-clock mean against REG-8's, from `gpu.jsonl`. This is not registered; it could join the reported gauges.
+> - **The fill transient at the lowest saturated rate** inside the 660 s window. Separating evidence: throughput in each half of the window per row. Not registered.
+> 
+> ### 4. Can E1 change any decision?
+> 
+> - **The floor: no run decision.** I agree with the text, and the draft-3 review's label map has the 16-turn question resting on the cache-on sweep alone.
+> - **It changes a claim decision:** K2's wording and the paper's closed-loop margins, which the text names.
+> - **The text does not name one more:** E1's validity record is the first GPU evidence on 5ee6e38's harness, and the step-D registrations will run on that harness (DA7). With DA7, the answer is yes, one decision. Without it, the sentence "In neither case does E1 start, stop or size another run" is incomplete.
+> - **Is it worth 2.1 GPU h?**
+>   - On the text's own terms (K2 wording only), weakly. The closed-loop cold throughput at the operating points is already bounded by the two cold spans the text cites (1.73–1.81 at λ = 2.0 and 2.2) and by model F's replay (1.744 or 1.771). E1 would add a sweep mean with a predicted rate dependence and the same named confounds.
+>   - With DA7 (the first GPU exercise of the A14 recorder and the stricter checks before step D relies on them), and with the GPU otherwise idle until REG-21's and REG-22's entries are committed, it is worth 2.1 h. DA1 keeps a broken harness from turning that into 6.3 h.
+>   - The text's own sentence, "If the owner holds that a measurement that changes no decision should not cost 2.1 GPU h, E1 should not run", stays the owner's call; the owner's 2026-11-13 entry chose to prepare it.
+> 
+> ### Checked and correct
+> - The attempt count from the sweep's `run_id` lines; the sweep launched at most once ever.
+> - The global stops (`no_errors`/`power_limit` anywhere, the second `gpu_steady` over all runs).
+> - A spent rate does not block the other rates.
+> - Two valid runs at one rate: both listed, earliest counted.
+> - Unnamed folders, missing named runs and Mac-only folders stop E1.
+> - The commit check, from the start line `[run] start {'run_id': …, 'git_commit': …}`. `git_commit` is `git rev-parse HEAD`; a missing value fails safe.
+> - Every run with `checks.json` is copied and checksum-verified, one at a time.
+> - `vm_state.py` prints only `valid` and `failed`. The launch log is read only through `'run_id': '` lines (no other harness print carries that pattern). `copy_verify` reads bytes, not content. `tools/context_pack.py` reads no runs; `check_docs.py` reads `valid`.
+> - The six single-rate configs expand to exactly the sweep's run at their rate (the configs' `sweep` key is the only difference). E1 folders exist on neither the Mac nor the VM side named in the repo (0 matching folder names on the Mac).
+> - Moving off a7bb77a does not touch REG-19's data or `final.sh`, which is Mac-only. The harm is limited to DA5(b) and the need for a move back (DA-O7).
+> - Treating `gpu_steady`'s coverage failures as heat is sound: it allows one rerun instead of two and adds to the global stop, so it is never looser. The [RESULT] should not call them heat (DA-O5).
+> - R5's BELIEF holds on reading the diff: with the cap off, the load generator changes only in bookkeeping and flushing.
+> 
+> ### Could not check
+> - The cold spans 1.73–1.81 and the RUN tags of runs (they need reads beyond folder names).
+> - The replay floors 1.744/1.771 (verified by the draft-3 review; not recomputed here, because analysis-module commands are outside my limits).
+> - `docs/claims.md` K2 and `experiment-plan.md` step E1.
+> - Whether a sudoers rule for `nvidia-smi -pl 350` exists.
+> 
+> ### 5. Verdict
+> **NOT READY.** Apply first: DA1, DA2, DA3, DA4, DA5, DA6, DA7, DA8, DA9, DA10, DA11, DA12.
+> - DA1 and DA2 change `common.sh`, `queue.sh`, `launch.sh` and `test_sandbox.sh`. The patches and changed cases were tested at 177 of 177 in scratch; rerun the sandbox in the repo after applying them.
+> - DA6 changes `analysis/e1.py`. `e1.py` is outside REG-21's and REG-22's frozen closures. Rerun `tests/test_e1.py`.
+> - The other items are text and tags.
+> - Because DA1, DA2 and DA6 are code changes, the review-stop rule calls for a second round on the new bundle.
+
+#### What was changed because of it
+- **DA1** (a check failing on two runs): the stopping rule's sentence "Likewise any other check …" and R2's last clause, verbatim. Code: `MAX_SAME` (FILE(docs/probe/20261113_e1/ops/common.sh:24,193,242,267-269), lines after draft 7's script patch), as the review gives it. Sandbox: the three-attempt cases use three different checks; the new case "a check failing on two or more runs stops E1, no rerun". README: the stop-table row. Kept beside the owner-proxy's restart rule (DB4); the sentence after DB4 says where the code is stricter (two runs at one rate).
+- **DA2** (the pause lost to another stop): R2's parenthesis, verbatim. Code: `queue.sh`'s `report_settled` wrote `state/pause_pending.txt` (draft 7 moves that write into `common.sh`'s `settle`, FILE(docs/probe/20261113_e1/ops/common.sh:164-167), round 2's DC-O1) and the `launch` branch shows it and sets it aside (FILE(docs/probe/20261113_e1/ops/queue.sh:68-71); lines after draft 7's script patch); `launch.sh` refuses while it exists (FILE(docs/probe/20261113_e1/ops/launch.sh:27)). Sandbox: the case "with lost_ok: the pause not yet shown comes first" and the four checks of "an invalid run, then a failed copy". `PAUSE=""` stays, unused, as the review allows.
+- **DA3** (pre-launch checks do not end E1): both sentences of the stopping rule, verbatim.
+- **DA4** (the floor's code frozen): "Result, computed once", verbatim, followed by the owner-proxy's DB6 and one sentence on how the two agree.
+- **DA5** (REG-19's runs, RUNBOOK): the ID line, verbatim. The two RUNBOOK edits are not made in this draft; with the owner-proxy's DB11 they form one proposal for the approval commit (`docs/drafts/e1_draft6_itemmap.md`, "RUNBOOK").
+- **DA6** (the floor is a mean over a rate range): "Decision under each outcome" and "Result, computed once", verbatim. Code: `observed` gives `floor_slope_reported`, as the review gives it; a test (`test_observed_reports_the_floors_slope_on_rate`).
+- **DA7** (the validity record changes one decision): the bullet "In neither case", verbatim; "What E1 cannot do" ends with a sentence pointing to it.
+- **DA8** (one bit per rate): the stopping rule's first bullet, verbatim.
+- **DA9** (the cost's ceiling): "Cost", verbatim but for one word: "at most 18 runs" for "at most 18 launches" (the sweep is one launch for six runs, so 18 runs take 13 launches, or 19 when the sweep's launch fails before any rate starts). The owner-proxy's DB7 is merged into it.
+- **DA10** (tags): all six, verbatim, except that `common.sh:96-104` is now `common.sh:98-108`, the same lines after this draft's edits.
+- **DA11** (the reviewed harness is the one that runs): "The harness E1 runs on", **Facts**, verbatim. Rechecked on 2026-11-13: `harness/` has tree `e8a3e1e7425da486327884d093055e0846229d38` at 9e249b1, e87884d and the working HEAD, and the `git diff --quiet` of the text exits 0 against HEAD.
+- **DA12** (stale comments): `queue.sh` lines 2 and 4, `vm_checkout.sh` line 6, `common.sh` line 3, and DESIGN_NOTES.md (I11, part 2 item 12, R6), verbatim; comment lines rewrapped. Comments that this draft's own code changes made stale were also brought up to date (`common.sh`'s `ready_to_run` and `next_step` comments, `queue.sh`'s header and `report_settled` comment, `launch.sh`'s header).
+- **DA-O1** (the gate's heading names the end line): the ID line and `END19_PAT`, verbatim; the sandbox's heading `(QUEUE DONE)`, and three cases added by this draft's writer (the futility-stop end passes; a `QUEUE STOP` heading and a bare heading are refused). The gate's refusal message also names the two forms.
+- **DA-O2** (the owner's halt): the stopping rule's sentence and `ready_to_run`'s first line, verbatim; four sandbox cases added by this draft's writer (the queue, `launch.sh` and `vm_checkout.sh` refuse; nothing moved). The code also accepts a `[CORR] (owner) E1 halted` heading, as the review's line does.
+- **DA-O3** (a pre-registered rerun after a power-off): **not taken.** It changes the stopping rule for lost runs, which the owner-proxy's note N3 leaves to the owner. A run that ends without `checks.json` still stops E1 until a new decision.
+- **DA-O4** (a hole just below λ_sat): "Holes", verbatim; `e1.floor`, as the review gives it; a test (`test_a_hole_just_below_lam_sat_is_a_hole`).
+- **DA-O5** (what a `gpu_steady` failure was): appended to R3, verbatim.
+- **DA-O6** (`report` and `first_valid`): `e1.report`, as the review gives it; a test (`test_report_counts_only_the_runs_first_valid_keeps`).
+- **DA-O7** (the move back to the pin): the ID line, verbatim, followed by the owner-proxy's DB10(iii): the move back needs its own entry.
+
+### Adversarial review, round 2 (rule F, `docs/process.md` §3), verbatim
+
+> <!-- Saved verbatim 2026-11-13 ≈ 23:20 UTC from the reviewer's own file /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/d3f64482-d0cf-4bf8-9ad1-c1dc026c562c/scratchpad/rulef-e1-draft6-r2.md (sha256 8dc8a1463b8db0850d3e97b8a357f336fcf39996e4ff69aa4117075f933b6408, 354 lines); the reviewer (rulef-e1-r2) sent the same text to the agent in five SendMessage parts. Body below this line is byte-identical to that file. -->
+> Rule F review, round 2, of E1 draft 6 (bundle `docs/drafts/review_bundles/e1_r2/`, commit 97a6438), with the start-gate entry of 302d431
+> 
+> **Verdict: NOT READY.** Two blocking items: DC1 (E1's floor is an input of E0's gate in the plan, in claims.md and in committed code, so "E1 changes no decision about a shock matrix" is false, and running E1 before E0 is registered needs a rule-A5 guard) and DC2 (the "holes" rule in `e1.floor` gives a cleaner status on less data; a code fix, tested). DC3–DC9 are required but do not block: they are text, tags or reporting duties and can be applied verbatim. DC-O1 to DC-O5 are optional; DC-O1 and DC-O2 are code, tested in a scratch sandbox. The start gate with the 4611 entry is sound (section "The start gate").
+> 
+> **Bundle and limits**
+> - MANIFEST: 41 of 41 sha256 lines OK. Every file in the bundle is in the manifest, and the manifest lists nothing else.
+> - `ops/` in the bundle is byte-equal to `docs/probe/20261113_e1/ops/` at HEAD (cmp, 10 files).
+> - `e1_draft6.patch` and `test_e1_draft6.patch`, applied to HEAD's `analysis/e1.py` and `tests/test_e1.py`, give the bundle's `e1.py` and `test_e1.py` byte for byte (patch in scratch, then cmp).
+> - HEAD moved to 08817af during this review: 7e1a9fd, de80007, d9b324d (REG-22 and REG-21 registered), 62c9d96, 1dc008d and 08817af. `git diff --stat 97a6438 HEAD` over `docs/probe/20261113_e1`, `analysis`, `tests`, `harness`, `configs`, `agent/RUNBOOK.md`, `docs/experiment-plan.md`, `docs/claims.md` and the bundle is empty, so every anchor and FILE line below holds at HEAD. `docs/decisions.md` is append-only and now has 16320 lines; lines 1–4614 are unchanged, and every decisions.md line cited below is in that range unless named otherwise.
+> - **REG-21's and REG-22's freezes (since d9b324d, after the bundle).**
+>   - E1's draft-6 patch and DC2's patch change only `analysis/e1.py` and `tests/test_e1.py`. Neither is in REG-22's 27 frozen files (FILE(docs/decisions.md:4748)) or REG-21's 26 (FILE(docs/decisions.md:9834)), and neither adds a `.py` file. So the approval commit does not break either freeze. `analysis/k2.py` is not frozen either, so DC1's guard still matters.
+>   - E1's seal is already at HEAD (FILE(analysis/withheld.py:30)), and `withheld.py` is frozen, so no seal change is needed or allowed.
+>   - E1's folders match neither REG-21's reference pattern `*_sweep_l1pl350_pc_off_r*` (FILE(analysis/k3w.py:77); E1's names carry `l1pl350cl`) nor REG-21's or REG-22's batch-2 patterns, which name REG-19's burst configs. So E1's runs enter no batch.
+>   - Disclosure E1 should carry (in DC5's spirit, not a separate item): the harness E1 runs on (`harness/checks.py`, `run.py`, `recorder.py`, `loadgen.py`, …) is frozen until both batch 2s are computed or declared not computed. A harness fault that DA7's block finds cannot be fixed before then.
+> - Read: the bundle; the ops scripts; `analysis/e1.py`, `gate.py` (cold_floor, sweep_rows), `load.py` (find_runs), `withheld.py`, `k2.py` (decide, observed), `k3.py` (e1_prediction, legacy); `harness/run.py`, `checks.py`, `config.py`, `loadgen.py` (the drain deadline); the E1 config chain; `tools/manifest.py` (reads bytes only); `docs/decisions.md` (the cited lines, 1744–1752, 4037–4045, 4260–4275, 4516–4521, 4571–4614); `docs/claims.md` K2; `docs/experiment-plan.md` lines 427–428 (a grep for E0/E1); `agent/RUNBOOK.md` lines 46–75; `docs/drafts/reg19_resume_decision_draft5.md` line 41; REG-19's `ops_r3/` scripts (`common.sh`, `queue.sh`, `launch.sh`, `final.sh`); `docs/probe/20261113_reg20/ops/common.sh` (a grep for E1 and the gate); `docs/probe/20261113_freeze/closure.py` (source); `git diff .gitignore`.
+> - Not opened: anything under `runs/` beyond folder names (`ls runs | grep -E '_sweep_l1pl350(cl)?_pc_off'`: seven REG-8 folders, no E1 folder; 186 folders in all); `docs/probe/**/state/`; `/Users/chalshik/aftershock-backups/`; RESUME.md; `docs/paper/`; any `queue_*.txt` or `launch_*.out`; any transcript; `docs/context-pack.md`; `docs/status.md` beyond the session-start digest a hook put into my context; the draft-3 rule F review (`rulef-e0e1-r2.md`), whose argument DC1 contradicts but which I did not read. Names under `ops_r3/state/` appeared in the git-status snapshot of my context (names only). No VM contact.
+> - Ran: the sandbox in a temp dir under my scratchpad (`passed 184, failed 0`); `tests/test_e1.py` on the patched files in a scratch copy (`git archive HEAD analysis harness configs tests pyproject.toml`, with no `runs/`), run with the repo's interpreter: 16 passed; `python3 docs/probe/20261113_freeze/closure.py --at HEAD analysis/e1.py` (24 .py files, the same 27 in all as draft 6 says; it reads source only); schedule and config expansion through `e1._cfgs` and `harness.workload.build_schedule` in the scratch copy (no run read); `git diff --quiet 9e249b1 HEAD -- <DA11's list>` (exit 0); `git merge-base --is-ancestor a7bb77a HEAD` (exit 0). No analysis module command, no `tables.py`, `recheck`, `gate`, `check_docs.py` or full pytest. Python may have refreshed gitignored `__pycache__` in the repo when the sandbox ran `vm_state.py`; nothing else in the repo was written. The working tree's other modifications (`docs/decisions.md`, `agent/STATE.md` and others, shown by `git status` during this review) are not mine.
+> - Scratch files, under `/private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/d3f64482-d0cf-4bf8-9ad1-c1dc026c562c/scratchpad/`:
+>   - `DC2_DC8_e1_vs_bundle.patch`, `DC2_test_e1_vs_bundle.patch`: against the bundle's `e1.py` and `test_e1.py`. Patched files: `out/b/analysis/e1.py` (sha256 428771e0…) and `out/b/tests/test_e1.py` (dd3f52c5…); 16 passed.
+>   - `DCO1_common.patch`, `DCO1_queue.patch`, `DCO1_test_sandbox.patch`: sandbox 188 of 188 (`sandbox_patched_newcase.txt`). Without the fix, the new case fails (`sandbox_unpatched_newcase.txt`, 186 passed, 2 failed).
+>   - `DCO2_common.patch`, `DCO2_test_sandbox.patch`: sandbox 188 of 188 (`sandbox_dco2.txt`).
+> - Every replacement anchor below was counted in the entry (lines 1–75 of `registration_draft6.md`): each occurs exactly once. The RUNBOOK and README anchors also occur once each.
+> 
+> ---
+> 
+> ### Required items
+> 
+> **DC1 (BLOCKING). E1's floor is an input of E0's gate. "E1 changes no decision about a shock matrix" is false, and E1 is run ahead of the gate that will judge it.**
+> - **Trace.**
+>   - The owner's plan makes E1's floor K2's 8-turn reference: "E0 … register[s], before any sweep, a numeric prediction of each setup's window ratio (closed-loop warm capacity over closed-loop cold floor) and the gate: the 16-turn shock matrix runs only if the 16-turn ratio exceeds the 8-turn ratio by a factor fixed here (rule G)" (FILE(docs/experiment-plan.md:427)). E1 "gives K2 its 8-turn reference" (FILE(docs/experiment-plan.md:428)). The same is said in FILE(docs/decisions.md:4040) ("E0 (0 GPU h) registers … the gate factor before any sweep (rule G)") and FILE(docs/claims.md:56).
+>   - In the committed code, `k2.observed` computes `f8 = e1.floor(sweep_rows("sweep_l1pl350cl_pc_off"))`, which is E1's runs (FILE(analysis/k2.py:179)). `k2.decide` puts f8 into R = (warm16/f16)/(warm8/f8) (FILE(analysis/k2.py:109)) and returns "missing", meaning no matrix, when f8 is NaN (FILE(analysis/k2.py:102-103)). The owner's choice 2 of 2026-11-12 is "kept as it is in the E0 … registration" (FILE(docs/decisions.md:4264-4269)).
+>   - So on E1's no-floor outcomes ("holes", "too_few", "unsaturated", "tail_*" but "tail_ok"), E0's committed gate gives "missing": no 16-turn matrix. Within E1's predicted range, f8 still moves R in proportion. Whether that flips a label depends on g and on E2's grid, which E0 has not fixed.
+>   - The draft rests its claim on the draft-3 review's argument ("decided by the 16-turn cache-on sweep alone"). That argument is about a gate that is not registered, and it fails on the no-floor branch above. The owner's 4516 entry repeats the claim from the draft ("as its own draft says first", FILE(docs/decisions.md:4520)), so the owner's acceptance rests on it.
+>   - Rule A5 hazard. E1 runs before E0 is registered. E0's redesign "needs … the owner's choice of a threshold" (draft 6, header). E1's result waits only for REG-21's first [RESULT]. If E1's floor is reported first, E0's threshold is chosen with one of its inputs known. The delegation does not cover choosing a threshold after seeing the data it judges (FILE(docs/decisions.md:4235)).
+>   - Second inconsistency: `k2.observed` reads E1's runs with `e1.floor` but without `first_valid` and without the swept rates. It skips E1's holes check, and `gate.cold_floor` raises on two valid runs at one rate (FILE(analysis/gate.py:35-36)). E0 could therefore get a floor from runs on which E1's own rule reports "holes".
+> - **Class:** disclosure and stricter rule (text).
+> - **Text.** All anchors are in the entry, above the quoted review.
+>   - (a) Anchor: `- **What E1 cannot do (rule A1), said first:** E1 changes no decision about a shock matrix. The rule F review showed that whether the 16-turn window "widens" is decided by the 16-turn cache-on sweep alone; E1 and the 16-turn cache-off sweep only word the ratio. E1 is proposed as K2's measurement and as the floor every closed-loop margin in the paper is quoted against, and for nothing else.`
+>     Replace with: `- **What E1 can and cannot do (rule A1), said first:** E1's floor is K2's 8-turn reference: the denominator of the 8-turn window ratio that E0's gate compares the 16-turn ratio against (FILE(docs/experiment-plan.md:427-428); FILE(docs/decisions.md:4040); FILE(docs/claims.md:56)). As committed, `k2.decide` takes it as `f8` in R = (warm16/f16)/(warm8/f8) and returns "missing" (no matrix) when it is undefined (FILE(analysis/k2.py:102-109)), and `k2.observed` computes it from E1's runs (FILE(analysis/k2.py:179)). The draft-3 rule F review argued that the label is set by the 16-turn cache-on sweep alone; that is an argument about a gate that is not registered (BELIEF until E0's [REG] shows it), and it does not hold for E1's outcomes without a floor, which make the committed label "missing". So E1 can change the 16-turn matrix decision and K2's "does not widen" reading, through E0. E1 runs before E0 is registered, which departs from "E0 … registers … the gate factor before any sweep (rule G)" (FILE(docs/decisions.md:4040)). To keep rule A5 for E0's gate, no part of E1's floor (status, value, n, rates, slope) is computed, quoted or used before E0's [REG] is committed, or before an entry records that E0's gate takes no input from E1's runs. E0's registration discloses the one bit per rate that the allowed reads show (stopping rule, first bullet), and takes E1's floor as E1's [RESULT] reports it (the registered code, "holes" included), not recomputed by another rule (`k2.observed` calls `e1.floor` without `first_valid` or the swept rates, FILE(analysis/k2.py:179)). Apart from E0's gate, E1 is proposed as K2's measurement and as the floor every closed-loop margin in the paper is quoted against, and for nothing else.`
+>   - (b) Anchor: `The decisions E1's outcomes do change are the wording ones under "Decision under each outcome".`
+>     Replace with: `The decisions E1's outcomes do change are E0's gate input (above) and the wording ones under "Decision under each outcome".`
+>   - (c) Anchor: `- **No floor:** K2's 8-turn closed-loop floor is reported as unmeasured on this grid; closed-loop margins keep the open-loop floor, named as such. A new grid is a new registration.`
+>     Replace with the same text followed by: ` Under E0's gate as committed, the label is then "missing": no 16-turn matrix, the owner decides (FILE(analysis/k2.py:94-95,102-103)).`
+>   - (d) Anchor: `- **In neither case** does E1's floor start, stop or size another run. That is why the paragraph "What E1 cannot do" comes first.`
+>     Replace with: `- **In neither case** does E1's floor start, stop or size a run other than through E0's gate ("What E1 can and cannot do", which is why that paragraph comes first).`
+>   - (e) Anchor: `After every rate has a valid run or the stopping rule has ended, and after REG-21's first [RESULT]:`
+>     Replace with: `After every rate has a valid run or the stopping rule has ended, after REG-21's first [RESULT], and after E0's [REG] is committed or an entry records that E0's gate takes no input from E1's runs ("What E1 can and cannot do"; no computation in this section, and no `e1.observed`, `e1.floor_status` or `k2.observed` on E1's runs, runs before then):`
+> - **Why blocking.** The first paragraph is the entry's rule-A1 statement, and a delegate approval may not rest on a false one. Without (e), the order of E1's result and E0's registration is left to chance, and with it rule A5 for E0.
+> 
+> **DC2 (BLOCKING). The holes rule gives "ok" when two rates are missing and "holes" when one is; a row `cold_floor` drops is not counted as a hole.**
+> - **Trace (a), the main one.**
+>   - The sweep returns 1.5 INVALID `recorder` and 2.0 INVALID `recorder`; 2.5–4.0 are valid. `MAX_SAME` stops E1 after the sweep (common.sh:260-262), and "E1's result is then computed from the runs made".
+>   - `floor` sees rows 2.5–4.0 only. `cold_floor` returns "ok" with λ_sat 2.5. Draft 6's hole check finds no valid row below λ_sat, sets `lo = lam_sat`, and so reports **"ok", 1.735** (scratch check on synthetic rows).
+>   - With 1.5 valid and kept up, and only 2.0 missing, the same code reports "holes" [2.0] (DA-O4's own case). Less data gives the cleaner status.
+>   - 2.0 plans 2.097 req/s and counts as saturated below 1.992, against a predicted floor of 1.70–1.80 (DERIVED from `build_schedule`: 1374 planned arrivals in [240, 900) over 660 s). So the "ok" floor leaves out a row predicted to belong to it, and sits about 0.01–0.015 req/s high (DA6's figures).
+>   - A fault that hits only the first two runs of the sweep (the coolest and shortest) is the kind DA1's stop is built for, so this trace is reachable.
+>   - Under the DA4 merge, after a later [CORR] "the registered code's floor is E1's floor". A fix after registration cannot correct this outcome, so it must be in the registered code.
+> - **Trace (b).** `have` is built from every row's rate, including rows that `cold_floor` drops for a non-finite value (FILE(analysis/gate.py:33)). A valid run with a NaN `kv_mean` or throughput at 3.0 therefore makes no hole, and the floor silently leaves out 3.0. This is unlikely under the new coverage checks, and costs one line.
+> - **Class:** code fix, plus text.
+> - **Code** (against the bundle's `e1.py`; full patch `DC2_DC8_e1_vs_bundle.patch`).
+>   - Replace `        have = set(np.round(rows.rate.to_numpy(float), 6))` with:
+>     ```
+>             fin = rows[np.isfinite(rows[["rate", "throughput", "planned_rate", "kv_mean"]]).all(axis=1)]   # as cold_floor reads them
+>             have = set(np.round(fin.rate.to_numpy(float), 6))
+>     ```
+>   - Replace `        lo = max(below) if below else f["lam_sat"]` with `        lo = max(below) if below else -math.inf          # no valid row below lam_sat: lam_sat is not bracketed (DC2)`.
+>   - In `floor`'s docstring, replace `    lam_sat, or between the highest valid row below lam_sat and lam_sat (rule F e1_r1, DA-O4: lam_sat could lie` / `    there), has no valid run (the floor would average over a gap)."""` with `    lam_sat, or below lam_sat with no valid row between it and lam_sat (rule F e1_r1, DA-O4; e1_r2, DC2: lam_sat` / `    could lie there), has no valid run (the floor would average over a gap); a row with a non-finite rate, throughput,` / `    planned rate or KV mean, which cold_floor drops, counts as no valid run."""`.
+> - **Tests** (`DC2_test_e1_vs_bundle.patch`; still 16 tests, 16 passed).
+>   - In `test_floor_no_rows_and_holes`, replace
+>     ```
+>         low = E.floor(full[full.rate != 1.5], grid)             # a hole below lam_sat does not matter
+>         assert low["status"] == "ok" and low["n"] == 5
+>     ```
+>     with
+>     ```
+>         low = E.floor(full[full.rate != 1.5], grid)             # no valid row below lam_sat: lam_sat could be 1.5
+>         assert low["status"] == "holes" and low["missing_rates"] == [1.5]
+>         assert E.floor(full, (1.0,) + grid)["status"] == "ok"   # a hole below a valid unsaturated row does not matter
+>     ```
+>   - In `test_a_hole_just_below_lam_sat_is_a_hole`, replace
+>     ```
+>         g = e1.floor(no_low, grid)
+>         assert g["status"] == "ok" and g["lam_sat"] == 2.5                               # 1.5 and 2.0: below, not holes
+>     ```
+>     with
+>     ```
+>         g = e1.floor(no_low, grid)                                                       # no valid row below lam_sat:
+>         assert g["status"] == "holes" and g["missing_rates"] == [1.5, 2.0]               # lam_sat could be 1.5 or 2.0
+>         nan_row = rows([1.5, 2.0, 2.5, 3.0], [1.45, 1.70, 1.72, float("nan")], kv=[0.6, 0.95, 0.95, 0.95])
+>         assert e1.floor(nan_row, (1.5, 2.0, 2.5, 3.0))["missing_rates"] == [3.0]     # a row cold_floor drops is a hole
+>     ```
+> - **Text.**
+>   - Anchor: `- **Holes:** a swept rate at or above λ_sat, or a swept rate between the highest valid row below λ_sat and λ_sat, with no valid run gives the status "holes" and no floor (the floor would average over a gap); the missing rates are listed.`
+>   - Replace with: `- **Holes:** a swept rate with no valid run gives the status "holes" and no floor when it lies at or above λ_sat, or below λ_sat with no valid row between it and λ_sat (λ_sat could lie there; with no valid row below λ_sat, every swept rate below it without a valid run is such a hole). A row with a non-finite rate, throughput, planned rate or KV mean, which `gate.cold_floor` drops, counts as no valid run. The missing rates are listed.`
+> - **Cost and side effect.**
+>   - The stricter rule costs a floor only when 1.5 has no valid run. Outside a stop, that means three failures at 1.5.
+>   - It also changes `floor_status`, which E2 reads (E2's lowest rate is 1.0). E2 is not registered; its registration must say so.
+>   - "holes" is on the owner-proxy's §3 list, so this needs its pass.
+> 
+> **DC3. Two descriptions of the registered-code computation disagree, and one of them would read sealed folders.**
+> - **Trace.**
+>   - DA4's sentence runs the registered code "from a worktree at the registered commit whose `runs/` links to the Mac's". DB6's sentence links only the two sweeps' folders.
+>   - Read as a link to the whole `runs/`, the worktree's `e1.observed` → `gate.sweep_rows` → `load.find_runs("*")` would load every run folder that the registered commit's `withheld.SEALS` does not list (FILE(analysis/load.py:41-44)).
+>   - E1's result waits for REG-21's first [RESULT] (and, with DC1, for E0's [REG]). Seal rows added after the registered commit, for REG-20 arm A's operations or D1/D2, are unknown to that code, so their sealed runs' requests and metrics would be loaded.
+>   - That is "reading outcome data a pending registration withholds", which the delegation does not cover.
+> - **Class:** stricter rule (text; resolves a DA4/DB6 merge conflict).
+> - **Text.**
+>   - Anchor, in the entry: ``(run from a worktree at the registered commit whose `runs/` links to the Mac's)``
+>   - Replace with: ``(the worktree computation below, whose `runs/` is a real directory holding links to E1's and REG-8's cache-off sweep folders only, as REG-19's `links_ok` builds its own, FILE(docs/probe/20261113_reg19/ops_r3/common.sh:88-102); never a link to the whole of the Mac's `runs/`: the registered code's `analysis/withheld.py` does not know seals added after the registered commit, and `gate.sweep_rows` loads every run folder it can see, FILE(analysis/load.py:41-44))``
+> 
+> **DC4. Nothing holds the VM for E1 between its queue runs, and RUNBOOK §5 puts REG-20 first.**
+> - **Trace.**
+>   - E1 pauses after an invalid run, or stops for a `lost_ok` decision (likely, given A18). While it waits, E1's queue lock does not exist.
+>   - REG-19's [RESULT] may land then. REG-21's and REG-22's entries are now committed (d9b324d), so only `final.sh` stands before it.
+>   - RUNBOOK §5 orders "2 REG-20 gate, 2a REG-20 arm A" before "4 E1" (FILE(agent/RUNBOOK.md:63-66)). REG-20's ops scripts (in review) gate on `[RESULT] REG-19` and know nothing of E1 (a grep of `docs/probe/20261113_reg20/ops/common.sh` for E1 has no hit).
+>   - REG-20's move puts the VM on a commit that descends from E1's. E1's next pre-launch then stops on the tree, and `vm_checkout.sh` refuses to move backward (FILE(docs/probe/20261113_e1/ops/vm_checkout.sh:32)).
+>   - E1 is stranded with holes. The 2.1 h already spent may then give no floor.
+>   - The draft's RUNBOOK proposal amends §4 and §3 item 6 only, and E1's end has no fixed record that another registration's gate could read. This is the mirror of the REG-19 gate E1 itself needed.
+> - **Class:** stricter rule (text, with RUNBOOK and README edits in the approval commit).
+> - **Text.**
+>   - Anchor: `- The owner halts E1 by an entry headed `## <date> · [DECISION] (owner) E1 halted`; no launch follows its commit.`
+>   - Replace with the same line followed by a new bullet: ``- **E1 holds the VM** from `vm_checkout.sh` until its end is recorded by an entry headed `## <date> · [OPS] E1: the queue ended (QUEUE DONE)`, `## <date> · [OPS] E1: the queue ended (QUEUE END)`, or `## <date> · [OPS] E1 ended by a stop: <the stop line>` (a stop that an entry has decided ends E1). A pause, or a stop that waits for a decision, is not an end. Until the end entry, no other registration's run is launched, and the VM's tree is moved only by E1's scripts or under an owner's entry. The approval commit amends RUNBOOK §5's order to match: E1 runs from REG-19's recorded queue end, and REG-20's gate and arm A wait for E1's end entry.``
+> - **RUNBOOK, (c), merged with the item map's (a) and (b).**
+>   - Anchor: `| 4 | E1 |`
+>   - Replace with: `| 1a (before 2) | E1 (runs from REG-19's recorded queue end; items 2 and 2a wait for E1's end entry, "[OPS] E1: the queue ended …" or "[OPS] E1 ended by a stop: …") |`
+> - **README.**
+>   - Anchor: ``   - write the `[OPS]` entry;``
+>   - Replace with: ``   - write the `[OPS]` entry, headed `[OPS] E1: the queue ended (QUEUE DONE)` or `(QUEUE END)` (registration, "E1 holds the VM");``
+> 
+> **DC5. DA7's readable fields cannot name every cause of a `recorder` or `gpu_steady` failure, and two of them carry DA8's bit without saying so.**
+> - **Trace.**
+>   - `gpu_steady` fails on `busy_sm_clock_cv` > 0.05 or on no busy sample, as well as on throttling, SW thermal or coverage (FILE(harness/checks.py:134-138)).
+>   - Suppose a run fails on the clock CV alone. Every allowed field then reads as passing: `hw_throttle_samples` 0, `sw_thermal_frac` ≤ 0.05, `window_max_gap_s` ≤ 2.
+>   - Three sentences then pull against each other. DA-O5's "then says which" cannot be met. DA7's block ("no registration runs on this harness until the cause is found") cannot be lifted within the allowed reads. The only way out is a read outside the list.
+>   - `recorder`'s `counter_decreases` is missing the same way (FILE(harness/checks.py:106-110)).
+>   - The item map's finding 2: `end_ref_t` (the time of `load_end`) shows whether the run ended early. `busy_samples`, once added, shows how loaded the GPU was. For a failed run, both show DA8's bit per rate.
+> - **Class:** reporting duty and disclosure (text). It widens what may be read before E1's [RESULT], so the owner-proxy must rule on it (its §3, fourth bullet; item map finding 3).
+> - **Text.**
+>   - Anchor: `` `recorder`'s `first_ok_scrape_t`, `last_ok_scrape_t`, `end_ref_t`, `recorder_died`, `max_gap_s`, `failed_scrapes`; `gpu_steady`'s `window_max_gap_s`, `hw_throttle_samples`, `sw_thermal_frac`, `max_temp_c`. None of them holds a request count, throughput or KV. ``
+>   - Replace with: `` `recorder`'s `first_ok_scrape_t`, `last_ok_scrape_t`, `end_ref_t`, `end_ref`, `recorder_died`, `max_gap_s`, `failed_scrapes`, `counter_decreases`; `gpu_steady`'s `window_max_gap_s`, `window_samples`, `busy_samples`, `busy_sm_clock_cv`, `hw_throttle_samples`, `sw_thermal_frac`, `max_temp_c`, or its detail text when the detail is not a dict ("no gpu.jsonl data"). These are every input of the two checks' pass conditions (FILE(harness/checks.py:106-110,134-138)). None of them holds a request count, throughput or KV. Disclosed: `end_ref_t` is the time of `load_end`, which comes early for a run whose sessions all ended before the drain deadline, and `busy_samples` counts the samples with the GPU at least 50 % busy. For a failed run, both show the same one bit per rate as the stopping rule's first bullet, and no more. ``
+>   - Anchor (in R3, in the entry): `The [RESULT] names each `gpu_steady` failure "heat or sample coverage" until its detail is read (DA7's fields), then says which.`
+>   - Replace with: `The [RESULT] names each `gpu_steady` failure "heat, SM-clock steadiness or sample coverage" until its detail is read (the fields listed under "In neither case"), then says which.`
+> 
+> **DC6. Two sentences of "Result, computed once" describe a `report()` that does not exist (item map finding 4).**
+> - **Trace.**
+>   - `report()` returns `observed()` plus the work rates. `observed()` gives `tilt_reported` and never calls `prediction()` (bundle `e1.py`:184-199, 242-252).
+>   - `floor_ol` is `saturated(ol)`: `cold_floor` with no tail fallback and no holes check, which is not "the same way" as E1's floor.
+>   - For REG-8's seven rows the value is 1.681 either way, since `cold_floor` gives "ok" and every swept rate has a row. So the fix is wording, which keeps REG-8's own definition.
+> - **Class:** wording.
+> - **Text.**
+>   - Anchor: `the open-loop floor recomputed the same way; the common onset; the tilt with its prediction; the work rates of both sweeps.`
+>   - Replace with: `the open-loop floor recomputed by `gate.cold_floor` with REG-8's settings (`e1.saturated`, as REG-8 computed it: no tail fallback and no holes check); the common onset; the tilt (`tilt_reported`); the work rates of both sweeps. The tilt's model-F description, `e1.prediction()`, reads no run. `e1.report` does not print it; it is quoted beside the tilt from `python -c 'import json; from analysis import e1; print(json.dumps(e1.prediction(), default=str))'`, run from the same code.`
+> 
+> **DC7. Rule H: the floor is a single-seed, pooled quantity, and the entry does not label it so.**
+> - **Class:** reporting duty.
+> - **Text.**
+>   - Anchor: `- **A floor exists** only with status "ok" or "tail_ok". The result reports n and the rates used.`
+>   - Replace with: `- **A floor exists** only with status "ok" or "tail_ok". The result reports n and the rates used, and labels the floor "single seed (seed 0), one run per rate": no seed-to-seed spread is measured, and the SE of `floor_slope_reported` is across rates, not seeds (rule H). The floor pools its rows under REG-8's assumption that a saturated cache-off server completes requests at one rate whatever the offered load. E1's own prediction says closed-loop rows break that assumption by a slope of about 0.04 req/s per req/s (FILE(tests/test_e1.py:59), BELIEF as to the model), so the result states the assumption beside the floor, with the slope as the evidence on it.`
+> 
+> **DC8. `analysis/e1.py`'s module docstring still says "not yet registered: draft docs/drafts/e1_draft4.md" (item map finding 7; owner-proxy N7).**
+> - **Why now.** Draft 6 changes `e1.py` anyway, and from the registered commit the file is frozen (DA4). After registration this sentence would be false in judged code, with no way to fix it short of a [CORR].
+> - **Class:** wording, in code; included in `DC2_DC8_e1_vs_bundle.patch`.
+> - **Code.**
+>   - Replace `"""E1 (not yet registered: draft docs/drafts/e1_draft4.md; its [REG] E1 entry does not exist yet): the closed-loop cache-off sweep of setup L1`
+>   - with `"""E1 (registered: the [REG] E1 entry in docs/decisions.md; frozen from its registered commit): the closed-loop cache-off sweep of setup L1`.
+> - **Note.** `observed`'s docstring "feeds E0" is true (DC1) and stays.
+> 
+> **DC9. The gate's entry now exists; cite it.**
+> - **Class:** tag.
+> - **Text.**
+>   - Anchor: `It needs no REG-19 result.`
+>   - Replace with: `It needs no REG-19 result. That entry exists: FILE(docs/decisions.md:4611) (commit 302d431, headed `[OPS] REG-19: the queue ended (QUEUE DONE)`, quoting `QUEUE DONE (all five seeds run). Next: final.sh, once`), which restates FILE(docs/decisions.md:4571) and records no new event.`
+> 
+> ---
+> 
+> ### Optional items
+> 
+> Every code anchor below occurs exactly once in the ops scripts at HEAD (grep -c -F).
+> 
+> **DC-O1. The DA2 residual gap (item map finding 5), closed by writing the pause in `settle`.**
+> - **Trace** (reproduced in the scratch sandbox).
+>   - The sweep is launched by `launch.sh` with 2.0 INVALID, then settled by hand without `report_settled`. This is the state a queue leaves when it dies between the two statements.
+>   - Restart: the queue launches rate 2's rerun with no pause, rc 0 (`sandbox_unpatched_newcase.txt`: "FAIL the restart still pauses before the rerun").
+>   - DA1's stop still bounds a systematic fault, so this is optional.
+> - **Code.**
+>   - `common.sh`, in `settle`:
+>     - Replace `  local rec=$1 f log out line id c lines recs=()` with `  local rec=$1 f log out line id c lines recs=() l2 p`.
+>     - Immediately before the line `  print -r -l -- $recs "time $(date -u +%Y-%m-%dT%H:%M:%SZ)" "scripts $SC" > $f.tmp && mv $f.tmp $f || { MSG="${f:t} could not be written"; return 2; }`, insert:
+>       ```
+>         for line in $recs; do                          # the pause (draft 6, DA2), written before the settle record (e1_r2, DC-O1)
+>           id=${${=line}[2]}
+>           for l2 in $VMS; do p=(${=l2}); [[ $p[1] == $id && $p[2] == invalid ]] && print -r -- "$id failed=$p[3]" >> $ST/pause_pending.txt; done
+>         done
+>       ```
+>   - `queue.sh`: replace `      invalid) echo "RUN $id INVALID failed=$fl"; print -r -- "$id failed=$fl" >> $ST/pause_pending.txt;;` with ``      invalid) echo "RUN $id INVALID failed=$fl";;   # its pause line was written by `settle` (e1_r2, DC-O1)``. In its comment, replace `# The runs an attempt's launch log names, as the VM's checks.json says them; an invalid one is written to` / `# state/pause_pending.txt (draft 6, rule F e1_r1 DA2), which the next launch turn shows and sets aside.` with `# The runs an attempt's launch log names, as the VM's checks.json says them; `settle` has written each invalid one to` / `# state/pause_pending.txt (draft 6, DA2; e1_r2, DC-O1), which the next launch turn shows and sets aside.`
+> - **Sandbox.** Before `echo "--- every stop"`, add:
+>   ```
+>   echo "--- review e1_r2: the queue dies between settle and report_settled"
+>   reset
+>   case_ "the sweep launched by hand" "ENDED sweep attempt 1" 0 FAKE_FAIL="2:recorder" zsh $L sweep
+>   case_ "settled by hand, as if the queue died before report_settled" "SETTLED-BY-HAND" 0 zsh -c "source $S/common.sh; mac_checks && next_step && [[ \$ACT == settle ]] && settle \$ARG && echo SETTLED-BY-HAND"
+>   case_ "the restart still pauses before the rerun" "QUEUE STOP after an invalid run" 1 zsh $Q
+>   chk "no rerun launched before the pause" is "$(launches)" 1
+>   ```
+>   188 of 188 with the fix. A death after the append but before the settle record leaves a duplicate pause line, which is harmless.
+> 
+> **DC-O2. Launches that leave no run spend attempts with no stop.**
+> - **Trace.**
+>   - A fault that stops the harness before its first folder (a failed `uv run`, a held `.run.lock`, an ssh failure on the launch command) leaves a launch log with no `run_id` line. Each such launch is an attempt.
+>   - The queue stops after each one (rc 2 or 4), but README has no row for that stop. A habitual restart spends all 13–19 launches, and E1 ends with six holes and no GPU time spent.
+> - **Code** (`common.sh`, `next_step`; tested with three new sandbox checks, 188 of 188).
+>   - Replace `  local rec f stem line l2 parts id c r rate name s att n a ids valid inval lost=() stopper="" n_heat=0` with the same line plus ` n_norun=0`.
+>   - After the inner `done` of the settled-records loop, that is, after `      per[$r]=$id; NAMED[$id]=$stem` / `    done`, insert `    grep -q '^rid ' $f || n_norun=$((n_norun + 1))   # a launch whose log names no run (e1_r2, DC-O2)`.
+>   - After the `MAX_SAME` loop's `    done`, insert `    (( n_norun < MAX_SAME )) || { MSG="$n_norun launches of E1 named no run (no run_id line in their logs): a question about the harness or the VM, not a rerun. E1 stops; the owner decides"; return 2; }`.
+>   - Sandbox case: `DCO2_test_sandbox.patch`.
+> - **Text.**
+>   - Anchor: `Any `no_errors` in `failed` stops E1 (the details that would separate a client error from another are not read).`
+>   - Append: ` A launch whose log names no run (no `run_id` line: its command failed, or the harness stopped before its first folder) spends its attempt; a second such launch, at any rate, stops E1 for a new decision.`
+> 
+> **DC-O3. README is not frozen by `mac_checks` (only the six scripts and `e1_commit.txt` are), so its stale lines can be fixed instead of listed.**
+> - The stale lines are 5, 9, 39, 41, 52 and 85: the citations of draft 4, "Nothing here is committed or reviewed", and the step-4 heading without "(QUEUE DONE)".
+> - If DC-O1 or DC-O2 changes the scripts, also bring `queue.sh` lines 4–5 and `vm_checkout.sh` lines 6–7 up to the heading form `END19_PAT` requires.
+> 
+> **DC-O4. No E1 run's VM copy may be removed before E1's end entry.**
+> - **Why.** The queue stops when the Mac holds an E1 folder that the VM does not list (FILE(docs/probe/20261113_e1/ops/common.sh:217-219)). Rule 4's exception (2026-11-04) would otherwise allow the removal.
+> - **Text.**
+>   - Anchor: `Every run with a `checks.json`, valid or invalid, is copied and checksum-verified; a run without one is copied by a separate step.`
+>   - Append: ` No E1 run is removed from the VM before E1's end entry (the queue stops when the Mac holds an E1 folder that the VM does not list, FILE(docs/probe/20261113_e1/ops/common.sh:217-219)).`
+> 
+> **DC-O5. If REG-21 is withdrawn, E1's result can never be computed (owner-proxy N4).**
+> - **Text.**
+>   - Anchor: `and E1's result is computed after it.`
+>   - Append: ` If an entry withdraws REG-21, E1's result is the worktree floor and `e1.observed()` without the work rates, by a [DECISION] entry made before it is computed.`
+> 
+> ---
+> 
+> ### The start gate, with the 4611 entry (asked by the lead)
+> 
+> **Sound.**
+> - `git grep -n -E "$END19_PAT" HEAD -- docs/decisions.md` has exactly one hit, at 302d431 and again at 08817af (after REG-21's and REG-22's 11 700 appended lines): line 4611, `## 2026-11-13 · [OPS] REG-19: the queue ended (QUEUE DONE)`. The UTC date matches the commit time (22:18 UTC).
+> - The entry quotes `QUEUE DONE (all five seeds run). Next: final.sh, once`, as the ID line requires. That line is one of ops_r3's two end lines (FILE(docs/probe/20261113_reg19/ops_r3/queue.sh:91)). The same queue lines are quoted in FILE(docs/decisions.md:4571); I did not open the queue output file it cites.
+> - After QUEUE DONE, REG-19 has no run left by its own rules (seed 19's `'continue': False`).
+> - What remains of REG-19 does not need the VM's tree:
+>   - `final.sh` runs on the Mac, from the worktree at the pin.
+>   - Its `links_ok` links only REG-19's folders into a real `runs/` and refuses anything else (FILE(docs/probe/20261113_reg19/ops_r3/common.sh:88-102)), so E1's copied folders are never seen by REG-19's unsealed a7bb77a code.
+>   - Its recheck uses REG-19's pattern only.
+>   - Applying E1's code at the approval commit keeps the working tree equal to HEAD, which `recheck_ok` requires (FILE(docs/probe/20261113_reg19/ops_r3/common.sh:207)), as long as it is committed and not left in the working tree.
+> - The gate is a heading pattern and is now permanently open. Three independent guards keep REG-19 and E1 apart afterwards:
+>   - REG-19's lock is tested at every queue start and before every launch (`launch.sh` calls `ready_to_run`).
+>   - The tmux check.
+>   - The tree check: REG-19 launches only at `a7bb77a`, and E1 only at its own commit.
+> - The restated heading was written to fit the gate (it says so). That is honest, and the event it points to is recorded with its quote in 4571.
+> 
+> **Residual.** The gate only answers "has REG-19 let go of the GPU". The converse, other registrations waiting for E1, is DC4.
+> 
+> ---
+> 
+> ### Were DA1–DA12 and DB1–DB12 applied, and do the merges keep both?
+> 
+> - **Verbatim.** DA1, DA2, DA3, DA4, DA5 (text), DA6, DA7, DA8, DA10, DA11 and DA12 are verbatim (checked against the round-1 text quoted in the draft).
+> - **DA9.** "18 launches" → "18 runs" is a correct departure. 18 runs take 13 launches when the sweep starts every rate, and 19 when it starts none (DERIVED: 1 + (6 − k) × 3 + k × 2 launches for k rates started).
+> - **Optional DA items.** DA-O1, O2, O4, O5, O6 and O7 are applied as given. DA-O3 is not taken, with its reason stated.
+> - **DB items.** DB1–DB9 are applied. DB9(a) is rewritten, as listed. DB10–DB12 are deferred to the approval commit.
+> - **Merges.**
+>   - DA1+DB4: both kept. The claim "every case DB4 stops, the scripts stop too" holds: a check at two rates means two runs, so `MAX_SAME` or the heat rule fires, and `no_errors`/`power_limit` stop at once.
+>   - DA4+DB6: both kept, but their link specifications conflict (DC3).
+>   - DA7+DB3: kept, but both understate what E1 changes (DC1).
+>   - DA-O7+DB10(iii), DB2+DA-O2, DA9+DB7: fine.
+> - **Item map, "Found while applying".** Items 1 and 6 are correct and benign. Item 2 is DC5. Item 3 is for the owner-proxy. Item 4 is DC6. Item 5 is DC-O1. Item 7 is DC8.
+> 
+> ### Do the scripts do what the stopping rule says?
+> 
+> - **Attempt counting.** The sweep counts as attempt 1 for each rate whose `run_id` line it has, and every single-rate launch is one attempt. Records are numbered and checked (common.sh:240-254).
+> - **The sweep is launched at most once.** `attempt_sweep_1.txt` gates it, and folders or records before it stop the queue.
+> - **Global stop.** `no_errors`/`power_limit` in any run, a second `gpu_steady` over all runs, and `MAX_SAME` for any other check over all runs all stop E1. When every rate still without a valid run is already spent, the queue prints QUEUE END instead (item map finding 6). Nothing is launched either way.
+> - **Spent rates** do not hold back the others.
+> - **The pause.** It survives other stops, and `launch.sh` by hand refuses while it is pending. The one residual gap is DC-O1.
+> - **Two valid runs:** both are listed, nothing is launched, and the earliest is marked.
+> - **The commit check** is taken from the start line. `git_commit` comes from FILE(harness/run.py:143), printed by FILE(harness/run.py:80); a missing value fails safe.
+> - **Copying.** Every run with `checks.json` is copied, the sha256 lists are compared, and the copy record is written after the manifest. `tools/manifest.py` reads bytes only.
+> - **Sandbox:** 184 of 184 in my scratch run.
+> 
+> ### Reads beyond `valid`/`failed` and the allowed log lines
+> 
+> None by the scripts:
+> - `vm_state.py` prints only `valid` and `failed`.
+> - `'run_id': '` appears on one harness print only, `ev("start", run_id=…, git_commit=…)`. All 16 `ev(` calls in `harness/run.py` were checked. The `[run] checks` line prints `valid` and `failed` only (FILE(harness/run.py:219)).
+> - `copy_verify` prints a file count and a hash of hashes.
+> - The pre-launch read is GPU state before the launch.
+> 
+> What the allowed reads still show:
+> - The `LAUNCHED`/`ENDED` times and the run-id gaps (DA8's bit, disclosed).
+> - With DC5, the same bit in two failure fields.
+> - With DC1, that bit is information about E0's input before E0's gate is fixed, which E0 must disclose.
+> 
+> ### Cost arithmetic
+> 
+> - **2.1 h:** 6 × 1260 s = 7560 s. Every rate's schedule ends at 899.2–900.0 s, the drain deadline is t_planned max + 300 s (FILE(harness/loadgen.py:209)), and REG-8's saturated runs started 1262–1264 s apart (FILE(docs/decisions.md:1748-1751)).
+> - **4.2 h** with one rerun per rate. **At most 18 runs, 6.3 h (22680 s).**
+> - **Launches:** 13 to 19 for 18 runs; the extra launch is a sweep start that failed before its first rate, which costs at most the server start.
+> - **What the stops do to the ceiling.** With `MAX_SAME` and the heat rule, the 4.2 h case already needs six invalid runs with six different check names. The practical ceiling is well below 6.3 h, so "every other stop only lowers that ceiling" holds.
+> 
+> ### FILE tags
+> 
+> All checked and correct:
+> - decisions.md: 4037, 4040, 4200, 4201, 4205, 4209, 4233, 4287, 4400, 4506, 4516, 4520, 1745-1751.
+> - reg19_resume_decision_draft5.md:41.
+> - ops_r3: final.sh:2, launch.sh:45, common.sh:11, queue.sh:54-60.
+> - agent/RUNBOOK.md:48.
+> - harness: checks.py:127, run.py:80 and :143.
+> - configs/base.yaml:55.
+> - tests/test_e1.py:59.
+> - E1's scripts: common.sh:24, :40, :98-108, :104, :187, :235, :260-262; queue.sh:44, :67-70; launch.sh:27.
+> 
+> Not checked: the RUN tags and the cold spans of 1.73–1.81, which need run reads; the replay floors 1.744/1.771, which need an analysis call.
+> 
+> ---
+> 
+> ### Strongest alternative explanation for the floor E1 would report
+> 
+> The floor will be read as the 8-turn closed-loop server's cold capacity, and through E0 as the denominator of the 8-turn window ratio. The strongest alternative is that it differs from 1.681, and from what a 16-turn sweep reports, mostly because of what is counted.
+> 
+> - **The mix.**
+>   - Closed loop serves early, short turns first, so completions per second rise with the load at a fixed token rate (FILE(tests/test_e1.py:59); BELIEF as to the model). The 16-turn closed loop tilts by a different amount.
+>   - E0's ratio of two req/s floors therefore mixes capacity with counting. A "widens" or "does not widen" label could come from the served mix, not from the cost gap K2 is about.
+>   - **Separating evidence:** the token work rate U per saturated row at 8 turns (reported, `e1.work_rates`) against its 16-turn counterpart. Equal U with different req/s floors means counting. E0's registration should state R also on U-based floors, or say why not.
+> - **Drift within an ascending sweep.**
+>   - At 350 W the GPU warms over two hours of back-to-back runs, and the SM clock can fall with it. That lowers the high-rate rows and the slope.
+>   - REG-8 ran in the same order but on another day.
+>   - **Separating evidence:** the busy SM-clock mean per run from `gpu.jsonl`, which is not registered.
+> - **For the margin use.**
+>   - A cache-off floor is not the capacity of a cold cache-on server, which still hits on whatever prefix survives. So λ ÷ floor at λ = 2.0–2.2 overstates how far the cold state sits below its own capacity.
+>   - **Separating evidence:** the hit rate of the cold spans on record, already measured.
+> 
+> ### Can E1 change any decision, and is it worth its GPU hours?
+> 
+> - **Yes, three.**
+>   - (1) E0's gate, through f8 (DC1). Under the committed code, an E1 without a floor makes the 16-turn label "missing".
+>   - (2) Whether the next registration may run on 5ee6e38's harness (DA7).
+>   - (3) K2's wording and the closed-loop margins.
+> - **Worth 2.1 GPU h:** yes. It is K2's 8-turn reference, which the owner's plan requires. It is the first GPU exercise of the A14 recorder and the stricter checks. And the GPU is otherwise idle until REG-19's [RESULT].
+> - **But only on DC1's terms.** Run before E0's gate is registered, its floor must stay unseen until that gate exists. Otherwise the run's main decision value turns into a rule-A5 problem for E0.
+> 
+> ### Verdict
+> 
+> **NOT READY.**
+> - **Blocking, apply first:**
+>   - DC1 (text; E0 dependency and its A5 guard).
+>   - DC2 (code and tests in `analysis/e1.py` and `tests/test_e1.py`, patches in scratch, 16 passed; "holes" changes, so the owner-proxy must pass it).
+> - **Required, not blocking (verbatim):** DC3, DC4 (with its RUNBOOK and README edits in the approval commit), DC5 (the owner-proxy rules on the wider reads), DC6, DC7, DC8 (inside DC2's patch) and DC9.
+> - **Optional:** DC-O1 to DC-O5. If DC-O1 or DC-O2 is taken, the scripts change and need the sandbox rerun and the owner-proxy's pass.
+> - **Next round.** DC2 is a code change, so the review-stop rule calls for one more rule F round on the new bundle. That round can be limited to DC1's text and DC2's patch.
+> 
+> Review file: /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/d3f64482-d0cf-4bf8-9ad1-c1dc026c562c/scratchpad/rulef-e1-draft6-r2.md
+
+#### What was changed because of it (round 2)
+- **DC1** (E0's gate takes E1's floor): (a) to (e), verbatim: "What E1 can and cannot do", the sentence after it, "No floor", "In neither case" and "Result, computed once". The guard is text only: no code refuses `e1.observed`, `e1.floor_status` or `k2.observed` before E0's [REG] (E1's seal is lifted by `AFTERSHOCK_UNSEAL=E1` alone), so it is kept by hand; the README's result line names the wait.
+- **DC2** (the holes rule): "Holes", verbatim. Code: `e1.floor` and its docstring, the reviewer's patch byte for byte (`docs/drafts/e1_r3/DC2_DC8_e1_vs_bundle.patch`), now inside the cumulative `docs/drafts/e1_r3/e1_py_draft7.patch`. Tests: the reviewer's `DC2_test_e1_vs_bundle.patch`, inside `test_e1_draft7.patch`; 16 tests, 16 passed. With draft 6's `e1.py` the two changed tests fail (2 failed, 14 passed), so they test the change. The owner-proxy's DD5 is not applied (below).
+- **DC3** (the worktree's `runs/`): verbatim.
+- **DC4** (E1 holds the VM): the bullet "E1 holds the VM", verbatim except its last sentence; README's step 9 edit, verbatim (in `ops_draft7.patch`). **Departure:** the RUNBOOK row that puts E1 before REG-20 (`| 1a (before 2) | E1 (runs from REG-19's recorded queue end; items 2 and 2a wait for E1's end entry, …) |`) is not applied, and the bullet's last sentence, which says the same ("E1 runs from REG-19's recorded queue end, and REG-20's gate and arm A wait for E1's end entry"), is replaced by the lead's rule: "E1 and REG-20 arm A: whichever has its ops approved first runs first; the other launches only after the first's end entry ([OPS] … the queue ended …, or … ended by a stop …)". Reason (the lead's instruction for draft 7): the facts changed after the review. REG-19's [RESULT] is written (FILE(docs/decisions.md:16517)); REG-20's gate was computed (commit 3c8e5dc), so it cannot wait for E1's end entry; REG-20's arm A is owner-approved since 2026-11-12 (FILE(docs/decisions.md:4166), REG-20 approved by the owner as registered), and only its ops decision is in review. So the order between E1 and arm A follows from which ops decision is approved first. Added by this draft's writer, for round 3 to check: if REG-20 arm A runs first, E1's `vm_checkout.sh` and queue wait for REG-20's end entry, by hand, since E1's scripts do not read REG-20's entries (the same bullet, README step 4); the ID line, R6 and "Pre-launch and launch" name the commit the VM may then be at; README names the third end form (`[OPS] E1 ended by a stop: …`) under its stops table. The RUNBOOK text for the approval commit is the section "RUNBOOK, for the approval commit" below.
+- **DC5** (the failure fields): both anchors, verbatim. The owner-proxy's DD6(b) is merged after it (below).
+- **DC6** (what the result prints): verbatim. The owner-proxy's DD3 is merged after it as one sentence (below).
+- **DC7** (rule H): verbatim. FILE(tests/test_e1.py:59) is the same line in the draft-7 patched file as at HEAD.
+- **DC8** (the docstring): in the code patch, byte for byte.
+- **DC9** (the gate's entry): verbatim, followed by one sentence: REG-19's [RESULT] has since been written (FILE(docs/decisions.md:16517)) and matches the gate too.
+- **DC-O1** (the pause written in `settle`): code: the reviewer's `DCO1_common.patch`, `DCO1_queue.patch` and `DCO1_test_sandbox.patch`, byte for byte, and `queue.sh`'s comment, replaced as the review's text gives it (that change is not in the reviewer's queue patch). Added by this draft's writer: `settle`'s header comment says it writes the pause. Text: R2's parenthesis now names `settle`, and the round-1 list below (DA2) says the write moved.
+- **DC-O2** (launches that name no run): code: the reviewer's `DCO2_common.patch` and `DCO2_test_sandbox.patch`, byte for byte; text: appended verbatim. Added by this draft's writer: a row for the new stop in README's stops table.
+- **DC-O3** (README and comments): README's stale lines 5, 9, 39, 41, 52 and 85 brought up to date, and its line 3 "Stale" list cut to what is still stale (DESIGN_NOTES.md); line 52 also names DC1's wait for E0's [REG]; line 12 names draft 7's sandbox. `queue.sh` lines 4–5 and `vm_checkout.sh` lines 6–7 now name `(QUEUE DONE)` or `(QUEUE END futility stop)`; the two comment paragraphs are rewrapped. DESIGN_NOTES.md is unchanged; README's line 3 lists what in it is stale.
+- **DC-O4** (no VM copy removed before E1's end entry): appended verbatim but for one citation, renumbered: `common.sh:217-219` is `common.sh:224-226` after draft 7's script patch (the same three lines).
+- **DC-O5** (REG-21 withdrawn): appended verbatim, followed by one sentence: REG-21's first [RESULT] is now in the log (FILE(docs/decisions.md:16421)), so `e1.report`'s wait for it is met and the wait for E0's [REG] remains.
+- **Facts since round 2** (the lead's instruction for draft 7): every sentence that had E1 or the GPU wait for REG-19's [RESULT], or that had REG-19 not yet reported, now cites FILE(docs/decisions.md:16517): the ID line (the pin clause is met, so draft 6's amendment of it is dropped as having nothing left to amend; REG-19's table was computed in 047b95e; the lost seed-18 folder's copy may follow; RUNBOOK §4's clause is met). The quoted reviews keep their words.
+- **The harness freeze** (round 2, "Bundle and limits", a disclosure in DC5's spirit): a bullet under "The harness E1 runs on", worded as the lead gave it: "until both batch 2s are computed or declared not computed (expected on 2026-11-13/14)". Both batch 2s were then committed (7230ae8); one sentence added to the bullet says the disclosure is moot.
+- **Sandbox:** 192 of 192 on a scratch copy of HEAD's scripts with `ops_draft7.patch` applied (184 of draft 6, plus DC-O1's 4 checks and DC-O2's 4; the reviewer had 188 for each alone), PROBE(docs/drafts/e1_r3/sandbox_20261113T231637Z.txt).
+
+### Adversarial review, round 3 (rule F, `docs/process.md` §3), verbatim
+Verbatim from `docs/drafts/reviews-2026-11-13/rulef-e1-draft7-r3.md` (the agent's saved copy of the subagent's report, with the agent's header); every line prefixed.
+
+> # rulef-e1-draft7-r3 (rule F, round 3 on E1 draft 7, bundle e1_r3), verbatim
+>
+> Saved by the agent at 2026-11-14 01:50 UTC from the reviewer's own file (teammate `rulef-e1-r3` of session 8c5f8396; scratchpad `reviews_r3/rulef-e1-draft7-r3.md`, 32640 bytes, 375 lines, sha256 4ab9bebf887dd52dabc4ae382c8aacdd798204e4b5110dc52d57d4f98dd5cf61, checked on copy; the reviewer's message named the same sha256 and line count). Its companion files are copied byte for byte to `docs/drafts/reviews-2026-11-13/rulef-e1-r3_files/`. The reviewer's report follows the line '---' unchanged.
+>
+> ---
+> Rule F review, round 3 (limited), of E1 draft 7 (bundle `docs/drafts/review_bundles/e1_r3/`, commit 56820bd)
+>
+> **Verdict: READY, provided DE1–DE7 are applied verbatim.**
+> - DC1 is met in text and DC2 in text and code (sections 1 and 2).
+> - All seven required items are text: wording, stricter rules or reporting duties. None changes code, a threshold, the floor or the stopping rule, so they need no fourth rule F round.
+> - DE2, DE3 and DE4 change the owner-proxy's DD10 and DD12. Its next pass is already due for DC2, DC-O1 and DC-O2, and it rules on them there.
+> - DE-O1 to DE-O6 are optional. DE-O1 is code (a SEALS row and a test, patch tested here). DE-O6 widens a read, so the owner-proxy would have to pass it.
+>
+> ## 0. Bundle, scope and limits
+>
+> **Bundle**
+> - MANIFEST: 50 of 50 sha256 lines OK (`shasum -a 256 -c`).
+> - HEAD was 56820bd when I started. During the review it moved to 47b8e06 (f43a5a1: STATE and FOR_AUTHOR; 47b8e06: REG-19 seed 18's lost control copied from the VM). `git diff --stat 56820bd HEAD` over `analysis tests harness configs docs/probe/20261113_e1 agent/RUNBOOK.md docs/experiment-plan.md docs/claims.md`, the bundle, `docs/drafts/e1_r3` and `docs/drafts/e1_draft7.md` is empty. So every anchor and FILE line below holds at HEAD. `docs/decisions.md` is append-only; the cited lines are unchanged.
+>
+> **Code**
+> - I took `git archive 56820bd analysis harness configs tests pyproject.toml tools docs/probe/20261113_e1/ops docs/probe/20261113_freeze` into my scratchpad and ran `git apply` with `e1_py_draft7.patch`, `test_e1_draft7.patch` and `ops_draft7.patch`.
+> - Results:
+>   - `analysis/e1.py` has sha256 `428771e0…` and `tests/test_e1.py` has `dd3f52c5…`. Both are byte-equal to the bundle's.
+>   - All ten ops files are byte-equal to the bundle's `ops/` (cmp). The five unpatched ones equal HEAD's.
+> - `tests/test_e1.py tests/test_k2.py tests/test_withheld.py`: 39 passed, with the repo's `.venv` interpreter on the scratch copy (`analysis.e1.__file__` is in the copy).
+>
+> **DC2: two exhaustive checks of `e1.floor` on synthetic rows** (scripts in `rulef-e1-r3_files/`)
+> - Setup: six rates, each row one of three types: kept up and not full; full but kept up; saturated. Every subset of missing rates was tried.
+> - (i) **Soundness.** Every floor that the patched rule reports on partial data equals the floor of every completion of the missing rows (`holes_sound.py`):
+>   - draft 7: 438 floors on partial data, 0 completions that change the floor;
+>   - draft 6's `e1.py`: 2457 completions that change the floor.
+> - (ii) **Monotonicity.** Over present sets S ⊂ S′ of one sweep, a floor on S never becomes "holes" or another floor on S′ (`holes_mono.py`):
+>   - draft 7: 1122 pairs, 0 bad;
+>   - draft 6: 915 bad.
+>
+> **Ops scripts**
+> - Sandbox: `TMPDIR=<my scratchpad> zsh <patched copy>/test_sandbox.sh` gives `passed 192, failed 0`, rc 0 (`sandbox_r3_reviewer.txt`).
+> - Control: HEAD's scripts with only the patched `test_sandbox.sh` give `passed 188, failed 4`. The four failures are exactly the new DC-O1 and DC-O2 checks (`sandbox_r3_control_unpatched_scripts.txt`), so the new cases test the change.
+>
+> **Citations checked**
+> - FILE lines that exist after the patch: `vm_checkout.sh:33` (the ancestor check); `common.sh:24`, `:164-167`, `:193`, `:224-226`, `:242`, `:267-269`; `queue.sh:68-71`.
+> - decisions.md headings at 4166, 4611, 16322, 16421, 16517, 16571 and 16798.
+> - `git grep -n -E "$END19_PAT" HEAD -- docs/decisions.md` hits 4611 and 16517.
+> - `withheld.lifted` on the real `docs/decisions.md` (headings only): "[RESULT] REG-21" True, "[REG] E0" False, "[RESULT] E1" False.
+> - `analysis/k2.py:94-95,102-109,179` as DC1 cites them.
+>
+> **Other reads**
+> - RUNBOOK lines 40–80, and draft 6's item map, section "RUNBOOK: one proposal for the approval commit" (DD10's text).
+> - `docs/drafts/reg20_ops_decision_draft2.md`, by grep for E1, deploy and pin, and lines 417–425.
+> - `git merge-base --is-ancestor 1cface7 HEAD`: exit 0.
+> - `git merge-base --is-ancestor 5ee6e38 1cface7`: exit 1. REG-20 ops draft 2's pin predates the A14 harness.
+>
+> **Not opened or not run**
+> - Not opened: `runs/` (no folder name either); the contents of any `state/` folder; `/Users/chalshik/aftershock-backups/`; RESUME.md; `docs/paper/`; any sealed folder; `docs/context-pack.md`; `docs/status.md` beyond the session-start digest that a hook put into my context; the other reviews in this `reviews_r3/` folder (I listed only their names).
+> - Not run: `e1.observed`, `e1.report`, `e1.floor_status`, `k2.observed`, any `k1`/`k3` function or any analysis command on run data. No VM contact.
+>
+> **Writes**
+> - Only in my scratchpad and in this folder's `rulef-e1-r3_files/`.
+> - `git apply --check` of the DE-O1 patches on the main checkout writes nothing.
+> - The main checkout's `git status` changed during my sandbox run because the lead committed 47b8e06. I wrote nothing there.
+>
+> ## 1. DC1: met in text; the guard is text only (the lead's question 4)
+>
+> **What round 2 asked for, and what draft 7 does**
+> - Round 2 classed DC1 as "disclosure and stricter rule (text)" and gave (a)–(e) as its fix.
+> - All five are in draft 7 verbatim, at L13, L13, L42, L43 and L68 (checked).
+> - README step 9's result line now names the wait for E0's [REG] (DC-O3).
+>
+> **Is a text-only guard enough? Yes, for registration, on three grounds:**
+> 1. Computing the floor needs a deliberate `AFTERSHOCK_UNSEAL=E1` (FILE(analysis/withheld.py:30), the E1 row). No tool, test or other module calls `e1.observed`, `e1.report` or `e1.floor_status`; `k2.observed` is the only other caller of `e1.floor` (grep of `analysis/`, `tools/`, `tests/`).
+> 2. No computation is possible before E1's folders reach the Mac, which is about 2.1 h after launch at the earliest.
+> 3. A code refusal inside `e1.py` would not cover `k2.observed`, which calls `e1.floor` directly (FILE(analysis/k2.py:179)). It would also re-open `e1.py` for a fourth round.
+>
+> **But the text guard is missing where an operator reads the command.**
+> - RUNBOOK §5's E1 row keeps `AFTERSHOCK_UNSEAL=E1 uv run python -m analysis.e1 floor` as the item's "Registered computation (once)", with no wait (FILE(agent/RUNBOOK.md:66)).
+> - Draft 7's (c), like round 2's DC4 row, replaces only the first two cells ("The row's other cells stay").
+> - So after the approval commit, the playbook the agent works from names the command with no condition. **DE1** closes that.
+>
+> **A mechanical guard exists and the entry already permits it, but it is optional (DE-O1).**
+> - It is one SEALS row that `AFTERSHOCK_UNSEAL=E1` does not lift. The entry allows rows added to `SEALS` after the registered commit ("Result, computed once").
+> - It requires one existing test, `test_e1_seal_lifts_alone`, to also hold the new heading.
+>
+> ## 2. DC2: met in text and in code
+>
+> **Code**
+> - `floor` builds `have` from the finite rows, the same filter `gate.cold_floor` applies (FILE(analysis/gate.py:33)).
+> - `lo = -inf` when no valid row lies below λ_sat.
+> - A missing swept rate is therefore a hole whenever no valid row separates it from λ_sat, and whenever it lies at or above λ_sat.
+> - This is round 2's patch byte for byte. The two exhaustive checks in section 0 show that the rule is now sound and monotone over every subset of a six-rate grid with three row types.
+>
+> **One residue in the status label, not in the value**
+> - A missing rate below a valid unsaturated row can still change the full-data status between "ok" and "tail_ok" (a full row there would make `cold_floor` "not_monotone"). The floor's value and λ_sat cannot change.
+> - My soundness check accepts that pair. It changes no decision: both statuses are floors under "Decision under each outcome".
+>
+> **Text.** "Holes" at L32 is round 2's text verbatim, and it matches the code clause by clause.
+>
+> **DD5 not applied (departure 6): correct.** Its sentence "is not a hole" is false under DC2: `test_a_hole_just_below_lam_sat_is_a_hole` now asserts "holes" [1.5, 2.0] for DD5's own example, and my soundness check reaches the same.
+>
+> ## 3. Scripts: DC-O1, DC-O2, DC-O3, DC4's README edit
+>
+> **DC-O1**
+> - `settle` writes each invalid run's pause line from `$VMS` before the settle record (`common.sh:164-167`). `report_settled` only prints (`queue.sh`).
+> - `$VMS` is the read that `next_step` makes in the same turn, after the tmux session has ended, so the runs' `checks.json` exist.
+> - A death after the append and before the record leaves a duplicate line, which is harmless, as round 2 said. The reviewer's case passes, and it fails on HEAD's scripts.
+>
+> **DC-O2**
+> - `n_norun` counts settled records with no `rid ` line, the sweep's included.
+> - The stop sits in the rate loop with the other global stops (`common.sh:270`). When every rate still without a valid run is spent, the queue therefore ends with `QUEUE END` and not this message; nothing is launched either way.
+> - This matches the appended text ("a second such launch, at any rate, stops E1"). A failed sweep start followed by one failed single-rate launch stops E1, which is stricter and accepted.
+> - A pre-launch refusal writes no attempt record and so does not count (DA3's text holds).
+>
+> **DC-O3 and DC4's README edit:** done as the items allow. Finding 6 is DE6 below.
+>
+> ## 4. The writer's departures and "Found while applying"
+>
+> - **Departure 1 (DC4's RUNBOOK order replaced by the lead's rule):**
+>   - The rule is accepted. The facts changed: REG-20's gate was computed (3c8e5dc), and REG-20 is owner-approved (FILE(docs/decisions.md:4166)). Round 2's row (E1 first, REG-20's gate waiting for E1's end entry) can no longer be met.
+>   - Three gaps remain:
+>     - (i) DD10 (a) and (b), applied verbatim, still force E1 first. (b) also collides with REG-20 ops draft 2's RB6 on the same RUNBOOK:48 anchor. See **DE2**.
+>     - (ii) "Approved first" and REG-20's end entry are undefined: REG-20 ops draft 2 defines no end-entry heading and does not mention E1. See **DE3**.
+>     - (iii) The RUNBOOK row's computation cell. See **DE1**.
+> - **Departure 2 (facts since round 2):**
+>   - Checked: the pin clause is met; END19_PAT matches 16517; `lifted("[RESULT] REG-21")` is True.
+>   - One fact is now at risk. RUNBOOK §3 item 6 ("copy the lost seed-18 folder …; then deploy HEAD (§4)", FILE(agent/RUNBOOK.md:48)) is under way: its first half landed in 47b8e06. If its deploy runs before E1's approval, the VM leaves `a7bb77a` at HEAD, and R6's "first move of the VM off `a7bb77a`" and the ID line's "leaves REG-19's pin" become false. See **DE6**.
+> - **Departures 3–9:** accepted.
+>   - Renumbered citations: checked.
+>   - DD2: accepted.
+>   - DD3's merge: one wording point, DE-O4.
+>   - DD5: correct, as section 2 says.
+>   - DD6(b)'s merge: redundant but true.
+>   - DD7's hashes: checked.
+>   - The freeze bullet: moot, and kept as a record.
+> - **Found 1 (DD12 conflicts):** the draft is right and DD12 is not. See **DE4**.
+> - **Found 2:** section 1, DE1, DE-O1.
+> - **Found 3:** the sentence is now false in its last clause. See **DE5**.
+> - **Found 4:** see **DE7**. DC-O2's stop is rightly absent from DD6(a)'s list: a launch that names no run has no `checks.json` details to read. The cost of that is DE-O6.
+> - **Found 5:** **DE3**.
+> - **Found 6:** **DE6** (README). `vm_checkout.sh:2` is a frozen script's comment; it is left, and DE6 discloses it.
+> - **Found 7:** accepted. README line 3 names what is stale.
+> - **Found 8:** DE-O5.
+> - **Found 9:** no item.
+>
+> ## 5. A trace on which E1's verdict would be wrong
+>
+> **Trace A (E1's floor)**
+> 1. The sweep runs 1.5 → 4.0 back to back in one invocation, about 2.1 h at 350 W. At 3.0, `gpu_steady` fails on `busy_sm_clock_cv` > 0.05. That check is new since `5ee6e38` and has never run on the GPU (R3, R4). DD4 gives P(a `recorder` or `gpu_steady` failure) ≈ 0.1 (BELIEF).
+> 2. R3 gives it the heat rule's single rerun, after cooling to ≤ 45 °C. The rerun 3.0′ starts cold and runs alone.
+> 3. All six rates now have a valid run. `cold_floor` gives "ok", λ_sat 2.0, n 5, and the floor is the mean of 2.0, 2.5, 3.0′, 3.5 and 4.0.
+> 4. Four of those rows were measured on a GPU that had been under load for 20–100 min, and one from a cool start.
+> 5. If a cooler die holds a higher SM clock at the same 350 W (BELIEF, unmeasured here), 3.0′ is high by some x %. The floor is then high by about x/5 %, and `floor_slope_reported` gets a bump at 3.0.
+> 6. The original 3.0's clock-steadiness failure also says that the hot sweep's clock was moving, so the other rows may sit just under the 0.05 cut.
+> 7. The registered verdict ("ok", the 8-turn closed-loop cold floor) is then a mix of thermal states that REG-8's sweep (no reruns) does not have. E0's R inherits it through f8.
+> - **Separating evidence:**
+>   - each launch's pre-launch GPU temperature, already in the attempt records (an allowed read);
+>   - after the result, each saturated row's busy SM-clock mean from `gpu.jsonl`, which is not registered.
+> - Reporting both is DE-O2.
+>
+> **Trace B (DC1's guard fails through the playbook)**
+> 1. E1 ends `QUEUE DONE`. REG-21's first [RESULT] is in the log, so `e1.report`'s code wait is met.
+> 2. RUNBOOK §5's E1 row, as the approval commit leaves it, names `AFTERSHOCK_UNSEAL=E1 uv run python -m analysis.e1 floor` as the registered computation, with no wait.
+> 3. A later session follows the playbook, and the floor is printed before E0's [REG].
+> 4. E0's gate factor is then chosen with f8 known: rule A5 is broken for E0's gate. E0 can no longer use E1's floor without a [CORR], and E1 (2.1 GPU h) may have to be rerun to give E0 a blind input.
+> - **DE1** closes the text gap. DE-O1 would make it mechanical.
+>
+> ## 6. Strongest alternative explanation of E1's likely outcome
+>
+> **The likely outcome:** status "ok", with a floor of 1.70–1.80 req/s, above REG-8's 1.681 (the draft's prediction).
+>
+> **The alternative.** The whole gap is counting, not capacity: closed loop serves early, shorter turns first, so the same token work completes more requests.
+> - REG-21's batch 1 measured this on cold, backlogged cache-on runs (decisions.md 2026-11-13 [RESULT] REG-21 batch 1, FILE(docs/decisions.md:16421); its figures as in docs/status.md, from RUN(the 13 burst runs, k3w.reg21_table)):
+>   - a completion rate of 1.720–1.798 req/s against 1.681;
+>   - a mean served prompt of 2931–3067 tokens against the planned 3072;
+>   - a token-work ratio r with median 1.021.
+> - 1.681 × 3072 / 2950 = 1.750 (DERIVED). That is the centre of E1's predicted floor, with no change in capacity.
+> - E1's floor in req/s would then carry the 8-turn served mix, and the 16-turn sweep would carry a different one. So part of E0's R would measure counting, not the cost gap K2 is about.
+>
+> **Other explanations**
+> - The day and harness difference against REG-8 ("Confounds, named").
+> - Trace A's thermal composition.
+>
+> **Separating evidence**
+> - U per saturated row (`e1.work_rates`, reported) against REG-8's.
+> - U ÷ throughput, which with caching off is the mean served prompt (DERIVED from two reported numbers). DE-O2 asks the [RESULT] to state it.
+> - Equal U with a higher req/s floor means counting.
+>
+> ## 7. Can the run change any decision?
+>
+> **Yes:**
+> 1. E0's gate, through f8, once E0's [REG] exists. Without a floor the committed label is "missing": no 16-turn matrix (FILE(analysis/k2.py:94-95,102-103)).
+> 2. Through the validity record, whether any registration may run on `5ee6e38`'s harness.
+> 3. K2's wording and the closed-loop margins.
+> 4. Not an inference, but under the lead's rule E1's start sets when REG-20 arm A can start.
+>
+> **Worth 2.1 GPU h:** yes. It is K2's 8-turn reference, which the owner's plan requires, and the first GPU use of the A14 harness. The GPU is idle.
+>
+> ## 8. Required items
+>
+> **DE1 (stricter rule and reporting duty; text, in the approval commit). DC1's wait where the playbook names the command.**
+>
+> (i) In `agent/RUNBOOK.md` §5, this replaces draft 7's (c) and round 2's DC4 row. Anchor (FILE(agent/RUNBOOK.md:66); one occurrence):
+> ```text
+> | 4 | E1 | `uv run python -m harness.run configs/sweep_l1pl350cl_pc_off.yaml` (one invocation; rerun configs list one rate, same `name`) | `AFTERSHOCK_UNSEAL=E1 uv run python -m analysis.e1 floor` | [RESULT] E1 |
+> ```
+> Replace with:
+> ```text
+> | 2b (with 2a) | E1 (E1 and REG-20 arm A: whichever has its ops approved first runs first; the other launches only after the first's end entry; decisions.md [REG] E1, "E1 holds the VM") | `docs/probe/20261113_e1/ops/queue.sh` (its README, "Run order"): the sweep `configs/sweep_l1pl350cl_pc_off.yaml` once; a rate never started, or a rerun, from its single-rate config (same `name`) | `AFTERSHOCK_UNSEAL=E1 uv run python -m analysis.e1 floor`, once, only after REG-21's first [RESULT] (met) and after E0's [REG] is committed or an entry records that E0's gate takes no input from E1's runs; before then no part of E1's floor is computed, quoted or used (no `e1.observed`, `e1.floor_status` or `k2.observed` on E1's runs; decisions.md [REG] E1, "Result, computed once") | [RESULT] E1 |
+> ```
+>
+> (ii) In the draft's section "RUNBOOK, for the approval commit": replace the block under "(c)" (from `In `agent/RUNBOOK.md` §5's table, replace` to the closing parenthesis about row 2a) with (i)'s anchor and replacement, and keep the sentence "Row 2a, REG-20 arm A, is not edited here: the same rule belongs in REG-20's ops decision, which is in review."
+>
+> (iii) Reporting duty: the approval commit's `docs/status.md` next action, and every status update until E1's [RESULT], states: "E1's floor is not computed before E0's [REG] is committed or an entry records that E0's gate takes no input from E1's runs."
+>
+> **DE2 (wording; RUNBOOK text in the approval commit). DD10 (a) and (b) as written force E1 first, and (b) collides with REG-20's RB6.**
+> - **Why.**
+>   - (a) says §4 deploys happen "never while E1 has not ended", which is true before E1 starts. REG-20's VM step begins with "push main to the VM's bare repo (RUNBOOK §4 step 1)" (FILE(docs/drafts/reg20_ops_decision_draft2.md:421)).
+>   - (b) makes item 6's deploy wait "once E1 has ended".
+>   - Both contradict "whichever has its ops approved first runs first".
+>   - (b)'s anchor, `then deploy HEAD (§4); then` (FILE(agent/RUNBOOK.md:48)), is the one REG-20 ops draft 2's RB6 replaces (FILE(docs/drafts/reg20_ops_decision_draft2.md:418)), so whichever commit lands second fails to apply.
+> - **Text.** In draft 7's section "RUNBOOK, for the approval commit", replace its first paragraph (from `The owner-proxy's DD10 applies draft 6's merged proposal, (a) and (b), verbatim` to `which this draft replaces by the lead's rule:`) with:
+> ```text
+> In place of DD10's (a) and (b) (draft 6's merged proposal, which put E1 first), the approval commit makes one edit, (a), and leaves FILE(agent/RUNBOOK.md:48) to REG-20's ops decision (its RB6 edits that line). (a) In `agent/RUNBOOK.md`, replace `## 4. Deploying `main` to the VM (only between items, never during a run, never before REG-19's [RESULT])` (FILE(agent/RUNBOOK.md:50)) with `## 4. Deploying `main` to the VM (only between items, never during a run, never before REG-19's [RESULT]; never while E1 holds the VM, that is from E1's `docs/probe/20261113_e1/ops/vm_checkout.sh` until E1's end entry (decisions.md [REG] E1, "E1 holds the VM"), nor while E1's queue lock `docs/probe/20261113_e1/ops/state/queue.lock` exists; E1 moves the VM only with its own `vm_checkout.sh`, to E1's commit, detached: decisions.md, [DECISION] (delegate) E1 approved; if the VM is at E1's commit, detached, `git checkout main` comes first)`. This holds under either order: before E1's `vm_checkout.sh`, and after E1's end entry, §4 is as before. Round 2's DC4 adds a §5 row, (c), replaced by the lead's rule:
+> ```
+> - The owner-proxy's next pass restates DD10 with this text, or rules otherwise.
+>
+> **DE3 (stricter rule and reporting duty; text). The order rule's terms, which the scripts cannot check.**
+> - Anchor (in "E1 holds the VM"; one occurrence):
+>   ```text
+>   The approval commit amends RUNBOOK §5's order to match: E1 and REG-20 arm A: whichever has its ops approved first runs first; the other launches only after the first's end entry ([OPS] … the queue ended …, or … ended by a stop …). If REG-20 arm A runs first, E1's `vm_checkout.sh` is not run, and E1's queue is not started, before REG-20's end entry; E1's scripts do not read REG-20's entries, so this is kept by hand (E1's pre-launch checks still refuse a launch while a compute process is on the GPU or the VM's tree is not E1's commit, "Pre-launch and launch").
+>   ```
+> - Replace with:
+>   ```text
+>   The approval commit amends RUNBOOK §5's order to match: E1 and REG-20 arm A: whichever has its ops approved first runs first; the other launches only after the first's end entry. "Approved first" is read from the committed `docs/decisions.md`: the earlier line of E1's approval heading (`[DECISION] (owner|delegate) E1 approved`) and of the heading of REG-20 arm A's operations decision. E1's end entry is one of the three headings above. REG-20 arm A's end entry, for this rule, is REG-20's [RESULT] heading, or an [OPS] entry that quotes REG-20's `QUEUE DONE` line or records a stop of REG-20 that an entry has decided ends arm A, or the end heading REG-20's ops decision names, if it names one. If REG-20 arm A runs first, E1's `vm_checkout.sh` is not run, and E1's queue is not started, before REG-20's end entry; E1's scripts do not read REG-20's entries, so this is kept by hand, and the [OPS] entry that commits `vm_checkout.sh`'s output quotes `git grep -n` of that end entry's heading at the Mac's HEAD (E1's pre-launch checks still refuse a launch while the tmux session `run` exists, a compute process is on the GPU or the VM's tree is not E1's commit, "Pre-launch and launch"). If E1 runs first, REG-20's scripts do not read E1's entries either (rule F e1_r2, DC4), so the approving decision asks that REG-20's ops decision carry this rule's other side, and until it does REG-20 arm A is not launched before E1's end entry, by hand.
+>   ```
+>
+> **DE4 (reporting duty; the registration commit). DD12's "leaves `docs/probe/20261113_e1/ops/` as it is at 97a6438" is replaced.**
+> - **Why.** As written, DD12 would register draft 6's scripts: `mac_checks` freezes the six scripts at the registered commit (FILE(docs/probe/20261113_e1/ops/common.sh:92)). Meanwhile the entry cites `common.sh:24,267-269` and `:224-226` "after draft 7's script patch", and R2 says `settle` writes the pause.
+> - **Text**, for the approving [DECISION]'s steps (beside DD7) and the commit:
+>   ```text
+>   The commit that holds the [REG] and the approval also applies `docs/drafts/e1_r3/ops_draft7.patch` (`git apply`, after `git apply --check`), so that `docs/probe/20261113_e1/ops/` holds `common.sh` 1dff7875947d23c84eeb3fd745446741f5603ed02910db19855665efc63cf237, `queue.sh` d727e0069595b650f3814383c1a31f6594da6599c9a293ccaa5b951ea7415f7c, `vm_checkout.sh` 1fff3e488e8c03ffecb9d62323d0d8c2df0eef9ab07c8b0368b9240293b83c2d, `test_sandbox.sh` dddb31361ac95eee21fbb2ac71a9c429e1011c8da1d3d9510e7f4a4073427a10 and `README.md` 9eb497129e7cf1c958a4b169da9df1554a39e8204c76a4e3cad584698871eedd (sha256; the bundle e1_r3's `ops/` copies), with `vm_state.py`, `session_probe.sh`, `launch.sh`, `DESIGN_NOTES.md` and `e1_commit.txt` (`UNSET`) unchanged. Before that commit, `TMPDIR=<a scratchpad> zsh docs/probe/20261113_e1/ops/test_sandbox.sh` is run on the applied files and must print `passed 192, failed 0`; its output is saved as `docs/probe/20261113_e1/ops/sandbox_<stamp>.txt` and committed in the same commit. DD12's path list gains these six files; the rest of DD12 stands (named paths only; nothing under `runs/`, `docs/probe/20261113_reg19/` or `docs/probe/20261113_e1/ops/state/`).
+>   ```
+>
+> **DE5 (wording). The rule-A1 sentence rests on the owner's premise that DC1 corrected.**
+> - Anchor (one occurrence):
+>   ```text
+>   and the owner sent E1 to review with this paragraph's content stated (FILE(docs/decisions.md:4520)).
+>   ```
+> - Replace with:
+>   ```text
+>   and the owner sent E1 to review on draft 4's statement that "E1 changes no decision about a shock matrix" (FILE(docs/decisions.md:4520)). Rule F round 2 found that statement false (DC1), so this registration rests on the owner's two choices above and on the delegation (FILE(docs/decisions.md:4233)), not on that premise. Its departure from the plan's order, E1 run before E0's [REG] ("E0 … registers … the gate factor before any sweep", FILE(docs/decisions.md:4040)), is the delegate's, made under DC1's guard; the approving entry states it among its notes for the owner, who may reverse it with one entry.
+>   ```
+> - Note: after this replacement, the sentence before the anchor ("Rule A1 and `docs/process.md` §3 say a run whose outcomes change no decision is not proposed. The owner has decided otherwise for this run: …") still stands as history. E1 now does change a decision, so A1 is also met directly.
+>
+> **DE6 (wording). The VM's starting commit is not necessarily `a7bb77a`.**
+> - **(a)** ID line. Anchor:
+>   ```text
+>   **The VM then leaves REG-19's pin** `a7bb77a` for this entry's commit (`vm_checkout.sh`), or, if REG-20 arm A runs first ("E1 holds the VM"), the commit REG-20 left it at;
+>   ```
+>   Replace with:
+>   ```text
+>   **The VM then moves to this entry's commit** (`vm_checkout.sh`) from the commit it is at: REG-19's pin `a7bb77a`; HEAD of the day, if RUNBOOK §3 item 6's deploy (§4) ran after REG-19's [RESULT]; or, if REG-20 arm A runs first ("E1 holds the VM"), the commit REG-20 left it at; `vm_checkout.sh`'s probe file records which (its `before` line);
+>   ```
+> - **(b)** Anchor:
+>   ```text
+>   R6: this is the first move of the VM off `a7bb77a` since REG-19 began (the ID line), unless REG-20 arm A runs first ("E1 holds the VM").
+>   ```
+>   Replace with:
+>   ```text
+>   R6: this may be the first move of the VM off `a7bb77a` since REG-19 began (the ID line); it is not if RUNBOOK §3 item 6's deploy of HEAD, or REG-20 arm A ("E1 holds the VM"), moved it first. Either way `vm_checkout.sh` moves it only from an ancestor of E1's commit, and its probe file records the commit it starts from.
+>   ```
+> - **(c)** Anchor:
+>   ```text
+>   The VM moves from `a7bb77a` (or from REG-20 arm A's commit, if that runs first: "E1 holds the VM") to the registered commit by `vm_checkout.sh`
+>   ```
+>   Replace with:
+>   ```text
+>   The VM moves from the commit it is at (`a7bb77a`, HEAD deployed under RUNBOOK §3 item 6, or REG-20 arm A's commit if that runs first: "E1 holds the VM"; it must be an ancestor of the registered commit) to the registered commit by `vm_checkout.sh`
+>   ```
+> - **(d)** `docs/probe/20261113_e1/ops/README.md`, in the registration commit after DE4's patch. README is not among the frozen scripts.
+>   - Anchor:
+>     ```text
+>     | `vm_checkout.sh` | The owner-approved step that moves the VM's tree from REG-19's pin to the registered commit. No other script changes the VM's tree. |
+>     ```
+>   - Replace with:
+>     ```text
+>     | `vm_checkout.sh` | The owner-approved step that moves the VM's tree to the registered commit, from the commit it is at, which must be an ancestor (REG-19's pin, HEAD deployed after REG-19's [RESULT], or REG-20 arm A's commit; its line 2 still says "from REG-19's pin", a comment in a frozen script). No other script changes the VM's tree. |
+>     ```
+>   - After this edit, README's sha256 differs from DE4's value. DE4's README hash is then replaced by that of this edited file, stated in the approving entry.
+>
+> **DE7 (wording). Two meanings of "E1 has ended" (found 4).**
+> - Anchor (in "In neither case"; one occurrence):
+>   ```text
+>   After E1's queue has ended (it printed `QUEUE DONE` or `QUEUE END`, or stopped on a rule that ends E1: `no_errors` or `power_limit` in a run's `failed`, a second `gpu_steady`, one check in `failed` of two runs, or the owner's halt), and only for the runs that have that check in `failed`,
+>   ```
+> - Replace with:
+>   ```text
+>   After E1's queue has printed `QUEUE DONE` or `QUEUE END`, or has stopped on one of these rules: `no_errors` or `power_limit` in a run's `failed`, a second `gpu_steady`, one check in `failed` of two runs, or the owner's halt (each such stop waits for a decision and is E1's end only once an entry says so, "E1 holds the VM"; these reads may inform that decision and may be made before it), and only for the runs that have that check in `failed`,
+>   ```
+> - This is DD6(a)'s sentence, so the owner-proxy confirms it. It widens nothing: the same stops and the same fields.
+>
+> ## 9. Optional items
+>
+> **DE-O1 (code; a mechanical guard for DC1).** Patches in `rulef-e1-r3_files/`:
+> - `DEO1_withheld.patch` (sha256 1c1c8c1a…): adds after E1's SEALS row
+>   ```text
+>   ("E1-after-E0", "*_sweep_l1pl350cl_pc_off_r*", "[OPS] E1: the floor may be computed"),
+>   ```
+>   with a comment.
+> - `DEO1_test_withheld.patch` (cf7da521…):
+>   - `test_e1_seal_lifts_alone` also writes the [OPS] heading;
+>   - a new test, `test_e1_floor_waits_for_e0_even_when_unsealed`: with `AFTERSHOCK_UNSEAL=E1`, the folders stay sealed until that heading exists. E0's [REG] heading alone, or a quote of the heading, lifts nothing.
+>
+> Results:
+> - `tests/test_withheld.py tests/test_e1.py tests/test_k2.py`: 40 passed in my scratch copy.
+> - `git apply --check` passes on the main checkout (nothing applied).
+>
+> How it would be used:
+> - The agent writes `## <date> · [OPS] E1: the floor may be computed (…)`, quoting E0's [REG] heading or the entry that frees E1's floor, before the registered command. Like REG-19's queue-end gate, it is a recorded act.
+> - It covers `e1.observed`, `e1.floor_status`, `k2.observed` and the worktree computation, because it acts at `load` level.
+> - The entry already allows SEALS rows after the registered commit ("Result, computed once"), and `tests/` is outside `e1.py`'s closure. So it can land in the registration commit or in any commit before E1's first `COPIED` line.
+>
+> Side effects to state if taken:
+> - Before the heading exists, `e1.observed` raises with "set AFTERSHOCK_UNSEAL=E1" even when the variable is set. The stderr line names the seal `E1-after-E0`.
+> - `k2.observed` would get no E1 rows and return "missing" without an error. That is already its behaviour on sealed E1 rows today, and is for E0's registration.
+>
+> **DE-O2 (reporting duty; Trace A and section 6).** Append to "Reported, never judged":
+> ```text
+> - For each counted row: whether it came from the sweep or from a later single-rate launch, and that launch's pre-launch GPU temperature (its attempt record); after the result, each saturated row's busy SM-clock mean from `gpu.jsonl`; and U ÷ throughput (with caching off, the mean served prompt, DERIVED from `e1.work_rates` and the row) beside REG-8's rows. None of these is judged; they separate a thermal or a served-mix cause from a capacity cause of any difference from 1.681.
+> ```
+>
+> **DE-O3 (wording).**
+> - Anchor:
+>   ```text
+>   the queue ends with `QUEUE END`, naming the rates without a valid run ("holes").
+>   ```
+> - Replace with:
+>   ```text
+>   the queue ends with `QUEUE END`, naming the rates without a valid run (not each of them is a hole of `e1.floor`: "Holes").
+>   ```
+>
+> **DE-O4 (wording; DD3's merge).**
+> - Anchor:
+>   ```text
+>   the prediction is computed once, beside the result, with `uv run` before that command, and reported as the tilt's description.
+>   ```
+> - Replace with:
+>   ```text
+>   the prediction is computed once, beside the result, as `uv run python -c '…'` (the command above with `uv run` in front), and reported as the tilt's description.
+>   ```
+>
+> **DE-O5 (reporting duty; found 8).** Append to "Code and tests":
+> ```text
+> `e1.floor_status`, the flag E2 reads between its sweeps, applies the same holes rule (rule F e1_r2, DC2), and `k2.observed` calls `e1.floor` without the swept rates, so without it (FILE(analysis/k2.py:179)); E2's and E0's registrations cite both.
+> ```
+>
+> **DE-O6 (widens a read; the owner-proxy must pass it).**
+> - Why: under DC-O2, a launch log with no `run_id` line can only be diagnosed by lines that the allowed reads exclude.
+> - Append to "Reads allowed while diagnosing a stop":
+>   ```text
+>   A launch log that holds no `run_id` line may be read in full while the VM lists no E1 folder that no settled log names (no run was made, so it holds no outcome); the read is quoted in the [OPS] entry that records the cause.
+>   ```
+>
+> ## 10. Verdict
+>
+> **READY**, provided DE1–DE7 are applied verbatim.
+>
+> Each required item, with its class:
+>
+> | Item | Class |
+> |---|---|
+> | DE1 | stricter rule and reporting duty |
+> | DE2 | wording |
+> | DE3 | stricter rule and reporting duty |
+> | DE4 | reporting duty |
+> | DE5 | wording |
+> | DE6 | wording |
+> | DE7 | wording |
+>
+> DC1 is met in text, and DC2 in text and code. No required item is code.
+>
+> The owner-proxy's next pass, already due for DC2, DC-O1 and DC-O2, must restate DD10 (DE2, DE1 (ii)) and DD12 (DE4), and confirm DD6(a)'s wording (DE7).
+
+#### What was changed because of it (round 3)
+Each item's text was taken by script from the review's `text` blocks (`<scratchpad>/e1_draft8.py`); where an item meets the round-3 owner-proxy's DF items, the owner-proxy's delta pass ruled (below, "Owner-proxy pass"; `docs/drafts/e1_draft8_itemmap.md`, points 1–7).
+- **DE1** (DC1's wait where the playbook names the command): (i) and (ii) verbatim: the section "RUNBOOK, for the approval commit", (c), now holds DE1 (i)'s anchor (the whole §5 row, FILE(agent/RUNBOOK.md:66)) and its row, with the sentence on row 2a kept. The owner-proxy's delta (point 1) keeps DE1's row verbatim and withdraws DF7 (ii) and (iii): the row cites "E1 holds the VM", where DF3's "the second item neither launches, nor moves the VM's tree, nor starts its queue" and DF4's ban on an earlier `AFTERSHOCK_UNSEAL=E1` command bind; which item is first goes into the approving decision and `docs/status.md`. (iii), the status duty, is met in the approval commit's `docs/status.md` and in every status update until E1's [RESULT].
+- **DE2** (DD10's (a) and (b)): the section's first paragraph, verbatim; DD10's (b) is dropped and FILE(agent/RUNBOOK.md:48) is left to REG-20's operations decision. The delta (point 2) keeps DE2 and withdraws DF7 (i), since DE2's (a) ends the §4 wait at E1's end entry; DD10 is restated as this section's (a) and (c) (DF11 restated).
+- **DE3** (the order rule's terms): verbatim in "E1 holds the VM". DF3's added sentences follow it. The delta (point 3) found that the two definitions of "approved first" contradict in one case (REG-20 arm A's delegate operations heading committed before E1's approval, the owner's rulings after it: DE3 would make REG-20 first while its scripts cannot start), ruled that DF3's definition governs, and reworded DE3's sentence (X1). This is the one departure from DE3's words; the delta calls it the stricter reading, settling a contradiction round 3 could not see.
+- **DE4** (DD12's "leaves `ops/` as at 97a6438" replaced): in the approving decision, verbatim, beside DF8; README's sha256 there is that of the file after DE6 (d).
+- **DE5** (the rule-A1 sentence's premise): verbatim to its anchor. DF5's first sentence takes the place of the sentence before it, with its lead-in adjusted by the delta (X2) so that DE5's "and the owner sent E1 to review …" no longer reads as a third decision; DF5's last sentence, which repeated DE5 and left a dangling "it", is dropped (X3).
+- **DE6** (the VM's starting commit): (a), (b) and (c) verbatim (the ID line, R6, "Pre-launch and launch"); (d), README's `vm_checkout.sh` row, in the approval commit, after `ops_draft7.patch`.
+- **DE7** (two meanings of "E1 has ended"): verbatim in "In neither case". Confirmed by the delta (point 5); DF6's two sentences after it stand.
+- **Optional, taken, verbatim:** DE-O2 (appended to "Reported, never judged"), DE-O3 (the stopping rule's "holes"), DE-O4 (the prediction's command), DE-O5 (appended to "Code and tests").
+- **Optional, not taken:** DE-O1, the mechanical guard (a `SEALS` row lifted by an `[OPS] E1: the floor may be computed` entry). It is code, so it would need a rule F code round and an owner-proxy pass before registration; the entry allows `SEALS` rows to be added after the registered commit ("Result, computed once"), so it can still be added, with its tests, by its own reviewed commit before E1's floor is computed. DE-O6, a full read of a launch log that names no run: it widens a read, and no stop of that kind has happened.
+
+#### Owner-proxy pass
+Owner-proxy on draft 5 (`docs/drafts/reviews-2026-11-13/proxy-e1-draft5.md`): **APPROVE on DB1–DB12**; DB1 (the heading's date, `<date of append>` until the entry is appended), DB2 (the ID line), DB3 ("What E1 cannot do"), DB4 (the stopping rule, with DA1), DB5 (the single-rate configs, the test, 16 tests), DB6 ("Result, computed once", with DA4), DB7 ("Cost", merged into DA9), DB8 (this section) and DB9 (`README.md`, written with the facts still true after draft 6) are applied in this draft; DB10 (the approving decision), DB11 (`agent/RUNBOOK.md`, merged with DA5's two edits) and DB12 (the `docs/model.md` ledger row) belong to the approval commit; draft 6's script, holes and stopping-rule changes need another owner-proxy pass (its §3). Owner-proxy on draft 6 (round 2; `docs/drafts/reviews-2026-11-13/proxy-e1-draft6.md`): **APPROVE on DD1–DD12**; DD1 (rule F round 2, verbatim, above), DD2 (this line), DD3 ("Result, computed once", merged into round 2's DC6 there), DD4 ("Prediction"), DD6 ("In neither case"; its (b) merged into round 2's DC5 there) and DD7 (the two patches, applied in this commit; draft 7's patches and sha256s take the place of draft 6's, so DD7's steps are run with them) are applied in this entry; DD5 ("Holes") is not, because round 2's DC2 changes the code so that the case it discloses no longer occurs; DD8–DD12 belong to the approval commit and the steps after it. Draft 7's DC2 ("holes"), DC-O1 and DC-O2 (the scripts; DC-O2 also the stopping rule) need another owner-proxy pass (its §3). Owner-proxy on draft 7 (round 3; `docs/drafts/reviews-2026-11-13/proxy-e1-draft7.md`): **APPROVE on DF1–DF11**; DD5 not applied, DC2's "holes", DC-O1 and DC-O2 accepted; DF1 (rule F round 3, verbatim, above), DF2 (this line), DF3 ("E1 holds the VM"), DF4 and DF5 ("What E1 can and cannot do"), DF6 ("In neither case"), DF7 ("RUNBOOK, for the approval commit") and DF8 (the three patches, applied in this commit, in place of DD7) are applied in this entry; DF9–DF11 belong to the approval commit; DD9 and DD11 stand. Owner-proxy delta on draft 8 (`docs/drafts/reviews-2026-11-13/proxy-e1-draft8-delta.md`): **APPROVE**; DE1–DE7 confirmed; DF7 withdrawn (DE1's row and DE2's (a) replace the RUNBOOK edits it made); DF3's definition governs "approved first" (DE3's sentence reworded, X1); DF5's lead-in adjusted and its last sentence dropped for DE5's (X2, X3); DF8, DF9 and DF11 as that delta restates them.
+
+### Changed from draft 3 (the E1 items of its rule F review)
+- E1 is registered alone and says first that it changes no decision (item 9).
+- `floor`, `floor_status` and `observed` fail loudly on a sweep with no readable run; "holes" for a swept rate without a valid run; n and the rates are reported (items 4, 5).
+- The result command names `AFTERSHOCK_UNSEAL=E1`; the seal test is keyed on the config's `name`, so single-rate configs do not break it (item 5).
+- Rerun decisions read only `valid` and `failed` (item 6).
+- The stopping rule covers a rate never started, says which of two valid runs counts, and needs no later commit, because the single-rate configs are registered with it (item 7).
+- The text lists the functions and what the command prints (item 8).
+- New: the report waits for REG-21's result, because it computes REG-21's statistic on REG-8's runs.
+- Left for the E0/E2 registration: its items 1 to 3 (the planned-rate and surge table, floors over common rates, the rounding guard).
+
+### Changed from draft 4 (the launch scripts written; no review yet)
+- "Not ready for review" is dropped: the scripts exist and go to rule F and the owner-proxy with this text.
+- E1 waits for REG-19's queue to end, recorded by an [OPS] entry, not for REG-19's [RESULT] (the ID line; DESIGN_NOTES.md I11). The VM's move off `a7bb77a` is stated.
+- New section "The harness E1 runs on": E1 is the first GPU run on `5ee6e38`'s harness; risks R1–R6 and how they are bounded; `gpu_steady`'s coverage failures are treated as heat (R3); the pause after an invalid run is part of the rule (R2).
+- The stopping rule states the scripts' readings of draft 4 (DESIGN_NOTES.md I1–I9, I12, I13): attempts, a global stop, the heat count over all runs, any `no_errors`, spent rates, two valid runs, unnamed folders, the commit check and what is copied.
+- The approval heading the scripts recognise, and `e1_commit.txt`.
+
+### Changed from draft 5 (rule F round 1 and the owner-proxy pass)
+- Every rule F item is listed above ("What was changed because of it"), every owner-proxy item in the line after it, and both item by item, with each departure from the reviewers' words, in `docs/drafts/e1_draft6_itemmap.md`.
+- Code, as patches against HEAD (bundle e1_r2): `analysis/e1.py` (DA6, DA-O4, DA-O6); `tests/test_e1.py` (DB5's test, and one test each for DA6, DA-O4 and DA-O6; 16 passed with both applied). They are applied in the commit that registers E1, at the latest. Scripts: `common.sh`, `queue.sh`, `launch.sh`, `vm_checkout.sh`, `test_sandbox.sh` (184 of 184), `README.md`, `DESIGN_NOTES.md`; `vm_state.py`, `session_probe.sh` and `e1_commit.txt` (still `UNSET`) are unchanged.
+
+### Changed from draft 6 (rule F round 2 and the owner-proxy's round-2 conditions)
+- Every rule F round-2 item is listed above ("What was changed because of it (round 2)"), every owner-proxy round-2 item in the line after it, and both item by item, with each departure from the reviewers' words, in `docs/drafts/e1_draft7_itemmap.md`.
+- Code, as cumulative patches against HEAD: `docs/drafts/e1_r3/e1_py_draft7.patch` (draft 6's DA6, DA-O4 and DA-O6; round 2's DC2 and DC8) and `test_e1_draft7.patch` (draft 6's four added tests; round 2's DC2 changes to two tests); 16 passed with both applied. They are applied in the commit that registers E1, and DD7's sha256 check uses the hashes in this draft's header.
+- Scripts, as one patch against HEAD: `docs/drafts/e1_r3/ops_draft7.patch` (`common.sh`, `queue.sh`, `vm_checkout.sh`, `test_sandbox.sh`, `README.md`; DC-O1, DC-O2, DC-O3 and DC4's README edit); 192 of 192. `vm_state.py`, `session_probe.sh`, `launch.sh`, `DESIGN_NOTES.md` and `e1_commit.txt` (still `UNSET`) are unchanged. The patch is applied in the commit that registers E1, before `e1_commit.txt` is set, and the sandbox is run again there.
+- E1's order with REG-20 arm A follows the lead's rule, not round 2's RUNBOOK row (DC4, above).
+- Facts since round 2: REG-19's [RESULT], REG-21's first [RESULT], REG-20's gate (the header, the ID line, "Reported, never judged").
+
+### Changed from draft 7 (rule F round 3 and the owner-proxy's round-3 pass)
+- Rule F round 3 (`docs/drafts/reviews-2026-11-13/rulef-e1-draft7-r3.md`, READY provided DE1–DE7 are applied verbatim) is quoted above with its change list; the round-3 owner-proxy pass (`docs/drafts/reviews-2026-11-13/proxy-e1-draft7.md`, APPROVE on DF1–DF11) and its delta pass on draft 8 (`docs/drafts/reviews-2026-11-13/proxy-e1-draft8-delta.md`, APPROVE with X1–X4) are named in the owner-proxy line. The two round-3 passes ran in parallel on draft 7; draft 8 (`docs/drafts/e1_draft8.md` at `88593dc`) joined them by the owner-proxy's rule, and the delta pass ruled on the seven points where they meet (`docs/drafts/e1_draft8_itemmap.md`).
+- Text only: no code, script, config, threshold or check changed from draft 7; the three patches of `docs/drafts/e1_r3/` are applied in the approval commit (DF8, DE4), and README's `vm_checkout.sh` row there (DE6 (d)).
+- Facts since draft 7: seed 18's lost control is on the Mac (FILE(docs/decisions.md:17014), `47b8e06`), and RUNBOOK §3 item 6's deploy of HEAD has not been made: the VM is at `a7bb77a` (the watcher's last read, `agent/run/gpu_watch.last`), which DE6's wording covers either way.
+
+### RUNBOOK, for the approval commit (text; `agent/RUNBOOK.md` is not edited by this draft)
+In place of DD10's (a) and (b) (draft 6's merged proposal, which put E1 first), the approval commit makes one edit, (a), and leaves FILE(agent/RUNBOOK.md:48) to REG-20's ops decision (its RB6 edits that line). (a) In `agent/RUNBOOK.md`, replace `## 4. Deploying `main` to the VM (only between items, never during a run, never before REG-19's [RESULT])` (FILE(agent/RUNBOOK.md:50)) with `## 4. Deploying `main` to the VM (only between items, never during a run, never before REG-19's [RESULT]; never while E1 holds the VM, that is from E1's `docs/probe/20261113_e1/ops/vm_checkout.sh` until E1's end entry (decisions.md [REG] E1, "E1 holds the VM"), nor while E1's queue lock `docs/probe/20261113_e1/ops/state/queue.lock` exists; E1 moves the VM only with its own `vm_checkout.sh`, to E1's commit, detached: decisions.md, [DECISION] (delegate) E1 approved; if the VM is at E1's commit, detached, `git checkout main` comes first)`. This holds under either order: before E1's `vm_checkout.sh`, and after E1's end entry, §4 is as before. Round 2's DC4 adds a §5 row, (c), replaced by the lead's rule:
+
+(c) In `agent/RUNBOOK.md` §5's table, replace
+```text
+| 4 | E1 | `uv run python -m harness.run configs/sweep_l1pl350cl_pc_off.yaml` (one invocation; rerun configs list one rate, same `name`) | `AFTERSHOCK_UNSEAL=E1 uv run python -m analysis.e1 floor` | [RESULT] E1 |
+```
+with
+```text
+| 2b (with 2a) | E1 (E1 and REG-20 arm A: whichever has its ops approved first runs first; the other launches only after the first's end entry; decisions.md [REG] E1, "E1 holds the VM") | `docs/probe/20261113_e1/ops/queue.sh` (its README, "Run order"): the sweep `configs/sweep_l1pl350cl_pc_off.yaml` once; a rate never started, or a rerun, from its single-rate config (same `name`) | `AFTERSHOCK_UNSEAL=E1 uv run python -m analysis.e1 floor`, once, only after REG-21's first [RESULT] (met) and after E0's [REG] is committed or an entry records that E0's gate takes no input from E1's runs; before then no part of E1's floor is computed, quoted or used (no `e1.observed`, `e1.floor_status` or `k2.observed` on E1's runs; decisions.md [REG] E1, "Result, computed once") | [RESULT] E1 |
+```
+Row 2a, REG-20 arm A, is not edited here: the same rule belongs in REG-20's ops decision, which is in review.
+
+## 2026-11-14 · [DECISION] (delegate) E1 approved as registered above: the closed-loop cache-off sweep of L1 at 350 W, six rates 1.5 to 4, seed 0 (≈ 2.1 GPU h, at most 6.3); the VM moves forward to E1's commit by E1's `vm_checkout.sh`; E1 is the first of E1 and REG-20 arm A; E1's floor waits for E0's registration
+
+- **What is approved:** the [REG] E1 entry above. Its text is draft 8 (`docs/drafts/e1_draft8.md` at `88593dc`, sha256 e1802497152b16416d9a02f5637b665f80984fd0635abbb85cf3196f336f746a: draft 7, `docs/drafts/e1_draft7.md` at `56820bd`, sha256 f0b2ce11a85489e38b38dd72458fe88f2b5686050f0ecd1a7db310084272de10, with rule F round 3's DE1–DE7 verbatim, the round-3 owner-proxy's DF2–DF7 merged by that pass's rule and DE-O2 to DE-O5, all taken by script from the saved reviews' `text` blocks), with the owner-proxy delta's X1–X4 applied verbatim and rule F round 3 quoted (DF1). The code is draft 7's two cumulative patches, `docs/drafts/e1_r3/e1_py_draft7.patch` and `test_e1_draft7.patch`, and the scripts are `docs/probe/20261113_e1/ops/` at 97a6438 with `docs/drafts/e1_r3/ops_draft7.patch` and DE6 (d)'s README row; all applied in this commit (DF8 and DE4, below). `e1_commit.txt` stays `UNSET`.
+- **Under what authority:** the owner's delegation (FILE(docs/decisions.md:4231)): (a) rule F reviews by separate subagents that saw only the registration, its code and its scripts, every round quoted verbatim in the [REG]: round 1 on draft 5, NOT READY (`docs/drafts/reviews-2026-11-13/rulef-e1-draft5-r1.md`); round 2 on draft 6, NOT READY (`docs/drafts/reviews-2026-11-13/rulef-e1-draft6-r2.md`); round 3 on draft 7, **READY, provided DE1–DE7 are applied verbatim** (`docs/drafts/reviews-2026-11-13/rulef-e1-draft7-r3.md`); DE1–DE7 are applied verbatim but for one sentence of DE3, reworded by the owner-proxy's X1 to settle a contradiction with DF3 that round 3 could not see (the [REG], "What was changed because of it (round 3)"); (b) an independent owner-proxy, whose four verdicts are quoted verbatim below: round 1 on draft 5, APPROVE on DB1–DB12; round 2 on draft 6, APPROVE on DD1–DD12; round 3 on draft 7, APPROVE on DF1–DF11; its delta on draft 8, APPROVE with X1–X4. A reject from either would have been binding; there was none.
+
+### What this entry states (round 1's DB10 (i)–(iv); DF9 as the delta restates it, in place of round 2's DD8)
+- **DB10 (i), the pin clause.** REG-19's pin rule ("The VM stays at `a7bb77a` with a clean tree until REG-19's [RESULT] is written", FILE(docs/drafts/reg19_resume_decision_draft5.md:41), approved FILE(docs/decisions.md:4287), kept FILE(docs/decisions.md:4400)) is met, not amended: REG-19's [RESULT] is written (FILE(docs/decisions.md:16517)). Draft 6's amendment under the delegation's "the pin rule" (FILE(docs/decisions.md:4233)) was dropped in draft 7 because nothing is left for it to amend. The owner may overrule any part of this approval by an entry, and halts E1 by an entry headed `## <date> · [DECISION] (owner) E1 halted`.
+- **DB10 (ii), the checkout.** README step 5 (`zsh docs/probe/20261113_e1/ops/vm_checkout.sh`) is approved under the delegation, to be run only once `ready_to_run` passes (REG-19's queue end recorded, FILE(docs/decisions.md:4611); REG-19's lock gone); its probe file is committed with an [OPS] entry.
+- **DB10 (iii), no move back.** A move of the VM back to `a7bb77a`, or to any commit other than forward to E1's, is not covered by this approval and needs its own entry.
+- **DB10 (iv).** No E1 launch happens before the checkout's [OPS] entry and the session probe's file are committed.
+- **DF9 (a), (b).** The four owner-proxy verdicts are quoted verbatim below; rule F rounds 2 and 3 are named above with their verdicts and files, and round 3 is quoted in the [REG].
+- **DF9 (c), the outputs,** run in the working tree with this commit's content staged and nothing else changed in these paths. DD9 repeats the first two at the registered commit (after `e1_commit.txt` is committed, before `vm_checkout.sh`), and both are then quoted in the [OPS] entry that commits `vm_checkout.sh`'s probe file; if either differs, `vm_checkout.sh` is not run and the registration goes back to rule F, then to the owner-proxy:
+
+  1. `python3 docs/probe/20261113_freeze/closure.py analysis/e1.py` (DA4):
+
+    # import closure of analysis/e1.py in the working tree: 24 .py files
+    analysis/__init__.py
+    analysis/derived.py
+    analysis/e1.py
+    analysis/floor.py
+    analysis/gate.py
+    analysis/k1.py
+    analysis/k3.py
+    analysis/k3w.py
+    analysis/load.py
+    analysis/margin.py
+    analysis/modelf.py
+    analysis/modelf_sim.py
+    analysis/stats.py
+    analysis/tables.py
+    analysis/withheld.py
+    harness/__init__.py
+    harness/checks.py
+    harness/config.py
+    harness/env_snapshot.py
+    harness/loadgen.py
+    harness/recorder.py
+    harness/run.py
+    harness/trigger.py
+    harness/workload.py
+    # environment: 3 files
+    .python-version
+    pyproject.toml
+    uv.lock
+    # total 27 files
+    # dynamic import call in harness/env_snapshot.py at line(s) 38: check by hand
+
+  2. `git diff --quiet 9e249b1 -- harness/ pyproject.toml uv.lock .python-version configs/defaults.yaml configs/base.yaml configs/gap5_base.yaml configs/l1_base.yaml configs/l1_pl350_base.yaml configs/sweep_l1pl350_pc_off.yaml configs/sweep_l1pl350cl_pc_off.yaml 'configs/sweep_l1pl350cl_pc_off_only_r*.yaml'; echo $?` (DA11):
+
+    0
+
+  3. DF8 step 5's last line (the sandbox, `docs/probe/20261113_e1/ops/sandbox_20261114T015642Z.txt`):
+
+    passed 192, failed 0  (sandbox /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad/e1_sandbox.0ciMPd)
+
+  4. README's sha256 after DE6 (d) (DF8 step 5a): `fe6dfc04ac8c4fb35828be5daabb5f6a08f79332e2e8077e30bae07613a926fe`.
+
+  5. DF8's run, verbatim (`<scratchpad>/e1_df8.zsh`, its stdout and stderr):
+
+    # DF8 at 2026-11-14T01:56:39Z, HEAD 88593dcb0b85c1de0fcc35e03ac64395f6f849c4
+    no queue, launch or final script runs (pgrep)
+    $ git apply docs/drafts/e1_r3/e1_py_draft7.patch docs/drafts/e1_r3/test_e1_draft7.patch docs/drafts/e1_r3/ops_draft7.patch
+    [exit 0]
+    $ shasum -a 256 analysis/e1.py tests/test_e1.py docs/probe/20261113_e1/ops/common.sh docs/probe/20261113_e1/ops/queue.sh docs/probe/20261113_e1/ops/vm_checkout.sh docs/probe/20261113_e1/ops/test_sandbox.sh docs/probe/20261113_e1/ops/README.md
+    428771e04a7a740bc87b20bc7959d835c56e0eebbfb822086248a373c200d415  analysis/e1.py
+    dd3f52c579288cbe9a9a0144b98d2b880f2606eacea153fc268d232e6f6a750d  tests/test_e1.py
+    1dff7875947d23c84eeb3fd745446741f5603ed02910db19855665efc63cf237  docs/probe/20261113_e1/ops/common.sh
+    d727e0069595b650f3814383c1a31f6594da6599c9a293ccaa5b951ea7415f7c  docs/probe/20261113_e1/ops/queue.sh
+    1fff3e488e8c03ffecb9d62323d0d8c2df0eef9ab07c8b0368b9240293b83c2d  docs/probe/20261113_e1/ops/vm_checkout.sh
+    dddb31361ac95eee21fbb2ac71a9c429e1011c8da1d3d9510e7f4a4073427a10  docs/probe/20261113_e1/ops/test_sandbox.sh
+    9eb497129e7cf1c958a4b169da9df1554a39e8204c76a4e3cad584698871eedd  docs/probe/20261113_e1/ops/README.md
+    [exit 0]
+    seven sha256 as DF8 lists: OK
+    $ git diff --quiet HEAD -- docs/probe/20261113_e1/ops/vm_state.py docs/probe/20261113_e1/ops/session_probe.sh docs/probe/20261113_e1/ops/launch.sh docs/probe/20261113_e1/ops/DESIGN_NOTES.md docs/probe/20261113_e1/ops/e1_commit.txt
+    [exit 0]
+    $ cat docs/probe/20261113_e1/ops/e1_commit.txt
+    UNSET
+    [exit 0]
+    $ uv run pytest tests/test_e1.py -q 2>&1 | tail -3
+    ................                                                         [100%]
+    16 passed in 2.05s
+    [exit 0]
+    $ TMPDIR=/private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad zsh docs/probe/20261113_e1/ops/test_sandbox.sh > /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad/e1_sandbox_20261114T015642Z.txt 2>&1
+    [exit 0]
+    passed 192, failed 0  (sandbox /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad/e1_sandbox.0ciMPd)
+    $ cmp /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad/e1_sandbox_20261114T015642Z.txt docs/probe/20261113_e1/ops/sandbox_20261114T015642Z.txt
+    [exit 0]
+    $ git status --short
+     M .gitignore
+     M agent/STATE.md
+     M analysis/e1.py
+     M docs/probe/20261113_e1/ops/README.md
+     M docs/probe/20261113_e1/ops/common.sh
+     M docs/probe/20261113_e1/ops/queue.sh
+     M docs/probe/20261113_e1/ops/test_sandbox.sh
+     M docs/probe/20261113_e1/ops/vm_checkout.sh
+     M tests/test_e1.py
+    ?? docs/FABLE_PROMPT.md
+    ?? docs/drafts/reg21_decision_draft2.md
+    ?? docs/drafts/reg22_decision_draft2.md
+    ?? docs/drafts/reviews-2026-11-13/proxy-e1-draft8-delta.md
+    ?? docs/probe/20261113_e1/ops/sandbox_20261114T015642Z.txt
+    [exit 0]
+    DF8 steps 1-3 and 5 done; sandbox file docs/probe/20261113_e1/ops/sandbox_20261114T015642Z.txt; step 4 (full pytest) next
+
+  6. The staged paths when 1 and 2 were run (`git diff --cached --name-only`):
+
+    agent/RUNBOOK.md
+    analysis/e1.py
+    docs/probe/20261113_e1/ops/README.md
+    docs/probe/20261113_e1/ops/common.sh
+    docs/probe/20261113_e1/ops/queue.sh
+    docs/probe/20261113_e1/ops/sandbox_20261114T015642Z.txt
+    docs/probe/20261113_e1/ops/test_sandbox.sh
+    docs/probe/20261113_e1/ops/vm_checkout.sh
+    tests/test_e1.py
+
+- **DF9 (d), the departures accepted:** round 2's pass's list (DD8 (d)): DA9's "runs", DA10's renumbering, DB5(c)'s 16 tests, DB7 merged into DA9, DB9(a) rewritten, DA12's further comment updates, DA-O1's and DA-O2's added sandbox cases and messages, and DA-O3 not taken; draft 7's item-map departures 1 (as DF3 defines it), 2, 3, 4, 5, 6 (DD5 not applied), 7, 8 (DD7 replaced by DF8) and 9 (FILE(docs/drafts/e1_draft7_itemmap.md:1)); DC-O1 to DC-O5 taken; draft 8's merges as the delta ruled them (`docs/drafts/e1_draft8_itemmap.md`; X1–X4; DF7 withdrawn, DE1's row and DE2's (a) replacing the RUNBOOK edits it made); DE-O2 to DE-O5 taken; DE-O1 (a code guard) and DE-O6 (a wider read) not taken.
+- **DF9 (e), DA7's detail reads:** allowed as DD6 scopes them (the [REG]'s "In neither case": only the listed fields of a failed `recorder` or `gpu_steady`, only for the runs with that check in `failed`, by one command quoted in the entry that records the cause) and as DF6 and DE7 time them (once the stop line is printed, before E1's end entry; they neither end E1 nor free the VM).
+- **DF9 (f), DE5's note for the owner:** the premise of the owner's entry that sent E1 to review ("E1 changes no decision about a shock matrix", FILE(docs/decisions.md:4520)) was false (rule F round 2, DC1: E1's floor is the denominator of E0's 8-turn ratio, and without it the committed gate says "missing", FILE(analysis/k2.py:102-103)); E1 run before E0's [REG] is the delegate's departure from the plan's order ("E0 … registers … the gate factor before any sweep", FILE(docs/decisions.md:4040)), made under DC1's guard (E1's floor withheld until E0's [REG]); this approval rests on the owner's two decisions to run E1 in any case (FILE(docs/decisions.md:4037), FILE(docs/decisions.md:4040)) and on the delegation (FILE(docs/decisions.md:4233)); the owner may reverse it with one entry.
+- **DF9 (g), which item is first.** By DF3's definition as X1 writes it into the [REG] (the item whose last required heading has the earlier line is first; an item's required headings are those its scripts need before their first launch), at this commit's content:
+
+  - E1's approval (`APPROVE_PAT`): `git grep -n -E '^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[DECISION\] \((owner|delegate)\) E1 approved' -- docs/decisions.md` (working tree, this commit's content):
+
+    docs/decisions.md:18286:## 2026-11-14 · [DECISION] (delegate) E1 approved as registered above: the closed-loop cache-off sweep of L1 at 350 W, six rates 1.5 to 
+
+  - REG-20 arm A's operations decision: `git grep -n -E '^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[DECISION\] \((owner|delegate)\) REG-20 arm A operations' -- docs/decisions.md` (working tree, this commit's content):
+
+    (no match)
+
+  - REG-20's `RULINGS_PAT`: `git grep -n -E '^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[DECISION\] \(owner\) REG-20 arm A operations: the owner.s rulings([^0-9A-Za-z]|$)' -- docs/decisions.md` (working tree, this commit's content):
+
+    (no match)
+
+  - REG-20's `START_PAT`: `git grep -n -E '^## [0-9]{4}-[0-9]{2}-[0-9]{2} · \[DECISION\] \((owner|delegate)\) REG-20 arm A starts: k1\.reg20_a_may_start passed([^0-9A-Za-z]|$)' -- docs/decisions.md` (working tree, this commit's content):
+
+    (no match)
+
+  - `grep -v '^#' docs/probe/20261113_reg20/ops/owner_rulings.txt`:
+
+    2a unset
+    6 unset
+    7 unset
+    8 unset
+    9 unset
+    16 unset
+
+  So **E1 is first**: this entry is the heading E1's scripts require (`APPROVE_PAT`, FILE(docs/probe/20261113_e1/ops/common.sh:40)), while REG-20 arm A's scripts require, besides REG-19's [RESULT], an owner's rulings entry (`RULINGS_PAT`, FILE(docs/probe/20261113_reg20/ops/common.sh:40)) and a start entry (`START_PAT`, FILE(docs/probe/20261113_reg20/ops/common.sh:41)), neither of which exists, and its `owner_rulings.txt` reads `unset` on every point. REG-20 arm A's operations decision draft 2 does not mention E1; while E1 is first, that decision must carry the wait for E1's end entry before its first launch or VM move (its owner-proxy's RD5 and its rule F round 2's RC7 ask the same: `docs/drafts/reviews-2026-11-13/proxy-reg20-ops-draft2.md`, committed in `88593dc`, and `docs/drafts/reviews-2026-11-13/rulef-reg20-ops-draft2-r2.md`, NOT READY on RC1–RC8, saved and committed after this entry), and until it does, REG-20 arm A is not launched before E1's end entry, by hand. DE3's duty is also taken: if REG-20 arm A were first, the [OPS] entry that commits `vm_checkout.sh`'s output would quote `git grep -n` of REG-20's end-entry heading at the Mac's HEAD; with E1 first it does not arise.
+- **DF9 (h).** `docs/status.md`'s next action and open risks carry DE1 (iii)'s sentence verbatim, "E1's floor is not computed before E0's [REG] is committed or an entry records that E0's gate takes no input from E1's runs.", then "No command sets `AFTERSHOCK_UNSEAL=E1` before then (DF4). First: E1."
+- **DE4 and DF8, the files** (the same act), with README's value replaced as the delta's DF8 step 5a says:
+
+  > The commit that holds the [REG] and the approval also applies `docs/drafts/e1_r3/ops_draft7.patch` (`git apply`, after `git apply --check`), so that `docs/probe/20261113_e1/ops/` holds `common.sh` 1dff7875947d23c84eeb3fd745446741f5603ed02910db19855665efc63cf237, `queue.sh` d727e0069595b650f3814383c1a31f6594da6599c9a293ccaa5b951ea7415f7c, `vm_checkout.sh` 1fff3e488e8c03ffecb9d62323d0d8c2df0eef9ab07c8b0368b9240293b83c2d, `test_sandbox.sh` dddb31361ac95eee21fbb2ac71a9c429e1011c8da1d3d9510e7f4a4073427a10 and `README.md` fe6dfc04ac8c4fb35828be5daabb5f6a08f79332e2e8077e30bae07613a926fe (sha256; the bundle e1_r3's `ops/` copies), with `vm_state.py`, `session_probe.sh`, `launch.sh`, `DESIGN_NOTES.md` and `e1_commit.txt` (`UNSET`) unchanged. Before that commit, `TMPDIR=<a scratchpad> zsh docs/probe/20261113_e1/ops/test_sandbox.sh` is run on the applied files and must print `passed 192, failed 0`; its output is saved as `docs/probe/20261113_e1/ops/sandbox_<stamp>.txt` and committed in the same commit. DD12's path list gains these six files; the rest of DD12 stands (named paths only; nothing under `runs/`, `docs/probe/20261113_reg19/` or `docs/probe/20261113_e1/ops/state/`).
+
+  (DE4's text, verbatim but for README's value: DE4 named `9eb497129e7cf1c958a4b169da9df1554a39e8204c76a4e3cad584698871eedd`, the file as `ops_draft7.patch` leaves it, which DF8's step 2 checked right after `git apply`; DE6 (d)'s row then changed it, step 5a.) DF8's run of these steps, verbatim, is quoted under DF9 (c), item 5: `git apply` of the three patches with no queue, launch or final script running (pgrep), the seven sha256s as DF8 lists them, the five kept files unchanged and `e1_commit.txt` reading `UNSET`, `uv run pytest tests/test_e1.py -q` 16 passed, the sandbox `passed 192, failed 0`, saved as `docs/probe/20261113_e1/ops/sandbox_20261114T015642Z.txt` and checked with `cmp`. Then DE6 (d) (step 5a), and `uv run pytest` in full: `533 passed in 750.11s (0:12:30)` (rc 0; started 20261114T015808Z, ended 20261114T021039Z UTC).
+- **DD9** stands as given (under DF9 (c)). **DD11, the ledger row,** is appended to `docs/model.md`'s prediction ledger as row 27, with DD4's numbers unchanged.
+- **DF10, this commit's paths,** named one by one (`git add <path> …`; never `-A`, `.` or `commit -a`): `docs/decisions.md`; `analysis/e1.py`, `tests/test_e1.py`; in `docs/probe/20261113_e1/ops/`: `common.sh`, `queue.sh`, `vm_checkout.sh`, `test_sandbox.sh`, `README.md`, `sandbox_20261114T015642Z.txt`; `agent/RUNBOOK.md`, `docs/model.md`; the session files `docs/status.md`, `docs/context-pack.md`, `agent/STATE.md`, `agent/LOG.md`, `agent/FOR_AUTHOR.md`; the saved review `docs/drafts/reviews-2026-11-13/proxy-e1-draft8-delta.md` (the other three E1 reviews of round 3 were committed in `88593dc`). Nothing under `runs/`, `docs/probe/20261113_reg19/`, `docs/probe/20261113_reg20/`, `docs/probe/reg20/` or any `docs/probe/**/state/`; not `.gitignore`, `docs/FABLE_PROMPT.md` or any untracked draft. `e1_commit.txt` (`UNSET`), `vm_state.py`, `session_probe.sh`, `launch.sh` and `DESIGN_NOTES.md` stay as at the parent commit.
+- **DF11, as the delta restates it (DD10):** the [REG]'s section "RUNBOOK, for the approval commit" is applied in this commit: (a), DE2's §4 heading, to FILE(agent/RUNBOOK.md:50); (c), DE1's row, to FILE(agent/RUNBOOK.md:66) (both anchors as at the parent commit); FILE(agent/RUNBOOK.md:48) is not edited, and is left to REG-20's RB6.
+- **Disclosed:** the round-3 owner-proxy reports that, in a scratch copy with no `runs/`, a test it ran (`test_report_counts_only_the_runs_first_valid_keeps`) called `e1.report()` and so `e1.observed()` on synthetic, monkeypatched rows; no run data was read (its file, "My error"). Every `uv run pytest` of the repo runs the same tests on the same synthetic rows. The agent's own full `pytest` runs (on a patched scratch copy, and in the checkout for DF8) did the same.
+
+### Then, in order (README "Run order")
+1. `git rev-parse HEAD > docs/probe/20261113_e1/ops/e1_commit.txt`, committed alone.
+2. DD9's two checks at that commit.
+3. `zsh docs/probe/20261113_e1/ops/vm_checkout.sh`; its file committed with an [OPS] entry quoting DD9's outputs.
+4. 350 W read (and set by `sudo -n nvidia-smi -pl 350` if it reads otherwise; if `sudo -n` fails, the owner).
+5. `zsh docs/probe/20261113_e1/ops/session_probe.sh`; its file committed.
+6. `nohup caffeinate -i zsh docs/probe/20261113_e1/ops/queue.sh > docs/probe/20261113_e1/queue_<stamp>.txt 2>&1 &` from the repo root.
+7. At `QUEUE DONE`, `QUEUE END` or a stop that ends E1: commit `state/`, the manifests and the probes, with the [OPS] end entry; compute nothing until "Result, computed once" allows it (REG-21's first [RESULT] is in; E0's [REG] first).
+
+### The owner-proxy's verdicts, verbatim (each line prefixed)
+
+#### Round 1, on draft 5 (`docs/drafts/reviews-2026-11-13/proxy-e1-draft5.md`)
+> # proxy-e1-draft5 (proxy-e1-d5), verbatim
+>
+> Saved by the agent from the reviewer's own final text (its session 09632008, line 563, timestamp 2026-11-13T21:06:15.345Z), which the reviewer ended its turn with and did not send by SendMessage, so it never reached the main session (checked by the agent on 2026-11-13 21:33 UTC: no SendMessage call in that session). The owner-proxy pass on E1 draft 5.
+>
+> ---
+>
+> **Verdict: APPROVE, on conditions DB1–DB12.** DB1–DB9 are BEFORE: they are applied before the `[REG] E1` entry is appended. DB10–DB12 are LATER: they go into the approving `[DECISION] (delegate) E1 approved` and its commit, before `vm_checkout.sh` runs.
+>
+> ## What I checked (0 GPU h; nothing written in the repo)
+> - **Bundle.** All 28 MANIFEST checksums pass. Every bundle copy is byte-identical to the repo at e87884d: `ops/`, `analysis/e1.py`, `tests/test_e1.py`, the 7 configs, and drafts 4 and 5. `harness_diff_a7bb77a_to_HEAD.diff` matches `git diff a7bb77a HEAD -- harness/` (sha 3b52b5e1…).
+> - **Sandbox.** `zsh docs/probe/20261113_e1/ops/test_sandbox.sh` gave "passed 170, failed 0". It ran in a temp dir in my scratchpad and the repo is unchanged.
+> - **Tests.** `uv run pytest tests/test_e1.py -q` gave 12 passed.
+> - **Single-rate configs.** I checked by hand, since no test covers this. Each `configs/sweep_l1pl350cl_pc_off_only_r<rate>.yaml` expands to one run, with name `sweep_l1pl350cl_pc_off_r<rate>` and `sweep_parent` `sweep_l1pl350cl_pc_off`. That run equals the sweep's own run at that rate in every key except `sweep`.
+> - **Citations.** Every line the draft cites says what the draft claims: decisions.md:4516/4520, 4200/4205; checks.py:127; base.yaml:55; run.py:143 (whose print format matches `settle`'s grep); ops_r3/common.sh:11; ops_r3/launch.sh:45.
+> - **REG-19 side.**
+>   - REG-19's queue moves its lock away on exit (ops_r3/queue.sh:28), so "no lock" does mean the queue ended.
+>   - QUEUE DONE and QUEUE END are its only terminal lines.
+>   - `final.sh` opens no ssh connection: the table needs nothing from the VM's tree.
+> - **Harness diff, cap off.** The load generator's paths are unchanged apart from per-line flushes. This is BELIEF from reading the diff, and agrees with the draft's R5.
+> - **Clean slate.** No E1 folder exists on the Mac (folder names only).
+> - **REG-19 still running or holding the GPU.** The session's git snapshot lists `ops_r3/state/queue.lock/` as present. That is existence only; nothing was opened. E1 cannot start yet.
+>
+> ## 1. Would the owner approve?
+> Yes, with the conditions below.
+>
+> **Value.** E1 changes no run decision. But the owner already decided on 2026-11-12 that this sweep "is run in any case", "run whatever step B finds" (FILE(docs/decisions.md:4037), FILE(docs/decisions.md:4040)), and sent E1 to review knowing this (FILE(docs/decisions.md:4520)). So rule A1 does not bar it. The draft has to cite that authority (DB3) instead of leaving it open.
+>
+> **Cost.** About 2.1 GPU h, with a ceiling the draft never states (≈ 6.3 h; DB7). The GPU would otherwise sit idle:
+> - REG-19's [RESULT] waits for REG-21 and REG-22.
+> - REG-20 waits for that [RESULT].
+>
+> The owner said: "whenever its available use it" (FILE(docs/decisions.md:4506)).
+>
+> **New start condition.** Starting at the recorded end of REG-19's queue fits what the owner said. But draft 5 never mentions the rule it overrides. The owner-approved REG-19 pin rule says: "The VM stays at `a7bb77a` with a clean tree until REG-19's [RESULT] is written" (FILE(docs/drafts/reg19_resume_decision_draft5.md:41), approved at FILE(docs/decisions.md:4287), kept at FILE(docs/decisions.md:4400)).
+> - The draft cites only the E1 entry's narrower wording at 4520, and `agent/RUNBOOK.md` §4 still says "never before REG-19's [RESULT]".
+> - The delegation does cover "the pin rule" (FILE(docs/decisions.md:4233)). So the change is allowed, but only as an explicit amendment the owner can see and reverse (DB2, DB10, DB11).
+> - Substantively the amendment is safe: no REG-19 run remains after DONE or END, and the table is Mac-only.
+>
+> **Leaving `a7bb77a`.** Accepted. `runs/` is untouched by the checkout, and REG-19's launch refuses any tree but the pin. A REG-19 rerun would need a backward move, which `vm_checkout.sh` refuses; that is noted for the owner.
+>
+> **First run on the new harness (R1–R6).** I accept option (a); a smoke run is not worth a registration on a GPU that is otherwise idle.
+> - R1 is bounded to one run.
+> - R3, which treats coverage failures as heat, is stricter, never looser.
+> - R2's bound has a gap. The queue pauses after an invalid run, but the draft never says when the queue may be started again. Restarting by habit would rerun a systematic fault for about 4.2 h more. DB4 sets the restart rule before any data, using only `valid` and `failed`.
+>
+> **Standing rules.**
+> - Rule F's output must sit verbatim in the [REG] (the delegation's condition (a); process §3), which the draft has no section for (DB8).
+> - `docs/model.md` requires the prediction in the ledger before the run (FILE(docs/model.md:3)); there is no row yet (DB12).
+> - The judged floor should come from the registered code, per RUNBOOK §5, not from whatever `main` holds when REG-21 reports (DB6).
+> - "Checked when they were written" is an untagged claim (rule B); DB5 replaces it with a test.
+> - Several files are stale against draft 5: README and DESIGN_NOTES still cite draft 4 and `RESULT19_PAT`, and the header comments of `queue.sh` (line 4) and `vm_checkout.sh` (line 6) say E1 waits for REG-19's [RESULT]. The code is right. DB9 fixes this in the README only, so the reviewed scripts stay as they are.
+>
+> ## 2. Conditions
+>
+> **DB1 (BEFORE): date of the heading.** In the line `## 2026-11-13 · [REG] E1: the closed-loop cache-off sweep of L1 at 350 W, which measures the 8-turn closed-loop cold floor (GPU, ≈ 2.1 h)`, replace `2026-11-13` with the UTC date on which the entry is appended. Nothing else changes.
+>
+> **DB2 (BEFORE): the pin rule, named and amended.** Anchor in the ID bullet:
+> ```text
+> The owner's entry forbids only a run while REG-19's queue holds the GPU (FILE(docs/decisions.md:4520)); draft 4's wait for REG-19's [RESULT] is dropped, since that result waits for two registrations that have no bearing on E1, and the GPU would sit idle meanwhile.
+> ```
+> Replace with:
+> ```text
+> The owner's entry on E1 forbids only a run while REG-19's queue holds the GPU (FILE(docs/decisions.md:4520)). REG-19's pin rule says more: "The VM stays at `a7bb77a` with a clean tree until REG-19's [RESULT] is written" (FILE(docs/drafts/reg19_resume_decision_draft5.md:41), approved by the owner as part of that plan, FILE(docs/decisions.md:4287), and kept unchanged by FILE(docs/decisions.md:4400)). **This entry's approval amends that one clause, under the delegation's "the pin rule" (FILE(docs/decisions.md:4233)):** the VM may leave `a7bb77a` once REG-19's queue has ended as recorded here, before REG-19's [RESULT]. The rest of the pin rule stands: REG-19's table is computed on the Mac from the worktree at `a7bb77a` (FILE(docs/probe/20261113_reg19/ops_r3/final.sh:2)) and needs nothing of the VM's tree. Draft 4's wait for REG-19's [RESULT] is dropped because that result waits for two registrations that have no bearing on E1, and the GPU would sit idle meanwhile; the owner: "whenever its available use it" (FILE(docs/decisions.md:4506)). If the owner restores the clause by a [DECISION] or [CORR] entry, E1 launches nothing further until REG-19's [RESULT] exists.
+> ```
+>
+> **DB3 (BEFORE): the rule A1 authority.** Anchor:
+> ```text
+> If the owner holds that a measurement that changes no decision should not cost 2.1 GPU h, E1 should not run.
+> ```
+> Replace with:
+> ```text
+> Rule A1 and `docs/process.md` §3 say a run whose outcomes change no decision is not proposed. The owner has decided otherwise for this run: the L1 closed-loop cache-off sweep "is run in any case" (FILE(docs/decisions.md:4037)), "run whatever step B finds" (FILE(docs/decisions.md:4040)), and the owner sent E1 to review with this paragraph's content stated (FILE(docs/decisions.md:4520)). The decisions E1's outcomes do change are the wording ones under "Decision under each outcome".
+> ```
+>
+> **DB4 (BEFORE): when the queue may be started again after a pause.** Anchor in the stopping rule:
+> ```text
+> **After any invalid run the queue pauses** ("The harness E1 runs on", R2).
+> ```
+> Replace with:
+> ```text
+> **After any invalid run the queue pauses** ("The harness E1 runs on", R2). **The queue is started again only if no check name stands in `failed` of E1's runs at two or more different rates;** otherwise E1 stops for a new decision, since one failure at several rates points to the harness's first GPU use (R2) or to the cell, and an unchanged rerun would repeat it. The check is made from the queue's `RUN … INVALID failed=…` lines alone, and each restart is recorded in an [OPS] entry that quotes those lines.
+> ```
+>
+> **DB5 (BEFORE): a test for the single-rate configs.**
+>
+> (a) Append to `tests/test_e1.py`:
+> ```python
+>
+>
+> def test_each_single_rate_config_is_the_sweeps_own_run_at_that_rate():
+>     """configs/sweep_l1pl350cl_pc_off_only_r<rate>.yaml (E1's reruns and never-started rates) expands to one run,
+>     equal to the sweep's own run at that rate in every key but `sweep` (its list of rates)."""
+>     drop = lambda c: {k: v for k, v in c.items() if k != "sweep"}
+>     sweep = e1._cfgs(e1.E1["configs"]["cl"])
+>     assert [c["workload"]["rate"] for c in sweep] == [1.5, 2, 2.5, 3, 3.5, 4]
+>     for c in sweep:
+>         only = e1._cfgs(f"configs/sweep_l1pl350cl_pc_off_only_r{c['workload']['rate']:g}.yaml")
+>         assert len(only) == 1 and drop(only[0]) == drop(c)
+> ```
+>
+> (b) Anchor:
+> ```text
+> (checked when they were written: equal to the sweep's expansion after the list of rates is removed)
+> ```
+> Replace with:
+> ```text
+> (FILE(tests/test_e1.py), `test_each_single_rate_config_is_the_sweeps_own_run_at_that_rate`: one run each, equal to the sweep's own run at that rate in every key but `sweep`)
+> ```
+>
+> (c) Replace `` `tests/test_e1.py`, 12 tests; `` with `` `tests/test_e1.py`, 13 tests; ``.
+>
+> (d) `uv run pytest tests/test_e1.py -q` must give 13 passed before the entry is appended. I ran this test's body at e87884d and it passes. `analysis/e1.py` and `tests/test_e1.py` are outside REG-21's freeze (FILE(docs/drafts/reg21_draft27.md:3)).
+>
+> **DB6 (BEFORE): the floor from the registered code.** Anchor in "Result, computed once":
+> ```text
+> From committed code, with `analysis/` and `tests/` clean and `uv run pytest` passing; the [RESULT] names the commit.
+> ```
+> Replace with:
+> ```text
+> From committed code, with `analysis/` and `tests/` clean and `uv run pytest` passing; the [RESULT] names the commit. **The floor is also computed from the registered code** (`agent/RUNBOOK.md` §5): from a worktree at the commit that holds this entry's approval (`git worktree add --detach ../aftershock-e1-pin <commit>`), with the run folders `*_sweep_l1pl350cl_pc_off_r*` and `*_sweep_l1pl350_pc_off_r*` of the Mac's `runs/` linked into its `runs/`, run from its root with the repo's interpreter: `AFTERSHOCK_UNSEAL=E1 /Users/chalshik/Projects/aftershock-artifacts/.venv/bin/python -c 'import json; from analysis import e1; print(e1.__file__); print(json.dumps(e1.observed()["floor"], default=str))'` (the floor needs no REG-21 statistic). The printed path must lie in the worktree. The worktree's floor (status, n, rates, value) is E1's floor; if the result commit's differs in any of these, the [RESULT] reports both and names the commits between the two that touch `analysis/`.
+> ```
+>
+> **DB7 (BEFORE): the cost ceiling.** Anchor:
+> ```text
+> 6 runs × (900 + 300 + about 60 s) ≈ 2.1 GPU h (DERIVED); ≈ 4.2 h with one rerun per rate.
+> ```
+> Replace with:
+> ```text
+> 6 runs × (900 + 300 + about 60 s) ≈ 2.1 GPU h (DERIVED); ≈ 4.2 h with one rerun per rate. At most ≈ 6.3 GPU h (DERIVED: 6 rates × 3 attempts × 1260 s), and less under the stops.
+> ```
+>
+> **DB8 (BEFORE): rule F, verbatim.** Insert immediately before the line `### Changed from draft 3 (the E1 items of its rule F review)`:
+> - a section headed `` ### Adversarial review (rule F, `docs/process.md` §3), verbatim ``, holding the full text of the separate rule F review of draft 5 with its bundle;
+> - then "What was changed because of it", item by item;
+> - then one line naming this owner-proxy pass, its verdict, and where each of DB1–DB12 was applied.
+>
+> **DB9 (BEFORE): the README, made consistent with draft 5 without touching the scripts.**
+>
+> (a) In `docs/probe/20261113_e1/ops/README.md`, insert after the line `# E1: operations scripts` a blank line and then:
+> ```text
+> **Read with the registration as entered** (docs/decisions.md, `[REG] E1`, and `[DECISION] (delegate) E1 approved`); it rules wherever this folder differs. Stale since draft 5: the citations of `docs/drafts/e1_draft4.md` below and in DESIGN_NOTES.md; "Nothing here is committed or reviewed"; DESIGN_NOTES.md's `RESULT19_PAT` (I11; part 2, item 12); and the header comments of `queue.sh` (line 4) and `vm_checkout.sh` (line 6), which say that E1 waits for REG-19's [RESULT]. The code waits for REG-19's queue end as recorded (`END19_PAT`, `ready_to_run`), as the registration says. The scripts are left unchanged so that the reviewed text is what runs. Step 5's move is approved by E1's approving decision.
+> ```
+>
+> (b) Replace the row
+> ```text
+> | `after an invalid run (…)` | The pause, as REG-19's queue does (I7) | Start the queue again; it reruns by E1's rule |
+> ```
+> with
+> ```text
+> | `after an invalid run (…)` | The pause, as REG-19's queue does (I7) | Start the queue again only if no check name stands in `failed` of E1's runs at two or more different rates (registration, stopping rule); otherwise E1 stops for a new decision. Each restart gets an [OPS] entry quoting the `RUN … INVALID` lines |
+> ```
+>
+> **DB10 (LATER): what the approving decision says.**
+> - Its heading has the form `## <date> · [DECISION] (delegate) E1 approved: …`, so that `APPROVE_PAT` matches.
+> - It sits after the [REG], in the same commit, and carries this verdict verbatim.
+> - It states:
+>   - (i) the amendment of the pin clause, as in DB2, citing FILE(docs/decisions.md:4287), FILE(docs/decisions.md:4400) and the delegation's "the pin rule" (FILE(docs/decisions.md:4233)), and that the owner may overrule it;
+>   - (ii) that it approves README step 5 (`vm_checkout.sh`) under the delegation, to be run only once `ready_to_run` passes, that is, after the `[OPS] REG-19: the queue ended` entry is committed and REG-19's lock is gone; its probe file is committed with an [OPS] entry;
+>   - (iii) that a move of the VM back to `a7bb77a` for any REG-19 run is not covered, since `vm_checkout.sh` moves forward only, and needs its own entry;
+>   - (iv) that no E1 launch happens before the checkout's [OPS] entry and the session probe are committed.
+>
+> **DB11 (LATER, same commit): RUNBOOK made current.** In `agent/RUNBOOK.md`:
+>
+> (a) Replace
+> ```text
+> ## 4. Deploying `main` to the VM (only between items, never during a run, never before REG-19's [RESULT])
+> ```
+> with
+> ```text
+> ## 4. Deploying `main` to the VM (only between items, never during a run, never while REG-19's queue may run; E1's `vm_checkout.sh` moves the VM to E1's commit, detached, once REG-19's queue end is recorded: decisions.md, [DECISION] (delegate) E1 approved)
+> ```
+>
+> (b) Replace `then deploy HEAD (§4); then` with:
+> ```text
+> then deploy HEAD (§4; if the VM is at E1's commit, detached, `git checkout main` comes first, and never while E1's queue lock exists); then
+> ```
+>
+> **DB12 (LATER, same commit, before the first launch): the ledger row, as FILE(docs/model.md:3) requires.** Append after the last row of the prediction ledger in `docs/model.md`, numbered as the next free row:
+> ```text
+> | <n> | <date> | Model F's replay and the closed-loop cold spans on record (E1: closed-loop cache-off sweep of L1 at 350 W, rates 1.5–4, seed 0) | Status `ok` ≈ 0.75, `tail_ok` ≈ 0.2 (neither ≈ 0.05, DERIVED); floor 1.70–1.80 req/s; model F's replay of E1's config at μ = 1.681 over rates ≥ 2.0: 1.744 (fixed cost) or 1.771 (proportional), `k2.closed_loop_floors` (BELIEF as to the model) | — | Open | decisions.md <date> [REG] E1 |
+> ```
+>
+> ## 3. Later changes that would need another owner-proxy pass
+> - Any change to the six scripts (`common.sh`, `vm_state.py`, `session_probe.sh`, `launch.sh`, `queue.sh`, `vm_checkout.sh`), comments included, since they are frozen at the registered commit. Also any change to `e1_commit.txt` other than README step 3.
+> - Any change to:
+>   - E1's configs, rates or seed;
+>   - the floor rule, the tail fallback, REG-8's settings, "holes" or `first_valid`;
+>   - the stopping rule: attempts, the heat rule, the checks that allow no rerun, the global stops, the pause, DB4's restart rule;
+>   - the allowed reads, the start condition (`END19_PAT` or the lock), or the approval heading.
+> - Rule F items on draft 5 that go beyond wording, tags and citations.
+> - Computing or quoting any part of E1's result before REG-21's first [RESULT] (for example splitting the floor out of the report), or reading any E1 run beyond `valid` and `failed` before E1's [RESULT].
+> - A pre-allowed rerun after a lost run (Note N3), a smoke run, or any start before the `REG-19: the queue ended` entry.
+> - Applying DB1–DB12 verbatim, renumbering FILE citations, and the [OPS] entries need no new pass.
+>
+> ## 4. Notes for the owner
+> - **N1. The pin clause.** E1's approval amends your REG-19 pin rule: the VM leaves `a7bb77a` at the recorded end of REG-19's queue, not at its [RESULT]. You can reverse this with one entry; the cost is a GPU idle until REG-19's [RESULT], which waits for REG-21 and REG-22.
+> - **N2. 350 W after a reboot.** The agent's `sudo -n` was refused, so every reboot (420 W) stops E1 until you set 350 W. A NOPASSWD sudoers rule for `nvidia-smi -pl 350` would remove that step; it is a root action, so it is yours.
+> - **N3. Lost runs.** All eight recorded boot ends were power-key presses (A18). Any E1 run that ends without `checks.json` stops E1 until a new decision. You could allow, before the run, one further attempt within the three for a run lost to a VM power-off (shown by a changed boot id). Your own reasoning at FILE(docs/decisions.md:4383) item 4 covers this: a lost run carries no outcome. A crash in the same boot (R1) would still stop. This changes the stopping rule, so it is your choice.
+> - **N4. The floor waits for REG-21.** E1's [RESULT], and with it the floor, waits for REG-21's first [RESULT], and E1's runs stay sealed until then. Quoting the floor earlier would need a registration change.
+> - **N5. A REG-19 stop holds E1 too.** If REG-19's queue ends in a QUEUE STOP, E1 waits with it, and only your decision on REG-19 releases it.
+> - **N6. A REG-19 rerun after the move.** If REG-19's `final.sh` ends in an operational stop and you want a REG-19 rerun, the VM has to be moved back to `a7bb77a` by hand, with its own entry. E1's launches refuse until it is moved forward again.
+> - **N7. Leftover stale text.** The `analysis/e1.py` docstring still says "not yet registered: draft docs/drafts/e1_draft4.md". It is harmless and left as is, so that judged code is not touched at registration.
+
+#### Round 2, on draft 6 (`docs/drafts/reviews-2026-11-13/proxy-e1-draft6.md`)
+> # proxy-e1-draft6 (proxy-e1-d6), verbatim
+>
+> Saved by the agent from the reviewer's own verdict file (its session 1a592fe9, scratchpad `proxy-e1-draft6.md`, 24165 bytes, sha256 cc3a73b8aabbc2b9f4e2d1073ddf333345a5724d30af35ac1d99e58d224e90f1, checked on copy), which the reviewer sent in three SendMessage parts (its transcript lines 585, 595 and 605, 2026-11-13T22:36:23.695Z, 22:36:55.532Z and 22:37:12.664Z); each part's body, less its "[Part n of 3]" line and part 3's closing file line, is a substring of the file (checked by script, 2026-11-13 22:38 UTC). The owner-proxy pass on E1 draft 6 (round 2, bundle e1_r2).
+>
+> ---
+> # Owner-proxy on E1 draft 6 (review round 2, bundle e1_r2)
+>
+> **Verdict: APPROVE, on conditions DD1–DD12.**
+> - DD1–DD7 are BEFORE: they are applied before the `[REG] E1` entry is appended. DD7's two files are committed with the entry.
+> - DD8–DD12 are LATER: they go into the approving `[DECISION] (delegate) E1 approved` and its commit. DD9 comes after `e1_commit.txt` is set and before `vm_checkout.sh` runs.
+> - This approval also needs rule F round 2 to return READY (the delegation's condition (a)). If round 2 asks for changes, §3 says which ones need another pass from me.
+> - None of DD1–DD12 changes code, a rule, a threshold or a config. DD6 narrows a read the draft allows. The rest are wording, disclosures, reporting duties, one prediction and procedure. So they need no new rule F code round.
+> - If a round-2 item changes an anchor's text first, apply the DD to the same sentence as changed, keep round 2's words, and say so in the [REG]'s change list. That needs no new pass unless §3 lists the change.
+>
+> ## What I checked (0 GPU h; nothing written in the repo)
+> - **Bundle.** MANIFEST: 41 of 41 sha256 lines OK. The bundle is committed in 97a6438 and has no uncommitted change. Every file in `ops/` is byte-equal to the main checkout's `docs/probe/20261113_e1/ops/`.
+> - **Sandbox.** `TMPDIR=<my scratchpad> zsh docs/probe/20261113_e1/ops/test_sandbox.sh` gave `passed 184, failed 0`. `git status --short` was the same before and after.
+> - **Code (scratch copy from `git archive HEAD`; the repo's `.venv` interpreter).**
+>   - Both patches apply. The results are byte-equal to the bundle's `e1.py` (sha256 `615e386f…`) and `test_e1.py` (`23672c2a…`).
+>   - `pytest tests/test_e1.py -q`: 16 passed.
+>   - The patched tests against HEAD's `e1.py`: 3 failed (the DA6, DA-O4 and DA-O6 tests) and 13 passed, as the item map says.
+>   - `tests/test_k2.py tests/test_withheld.py tests/test_e1.py` on the patched copy: 39 passed. `analysis/k2.py` is the only module that imports `e1`.
+>   - `git apply --check` of both patches against the main checkout passes. Nothing was applied.
+> - **Closures** (`docs/probe/20261113_freeze/closure.py --at HEAD`, a static `ast` reader).
+>   - `analysis/e1.py`: 24 .py files plus 3 environment files.
+>   - `e1.py` is in neither `k3w.py`'s closure (26 files) nor `c2.py`'s (27). The patch changes no import.
+> - **DB1–DB9, checked by script against the review text.**
+>   - DB2, DB3, DB4, DB5(b) and DB6's added text (after DA4's sentences) are in draft 6 character for character.
+>   - DB5(a)'s test is verbatim in the patched `test_e1.py`.
+>   - DB8: the quoted block, unquoted, equals `rulef-e1-draft5-r1.md` byte for byte.
+>   - DB9(b)'s row is in `README.md` verbatim.
+>   - DB1 is the placeholder `<date of append>`.
+> - **Draft 5 → 6.**
+>   - The word diff outside the quoted review has no change that the item map does not list.
+>   - The script diffs against e87884d are DA1, DA2, DA12, DA-O1, DA-O2 and comments, nothing else.
+> - **Citations rechecked.**
+>   - decisions.md 1744, 4037, 4040, 4200, 4201, 4205, 4209, 4233, 4287, 4400, 4506, 4516, 4520.
+>   - E1 `common.sh` 24, 37, 40, 98–108, 104, 187, 235, 260–262; `queue.sh` 44, 67–70; `launch.sh` 27.
+>   - ops_r3 `final.sh:2` and `common.sh:207`; `agent/RUNBOOK.md` 48 and 50.
+>   - The ten field names of DA7 are in `harness/checks.py`'s `recorder` and `gpu_steady` details.
+> - **The start gate as it stands.**
+>   - decisions.md:4611, `## 2026-11-13 · [OPS] REG-19: the queue ended (QUEUE DONE)`, matches `END19_PAT`.
+>   - REG-19's lock is absent: names only, from the session's git status (`queue.lock.ended_*` only) and the entry's own `test -e`.
+> - **REG-19's `final.sh` beside E1.**
+>   - It runs on the Mac.
+>   - It links only `*_stage2_control_…_s1[5-9]` and `*_burst_…_s1[5-9]`, and rechecks only `*_l1pl350cl_r2.0_w3000_s1[5-9]`. No E1 folder matches either pattern.
+>   - It needs the Mac's `analysis/` to equal HEAD (ops_r3 `common.sh:207`). So E1 can stop it only if the patches sit uncommitted (DD7).
+> - **REG-20's commit.** REG-20's approval commit 75e627e is older than 5ee6e38, and 5ee6e38 is not in a7bb77a (git, commit order only).
+> - **Not opened:** `runs/` beyond names, any `state/` file, RESUME.md, `docs/paper/`, queue outputs, launch logs, transcripts.
+> - **Not done:** no VM contact, no `analysis.*` command, no full pytest.
+>
+> ## 1. Would the owner approve registering and running E1 now, as written in draft 6?
+> **Yes, with DD1–DD12, once rule F round 2 is READY.**
+>
+> **Value.**
+> - The owner decided that this sweep "is run in any case" (FILE(docs/decisions.md:4037)).
+> - DA7 adds a decision that matters beyond wording. E1 is the first GPU test of the harness that every later registration on HEAD will use.
+> - The GPU has been idle since 21:49 UTC on 2026-11-13, with nothing else approved. The owner said: "whenever its available use it" (FILE(docs/decisions.md:4506)).
+> - The cost is 2.1 GPU h, with a ceiling of 6.3 h, and DA1's stop keeps a broken harness near the 2.1.
+>
+> **No harm to other items.**
+> - REG-19: its table is computed on the Mac and does not read E1's folders, and its VM folders are untracked.
+> - REG-21 and REG-22: `e1.py` is outside both closures.
+> - REG-20: unaffected. Its commit question exists already (N5).
+>
+> **My round-1 conditions.** Each is met as given, or with a departure I accept:
+> - **DB5(c), "16 tests":** accepted. The three added tests are the repo's only check of DA6, DA-O4 and DA-O6.
+> - **DB7 merged into DA9, with "runs" for "launches":** accepted. 18 runs × 1260 s = 6.3 h (DERIVED), in 13 or 19 launches.
+> - **DB9(a) rewritten:** accepted. DB9's premise (the scripts stay unchanged) fell when DA1, DA2, DA-O1 and DA-O2 changed them. `README.md` is not among the frozen `SCRIPTS` (`common.sh:37`).
+> - **DB4 with DA1:** accepted. I traced `next_step`. A check name at two rates means at least two runs with it:
+>   - `gpu_steady` gives `n_heat` ≥ 2, the heat stop;
+>   - `no_errors` or `power_limit` sets `stopper`;
+>   - any other check gives `nfail` ≥ `MAX_SAME`.
+>   So the code stops in every case DB4 stops.
+> - **DB6 with DA4, DB2 with DA-O2, DB3 with DA7:** consistent; accepted.
+> - **Other departures:** DA10's renumbering, DA12's further comment updates, and DA-O1's and DA-O2's added sandbox cases, messages and `[CORR] (owner) E1 halted` form. Accepted: they can only stop more, and the sandbox passes.
+> - **DA-O3 not taken:** accepted (N3).
+>
+> **What the item map left for this pass.**
+> - **Item 3, DA7's detail reads before E1's [RESULT]:** accepted, scoped by DD6.
+>   - The floor's code is frozen (DA4, DB6), so no analytic choice remains that a peek could steer.
+>   - After a stop that ends E1, the scripts refuse every launch.
+> - **Item 2, `end_ref_t` carries DA8's bit:** disclosed by DD6.
+> - **Item 4, the result's text:** the text is wrong, and DD3 makes it match the code.
+>   - It says `e1.report` prints "the tilt with its prediction", but `report` never calls `prediction()`.
+>   - It says the open-loop floor is recomputed "the same way", but `floor_ol` is `saturated(ol)`.
+>   - The tilt is absent unless both sweeps are `ok` under `gate.cold_floor`.
+> - **Item 5, DA2's two-statement window:** accepted (N10).
+> - **Item 6:** no change.
+> - **Item 7, the docstring:** N7.
+>
+> **New finds.**
+> - **F1.** The validity record, the one decision DA7 adds, has no numeric prediction (rule A1; `docs/process.md` §2's template). Fixed by DD4 and DD11.
+> - **F2. "Holes" is not monotone in the data.**
+>   - 1.5 valid and kept up, 2.0 without a valid run, 2.5–4.0 saturated: "holes".
+>   - 1.5 and 2.0 both without a valid run: "ok" from 2.5.
+>   - The second case is likelier now that DA1's stop can end E1 with several rates unrun.
+>   - No selection on outcomes follows, since validity comes from checks, so DD5 discloses it and does not change code (N8).
+> - **F3.** The result's text, as above (DD3).
+> - **F4. A circular reference.** DA4's closure and DA11's `git diff` are to be run "at <registered commit>" and quoted in the approval entry. But that commit is the one that contains the entry. DD8 quotes both from the staged tree, and DD9 repeats them at the commit before the VM moves.
+> - **F5. When the patches are applied, and REG-19's guard.** DD7.
+> - **F6. Untracked REG-19 state files.** The main checkout holds untracked REG-19 state files (recheck and step outputs, launch outputs; names only), so the registration commit must name its paths (DD12).
+>
+> ## 2. Conditions
+>
+> **DD1 (BEFORE): rule F round 2, verbatim.** Insert immediately before the line `#### Owner-proxy pass`:
+> - a section headed `` ### Adversarial review, round 2 (rule F, `docs/process.md` §3), verbatim ``. It holds the full text of rule F's round-2 review of draft 6 (bundle e1_r2), each line prefixed "> " as round 1's is, including any header the agent adds when it saves the review;
+> - then `#### What was changed because of it (round 2)`, item by item, naming every departure from the reviewer's words.
+>
+> If round 2 is not READY, the entry is not appended.
+>
+> **DD2 (BEFORE): this pass, named.** Anchor:
+> ```text
+> draft 6's script, holes and stopping-rule changes need another owner-proxy pass (its §3).
+> ```
+> Replace with:
+> ```text
+> draft 6's script, holes and stopping-rule changes need another owner-proxy pass (its §3). Owner-proxy on draft 6 (round 2; `<path where this verdict is saved>`): **APPROVE on DD1–DD12**; DD1 (rule F round 2, verbatim, above), DD2 (this line), DD3 ("Result, computed once"), DD4 ("Prediction"), DD5 ("Holes"), DD6 ("In neither case") and DD7 (the two patches, applied in this commit) are applied in this entry; DD8–DD12 belong to the approval commit and the steps after it.
+> ```
+> The placeholder is filled with the saved file's path, as DB1's date is.
+>
+> **DD3 (BEFORE): the result's text matches the code.** Anchor:
+> ```text
+> the open-loop floor recomputed the same way; the common onset; the tilt with its prediction; the work rates of both sweeps.
+> ```
+> Replace with:
+> ```text
+> the open-loop floor of REG-8's sweep recomputed by REG-8's own rule (`floor_ol`: `e1.saturated`, that is `gate.cold_floor` with REG-8's settings; neither E1's tail fallback nor its holes check applies to it); the common onset; the tilt (`tilt_reported`, present only when `gate.cold_floor` gives "ok" on both sweeps, since otherwise there is no common onset); the work rates of both sweeps. The tilt's prediction is not in this output (FILE(analysis/e1.py), `observed` and `report`): `e1.prediction()` replays the two configs through model F's server and reads no run; it is computed once beside the result, from the same code, with `uv run python -c 'import json; from analysis import e1; print(json.dumps(e1.prediction(), default=str))'`, and reported as the tilt's description.
+> ```
+>
+> **DD4 (BEFORE): a number for the validity record (rule A1).** Anchor, in "Prediction (BELIEF)":
+> ```text
+> RUN(20261110-063647_burst_l1pl350cl_r2.2_s2, gate.reg14_gate)).
+> ```
+> Replace with:
+> ```text
+> RUN(20261110-063647_burst_l1pl350cl_r2.2_s2, gate.reg14_gate)). The status figures assume a valid run at every rate. **E1's validity record** (the decision under "In neither case"; rule A1 asks for a number): P(clean: every launched run ends with a `checks.json`, and neither `recorder` nor `gpu_steady` is in any run's `failed`) ≈ 0.7; P(not clean) ≈ 0.3, of which a run lost to a power-off ≈ 0.2 and a `recorder` or `gpu_steady` failure ≈ 0.1. BELIEF: the VM went off twice during REG-19's runs, at 15:51 UTC on 2026-11-12 and at 04:39 UTC on 2026-11-13, and every boot end the journal keeps was a power-key press (FILE(docs/decisions.md:4383); open question A18); no run of REG-8's cache-off sweep failed a check (FILE(docs/decisions.md:1744)), and the recheck of 182 folders under the new checks changed no valid verdict (FILE(docs/decisions.md:4205)), but no GPU run has used the new recorder.
+> ```
+> The three numbers are this pass's BELIEF. The agent may put its own numbers in their place before the entry is appended, if it states its basis in the same sentence. Any number serves rule A1, provided it is written before the run.
+>
+> **DD5 (BEFORE): the holes case that fewer runs pass.** Anchor:
+> ```text
+> with no valid run gives the status "holes" and no floor (the floor would average over a gap); the missing rates are listed.
+> ```
+> Replace with:
+> ```text
+> with no valid run gives the status "holes" and no floor (the floor would average over a gap); the missing rates are listed. A swept rate below λ_sat with no valid run, when no valid row lies below λ_sat (for example 1.5 and 2.0 both without one), is not a hole (FILE(tests/test_e1.py), `test_a_hole_just_below_lam_sat_is_a_hole`): the floor is then reported from λ_sat, and the [RESULT] says that λ_sat may lie lower and that the floor, a mean over rates on which closed-loop throughput is predicted to rise, would then be lower. This is the one case in which fewer valid runs give a floor where more would give "holes" (1.5 valid and kept up, 2.0 without a valid run); it is disclosed, not changed, so that the code rule F reviewed is the code that runs. The stop on a check in `failed` of two runs makes it likelier, since E1 can then end with several rates unrun.
+> ```
+>
+> **DD6 (BEFORE): DA7's reads, scoped and disclosed.** Both anchors occur twice. Apply each to its **first** occurrence, the entry's bullet `- **In neither case**`. The second occurrence is inside the quoted round-1 review, which stays verbatim.
+>
+> (a) Anchor:
+> ```text
+> After E1's queue has ended, only these fields of a failed check may be read for that:
+> ```
+> Replace with:
+> ```text
+> After E1's queue has ended (it printed `QUEUE DONE` or `QUEUE END`, or stopped on a rule that ends E1: `no_errors` or `power_limit` in a run's `failed`, a second `gpu_steady`, one check in `failed` of two runs, or the owner's halt), and only for the runs that have that check in `failed`, only these fields of a failed check may be read for that:
+> ```
+> (b) Anchor:
+> ```text
+> None of them holds a request count, throughput or KV. If every run is valid,
+> ```
+> Replace with:
+> ```text
+> None of them holds a request count, throughput or KV, but `end_ref_t` and `last_ok_scrape_t` show when that run's load ended, so they carry the same one bit per rate as the run ids (the stopping rule, "Disclosed"). The read is one command that prints these fields and nothing else; the command and its output are quoted in the [OPS] or [CORR] entry that records the cause, and the [RESULT] lists every such read. If every run is valid,
+> ```
+>
+> **DD7 (BEFORE; the files are committed with the entry): the two patches.**
+> 1. In the main checkout, and never while REG-19's `final.sh` is running, run `git apply docs/drafts/review_bundles/e1_r2/e1_draft6.patch docs/drafts/review_bundles/e1_r2/test_e1_draft6.patch`.
+> 2. `shasum -a 256 analysis/e1.py tests/test_e1.py` must print `615e386f201734b686550918c601bfd85ecaea1d2aedd5fd51c7b62c6ee53c94` and `23672c2a81d9203186645046b5a6bee2d6a048dd68132c08721ea5f30643de9e`.
+> 3. `uv run pytest tests/test_e1.py -q` must give 16 passed.
+> 4. `uv run pytest` must pass in full. REG-22's batch command will require that (FILE(docs/drafts/reg22_draft18.md:131)).
+> 5. Both files go into the registration commit, so `analysis/` and `tests/` are clean again at that commit.
+>
+> `final.sh` is not started between the `git apply` and that commit. Its recheck refuses while `analysis/` differs from HEAD (FILE(docs/probe/20261113_reg19/ops_r3/common.sh:207)).
+>
+> **DD8 (LATER): what the approving decision also holds.** DB10 (i)–(iv) stand as given. In addition, the entry:
+> - (a) carries both owner-proxy verdicts on E1 verbatim: round 1 (`docs/drafts/reviews-2026-11-13/proxy-e1-draft5.md`) and this one;
+> - (b) names rule F round 2's verdict and file;
+> - (c) quotes two outputs, run in the working tree with the registration commit's content staged and nothing else changed in these paths. DD9 repeats both at the registered commit, and the entry says so. The two outputs:
+>   - `python3 docs/probe/20261113_freeze/closure.py analysis/e1.py` (DA4);
+>   - `git diff --quiet 9e249b1 -- harness/ pyproject.toml uv.lock .python-version configs/defaults.yaml configs/base.yaml configs/gap5_base.yaml configs/l1_base.yaml configs/l1_pl350_base.yaml configs/sweep_l1pl350_pc_off.yaml configs/sweep_l1pl350cl_pc_off.yaml 'configs/sweep_l1pl350cl_pc_off_only_r*.yaml'; echo $?` (DA11), which must print 0;
+> - (d) lists the departures from round 1's words that this pass accepted: DA9's "runs", DA10's renumbering, DB5(c)'s 16 tests, DB7 merged into DA9, DB9(a) rewritten, DA12's further comment updates, DA-O1's and DA-O2's added sandbox cases and messages, and DA-O3 not taken;
+> - (e) states this pass's ruling on DA7's detail reads, which are allowed as DD6 scopes them.
+>
+> **DD9 (LATER; after `e1_commit.txt` is committed, before `vm_checkout.sh` runs): the two checks, at the registered commit.**
+> - Run `python3 docs/probe/20261113_freeze/closure.py --at <E1 commit> analysis/e1.py`. It must print the list the approval entry quotes.
+> - Run `git diff --quiet 9e249b1 <E1 commit> -- <the paths of DD8 (c)>; echo $?`. It must print 0.
+> - `<E1 commit>` is the hash in `e1_commit.txt`.
+> - Both outputs are quoted in the [OPS] entry that commits `vm_checkout.sh`'s probe file.
+> - If either differs, `vm_checkout.sh` is not run, and the registration goes back to rule F.
+>
+> **DD10 (LATER, in the approval commit): RUNBOOK.**
+> - Apply the item map's merged proposal verbatim, both (a) and (b), in place of DB11. The proposal is in `docs/drafts/e1_draft6_itemmap.md`, under "RUNBOOK: one proposal for the approval commit".
+> - Its anchors are at FILE(agent/RUNBOOK.md:50), the §4 heading, and FILE(agent/RUNBOOK.md:48), `then deploy HEAD (§4); then`. Both were checked at HEAD.
+>
+> **DD11 (LATER, same commit, before the first launch): the ledger row, in place of DB12's.** Append after the last row of the prediction ledger in `docs/model.md`, numbered as the next free row:
+> ```text
+> | <n> | <date> | Model F's replay and the closed-loop cold spans on record (E1: closed-loop cache-off sweep of L1 at 350 W, rates 1.5–4, seed 0) | Status `ok` ≈ 0.75, `tail_ok` ≈ 0.2 (neither ≈ 0.05, DERIVED), given a valid run at every rate; floor 1.70–1.80 req/s; model F's replay of E1's config at μ = 1.681 over rates ≥ 2.0: 1.744 (fixed cost) or 1.771 (proportional), `k2.closed_loop_floors` (BELIEF as to the model). Validity record clean ≈ 0.7 (a run lost to a power-off ≈ 0.2; `recorder` or `gpu_steady` failing ≈ 0.1; BELIEF) | — | Open | decisions.md <date> [REG] E1 |
+> ```
+> If the agent replaced DD4's numbers, this row carries the agent's numbers.
+>
+> **DD12 (LATER): the registration commit's paths.**
+> - The commit that holds the [REG] and the approval is made with named paths only: `git add <path> …`, never `git add -A`, `git add .` or `git commit -a`.
+> - Its paths: `docs/decisions.md`, `analysis/e1.py`, `tests/test_e1.py`, `agent/RUNBOOK.md` and `docs/model.md`, plus the session files (`docs/status.md`, `docs/context-pack.md`, `agent/STATE.md`, `agent/LOG.md`, and the saved reviews under `docs/drafts/reviews-*/`).
+> - It adds nothing under `runs/`, `docs/probe/20261113_reg19/` or `docs/probe/20261113_e1/ops/state/`.
+> - It leaves `docs/probe/20261113_e1/ops/` as it is at 97a6438, with `e1_commit.txt` still `UNSET`.
+> - Reason: REG-19's untracked state files are in the checkout, and REG-19's own rule commits its table files at once and alone.
+>
+> ## 3. Later changes that would need another owner-proxy pass
+> - Any change to code, comments included:
+>   - the six frozen scripts (`common.sh`, `vm_state.py`, `session_probe.sh`, `launch.sh`, `queue.sh`, `vm_checkout.sh`);
+>   - `analysis/e1.py` beyond the bundle's patched file;
+>   - `tests/test_e1.py` beyond added tests;
+>   - any change to `e1_commit.txt` other than README step 3.
+>   A docstring-only fix of `e1.py` (N7) needs no owner-proxy pass, provided a rule F round has seen it.
+> - Any rule F round-2 item that changes:
+>   - the stopping rule (attempts, the heat rule, `MAX_SAME`, `no_errors` and `power_limit`, the pause, DB4's restart rule, the lost-run stop);
+>   - the floor, the tail fallback, "holes", `first_valid`, or REG-8's settings;
+>   - the allowed reads, including DA7's fields as DD6 scopes them;
+>   - the start gate (`END19_PAT`, the lock, the halt), the approval heading;
+>   - E1's configs, rates or seed;
+>   - the cost ceiling.
+> - Adopting DA-O3, or any rerun allowed in advance after a lost run.
+> - Reading any E1 run beyond `valid`, `failed` and DD6's fields before E1's [RESULT]. Computing or quoting any part of E1's result before REG-21's first [RESULT].
+> - Any move of the VM other than `vm_checkout.sh` forward to E1's commit, such as a move back to `a7bb77a` or to REG-20's commit. Each needs its own entry and is outside this approval.
+> - A failure of DD9's two checks. The registration then goes back to rule F, and then to me.
+> - **No new pass is needed for:**
+>   - applying DD1–DD12 verbatim, or DD4's numbers replaced as DD4 allows;
+>   - DB1's date and DD2's path;
+>   - renumbered FILE citations;
+>   - [OPS] entries;
+>   - rule F round-2 items that are only wording, tags, citations, disclosures or stricter reporting duties.
+>
+> ## 4. Notes for the owner
+> - **N1. The pin clause.** E1's approval amends your REG-19 pin rule. The VM leaves `a7bb77a` at the recorded end of REG-19's queue, not at REG-19's [RESULT].
+>   - REG-19's table is computed on the Mac and does not read the VM's tree.
+>   - REG-19's VM folders are untracked and stay where they are.
+>   - You can reverse this with one entry. The cost is an idle GPU until REG-19's [RESULT].
+> - **N2. 350 W after any reboot.** The agent's `sudo -n` was refused, so each reboot (back to 420 W) stops E1 until you set 350 W. A NOPASSWD rule for `nvidia-smi -pl 350` would remove that step. It is a root action, so it is yours.
+> - **N3. Runs lost to a power-off.**
+>   - A run that ends without `checks.json` stops E1 until a new decision. DA-O3 would have allowed the next attempt in advance, and it was not taken. DD4 puts the chance of a loss during E1 at about 0.2.
+>   - You must come back to set 350 W anyway. When you do, the same entry can allow the lost rate's next attempt (`state/lost_ok_<run id>.txt`), as you did twice for REG-19 (FILE(docs/decisions.md:4284), FILE(docs/decisions.md:4383)).
+>   - Allowing it now, in advance, would change the stopping rule and needs a pass.
+> - **N4. The floor waits for REG-21.** E1's [RESULT], and the floor with it, waits for REG-21's first [RESULT], and E1's folders stay sealed until then.
+> - **N5. Which harness REG-20 runs on is not settled.**
+>   - REG-20 is registered with "clean tree at the registered commit". Its approval commit, 75e627e, is older than the A14 harness fix, 5ee6e38.
+>   - RUNBOOK §3 item 6 deploys HEAD before REG-20.
+>   - E1's validity record, which DA7 makes binding, bears only on HEAD's harness.
+>   - This conflict predates E1. Settle it before REG-20 runs.
+> - **N6. A crash cannot be diagnosed within E1's allowed reads.**
+>   - A run that ends without `checks.json` on an unchanged boot id leaves no allowed read that could find the cause. The launch log also holds the recorder's status lines, which are outcome data.
+>   - DA7 then holds every registration on this harness until the cause is recorded.
+>   - Only you can allow a narrow read, for example a traceback block, or decide otherwise.
+> - **N7. A stale docstring.** `analysis/e1.py`'s docstring still says "not yet registered: draft docs/drafts/e1_draft4.md". It is harmless. A fix can ride with any code change that rule F round 2 asks for.
+> - **N8. Making "holes" consistent would need code.** The fix: a missing rate below λ_sat is a hole whenever no valid row lies between it and λ_sat. That would also make "1.5 missing" a hole, which today's registered test calls "ok". It was not done here, to avoid another code round. DD5 discloses the case instead.
+> - **N9. E2 inherits this holes rule.** E2's between-sweeps flag (`floor_status`) uses the same `floor`, so it inherits DA-O4's holes rule. E2's registration must cite it.
+> - **N10. DA2's window.** If the Mac's queue process dies between `settle` and `report_settled`, the pause for that attempt is lost. The window is two shell statements, and DA1's stop and DB4's rule still bound a systematic fault. Left as is.
+
+#### Round 3, on draft 7 (`docs/drafts/reviews-2026-11-13/proxy-e1-draft7.md`)
+> # proxy-e1-draft7 (owner-proxy, round 3 on E1 draft 7, bundle e1_r3), verbatim
+>
+> Saved by the agent at 2026-11-14 01:41 UTC from the reviewer's own verdict file (an in-process subagent of session 8c5f8396; scratchpad `reviews_r3/proxy-e1-draft7.md`, 32486 bytes, sha256 5a3fbe615a46182f045bda3dc55c2249e6870c8a27c8eb3d9d6fdf1fe65eab3c, checked on copy; the reviewer's hand-back message named the same sha256). The reviewer's report follows the line '---' unchanged.
+>
+> ---
+> # Owner-proxy on E1 draft 7 (review round 3, bundle e1_r3): a delta on the round-2 pass (DD1–DD12)
+>
+> **Verdict: APPROVE, on conditions DF1–DF11.**
+> - **BEFORE:** DF1–DF8 are applied before the `[REG] E1` entry is appended. DF8's files are committed with the entry.
+> - **LATER:** DF9–DF11 go into the approving `[DECISION] (delegate) E1 approved` and its commit.
+> - **What stands from round 2:** DD9 (the two checks at the registered commit) and DD11 (the ledger row) stand as given. DD1–DD8, DD10 and DD12 are met or replaced as follows:
+>   - DD1, DD2, DD4 and DD6(a): met (checked by script).
+>   - DD3: met, merged into DC6 (accepted).
+>   - DD5: not applied (accepted, point 1).
+>   - DD6(b): met, merged into DC5 (accepted).
+>   - DD7: replaced by DF8.
+>   - DD8: replaced by DF9.
+>   - DD10: replaced by DF7 and DF11.
+>   - DD12: replaced by DF10.
+> - **Rule F round 3 must still return READY** (the delegation's condition (a); FILE(docs/decisions.md:4234)). If it does not, §4 says which of its items need another pass from me.
+> - **Sentences round 3 changes first.** If round 3 changes a sentence that a DF anchors on, apply round 3's words first. Then append the DF's added sentences after them, unless the two contradict. A contradiction comes back to me.
+> - **No new rule F code round is needed for these conditions.** None of DF1–DF11 changes code, a threshold, a config or a check:
+>   - DF3 narrows when a second GPU item may start.
+>   - DF4 adds an audit duty to an existing wait.
+>   - DF8 and DF10 are procedure.
+>   - The rest are wording and disclosures.
+>
+> ## What I checked (0 GPU h; nothing written in the repository)
+> - **Delegation and owner entries.** Read: FILE(docs/decisions.md:4231-4238) (the delegation), 4516–4520 (the owner sends E1 to review), 4037–4045 (K2 staged) and 4166 (REG-20 approved). Also every heading draft 7 newly cites: 4611, 16322, 16421, 16517, 16571 and 16798, each equal to `decisions_headings_cited.txt`.
+> - **Bundle.**
+>   - `shasum -a 256 -c MANIFEST.txt`: every line OK (50 files).
+>   - Read: BUNDLE_NOTE.md, `e1_draft7_itemmap.md`, `rulef-e1-draft6-r2.md`, `proxy-e1-draft6.md`, and draft 7 lines 1–78 and 805–868.
+>   - Word diff of draft 6's entry (lines 1–76) against draft 7's (lines 1–78): 99 hunks, each matched to an item-map row or to departure 1, 2, 3 or 9.
+> - **HEAD.**
+>   - HEAD is now `f43a5a1`; the bundle was built at `3c8e5dc`, an ancestor (`git merge-base --is-ancestor`).
+>   - `git diff --stat 3c8e5dc HEAD` over `analysis tests harness configs agent/RUNBOOK.md docs/probe/20261113_e1 docs/experiment-plan.md docs/claims.md pyproject.toml uv.lock` is empty.
+>   - DA11's `git diff --quiet 9e249b1 HEAD -- <its list>` exits 0.
+>   - `closure.py --at HEAD analysis/e1.py`: 24 .py files plus `.python-version`, `pyproject.toml`, `uv.lock`. `analysis/withheld.py` is among them.
+>   - The configs `sweep_l1pl350cl_pc_off.yaml` and `…_only_r1.5.yaml` equal the bundle's.
+>   - `ls runs | grep -c _sweep_l1pl350cl_pc_off_r` is 0 (names only): no E1 folder yet.
+> - **Code, in a scratch copy** (`git archive HEAD analysis harness configs tests tools pyproject.toml docs/probe/20261113_e1/ops docs/probe/20261113_freeze`, no `runs/`).
+>   - All three patches apply.
+>   - `analysis/e1.py` is `428771e04a7a…` and `tests/test_e1.py` is `dd3f52c579…`. All ten ops files are byte-equal to the bundle's `ops/`, and `e1_commit.txt` reads `UNSET`.
+>   - With the repo's `.venv` interpreter, importing from the copy:
+>     - `tests/test_e1.py -k 'not observed'`: 15 passed, 1 deselected;
+>     - `tests/test_withheld.py`: 14 passed.
+>   - On the main checkout, `git apply --check` of the three patches passes. Nothing was applied.
+> - **Sandbox, in the scratch copy.** `TMPDIR=<my scratchpad> zsh …/test_sandbox.sh`: exit 0, `passed 192, failed 0`.
+>   - The DC-O1 cases pass: the restart still pauses, and no rerun runs before the pause.
+>   - So do the DC-O2 cases: two launches that name no run stop E1, and there is no third attempt.
+>   - `git status --short` of the main checkout was the same before and after.
+> - **DC2's code (I rule on "holes", round-2 §3).** I read the patched `floor` and `floor_tail`.
+>   - `lo = -inf` when no valid row lies below λ_sat.
+>   - `have` counts only rows with every value finite, as `cold_floor` reads them.
+>   - This is the fix my round-2 N8 named. In the cases I traced (§2, point 1), more valid runs never turn a floor into "holes".
+> - **Verbatim, by script against round 2's text** (draft 7):
+>   - DD1: the quote at L451–805, unquoted, equals `rulef-e1-draft6-r2.md` byte for byte (355 lines).
+>   - Verbatim as given: DD4; DD6(a) (once, in the entry); DD6(b)'s appended part; DD2's anchor sentence.
+>   - Round 2's texts: DC1(a), DC2, DC3, DC5 (both anchors), DC6, DC7, DC-O2, DC-O5, and DC4's bullet up to "… or under an owner's entry.".
+> - **REG-20 arm A beside E1.**
+>   - `docs/drafts/reg20_ops_decision_draft2.md`, lines 22–31 and a grep: no mention of E1.
+>   - Its pin is `1cface7`, an ancestor of HEAD.
+>   - Its scripts start only after three headings, the second being the owner's rulings. Its `owner_rulings.txt` holds six of them (2a, 6, 7, 8, 9, 16), all `unset` (FILE(docs/drafts/review_bundles/reg20_ops_r2/ops/owner_rulings.txt)).
+>   - `k1.py`'s closure at HEAD (19 .py files) holds neither `e1.py` nor `k2.py`. REG-20's `JUDGED` list (FILE(docs/drafts/review_bundles/reg20_ops_r2/ops/common.sh:53)) does not hold `e1.py`. E1's commit touches neither `load.py` nor `withheld.py` (REG-20's seal blobs).
+>   - So E1's registration commit does not trip REG-20's start checks.
+> - **E1's scripts.**
+>   - `vm_checkout.sh` (bundle) moves the VM from any ancestor of E1's commit (line 33), so a start at `1cface7` is a forward move.
+>   - `common.sh` lines 36–41: `SCRIPTS` holds six scripts, and README is not among them.
+>   - `common.sh` lines 192, 213, 268 and 270: DC-O2's counter and stop.
+> - **The seal (point 4).**
+>   - FILE(analysis/withheld.py:30): E1's seal is lifted by `[RESULT] E1` or by `AFTERSHOCK_UNSEAL` naming E1.
+>   - `load.find_runs` passes every folder through `withheld.keep` (FILE(analysis/load.py:42)).
+>   - `k2.observed` reads `off_8` with `e1.floor(sweep_rows(...))` and no swept rates (FILE(analysis/k2.py:179)).
+> - **RUNBOOK at HEAD.**
+>   - Line 48 holds `then deploy HEAD (§4); then`, and line 50 is the §4 heading.
+>   - Line 66 is the E1 row; `| 4 | E1 |` occurs once.
+>   - The draft-6 item map's proposal (a) and (b) was read in full.
+> - **Freezes.** No registration in force freezes `analysis/e1.py` or `tests/test_e1.py`. The only [REG] headings after line 4500 are REG-22 (4616) and REG-21 (9731), and both batch 2s are computed. REG-24 draft 1's patch touches `analysis/confirm.py`, two configs and `tests/test_confirm.py` only.
+> - **Not opened:** any `runs/` folder (names only, one count); any `state/` content; RESUME.md; `docs/paper/`; the backups folder; REG-20's gate value; queue outputs; launch logs.
+> - **Not run:** `k2.observed`, `k1.reg20_table`, any `k3.reg21_*`, `analysis.*` commands, the full pytest, `check_docs.py`. No VM, GPU or ssh.
+> - **My error (rule A6).** The barred list includes `e1.observed`, and I deselected only the test whose name contains "observed". `test_report_counts_only_the_runs_first_valid_keeps` calls `E.report()` with `withheld.lifted` patched to True, and `report()` calls `observed()` (scratch `analysis/e1.py:250`). So `e1.observed` ran once, inside that test, in the scratch copy. Its rows were synthetic: `sweep_rows`, `swept_rates` and `_kbar` were monkeypatched, and the copy has no `runs/`. No run folder was read. I should have read `report()` before running the tests.
+>
+> ## 1. Would the owner approve E1 as draft 7 writes it, with DF1–DF11?
+> **Yes.**
+> - **The run's value is unchanged from draft 6.** It is K2's 8-turn reference: the owner decided it "is run in any case" (FILE(docs/decisions.md:4037)). It is also the first GPU check of the harness after `5ee6e38`.
+> - **Cost:** about 2.1 GPU h, with a ceiling of 6.3 h, and the GPU is idle. The owner said "whenever its available use it" (FILE(docs/decisions.md:4506)) and "we cant affort just letting be idle" (quoted in this pass's brief).
+> - **Every change since draft 6 makes the run stricter or the text truer:**
+>   - DC1 states that E1 feeds E0's gate and withholds the floor until E0's [REG].
+>   - DC2 closes the "holes" case that round 2 and my N8 found.
+>   - DC3 limits the worktree's links.
+>   - DC5 completes the readable fields and discloses the bit they carry.
+>   - DC-O1 closes the pause gap, and DC-O2 stops launches that make no run.
+>   - DC-O4 protects the VM copies.
+>   - DC-O5 covers a withdrawn REG-21.
+> - **Two places where the owner's intent needs the text tightened:**
+>   - The order rule could idle the GPU (DF3).
+>   - The owner's own entry on E1 rested on a statement now known false (DF5).
+> - **No harm to other items.**
+>   - REG-19, REG-21 and REG-22 have reported.
+>   - REG-20 arm A's start checks are not touched (see "What I checked").
+>   - REG-24 shares no file with E1.
+>
+> ## 2. The five points
+>
+> **Point 1. DD5 not applied: accepted.**
+> - DD5 disclosed a case ("1.5 and 2.0 both without a valid run" gives a floor from λ_sat). DC2's code removes that case: `test_a_hole_just_below_lam_sat_is_a_hole` now asserts "holes" with `missing_rates == [1.5, 2.0]`. So DD5's text would be false.
+> - DC2 is the code fix my round-2 N8 named as the alternative.
+> - My ruling on DC2's "holes" (round-2 §3): approved.
+>   - Traced: 1.5 valid and kept up with 2.0 missing gives "holes" [2.0]. With 1.5 missing as well, it gives "holes" [1.5, 2.0]. With 2.0 valid and unsaturated and 1.5 missing, it gives "ok": λ_sat cannot lie at 1.5 then, and the floor's rows do not depend on 1.5.
+>   - In none of these does a missing run turn "holes" into a floor.
+>   - The cost: no floor whenever 1.5 has no valid run and no valid row lies below λ_sat. Outside a stop, that needs three failures at 1.5. Inside a `MAX_SAME` stop on the first two rates, the harness is suspect anyway (DA7).
+>   - The NaN-row clause (`have` from finite rows) is right: a row `cold_floor` drops is not data.
+> - **E2 inherits this rule** through `floor_status`. E2's registration must cite it (my N9; round 2 DC2).
+>
+> **Point 2. DD7 and DD12 restated: done as DF8 and DF10.**
+> - DD7's hashes are now draft 7's. The ops patch is applied in the same step, with all five changed ops files pinned by sha256.
+> - The sandbox is rerun in the repo and its output committed.
+> - DD7's clause "never while REG-19's `final.sh` is running" is replaced. REG-19 is finished. REG-20's draft scripts compare `analysis/` with HEAD (FILE(docs/drafts/review_bundles/reg20_ops_r2/ops/common.sh:495)), which is the same kind of guard that stopped REG-19's queue at 21:38 UTC on 2026-11-13.
+> - DD12's path list gains the five ops files and the sandbox output. Its exclusions gain REG-20's probe folders.
+>
+> **Point 3. "Whichever has its ops approved first runs first", kept by hand on both sides: acceptable only as DF3 defines it.**
+> - **As written, it can idle the GPU.** REG-20 arm A's scripts start only after three headings, and the second is the owner's six rulings (FILE(docs/drafts/reg20_ops_decision_draft2.md:24-29)). The owner is away.
+>   - "Ops approved" can be read as the delegate's REG-20 operations decision (heading 1).
+>   - Read that way, a REG-20 delegate decision committed before E1's approval makes REG-20 "first". E1 would then wait for REG-20's end entry, and REG-20 cannot start until the owner returns.
+>   - That is the idle GPU the owner refuses.
+> - **DF3 makes "first" mean "able to start first":** every entry the item's scripts require before their first launch is committed. E1's approving decision records which item is first, from `git grep` at its commit.
+>   - Today that is E1: REG-20's owner rulings are unset.
+> - **"Launches" also covers the VM.** The second item may not move the VM's tree. REG-20's README moves the VM by hand to `1cface7`; done during one of E1's pauses, that move would interleave the two items. DC4 was written to stop exactly that.
+> - **By hand on both sides is acceptable** for these reasons:
+>   - E1's side is backed by its pre-launch checks: no compute process, and the tree must be E1's commit.
+>   - REG-20's start needs the owner's rulings, so the owner can see the order then.
+>   - The owner can reorder by one entry.
+> - **The owner would not accept a rule whose other half does not exist.** REG-20's ops draft 2 does not mention E1. DF9(g) makes E1's approval say so, and requires REG-20's operations decision to carry the wait when E1 is first. That requirement belongs to REG-20's review; E1's [REG] already forbids another registration's launch until E1's end entry.
+>
+> **Point 4. DC1's guard is text only: acceptable, with DF4 and the RUNBOOK cell of DF7(d).**
+> - **The guard is not text alone.**
+>   - E1's folders are sealed in code until `[RESULT] E1` (FILE(analysis/withheld.py:30)).
+>   - `load.load_run` refuses them. `load.find_runs` (FILE(analysis/load.py:42)), `recheck.recheck`, `tables.arrival_table` and `engine_config.scan` skip them (decisions.md 2026-11-13 [DECISION] "A17 answered … analysis code now refuses run folders …"). So `k2.observed`, which reads them through `sweep_rows`, sees none of them.
+>   - Only a command that sets `AFTERSHOCK_UNSEAL=E1` can read them. What the text adds is a rule on when that deliberate command may be typed.
+>   - A premature run of it would also fall outside the delegation: it reads outcome data a pending registration withholds (FILE(docs/decisions.md:4235)).
+> - **A code refusal keyed on E0's [REG] would need another code round** in `e1.py` or `withheld.py`, both in `e1.py`'s closure, plus a test change, before registration. That would delay a 2.1 h run for a guard that bears only on when the result is computed.
+> - **Two weak points, both fixed in text:**
+>   - RUNBOOK's E1 row shows the result command with no E0 wait (FILE(agent/RUNBOOK.md:66)). Draft 7's (c) replaces only the row's prefix. DF7(d) adds the wait to that cell.
+>   - Nothing made a premature command visible. DF4 has the [RESULT] quote `git grep` of E0's [REG] heading and state that no earlier command set the variable.
+> - **The way out of the wait needs its own review.** "An entry records that E0's gate takes no input from E1's runs" would change K2's staged test (FILE(docs/claims.md:56)). DF4 says it needs its own rule F review and owner-proxy pass, so the wait cannot be lifted by a bare entry.
+>
+> **Point 5. What the owner would not approve as written.**
+> - **(a) The order rule's ambiguity:** point 3, fixed by DF3.
+> - **(b) A premise of the owner's entry is false.**
+>   - The owner sent E1 to review with the statement "E1 changes no decision about a shock matrix, as its own draft says first" (FILE(docs/decisions.md:4520)). DC1 found that false.
+>   - Draft 7 still says "the owner sent E1 to review with this paragraph's content stated". After DC1 replaced the paragraph, that is false too.
+>   - The owner would approve the run anyway: it is "run in any case" and "whatever step B finds" (4037, 4040), and the floor is withheld until E0's gate exists.
+>   - But the owner would want the approval to say what it rests on. DF5 says it, and DF9(f) repeats it in the approving decision.
+> - **(c) Two meanings of "E1 has ended"** (item-map finding 4).
+>   - DD6(a) allows the detail reads once a stop line that ends E1 is printed.
+>   - DC4 ends E1 only by an end entry.
+>   - DF6 rules that the reads may come before the end entry, because they serve the decision on the stop. They neither end E1 nor free the VM.
+>   - DC-O2's stop leaves no `checks.json`, so it allows no such read.
+> - **(d) DD10(b) uses the older end** ("its queue printed QUEUE DONE or QUEUE END"). DF7 aligns it with the end entry.
+> - **Accepted as written:**
+>   - item-map departures 2 (REG-19 facts), 3 (renumbered citations), 4 (DD2's text), 5 (DD3 merged into DC6), 7 (DD6(b) merged into DC5) and 9 (the freeze bullet, moot, kept as a record);
+>   - DC-O1 to DC-O5 taken;
+>   - item-map findings 6 (`vm_checkout.sh` line 2 says "from REG-19's pin", a comment; line 33 accepts any ancestor), 7 (DESIGN_NOTES.md stale, as README line 3 lists) and 9 (the home path, already throughout the repo).
+>
+> ## 3. Conditions
+>
+> **DF1 (BEFORE): rule F round 3, verbatim.** Immediately before the line `#### Owner-proxy pass`, insert:
+> - a section headed `` ### Adversarial review, round 3 (rule F, `docs/process.md` §3), verbatim ``, holding the full text of rule F's round-3 review of draft 7 (bundle e1_r3). Prefix each line with "> ", as rounds 1 and 2 are, and include any header the agent adds when it saves the review;
+> - then `#### What was changed because of it (round 3)`, item by item, naming every departure from the reviewer's words.
+>
+> If round 3 is not READY, the entry is not appended.
+>
+> **DF2 (BEFORE): this pass, named.** Anchor (draft 7, the owner-proxy line):
+> ```text
+> Draft 7's DC2 ("holes"), DC-O1 and DC-O2 (the scripts; DC-O2 also the stopping rule) need another owner-proxy pass (its §3).
+> ```
+> Replace with:
+> ```text
+> Draft 7's DC2 ("holes"), DC-O1 and DC-O2 (the scripts; DC-O2 also the stopping rule) need another owner-proxy pass (its §3). Owner-proxy on draft 7 (round 3; `<path where this verdict is saved>`): **APPROVE on DF1–DF11**; DD5 not applied, DC2's "holes", DC-O1 and DC-O2 accepted; DF1 (rule F round 3, verbatim, above), DF2 (this line), DF3 ("E1 holds the VM"), DF4 and DF5 ("What E1 can and cannot do"), DF6 ("In neither case"), DF7 ("RUNBOOK, for the approval commit") and DF8 (the three patches, applied in this commit, in place of DD7) are applied in this entry; DF9–DF11 belong to the approval commit; DD9 and DD11 stand.
+> ```
+> Fill the placeholder with the saved file's path.
+>
+> **DF3 (BEFORE): the order rule, defined.** Anchor (once, in "E1 holds the VM"):
+> ```text
+> The approval commit amends RUNBOOK §5's order to match: E1 and REG-20 arm A: whichever has its ops approved first runs first; the other launches only after the first's end entry ([OPS] … the queue ended …, or … ended by a stop …).
+> ```
+> Replace with:
+> ```text
+> The approval commit amends RUNBOOK §5's order to match: E1 and REG-20 arm A: whichever has its ops approved first runs first; the other launches only after the first's end entry ([OPS] … the queue ended …, or … ended by a stop …). An item's ops are approved when every entry its scripts require before their first launch is committed: for E1, the approving decision after this entry (`[DECISION] (delegate) E1 approved`, or the owner's); for REG-20 arm A, every heading its operations scripts require before their first launch (its operations decision draft 2 names three: the delegate's operations decision, the owner's rulings, and `[DECISION] (owner|delegate) REG-20 arm A starts`). An approval that still waits for an owner's ruling does not make an item first, so the GPU does not wait for an item that cannot start. E1's approving decision states which item is first, from `git grep -n` of those headings at its commit. The second item neither launches, nor moves the VM's tree, nor starts its queue before the first's end entry. An owner's entry may change the order.
+> ```
+>
+> **DF4 (BEFORE): the A5 guard, made auditable.** Anchor: the **first** occurrence only, in the entry's bullet "What E1 can and cannot do". The second is inside the quoted round-2 review, which stays verbatim.
+> ```text
+> or before an entry records that E0's gate takes no input from E1's runs.
+> ```
+> Replace with:
+> ```text
+> or before an entry records that E0's gate takes no input from E1's runs. This guard is kept by hand on top of the seal: E1's folders are sealed in code until `[RESULT] E1` (FILE(analysis/withheld.py:30)), so only a command that sets `AFTERSHOCK_UNSEAL=E1` reads them, and none is run before then. The [RESULT] quotes `git grep -n` of E0's [REG] heading, or of that entry, at the commit before its first such command, and states that no earlier command set `AFTERSHOCK_UNSEAL=E1`. An entry recording that E0's gate takes no input from E1's runs changes K2's staged test (FILE(docs/claims.md:56)), so it is the owner's, or a [DECISION] (delegate) with its own rule F review and owner-proxy pass.
+> ```
+>
+> **DF5 (BEFORE): what the approval rests on.** Anchor (once, in the same bullet):
+> ```text
+> Rule A1 and `docs/process.md` §3 say a run whose outcomes change no decision is not proposed. The owner has decided otherwise for this run: the L1 closed-loop cache-off sweep "is run in any case" (FILE(docs/decisions.md:4037)), "run whatever step B finds" (FILE(docs/decisions.md:4040)), and the owner sent E1 to review with this paragraph's content stated (FILE(docs/decisions.md:4520)).
+> ```
+> Replace with:
+> ```text
+> Rule A1 and `docs/process.md` §3 say a run whose outcomes change no decision is not proposed; E1's outcomes change one (above), and the owner has also decided that this run is made in any case: the L1 closed-loop cache-off sweep "is run in any case" (FILE(docs/decisions.md:4037)), "run whatever step B finds" (FILE(docs/decisions.md:4040)). The owner sent E1 to review (FILE(docs/decisions.md:4516)) with the statement, taken from draft 4, that "E1 changes no decision about a shock matrix" (FILE(docs/decisions.md:4520)); rule F round 2 (DC1) found it false. The two decisions to run E1 in any case do not rest on it, and E1's floor is withheld until E0's [REG] (above), so the delegate's approval rests on those two decisions; the owner may overrule it.
+> ```
+>
+> **DF6 (BEFORE): when the detail reads may be made.** Anchor (once, in "In neither case"):
+> ```text
+> and the [RESULT] lists every such read.
+> ```
+> Replace with:
+> ```text
+> and the [RESULT] lists every such read. These reads may be made once the stop line is printed, before E1's end entry ("E1 holds the VM"): they serve the decision on that stop, and they neither end E1 nor free the VM. A launch whose log names no run (the stopping rule) leaves no `checks.json`, so its stop allows no such read.
+> ```
+>
+> **DF7 (BEFORE): the [REG]'s section "RUNBOOK, for the approval commit".**
+>
+> (i) Anchor:
+> ```text
+> The owner-proxy's DD10 applies draft 6's merged proposal, (a) and (b), verbatim
+> ```
+> Replace with:
+> ```text
+> The owner-proxy's DD10 applies draft 6's merged proposal: (a) verbatim, and (b) with one change by the round-3 owner-proxy pass (DF7), its words `once E1 has ended (its queue printed QUEUE DONE or QUEUE END, or a stop that ends E1 is recorded)` reading `once E1's end entry is committed ("E1 holds the VM")`
+> ```
+>
+> (ii) Anchor (the row inside (c)'s second `text` block):
+> ```text
+> | 2b (with 2a) | E1 (E1 and REG-20 arm A: whichever has its ops approved first runs first; the other launches only after the first's end entry ([OPS] … the queue ended …, or … ended by a stop …)) |
+> ```
+> Replace with:
+> ```text
+> | 2b (with 2a) | E1 (E1 and REG-20 arm A: whichever has its ops approved first, as "E1 holds the VM" in the [REG] E1 entry defines it, runs first; first: <the item E1's approving decision names>; the second neither launches, nor moves the VM's tree, nor starts its queue before the first's end entry ([OPS] … the queue ended …, or … ended by a stop …)) |
+> ```
+>
+> (iii) After the paragraph that begins `(The row's other cells stay.`, append:
+> ````text
+> (d) In the same row, replace
+> ```text
+> `AFTERSHOCK_UNSEAL=E1 uv run python -m analysis.e1 floor` | [RESULT] E1 |
+> ```
+> with
+> ```text
+> `AFTERSHOCK_UNSEAL=E1 uv run python -m analysis.e1 floor`, once, only after REG-21's first [RESULT] and after E0's [REG] or the entry that "What E1 can and cannot do" names; no command sets `AFTERSHOCK_UNSEAL=E1` before then | [RESULT] E1 |
+> ```
+> ````
+>
+> **DF8 (BEFORE; the files are committed with the entry): the three patches, in place of DD7.**
+> 1. In the main checkout, while no queue, launch or final script of any registration runs from it, run:
+>    `git apply docs/drafts/e1_r3/e1_py_draft7.patch docs/drafts/e1_r3/test_e1_draft7.patch docs/drafts/e1_r3/ops_draft7.patch`
+>    (REG-20's draft scripts compare `analysis/` with HEAD, FILE(docs/drafts/review_bundles/reg20_ops_r2/ops/common.sh:495).)
+> 2. Check the hashes. `shasum -a 256 analysis/e1.py tests/test_e1.py docs/probe/20261113_e1/ops/common.sh docs/probe/20261113_e1/ops/queue.sh docs/probe/20261113_e1/ops/vm_checkout.sh docs/probe/20261113_e1/ops/test_sandbox.sh docs/probe/20261113_e1/ops/README.md` must print, in order:
+>    - `428771e04a7a740bc87b20bc7959d835c56e0eebbfb822086248a373c200d415`
+>    - `dd3f52c579288cbe9a9a0144b98d2b880f2606eacea153fc268d232e6f6a750d`
+>    - `1dff7875947d23c84eeb3fd745446741f5603ed02910db19855665efc63cf237`
+>    - `d727e0069595b650f3814383c1a31f6594da6599c9a293ccaa5b951ea7415f7c`
+>    - `1fff3e488e8c03ffecb9d62323d0d8c2df0eef9ab07c8b0368b9240293b83c2d`
+>    - `dddb31361ac95eee21fbb2ac71a9c429e1011c8da1d3d9510e7f4a4073427a10`
+>    - `9eb497129e7cf1c958a4b169da9df1554a39e8204c76a4e3cad584698871eedd`
+>
+>    Also:
+>    - `git diff --quiet HEAD -- docs/probe/20261113_e1/ops/vm_state.py docs/probe/20261113_e1/ops/session_probe.sh docs/probe/20261113_e1/ops/launch.sh docs/probe/20261113_e1/ops/DESIGN_NOTES.md docs/probe/20261113_e1/ops/e1_commit.txt` exits 0;
+>    - `e1_commit.txt` reads `UNSET`.
+> 3. `uv run pytest tests/test_e1.py -q`: 16 passed.
+> 4. `uv run pytest`: passes in full.
+> 5. Run the sandbox:
+>    - Run `TMPDIR=<the session's scratchpad> zsh docs/probe/20261113_e1/ops/test_sandbox.sh`, with stdout and stderr saved to a file in the scratchpad. It must exit 0, with a last line that starts `passed 192, failed 0`.
+>    - Copy that file byte for byte to `docs/probe/20261113_e1/ops/sandbox_<UTC stamp>.txt`, and check the copy with `cmp`.
+>    - `git status --short` then shows no path outside DF10's list.
+> 6. These files go into the registration commit (DF10).
+>
+> If round 3 changes any of these files, the hashes in step 2 are those of round 3's files, and §4 applies.
+>
+> **DF9 (LATER): what the approving decision holds, in place of DD8.** DB10 (i)–(iv) stand. In addition, the entry:
+> - **(a)** carries the three owner-proxy verdicts on E1 verbatim:
+>   - `docs/drafts/reviews-2026-11-13/proxy-e1-draft5.md`;
+>   - `docs/drafts/reviews-2026-11-13/proxy-e1-draft6.md`;
+>   - this pass, as saved.
+> - **(b)** names rule F rounds 2 and 3, with each verdict and file.
+> - **(c)** quotes DD8(c)'s two outputs (the closure of `analysis/e1.py` and DA11's `git diff --quiet 9e249b1 … ; echo $?`, which must print 0), run with the registration commit's content staged. It also quotes DF8 step 5's last line. DD9 repeats the two at the registered commit, and the entry says so.
+> - **(d)** lists the departures accepted:
+>   - DD8(d)'s list;
+>   - draft 7's item-map departures 1 (as DF3 defines it), 2, 3, 4, 5, 6 (DD5 not applied), 7, 8 (DD7 replaced by DF8) and 9;
+>   - DC-O1 to DC-O5 taken.
+> - **(e)** states the ruling on DA7's detail reads: allowed as DD6 scopes them and as DF6 times them.
+> - **(f)** states that the owner's 4516 entry rested on a statement DC1 found false, and that this approval rests on FILE(docs/decisions.md:4037) and FILE(docs/decisions.md:4040) (DF5). The owner may overrule it.
+> - **(g)** states which item is first (DF3), quoting the `git grep -n` output for both items' start headings at the commit.
+>   - It also says that REG-20 arm A's operations decision draft 2 does not mention E1.
+>   - While E1 is first, REG-20's operations decision must carry the wait for E1's end entry before its first launch or VM move.
+> - **(h)** adds to `docs/status.md`'s open risks: "E1's result waits for E0's [REG] (DF4); no command sets `AFTERSHOCK_UNSEAL=E1` before then".
+>
+> **DF10 (LATER): the registration commit's paths, in place of DD12.**
+> - The commit that holds the [REG] and the approval is made with named paths only: `git add <path> …`, never `git add -A`, `git add .` or `git commit -a`.
+> - **Its paths:**
+>   - `docs/decisions.md`;
+>   - `analysis/e1.py` and `tests/test_e1.py`;
+>   - in `docs/probe/20261113_e1/ops/`: `common.sh`, `queue.sh`, `vm_checkout.sh`, `test_sandbox.sh`, `README.md`, and the new `sandbox_<UTC stamp>.txt` from DF8 step 5;
+>   - `agent/RUNBOOK.md` and `docs/model.md`;
+>   - the session files: `docs/status.md`, `docs/context-pack.md`, `agent/STATE.md`, `agent/LOG.md`, `agent/FOR_AUTHOR.md`, and the saved reviews under `docs/drafts/reviews-*/`.
+> - **It adds nothing under** `runs/`, `docs/probe/20261113_reg19/`, `docs/probe/20261113_reg20/`, `docs/probe/reg20/`, or any `docs/probe/**/state/`. It does not add `.gitignore`, `docs/FABLE_PROMPT.md`, or any untracked draft.
+> - **These stay as at HEAD:** `e1_commit.txt` (`UNSET`), `vm_state.py`, `session_probe.sh`, `launch.sh` and `DESIGN_NOTES.md`. `e1_commit.txt` is set later, by README step 3, and DD9 follows.
+> - After the commit, `git status --short` lists none of the named paths.
+>
+> **DF11 (LATER, in the approval commit): RUNBOOK, in place of DD10.**
+> - Apply the [REG]'s section "RUNBOOK, for the approval commit" to `agent/RUNBOOK.md`, as DF7 leaves it:
+>   - (a) verbatim;
+>   - (b) with DF7(i)'s change;
+>   - (c) with the placeholder filled with the item DF9(g) names;
+>   - (d).
+> - The anchors are FILE(agent/RUNBOOK.md:50), FILE(agent/RUNBOOK.md:48) and FILE(agent/RUNBOOK.md:66), all checked at HEAD `f43a5a1`. Each occurs once.
+>
+> ## 4. Later changes that would need another owner-proxy pass
+> - **Any change to code, comments included:**
+>   - the six frozen scripts;
+>   - `analysis/e1.py` beyond DF8's file;
+>   - `tests/test_e1.py` beyond added tests;
+>   - `e1_commit.txt` other than by README step 3.
+>
+>   A code guard for DC1 (in `e1.py` or `withheld.py`) counts too: it needs a rule F code round and this pass.
+> - **Any round-3 item that changes:**
+>   - the stopping rule (including DC-O2's stop and `MAX_SAME`);
+>   - "holes", the floor, the tail fallback, `first_valid` or REG-8's settings;
+>   - the allowed reads or their timing (DD6, DF6);
+>   - the start gate, the approval heading, or the order rule beyond wording (DF3);
+>   - the configs, rates, seed or cost ceiling.
+> - **An order between E1 and another GPU item** other than DF3's rule or an owner's entry.
+> - **Reading any E1 run** beyond `valid`, `failed` and DD6's fields before E1's [RESULT]. Any command with `AFTERSHOCK_UNSEAL=E1` before E0's [REG] or the entry DF4 names.
+> - **A failure of DD9's two checks.** The registration then goes back to rule F, and then to me.
+> - **No new pass is needed for:**
+>   - applying DF1–DF11 verbatim;
+>   - DF2's path and DF7(ii)'s placeholder;
+>   - renumbered FILE citations;
+>   - [OPS] entries;
+>   - round-3 items that are only wording, tags, citations, disclosures or stricter reporting duties.
+>
+> ## 5. Notes for the owner
+> - **N1. The order rule.** As the lead wrote it, the order could put E1 behind REG-20 arm A, and arm A cannot start without your six rulings. DF3 ties "first" to being able to start. Today E1 is first.
+> - **N2. REG-20's operations draft 2 does not mention E1.** Its other half of the order rule must be added in its review (DF9(g)).
+>   - Its pin `1cface7` is an ancestor of E1's commit, so E1's `vm_checkout.sh` can move forward from it.
+>   - If you rule `pin_head` (its point 2a) and REG-20 runs first at a commit after E1's, `vm_checkout.sh` refuses, and you decide.
+> - **N3. Your 4516 entry rested on a false statement.** It quoted "E1 changes no decision about a shock matrix", which round 2 found false. E1's floor is the denominator of E0's 8-turn ratio, and without a floor the committed gate says "missing" (FILE(analysis/k2.py:102-103)).
+>   - This approval rests on your decisions to run E1 in any case (4037, 4040) and on withholding the floor until E0's [REG].
+>   - You can overrule with one entry.
+> - **N4. DC1's guard is the seal plus a rule on one command.**
+>   - The cheapest code guard would be a second `SEALS` row for E1's pattern, lifted by `[REG] E0`. Adding `SEALS` rows is exempt from E1's freeze.
+>   - It would need a test change in `tests/test_withheld.py` and a rule F code round.
+>   - It must not be committed while REG-20 arm A runs, because REG-20's queue stops on a `withheld.py` change.
+>   - Not required here.
+> - **N5. E2 inherits DC2's stricter "holes"** through `floor_status` (round 2 DC2; my round-2 N9). E2's registration must cite it.
+> - **N6. DC-O2 and random power-offs.** A power-off during the server's start leaves a launch log with no `run_id`, and two of them stop E1 for a decision.
+>   - BELIEF: the chance is small. The VM went off twice in about a day (FILE(docs/decisions.md:4383)), and the start-up window is about 60 s per launch.
+> - **N7. Round 2's N2 and N6 still hold:**
+>   - 350 W after a reboot needs you, unless a NOPASSWD rule exists;
+>   - a crash on an unchanged boot id cannot be diagnosed within the allowed reads.
+
+#### Delta on draft 8 (`docs/drafts/reviews-2026-11-13/proxy-e1-draft8-delta.md`)
+> # proxy-e1-draft8-delta (owner-proxy, delta pass on E1 draft 8: where DF1–DF11 meet rule F round 3's DE1–DE7), verbatim
+>
+> Saved by the agent at 2026-11-14 01:56 UTC from the reviewer's own verdict file (the same in-process subagent as `proxy-e1-draft7.md`, resumed; scratchpad `reviews_r3/proxy-e1-draft8-delta.md`, 8675 bytes, sha256 c8cfbbd130776f9aef80c944d9395ccbb962ff24c2f4c11045039ce071fb80ea, checked on copy; the reviewer's hand-back message named the same sha256). The reviewer's report follows the line '---' unchanged.
+>
+> ---
+> # Owner-proxy delta on E1 draft 8: where DF1–DF11 meet rule F round 3's DE1–DE7
+>
+> **Verdict: APPROVE** draft 8 as the [REG] text, with the replacements X1–X4 below.
+> - DF1 (rule F round 3 verbatim, before `#### Owner-proxy pass`) is added at assembly.
+> - Apply X1–X4 before DF1's quote is inserted. Each anchor occurs once in draft 8 (checked by script). After the quote is in, X1's anchor also occurs inside the quoted DE3, which stays verbatim.
+> - No DE item is changed in its own words. X1 rewords one sentence of DE3. X2 adjusts DF5's lead-in to DE5. X3 removes DF5's sentence that DE5 now replaces. So round 3's "provided DE1–DE7 verbatim" still holds, except for X1, which settles a contradiction between DE3 and DF3 that round 3 could not see. X1 is the stricter reading, so it needs no new rule F round.
+> - **Checked:**
+>   - draft 8 sha256 `e1802497…`;
+>   - the saved copy of my pass, body sha256 `5a3fbe61…`, equal to mine;
+>   - every DE1–DE7, DE-O2 and DE-O5 replacement text occurs once in draft 8, and every DE anchor is gone from it;
+>   - DE4 and DE6(d) (approval commit) and DE-O1 and DE-O6 (not taken) are absent, as stated;
+>   - `git diff --stat f43a5a1 HEAD` over `agent/RUNBOOK.md analysis tests harness configs docs/probe/20261113_e1 docs/drafts/e1_r3` is empty.
+> - **Not opened:** runs/, state/, RESUME.md, docs/paper, the backups folder. No VM. Nothing written in the repo.
+>
+> ## The seven points
+>
+> **1. DE1's row against DF7(ii)/(iii): DE1 stands verbatim. DF7(ii) and (iii) are withdrawn.**
+> - DE1's row cites `[REG] E1, "E1 holds the VM"`. That paragraph now ends with DF3's "The second item neither launches, nor moves the VM's tree, nor starts its queue before the first's end entry".
+> - Its result cell carries DC1's wait and cites "Result, computed once". DF4's "only a command that sets `AFTERSHOCK_UNSEAL=E1` reads them, and none is run before then" binds from the [REG].
+> - The concrete "first: …" goes into the approving decision and `docs/status.md` (DF9(g) and (h) below), not into the row.
+>
+> **2. DE2 against DF7(i)/DF11: DE2 stands. DD10 is restated as draft 8's RUNBOOK section, (a) and (c).**
+> - DF7(i) is withdrawn: DE2's (a) already ends the §4 wait at E1's end entry, which was DF7(i)'s point.
+> - Dropping (b) is accepted. §3 item 6's "then deploy HEAD (§4)" is governed by DE2's §4 heading, which forbids a deploy while E1 holds the VM. And RUNBOOK:48 is the anchor that REG-20's RB6 edits.
+> - DF11 is restated below.
+>
+> **3. DE3 against DF3: a contradiction, in one case. DF3's definition stands, and X1 rewords DE3's sentence.**
+> - The case: REG-20 arm A's delegate operations decision lands before E1's approval, while the owner's rulings come after it.
+> - DE3 reads "first" from the line of REG-20's operations heading, so REG-20 would be first. Its scripts cannot start until the owner returns, so the GPU would sit idle. DF3 makes E1 first.
+> - The agent's reading ("the item whose last required entry has the earlier line is first") is DF3's. X1 writes it into DE3's sentence. Today both give E1 first.
+>
+> X1. Anchor:
+> ```text
+> "Approved first" is read from the committed `docs/decisions.md`: the earlier line of E1's approval heading (`[DECISION] (owner|delegate) E1 approved`) and of the heading of REG-20 arm A's operations decision.
+> ```
+> Replace with:
+> ```text
+> "Approved first" is read from the committed `docs/decisions.md`: the item whose last required heading has the earlier line is first; an item's required headings are those its scripts need before their first launch (E1's approval heading `[DECISION] (owner|delegate) E1 approved`; for REG-20 arm A, every heading its operations scripts require, as below), so a REG-20 operations heading that still waits for the owner's rulings does not make arm A first.
+> ```
+>
+> **4. DE5 with DF5: DE5 stands verbatim, with two fixes around it.**
+> - **X2 (the lead-in).** In the merge, DE5's "and the owner sent E1 to review on draft 4's statement …" reads as a third item of "the owner has also decided that this run is made in any case: …", which it is not. X2 fixes the lead-in so that DE5's words follow correctly.
+> - **X3 (the tail).** DF5's appended last sentence repeats DE5's "rests on the owner's two choices above and on the delegation … not on that premise", and its "it" now follows DE5's "who may reverse it". X3 deletes it.
+>
+> X2. Anchor:
+> ```text
+> and the owner has also decided that this run is made in any case: the L1 closed-loop cache-off sweep
+> ```
+> Replace with:
+> ```text
+> and the owner has twice decided that this run is made in any case, and sent it to review: the L1 closed-loop cache-off sweep
+> ```
+>
+> X3. Anchor (delete it; the replacement is empty; the anchor starts with a space):
+> ```text
+>  The two decisions to run E1 in any case do not rest on it, and E1's floor is withheld until E0's [REG] (above), so the delegate's approval rests on those two decisions; the owner may overrule it.
+> ```
+>
+> **5. DE7: confirmed.**
+> - It keeps DD6(a)'s stops and fields, so it widens nothing.
+> - Its parenthesis ("each such stop waits for a decision and is E1's end only once an entry says so; these reads may inform that decision and may be made before it") is my round-3 ruling on finding 4.
+> - DF6's two sentences after it stand. They overlap with DE7 but do not contradict it, and they add "neither end E1 nor free the VM" and the no-run case.
+>
+> **6. DE4 against DF8/DF10: confirmed. It is the same act.**
+> - DE4's five script hashes equal DF8 step 2's.
+> - DF10's path list holds DE4's six files and is stricter in its exclusions, so DF10's list stands.
+> - README: DF8 step 2's value `9eb49712…` is checked right after `git apply`. DE6(d) then edits README, and the edited file's sha256 replaces that value in DE4's text and in the approving entry (DF8 below).
+>
+> **7. DE-O2 to DE-O5 taken, DE-O1 and DE-O6 not: confirmed. None needs another pass.**
+> - DE-O3 and DE-O4 are wording, and DE-O5 is a citation duty.
+> - DE-O2 is a reporting duty:
+>   - its reads come after the result, except the pre-launch temperature in the attempt records, which is pre-launch GPU state and already allowed;
+>   - it is never judged;
+>   - any DE-O2 figure that `e1.report` does not print needs a named function in `analysis/` (rule I), placed outside `e1.py`'s frozen closure; otherwise "Result, computed once" requires a [CORR].
+> - DE-O1 not taken: consistent with my N4.
+> - DE-O6 not taken: the reads stay as approved, and a widening would need a pass.
+>
+> ## Owner-proxy line (DF2's sentence, extended)
+>
+> X4. Anchor:
+> ```text
+> DF9–DF11 belong to the approval commit; DD9 and DD11 stand.
+> ```
+> Replace with:
+> ```text
+> DF9–DF11 belong to the approval commit; DD9 and DD11 stand. Owner-proxy delta on draft 8 (`<path where this delta is saved>`): **APPROVE**; DE1–DE7 confirmed; DF7 withdrawn (DE1's row and DE2's (a) replace the RUNBOOK edits it made); DF3's definition governs "approved first" (DE3's sentence reworded, X1); DF5's lead-in adjusted and its last sentence dropped for DE5's (X2, X3); DF8, DF9 and DF11 as that delta restates them.
+> ```
+>
+> ## Changes to DF8–DF11 for the approval commit
+> - **DF8.**
+>   - Step 2's README value applies to the file as `ops_draft7.patch` leaves it.
+>   - Add step 5a, after the sandbox: apply DE6(d) to `docs/probe/20261113_e1/ops/README.md`, then run `shasum -a 256` on it. That value is the committed README's. It takes the place of `9eb49712…` in DE4's text, and the approving entry states it.
+>   - The rest of DF8 stands. It and DE4 are the same act.
+> - **DF9.**
+>   - (c) also quotes the README sha256 from DF8 step 5a.
+>   - (d) adds: draft 8's merges as ruled here (X1–X4, DF7 withdrawn); DE-O2 to DE-O5 taken; DE-O1 and DE-O6 not.
+>   - (f) becomes: "states DE5's note for the owner: the 4520 premise was false; E1 run before E0's [REG] is the delegate's departure from the plan, made under DC1's guard; the owner may reverse it with one entry".
+>   - (g) stands, and DE3's `git grep -n` duty (REG-20's end entry before `vm_checkout.sh`, if arm A runs first) is added.
+>   - (h) becomes: `docs/status.md`'s next action and open risks carry DE1(iii)'s sentence verbatim, then "No command sets `AFTERSHOCK_UNSEAL=E1` before then (DF4). First: <the item (g) names>."
+>   - The entry's steps also quote DE4's text, with README's value as replaced.
+> - **DF10.** Stands. It includes DE4's six files and the DE6(d)-edited README.
+> - **DF11, restated (DD10).** In the approval commit, apply the [REG]'s section "RUNBOOK, for the approval commit" as draft 8 holds it:
+>   - (a), DE2's §4 heading, to FILE(agent/RUNBOOK.md:50);
+>   - (c), DE1's row, to FILE(agent/RUNBOOK.md:66);
+>   - FILE(agent/RUNBOOK.md:48) is not edited; it is left to REG-20's RB6.
+>
+>   Both anchors are unchanged since `f43a5a1`.

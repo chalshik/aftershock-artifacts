@@ -472,6 +472,20 @@ case_ "and launch.sh" "the owner halted E1" 2 zsh $L sweep
 case_ "and vm_checkout.sh" "the owner halted E1" 2 zsh $V
 chk "nothing launched, the VM's tree not moved" is "$(launches) $(git -C $VM rev-parse HEAD)" "0 $C0"
 
+echo "--- review e1_r2: the queue dies between settle and report_settled"
+reset
+case_ "the sweep launched by hand" "ENDED sweep attempt 1" 0 FAKE_FAIL="2:recorder" zsh $L sweep
+case_ "settled by hand, as if the queue died before report_settled" "SETTLED-BY-HAND" 0 zsh -c "source $S/common.sh; mac_checks && next_step && [[ \$ACT == settle ]] && settle \$ARG && echo SETTLED-BY-HAND"
+case_ "the restart still pauses before the rerun" "QUEUE STOP after an invalid run" 1 zsh $Q
+chk "no rerun launched before the pause" is "$(launches)" 1
+
+echo "--- review e1_r2, DC-O2: launches that name no run"
+reset
+case_ "a launch that names no run (its command fails)" "the launch command failed" 1 FAKE_LAUNCH_FAIL=1 zsh $Q
+case_ "a second one, at rate 1.5" "the launch command failed" 1 FAKE_LAUNCH_FAIL=1 zsh $Q
+case_ "two launches that named no run stop E1" "2 launches of E1 named no run" 1 zsh $Q
+chk "no third attempt" is "$(nfiles "$S/state/attempt_*.txt")" 2
+
 echo "--- every stop"
 chk "every stop above printed the allowed reads (${#noallowed} did not: ${noallowed[*]})" is ${#noallowed} 0
 
