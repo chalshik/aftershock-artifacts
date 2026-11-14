@@ -1,0 +1,469 @@
+--- the gate: REG-19's [RESULT], the owner's rulings, then the start decision (RA1, RA5, RA-O3)
+ok    no [RESULT] REG-19 heading: no queue
+ok    no heading that starts arm A: no queue
+ok    the start heading before REG-19's [RESULT]: no queue
+ok    a [RESULT] of REG-190 is not REG-19's
+ok    a start decision that is neither (owner) nor (delegate): no queue
+ok    a start decision quoted, not a heading: no queue
+ok    RA1: 'starts only after a new registration … failed': no queue
+ok    RA1: 'starts nothing': no queue
+ok    RA1: 'starts: k1.reg20_a_may_start failed': no queue
+ok    RA1: 'passed' must end the words: no queue
+ok    RA5: no rulings heading: no queue
+ok    RA5, RD1: a delegate's heading in the owner's words is not a rulings heading
+ok    RA5: the start heading before the rulings: no queue
+ok    RA-O3: an owner's stop heading after the start: no queue
+ok    RA-O3: a [CORR] 'is stopped' heading after the start: no queue
+ok    and no launch by hand either
+ok    RA-O3: a start heading after a stop heading: the queue runs
+ok    every heading in the working tree but not committed: no queue
+ok    and no launch by hand either
+ok    (delegate) start and an entry between: the queue runs
+--- the gate file in HEAD (RB5) and the owner's rulings (RA5)
+ok    no gate file in HEAD: no queue
+ok    a gate file reading may_start False: no queue
+ok    a gate file with a second line: no queue
+ok    two gate files: no queue (computed once)
+ok    a gate stderr with a withheld line: no queue
+ok    a gate file without its stderr file: no queue
+ok    a gate file anywhere but docs/probe/reg20/ is not the gate
+ok    RA5: the rulings file as committed for draft 2 (every point unset): no queue
+ok    and no launch by hand
+ok    a ruling the point may not take: no queue
+ok    ruling 2a pin_head: no queue until common.sh's pin changes
+ok    a ruling changed but not committed: no queue
+ok    none of these launched anything
+--- draft 3: the rulings heading is the owner's, or once and first the delegate's (RD1, RC2, RD2)
+ok    RD1: the delegate's rulings heading, in its own words, committed with the file: the queue runs
+ok    the ruling of that commit is in force
+ok    RD1: a delegate's heading in the owner's words, committed with the file: no queue
+ok    RD2: a delegate's rulings heading after an owner's: no queue
+ok    and no launch by hand
+ok    RD2: a second delegate's rulings heading: no queue
+ok    RD2: the owner overrules the delegate's rulings with an owner's entry: the queue runs
+ok    the owner's ruling is in force
+ok    RC2 with RD1: after the delegate's entry, a ruling changed by a commit with no rulings heading: no queue
+ok    and no table
+ok    RD1: the delegate's rulings heading after the start heading: no queue
+ok    the last of these launched nothing
+--- draft 3, point 18: E1 runs first; arm A waits for E1's end entry and for E1's queue lock to be gone (RC7, RD5, RC-O2)
+ok    no E1 end entry: no queue
+ok    and no launch by hand
+ok    and no table
+ok    and no checkout of the VM
+ok    and no session probe
+ok    which wrote no boot id and no probe file
+ok    none of these launched anything or moved the VM
+ok    not an E1 end entry ('## 2026-11-20 · [OPS] E1: the queue ended (QUEUE STOP after an invalid r'): no queue
+ok    not an E1 end entry ('## 2026-11-20 · [OPS] E10: the queue ended (QUEUE DONE)'): no queue
+ok    not an E1 end entry ('## 2026-11-20 · [OPS] E1: the queue ended (QUEUE END futility stop)'): no queue
+ok    not an E1 end entry ('## 2026-11-20 · [DECISION] (owner) E1 halted'): no queue
+ok    not an E1 end entry ('## 2026-11-20 · [OPS] E1 ended by a stop: '): no queue
+ok    not an E1 end entry ('- [OPS] E1: the queue ended (QUEUE DONE), quoted in a list'): no queue
+ok    E1's end entry (' [OPS] E1: the queue ended (QUEUE END)…'): the queue runs
+ok    E1's end entry (' [OPS] E1 ended by a stop: QUEUE STOP second heat failure…'): the queue runs
+ok    E1's end entry before the rulings and the start: the queue runs (its place is not judged)
+ok    E1's end entry in the working tree only: no queue
+ok    E1's queue lock exists, its end entry committed: no queue
+ok    and no launch by hand
+ok    and no checkout of the VM
+ok    and no session probe
+ok    with E1's lock gone the queue runs
+ok    the VM at E1's commit ce5f8421d2667e52c3db99f445de00519b73473c: no launch, no attempt spent
+ok    no attempt record
+ok    the VM at E1's commit: no session
+--- draft 3: STOP_PAT takes 'halted' (RC-O3) and 'ended by a stop' (point 18); arm A's QUEUE DONE end entry is not a stop
+ok    RC-O3: an owner's 'halted' heading after the start: no queue
+ok    RC-O3: 'is halted': no queue
+ok    point 18: an 'ended by a stop' end entry after the start: no queue
+ok    and no checkout of the VM
+ok    point 18: arm A's QUEUE DONE end entry stops nothing (final.sh follows it)
+ok    and final.sh runs after it
+ok    DH2: an [OPS] progress record headed 'REG-20 arm A stops …' is a stop heading: no queue
+ok    DH2: the same record headed 'REG-20 arm A: …' stops nothing
+--- the order: 15, 16, 17, the drift run, 18, 19; a control right after its burst run only when due
+ok    no control due anywhere
+ok    order B15 B16 B17 D B18 B19
+ok    one control decision per open burst run, five
+ok    each made with the seal lifted for REG-20, on its own run
+ok    the queue's own shell does not carry AFTERSHOCK_UNSEAL
+ok    every run is copied to the holding folder first
+ok    every run rechecked once, before it entered runs/ (six)
+ok    the end record lists the six slots
+ok    and the six copied runs
+ok    and the rulings in force
+ok    the holding folder is empty after the moves
+ok    started again after the end: same end
+ok    nothing launched again, no second look, no second recheck
+ok    a control due everywhere
+ok    order B15 C15 B16 C16 B17 C17 D B18 C18 B19 C19
+ok    the end record names each control
+ok    RA-O1: each control's gap after its burst run and the boot, recorded
+ok    eleven copied runs
+ok    unclear everywhere
+ok    unclear runs no control: B15 B16 B17 D B18 B19
+ok    mix 1 (yes no unclear yes no)
+ok    order B15 C15 B16 B17 D B18 C18 B19
+ok    mix 2 (no unclear yes no unclear)
+ok    the drift run after seed 17's control: B15 B16 B17 C17 D B18 B19
+ok    mix 3 (unclear yes no unclear yes)
+ok    order B15 B16 C16 B17 D B18 B19 C19
+ok    the records keep each decision: s15 unclear, s16 yes, s17 no
+ok    six slots in the end record
+--- the control decision: one line, once, on clean code, or a stop (RB1, RA4)
+ok    a decision line with a number in it
+ok    is not recorded
+ok    and runs no control
+ok    two lines
+ok    another word
+ok    a failed control_due.py
+ok    an error line on its stderr
+ok    none of these recorded a decision
+ok    after the fix the queue goes on without relaunching seed 15
+ok    seed 15's control ran: B15 C15 B16 B17 D B18 B19
+ok    RB1: analysis/gate.py edited during seed 15's burst run stops the queue before its control decision
+ok    no CONTROL line, no look, no record
+ok    and nothing copied
+ok    after the edit is undone the queue goes on
+ok    one look per open burst run, made on the pin's code
+ok    RA4: analysis/k1.py edited during the control_due.py call: the decision is dropped
+ok    not recorded and not shown
+ok    and no control launched
+ok    after the edit is undone the decision is made again on clean code
+ok    seed 15's control ran after its burst run
+ok    set-up: one launch, one decision
+ok    two decisions recorded for one run stop the queue
+ok    a control on the VM although none is due stops the queue
+ok    a control attempt record although none is due stops the queue
+ok    launch.sh by hand: a control not due is refused
+ok    no second look on seed 15
+--- the recheck at each copy, in the holding folder, under ruling 2a (RB2, RA2)
+ok    2a keep: a run today's checks flag is kept as its checks.json says, and the queue goes on
+ok    the RECHECK line names the recomputed failure
+ok    the end record says so
+ok    the record keeps validity fields only
+ok    the recheck ran without AFTERSHOCK_UNSEAL
+ok    2a setaside: a stored-valid run that today's checks fail is set aside, and the queue stops
+ok    the SET ASIDE line
+ok    it is in the holding folder, not in runs/, and has no copy record
+ok    draft 3, RC6 (ii): beside it, its per-file sha256 list, equal to the folder's
+ok    and the SHA256 LIST line names it
+ok    no control decision on it
+ok    started again: its config is rerun as attempt 2, and the queue goes on
+ok    attempt 2 of seed 15
+ok    the end record names it held and set aside
+ok    and final.sh accepts the folder set (the set-aside run is not in runs/)
+ok    2a setaside twice: the attempts are spent and the queue stops
+ok    an owner's settle record (not_run) lets it go on
+ok    the slot reads not_run
+ok    2a stop: a changed run stops the queue for the owner
+ok    a delegate's answer is not taken
+ok    the owner's answer 'keep' lets it go on
+ok    the owner's answer 'setaside' sets it aside
+ok    a folder today's checks cannot read stops the queue
+ok    nothing of it entered runs/
+ok    a failing recheck_one.py stops the queue
+ok    harness/checks.py not the checks in force: no recheck, no copy
+ok    any change in analysis/ (here outside k1's closure) stops the recheck (ops_r3's guard)
+ok    configs/defaults.yaml changed: no recheck
+ok    DH-O1: a commit to configs/defaults.yaml (read by today's checks) stops the recheck
+ok    DH-O1: and nothing of the run entered runs/
+ok    RD-O1: a commit to harness/config.py (in the recheck's closure, not in mac_checks) stops the recheck
+ok    and nothing entered runs/
+--- reruns: one, then a stop; the records name what they lift and who wrote them (RA3, RA-O4, RB3, RB7)
+ok    an invalid open burst run stops the queue and names the failed check
+ok    started again: copied, rerun once, valid, and the queue goes on
+ok    attempt 2 of seed 15
+ok    the invalid run is on the Mac, verified (k1 counts it)
+ok    no control decision on the invalid run
+ok    a control invalid
+ok    its rerun invalid
+ok    then a stop: the control's two attempts are spent
+ok    three launches
+ok    ruling 9(a): a delegate's attempt_ok record gives a third attempt
+ok    the control launched three times before the queue went on
+ok    a third control attempt invalid
+ok    then arm A stops
+ok    a delegate's fourth attempt is refused
+ok    under ruling 9(a) a delegate's control_not_run is refused
+ok    under ruling 9(b) it settles the control and the queue goes on
+ok    the slot reads control_not_run
+ok    both invalid control runs are on the Mac
+ok    and final.sh accepts the slot
+ok    under ruling 9(b) a delegate's third attempt is refused
+ok    the drift run invalid
+ok    its rerun invalid
+ok    then a stop: the drift run's two attempts are spent
+ok    a delegate's drift_not_run is refused
+ok    the owner's drift_not_run lets it go on
+ok    the slot reads drift not_run with both runs
+ok    an open burst run invalid
+ok    and invalid again
+ok    is lost_open (REG-20 counts it cold): the queue goes on to seed 16
+ok    no control for the lost seed: B15 B15 B16 C16 B17 D B18 B19
+ok    the end record says lost_open with both runs
+ok    both invalid runs are on the Mac, verified
+ok    no look at the lost seed
+ok    RA3: a setup-class failure (kv_capacity) is rerun as any invalid run
+ok    and fails again
+ok    then no lost_open: a stop
+ok    the second invalid run is not copied yet
+ok    under ruling 7 per_stop a delegate's settle is refused
+ok    the owner's lost_open lets it go on
+ok    the slot reads lost_open with both runs, both on the Mac
+ok    RA3: both attempts setup-only (trigger, then kv_capacity) stop as well
+ok    not_run naming the second run while the first is in runs/ is refused (k1 would read lost_open)
+ok    under ruling 7 not_run a delegate's not_run naming the copied run settles it
+ok    the slot reads not_run
+ok    the second run is held, not in runs/
+ok    draft 3, RC6 (ii): beside the held run, its per-file sha256 list, equal to the folder's
+ok    and none beside the copied run (it is in runs/, under the manifest)
+ok    and final.sh accepts the folder set
+ok    a held run that today's checks change
+ok    is listed as held, not kept
+ok    and final.sh accepts it (it is not in runs/)
+ok    RC: mixed case (client_lag, then trigger) stops for a settle record
+ok    RC: under ruling 7 not_run a delegate's not_run is refused in the mixed case
+ok    RC: and the delegate's lost_open (the registered label) is taken
+ok    RC: the slot reads lost_open with both runs, both on the Mac
+ok    RC: under ruling 7 per_stop the mixed case stays the owner's
+ok    RC: a ruling changed by a commit with no owner's rulings heading stops the queue
+ok    RC: and launch.sh
+ok    RC: and final.sh
+ok    RC: a new rulings heading after the start needs a new start heading after it
+ok    under ruling 7 lost_open a delegate's not_run is refused
+ok    and a delegate's lost_open is taken
+ok    a client error
+ok    is not rerun: stop and ask
+ok    one launch
+ok    RA-O4: a record that lifts another failure does not lift it
+ok    ruling 6(b): a delegate's record after a client error with nofile 65536 and the same boot: rerun
+ok    as attempt 2
+ok    ruling 6(b): not the delegate's when the VM rebooted since the run's launch
+ok    ruling 6(a): a delegate's record is refused
+ok    ruling 6(a): the owner's record: rerun
+ok    the owner refuses the rerun: the seed is settled not_run (RB3) and the queue goes on
+ok    the slot reads not_run, no control, one launch of seed 15
+ok    the refused run is on the Mac (k1 reads not_run from one invalid run)
+ok    and final.sh accepts the not_run slot
+ok    RA-O4: client error and manipulation in one run: one lift is not enough
+ok    with both lifts named: rerun
+ok    a second client error after an allowed rerun stops again
+ok    with a record for it the seed is lost_open and the queue goes on
+ok    an http error is an invalid run like any other
+ok    and is rerun
+ok    a burst that did not fill the pool
+ok    is not rerun: stop and ask
+ok    RB7: a delegate cannot lift it
+ok    a run at another power limit
+ok    is not rerun: stop and ask
+ok    a heat failure
+ok    is rerun once; a second heat failure on another run
+ok    stops the queue
+ok    the owner's record naming gpu_steady lets it go on
+ok    two valid runs of one config stop the queue
+ok    a run folder with no attempt record is a launch outside these scripts
+ok    a checks.json that contradicts itself stops the queue
+ok    a run made at another commit is not used
+ok    a run on the Mac that the VM no longer lists is not made again
+ok    no second launch
+--- lost attempts (no checks.json) under ruling 8 (RA6, RB4)
+ok    tmux gone without checks.json (a lost run)
+ok    is not rerun without a record
+ok    lost without a reboot: a delegate's record is refused (the owner's)
+ok    with the owner's record it is rerun as attempt 2
+ok    the lost run is not copied, nor held
+ok    RA6: the end record lists it with its arm, elapsed time, how it ended and whether it counted
+ok    a power-off during seed 15's run
+ok    after the reboot nothing is launched without a record
+ok    ruling 8(b): a delegate's 'count no' after a power-off: relaunched, not counted
+ok    so the invalid run still has its rerun
+ok    three launches of seed 15
+ok    the end record: lost, arm open, ended unreachable, not counted
+ok    ruling 8(a): 'count no' is refused
+ok    ruling 8(a): 'count yes' by the delegate: rerun as the second attempt
+ok    ruling 8(b): a third uncounted loss of one config stops the queue
+ok    three launches of seed 15
+--- the open-file limit
+ok    an open burst run with the raised limit at 1024
+ok    spends no attempt
+ok    at 4095
+ok    a limit that cannot be raised
+ok    none launched
+ok    at exactly 4096 the queue runs
+ok    a control is an open-loop run: 1024 stops it
+ok    after its burst run
+ok    the closed drift run at 1024 is only recorded
+ok    its attempt record holds the read
+ok    an open run's record holds the read and the log's nofile line
+ok    the records hold the arm and the log's path
+ok    and how each wait ended
+ok    the drift's record has no log line (its command sets no limit)
+ok    the open launch command starts with the limit and execs the harness
+ok    and the harness writes to the same log
+ok    the drift's launch command is ops_r3's, with no limit
+ok    a launch log whose nofile line is low: the run goes on, then the queue stops and asks
+ok    the warning names the line
+ok    the attempt record keeps it
+ok    RB15: started again, the run is not used without a nofile_ok record
+ok    with the record the run is used and the queue goes on
+ok    six launches
+ok    a launch log with no nofile line stops the same way
+ok    recorded as '-'
+--- any hour: the owner withdrew the quiet hours (2026-11-13); no start is held back for the time of day
+ok    the whole queue, controls included, with the clock at 0000 UTC
+ok    the whole queue, controls included, with the clock at 0230 UTC
+ok    the whole queue, controls included, with the clock at 0459 UTC
+ok    the whole queue, controls included, with the clock at 1145 UTC
+ok    the whole queue, controls included, with the clock at 1415 UTC
+ok    the whole queue, controls included, with the clock at 1759 UTC
+ok    the whole queue, controls included, with the clock at 2359 UTC
+ok    the whole queue, controls included, with the clock at abcd UTC
+ok    eight launches in the last of them: B15 C15 B16 B17 D B18 C18 B19
+ok    no script reads the clock as an hour
+--- pre-launch stops spend no attempt (as ops_r3)
+ok    420 W
+ok    no attempt, the probe kept
+ok    the same command then runs, as attempt 1
+ok    a reboot since the session probe
+ok    an empty boot id
+ok    another compute process
+ok    the wrong pin on the VM (REG-19's a7bb77a)
+ok    a dirty VM tree
+ok    low disk
+ok    a temperature that is not a number
+ok    a GPU still hot after the wait
+ok    a temperature that cannot be read
+ok    a pre-launch read that fails
+ok    an existing tmux session
+ok    no session probe, no launch
+ok    none of these launched anything
+--- rule F round 3, DH1: a control has the lower floor CONTROL_MIN_FREE_KB, so a disk stop never falls between a burst run and its control
+ok    DH1: a burst launch below MIN_FREE_KB is stopped as before
+ok    DH1: no attempt spent, nothing launched
+ok    DH1: the due control launches with CONTROL_MIN_FREE_KB <= free < MIN_FREE_KB; the next burst run does not
+ok    DH1: order B15 C15: the stop falls before B16, not between B15 and C15
+ok    DH1: no attempt of B16 spent
+ok    DH1: below CONTROL_MIN_FREE_KB the control is stopped too
+ok    DH1: and spends no attempt
+ok    DH1: the drift run is held to MIN_FREE_KB
+ok    DH1: order B15 B16 B17
+--- what a started run can leave behind (as ops_r3)
+ok    no run id within 120 s
+ok    the attempt is spent, and the record says how the wait ended
+ok    started again: the record names no run, so its nofile line is unknown (RB15)
+ok    with the record the finished valid run is used, not relaunched
+ok    six launches in all
+ok    a run still going after the wait is not called invalid
+ok    a VM that stops answering is reported as such
+ok    and the record says when it stopped answering
+ok    the launch command failing spends the attempt
+ok    and says so in the record
+ok    started again: attempt 2 runs
+ok    attempt 2 recorded
+ok    checks.json appearing just after tmux ended is found
+ok    the VM's state unreadable stops the queue
+--- copy and checksums
+ok    a checksum mismatch stops the queue before any decision
+ok    no copy record, no look, nothing in runs/
+ok    started again: copied, verified, and on
+ok    a failed copy
+ok    the VM's checksums unreadable
+ok    a manifest update that fails
+ok    leaves no copy record
+ok    started again after it: the run already in runs/ is verified again, not copied twice, and on
+ok    one launch of seed 15 in all, one recheck of it
+ok    a run in runs/ without a recheck record stops the queue
+--- the Mac-side checks (real git)
+ok    k1.py changed in the working tree
+ok    gate.py changed by a commit after the pin
+ok    the seal's load.py not the recorded blob
+ok    withheld.py changed by a commit
+ok    uv.lock changed in the working tree
+ok    a script changed since its commit
+ok    control_due.py changed since its commit
+ok    recheck_one.py changed since its commit
+ok    scripts_commit.txt missing
+ok    scripts_commit.txt naming another commit
+ok    none of these launched anything
+--- launch.sh by hand
+ok    a config that is not next is refused
+ok    the drift run first is refused
+ok    a REG-19 config is refused
+ok    arm B is refused
+ok    a name that is no config is refused
+ok    the next config is launched with the attempt number derived
+ok    after it, a launch by hand waits for the queue's copy
+--- the lock and the settings (as ops_r3)
+ok    a second queue beside a running one is refused
+ok    a lock left by a dead queue is set aside and the queue runs
+ok    the stale lock is kept under another name
+ok    WAIT_MIN that is not a number stops before anything
+--- session probe (as ops_r3)
+ok    session probe at 350 W
+ok    it wrote the boot id
+ok    a second probe is refused
+ok    RENEW=1 replaces it and keeps the old file
+ok    the replaced file is kept
+ok    420 W: no session
+ok    and no boot id file
+ok    another driver: no session
+ok    another uv.lock on the VM: no session
+ok    the VM at REG-19's pin: no session
+ok    a dirty VM tree: no session
+ok    a locked package missing on the Mac: no session
+ok    an empty boot id: no session
+ok    SET=1 runs the one root command when the GPU is idle
+ok    SET=1 does not touch the limit under another process
+--- the final table
+ok    no table before the queue has ended
+ok    nor mid-matrix
+ok    after QUEUE DONE: the registered command, seal lifted for REG-20, from the repo root
+ok    both files written
+ok    the recheck before it ran on both patterns with the seal lifted for REG-20
+ok    its records keep validity fields only
+ok    it ran under .venv's python, not uv run
+ok    the table is computed once
+ok    not while a queue holds the lock
+ok    not when a run the end record lists as copied has no verified copy
+ok    RB4: nor when a copied run has no checks.json on the Mac
+ok    RB4, RA-O2: nor when runs/ holds a REG-20 folder the queue did not copy (a lost folder copied by hand)
+ok    nor when a slot line is not of a form the queue writes
+ok    RB2: nor when the recheck before the table changes a run the queue did not keep
+ok    and no table file
+ok    nor when that recheck skips a sealed folder
+ok    a run kept under ruling 2a at its copy is changed again before the table: agreed, table computed
+ok    RA-O2: a table whose stderr holds a withheld line is refused, its files kept
+ok    both files kept
+ok    RA4: the code changed during the table: refused, files kept
+ok    a failed table stops and keeps its files
+ok    and a second try is refused
+ok    not without the gate's headings
+--- draft 3: vm_checkout.sh, the VM back to the pin after E1's end entry (point 18, RC-O10)
+ok    from E1's commit (here a descendant of the pin), clean and idle: checked out at the pin
+ok    the probe file records the commit before and after, and no package change
+ok    its one checkout command named the pin
+ok    already at the pin: nothing is changed
+ok    no checkout command
+ok    not under REG-20's queue lock
+ok    not with a compute process on the GPU
+ok    not while a tmux session exists
+ok    not from a dirty tree
+ok    not from a commit the pin is not an ancestor of
+ok    not from a commit unknown on the Mac
+ok    not when the VM cannot be read
+ok    none of these ran a checkout
+ok    a checkout that fails on the VM stops
+ok    a tree that is not the pin after the checkout stops
+ok    another uv.lock after the checkout stops
+ok    a dry-run sync that would change packages stops
+ok    PROBE (rule F round 3, not proposed): vm_checkout run again after that stop reports already_at_pin, exit 0
+ok    PROBE: an already_at_pin record holds no dry-run output
+ok    PROBE (rule F round 3, not proposed): after that stop the VM is at the pin, and the session probe passes
+ok    PROBE: the stop left the VM checked out at the pin
+ok    not before the start heading
+ok    vm_checkout.sh is one of the scripts mac_checks holds to their commit
+ok    no script but vm_checkout.sh ever changes the VM's tree
+ok    no script ever tried to compute the gate (computed once, 3c8e5dc)
+passed 445, failed 0  (sandbox /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad/r3dh/tmp6/reg20_sandbox.vVrbxz)
+exit 0

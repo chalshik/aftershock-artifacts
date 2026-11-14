@@ -1,0 +1,55 @@
+--- a/docs/probe/20261113_reg20/ops/common.sh
++++ b/docs/probe/20261113_reg20/ops/common.sh
+@@ -17,6 +17,9 @@
+ H=chalshik@${VM_HOST:-100.83.53.50}
+ K=(-i $HOME/.ssh/id_ed25519_vllm -o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
+ MIN_FREE_KB=2097152                      # 2 GB free on the VM before a launch (about 240 MB per run)
++CONTROL_RESERVE_KB=262144                # rule F round 3 (DH1): an open burst run launches only with MIN_FREE_KB plus room for one
++                                         # attempt of its control (256 MiB; REG-19's seed 15 burst run: 242,736 kB), so that a disk
++                                         # stop falls before a burst run, not between it and its control (decisions.md:4054)
+ MAX_ATTEMPTS=2                           # REG-20 (decisions.md 2026-11-12 [REG], standing instructions): one rerun
+ MAX_POWER_LOSSES=2                       # ruling 8(b): losses after a power-off that are not counted, per config
+ NOFILE_MIN=4096                          # REG-20: below this open-file limit in the launching shell, stop and ask
+--- a/docs/probe/20261113_reg20/ops/launch.sh
++++ b/docs/probe/20261113_reg20/ops/launch.sh
+@@ -49,7 +49,8 @@
+ [[ $APPS == 0 ]] || { echo "STOP: GPU compute process present"; exit 2; }
+ [[ $VMH == $PIN && $DIRTY == 0 ]] || { echo "STOP: VM tree '$VMH' dirty='$DIRTY', pin $PIN"; exit 2; }
+ [[ -n $BOOT && $BOOT == $(<$ST/session_boot_id.txt) ]] || { echo "STOP: the VM rebooted since the session probe (boot id '$BOOT')"; exit 2; }
+-[[ $FREE == <-> ]] && (( FREE >= MIN_FREE_KB )) || { echo "STOP: only '$FREE' kB free on the VM"; exit 2; }
++NEED=$MIN_FREE_KB; [[ $CFG == ${B}* ]] && NEED=$((MIN_FREE_KB + CONTROL_RESERVE_KB))   # DH1: a burst run keeps room for its control
++[[ $FREE == <-> ]] && (( FREE >= NEED )) || { echo "STOP: only '$FREE' kB free on the VM, $NEED needed for $CFG (MIN_FREE_KB${${(M)CFG:#${B}*}:+ + CONTROL_RESERVE_KB, so that its control, if due, is not stopped for disk})"; exit 2; }
+ if [[ -n $OPEN ]]; then
+   [[ $NOFR == <-> ]] && (( NOFR >= NOFILE_MIN )) || { echo "STOP: the open-file limit after 'ulimit -n $NOFILE_SET' reads '$NOFR' (hard '$NOFH'); REG-20 needs at least $NOFILE_MIN for the open arm: stop and ask"; exit 2; }
+ fi
+--- a/docs/probe/20261113_reg20/ops/test_sandbox.sh
++++ b/docs/probe/20261113_reg20/ops/test_sandbox.sh
+@@ -393,6 +393,10 @@
+ reset; setlog $LOGOK0 "" "## 2026-11-21 · [OPS] REG-20 arm A: the queue ended (QUEUE DONE)"
+ case_ "point 18: arm A's QUEUE DONE end entry stops nothing (final.sh follows it)" "QUEUE DONE" 0 zsh $Q
+ case_ "and final.sh runs after it" "{'fake': 'table'" 0 zsh $F
++reset; setlog $LOGOK0 "" "## 2026-11-21 · [OPS] REG-20 arm A stops for disk: QUEUE STOP ${C}17 launch rc=2"
++case_ "DH2: an [OPS] progress record headed 'REG-20 arm A stops …' is a stop heading: no queue" "a heading that stops arm A" 2 zsh $Q
++reset; setlog $LOGOK0 "" "## 2026-11-21 · [OPS] REG-20 arm A: QUEUE STOP at seed 17's control (disk); restarted after the owner freed space"
++case_ "DH2: the same record headed 'REG-20 arm A: …' stops nothing" "QUEUE DONE" 0 zsh $Q
+ 
+ echo "--- the order: 15, 16, 17, the drift run, 18, 19; a control right after its burst run only when due"
+ reset; dues no no no no no
+@@ -770,6 +774,17 @@
+ rm $S/state/session_boot_id.txt
+ case_ "no session probe, no launch" "no session probe" 1 zsh $Q
+ chk "none of these launched anything" is "$(launches)" 0
++echo "--- rule F round 3, DH1: a burst run launches only with room for its control (MIN_FREE_KB + CONTROL_RESERVE_KB)"
++reset
++case_ "DH1: a burst launch with MIN_FREE_KB <= free < MIN_FREE_KB + CONTROL_RESERVE_KB: stopped" "kB free on the VM, 2359296 needed for ${B}15" 1 FAKE_FREE=2300000 zsh $Q
++chk "DH1: no attempt spent, nothing launched" is "$(nfiles "$S/state/attempt_*") $(launches)" "0 0"
++reset; dues yes; q FAKE_PRELAUNCH_FAIL_FROM=2                       # seed 15 run and decided 'yes'; its control not yet launched
++case_ "DH1: the due control launches at the same free space (MIN_FREE_KB only); the next burst run does not" "kB free on the VM, 2359296 needed for ${B}16" 1 FAKE_FREE=2300000 zsh $Q
++chk "DH1: order B15 C15, the stop falls before B16, not between B15 and C15" is "$(order)" "B15 C15"
++chk "DH1: no attempt of B16 spent" test ! -e $S/state/attempt_${B}16_1.txt
++reset; dues no no no; q FAKE_PRELAUNCH_FAIL_FROM=4                 # no control due: 15, 16, 17 run; the drift run not yet launched
++case_ "DH1: the drift run is held to MIN_FREE_KB only; the next burst run is not" "kB free on the VM, 2359296 needed for ${B}18" 1 FAKE_FREE=2300000 zsh $Q
++chk "DH1: order B15 B16 B17 D" is "$(order)" "B15 B16 B17 D"
+ 
+ echo "--- what a started run can leave behind (as ops_r3)"
+ reset

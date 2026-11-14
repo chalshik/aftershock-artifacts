@@ -1,0 +1,24 @@
+--- a/docs/probe/20261113_reg20/ops/common.sh
++++ b/docs/probe/20261113_reg20/ops/common.sh
+@@ -526,6 +526,9 @@
+   # RD-O1: all of harness/ (the recheck's closure holds harness/{__init__,checks,config,workload}.py) equals the checks' commit.
+   git diff --quiet $CHECKS_COMMIT -- harness/ || { MSG="harness/ differs in the working tree from $CHECKS_COMMIT, whose harness/ the recheck runs (RD-O1; the arm A hold)"; return 2; }
+   git diff --quiet HEAD -- analysis harness configs/defaults.yaml || { MSG="analysis/, harness/ or configs/defaults.yaml differ in the working tree from the Mac's HEAD"; return 2; }
++  # rule F round 3 (DH-O1): today's checks merge configs/defaults.yaml beneath each run's config (harness/checks.py:48),
++  # so a commit to it would change the recheck silently; it is held to the pin, which it equals today.
++  git diff --quiet $PIN -- configs/defaults.yaml || { MSG="configs/defaults.yaml differs from the pin's, and today's checks read it (DH-O1; the arm A hold)"; return 2; }
+   return 0
+ }
+ recheck_one() {
+--- a/docs/probe/20261113_reg20/ops/test_sandbox.sh
++++ b/docs/probe/20261113_reg20/ops/test_sandbox.sh
+@@ -513,6 +513,9 @@
+ case_ "any change in analysis/ (here outside k1's closure) stops the recheck (ops_r3's guard)" "analysis/, harness/ or configs/defaults.yaml differ in the working tree from the Mac's HEAD" 1 zsh $Q
+ reset; echo "# y" >> $T/repo/configs/defaults.yaml
+ case_ "configs/defaults.yaml changed: no recheck" "differ in the working tree from the Mac's HEAD" 1 zsh $Q
++reset; (cd $T/repo && echo "# z" >> configs/defaults.yaml && $G commit -q -am "defaults (sandbox)")
++case_ "DH-O1: a commit to configs/defaults.yaml (read by today's checks) stops the recheck" "configs/defaults.yaml differs from the pin's" 1 zsh $Q
++chk "DH-O1: and nothing of the run entered runs/" is "$(nfiles "$T/repo/runs/*")" 0
+ reset; (cd $T/repo && echo "# y" >> harness/config.py && $G commit -q -am "harness/config.py moved")
+ case_ "RD-O1: a commit to harness/config.py (in the recheck's closure, not in mac_checks) stops the recheck" "harness/ differs in the working tree from $PINH" 1 zsh $Q
+ chk "and nothing entered runs/" is "$(nfiles "$T/repo/runs/*")" 0
