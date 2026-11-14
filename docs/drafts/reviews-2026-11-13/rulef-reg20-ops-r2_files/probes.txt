@@ -1,0 +1,83 @@
+# probes run by rule F round 2 on REG-20 ops draft 2, 2026-11-14T01:44:02Z, Mac HEAD 660a675ed35b4a17e99b2c63c03453cdece811c7; read-only
+$ git rev-parse HEAD
+660a675ed35b4a17e99b2c63c03453cdece811c7
+[exit 0]
+$ git log -1 --format='%h %s' -- docs/probe/20261113_reg20/ops/common.sh
+56820bd [OPS] Drafts for review, none approved: E1 draft 7 with its patches (e1.py, test_e1.py, ops scripts; applied nowhere) and bundle e1_r3; REG-20 arm A ops decision draft 2 with its draft scripts (owner_rulings.txt all unset, so they refuse to start) and bundle reg20_ops_r2; REG-24 draft 1 (C1's confirmation at λ = 2.0) with its patch
+[exit 0]
+$ git hash-object analysis/load.py analysis/withheld.py
+59ef93b9ecd5882b456b907b3a7a80851b58cc5e
+46b42a76a44a52051f25796fb3b917470378ccd2
+[exit 0]
+$ git diff --stat 1cface7 HEAD -- analysis/__init__.py analysis/k1.py analysis/gate.py analysis/margin.py analysis/derived.py analysis/floor.py analysis/stats.py
+[exit 0]
+$ git diff --stat 5ee6e38 HEAD -- harness/checks.py
+[exit 0]
+$ git diff --stat 72fafb5 HEAD -- analysis/recheck.py
+[exit 0]
+$ git diff --stat 1cface7 HEAD -- configs/defaults.yaml tools/manifest.py pyproject.toml uv.lock
+[exit 0]
+$ git diff --stat a7bb77a 1cface7 -- harness/
+[exit 0]
+$ git ls-tree -r --name-only HEAD -- docs/probe/reg20/
+docs/probe/reg20/gate_20261113T230307Z.txt
+docs/probe/reg20/gate_err_20261113T230307Z.txt
+[exit 0]
+$ ls runs | grep -cE '_l1pl350ol_|_s15_drift$'
+0
+[exit 1]
+$ git show 1cface7:harness/checks.py | grep -o -E 'check\("[a-z_/]+"' | sort -u | tr '
+' ' '
+check("accounting" check("arrival_rate" check("clean_git" check("client_lag" check("gpu_steady" check("kv_capacity" check("manipulation" check("no_errors" check("power_limit" check("recorder" check("release_chain" check("trigger" [exit 0]
+$ grep -l -E ulimit docs/probe/20261111_reg19/ops/*.sh docs/probe/20261113_reg19/ops_r3/*.sh _to_delete/docs/probe/20261113_reg19/ops/*.sh; echo rc=$?
+rc=1
+[exit 0]
+$ grep -n Popen harness/run.py
+105:def _stop(proc: subprocess.Popen | None, sig: int, grace: float):
+159:            server = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT,
+175:                recorder = subprocess.Popen(_pin(cfg["cpus"]["recorder"]) + py +
+182:            trig = subprocess.Popen(_pin(cfg["cpus"]["recorder"]) + py +  # sleeps until at_s, then one short call
+185:        loadgen = subprocess.Popen(_pin(cfg["cpus"]["loadgen"]) + py +
+[exit 0]
+$ python3 -I docs/probe/20261113_freeze/closure.py analysis/k1.py
+# import closure of analysis/k1.py in the working tree: 19 .py files
+analysis/__init__.py
+analysis/derived.py
+analysis/floor.py
+analysis/gate.py
+analysis/k1.py
+analysis/load.py
+analysis/margin.py
+analysis/stats.py
+analysis/tables.py
+analysis/withheld.py
+harness/__init__.py
+harness/checks.py
+harness/config.py
+harness/env_snapshot.py
+harness/loadgen.py
+harness/recorder.py
+harness/run.py
+harness/trigger.py
+harness/workload.py
+# environment: 3 files
+.python-version
+pyproject.toml
+uv.lock
+# total 22 files
+# dynamic import call in harness/env_snapshot.py at line(s) 38: check by hand
+$ python3 -I docs/probe/20261113_freeze/closure.py analysis/recheck.py
+# import closure of analysis/recheck.py in the working tree: 8 .py files
+analysis/__init__.py
+analysis/load.py
+analysis/recheck.py
+analysis/withheld.py
+harness/__init__.py
+harness/checks.py
+harness/config.py
+harness/workload.py
+# environment: 3 files
+.python-version
+pyproject.toml
+uv.lock
+# total 11 files

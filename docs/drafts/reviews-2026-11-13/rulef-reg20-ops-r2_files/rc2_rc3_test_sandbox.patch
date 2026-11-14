@@ -1,0 +1,53 @@
+--- a/docs/probe/20261113_reg20/ops/test_sandbox.sh	2026-11-14 07:37:07
++++ b/docs/probe/20261113_reg20/ops/test_sandbox.sh	2026-11-14 07:40:19
+@@ -232,7 +232,7 @@
+ outs() { print -l -- "$@" > $T/state/outcomes; }
+ rid_of() { echo 20261120-$(printf %06d $1)_$2; }   # the run id the fake gives launch number $1 of config $2
+ setlog() { (cd $T/repo && print -r -l -- "$@" > docs/decisions.md && $G commit -q -am log); }
+-setrul() { (cd $T/repo && sed -i '' "s/^$1 .*/$1 $2/" $S/owner_rulings.txt && $G commit -q -am "ruling $1 $2"); }
++setrul() { (cd $T/repo && sed -i '' "s/^$1 .*/$1 $2/" $S/owner_rulings.txt && print -r -l -- "" "## 2026-11-21 · [DECISION] (owner) REG-20 arm A operations: the owner's rulings (sandbox: $1 $2)" "" "## 2026-11-21 · [DECISION] (owner) REG-20 arm A starts: k1.reg20_a_may_start passed (sandbox, after the ruling)" >> docs/decisions.md && $G commit -q -am "ruling $1 $2"); }   # RC: a ruling changes only with the owner's rulings heading in the same commit
+ gatefiles() { (cd $T/repo && git rm -q --cached $GD/gate_*.txt > /dev/null && rm -f $GD/gate_*.txt && { [[ $# == 0 ]] || print -r -- "$1" > $GD/gate_20261113T230307Z.txt; } && { [[ $# == 0 ]] || print -r -- "${2:-}" > $GD/gate_err_20261113T230307Z.txt; } && $G add -A docs && $G commit -q -m gatefiles); }
+ reboot_to() { print -r -- $1 > $S/state/session_boot_id.txt; }   # what RENEW=1 of the session probe leaves after a reboot
+ q() { env PATH=$T/bin:$PATH "$@" zsh $Q > /dev/null 2>&1; }      # run the queue quietly, for set-ups
+@@ -482,8 +482,8 @@
+ rec $S/state/settle_$(rid_of 2 ${B}15).txt "label lost_open" "under sandbox" "by owner"
+ case_ "the owner's lost_open lets it go on" "QUEUE DONE" 0 zsh $Q
+ chk "the slot reads lost_open with both runs, both on the Mac" sh -c "grep -qx 's15 lost_open $(rid_of 1 ${B}15) $(rid_of 2 ${B}15)' $S/state/queue_done.txt && [ -e $S/state/copied_$(rid_of 2 ${B}15).txt ]"
+-reset; setrul 7 not_run; outs client_lag trigger; q; q
+-case_ "RA3: either attempt setup-only (here the second, trigger) stops as well" "failed only checks of the setup class" 1 zsh $Q
++reset; setrul 7 not_run; outs trigger kv_capacity; q; q
++case_ "RA3: both attempts setup-only (trigger, then kv_capacity) stop as well" "failed only checks of the setup class" 1 zsh $Q
+ rec $S/state/settle_$(rid_of 2 ${B}15).txt "label not_run" "under sandbox ruling 7" "by delegate"
+ case_ "not_run naming the second run while the first is in runs/ is refused (k1 would read lost_open)" "k1 would read lost_open" 1 zsh $Q
+ rm $S/state/settle_$(rid_of 2 ${B}15).txt; rec $S/state/settle_$(rid_of 1 ${B}15).txt "label not_run" "under sandbox ruling 7" "by delegate"
+@@ -491,11 +491,29 @@
+ chk "the slot reads not_run" grep -qx "s15 not_run $(rid_of 1 ${B}15)" $S/state/queue_done.txt
+ chk "the second run is held, not in runs/" sh -c "[ -d $HOLD/$(rid_of 2 ${B}15) ] && [ ! -e $T/repo/runs/$(rid_of 2 ${B}15) ] && grep -qx 'held $(rid_of 2 ${B}15) settled' $S/state/queue_done.txt"
+ case_ "and final.sh accepts the folder set" "{'fake': 'table'" 0 zsh $F
+-reset; setrul 7 not_run; outs client_lag trigger; q; q
++reset; setrul 7 not_run; outs trigger kv_capacity; q; q
+ rec $S/state/settle_$(rid_of 1 ${B}15).txt "label not_run" "under sandbox ruling 7" "by delegate"
+ case_ "a held run that today's checks change" "HELD $(rid_of 2 ${B}15)" 0 FAKE_RECHECK_FOR=$(rid_of 2 ${B}15) zsh $Q
+ chk "is listed as held, not kept" sh -c "grep -qx 'recheck_changed $(rid_of 2 ${B}15) held' $S/state/queue_done.txt && ! grep -q ' kept\$' $S/state/queue_done.txt"
+ case_ "and final.sh accepts it (it is not in runs/)" "{'fake': 'table'" 0 zsh $F
++# RC (rule F round 2): the mixed case, one attempt outside the setup class (T3's client_lag), the other setup-only.
++reset; setrul 7 not_run; outs client_lag trigger; q; q
++case_ "RC: mixed case (client_lag, then trigger) stops for a settle record" "failed only checks of the setup class" 1 zsh $Q
++rec $S/state/settle_$(rid_of 1 ${B}15).txt "label not_run" "under sandbox ruling 7" "by delegate"
++case_ "RC: under ruling 7 not_run a delegate's not_run is refused in the mixed case" "when every invalid attempt failed only setup checks" 1 zsh $Q
++rec $S/state/settle_$(rid_of 1 ${B}15).txt "label lost_open" "under sandbox ruling 7" "by delegate"
++case_ "RC: and the delegate's lost_open (the registered label) is taken" "QUEUE DONE" 0 zsh $Q
++chk "RC: the slot reads lost_open with both runs, both on the Mac" sh -c "grep -qx 's15 lost_open $(rid_of 1 ${B}15) $(rid_of 2 ${B}15)' $S/state/queue_done.txt && [ -e $S/state/copied_$(rid_of 2 ${B}15).txt ]"
++reset; setrul 7 per_stop; outs client_lag trigger; q; q
++rec $S/state/settle_$(rid_of 1 ${B}15).txt "label lost_open" "under sandbox ruling 7" "by delegate"
++case_ "RC: under ruling 7 per_stop the mixed case stays the owner's" "label lost_open needs an owner's record" 1 zsh $Q
++# RC (rule F round 2): a commit that changes owner_rulings.txt without the owner's rulings heading stops everything.
++reset; (cd $T/repo && sed -i '' "s/^7 .*/7 not_run/" $S/owner_rulings.txt && $G commit -q -am "ruling 7 changed alone")
++case_ "RC: a ruling changed by a commit with no owner's rulings heading stops the queue" "a ruling changes only with the owner's entry" 2 zsh $Q
++case_ "RC: and launch.sh" "a ruling changes only with the owner's entry" 2 zsh $S/launch.sh ${B}15
++case_ "RC: and final.sh" "a ruling changes only with the owner's entry" 2 zsh $F
++reset; (cd $T/repo && sed -i '' "s/^7 .*/7 not_run/" $S/owner_rulings.txt && print -r -l -- "" "## 2026-11-21 · [DECISION] (owner) REG-20 arm A operations: the owner's rulings (sandbox, 7 not_run)" >> docs/decisions.md && $G commit -q -am "ruling 7 with the owner's heading, no new start")
++case_ "RC: a new rulings heading after the start needs a new start heading after it" "is not after the owner's rulings" 2 zsh $Q
+ reset; setrul 7 lost_open; outs kv_capacity client_lag; q; q
+ rec $S/state/settle_$(rid_of 2 ${B}15).txt "label not_run" "under sandbox" "by delegate"
+ case_ "under ruling 7 lost_open a delegate's not_run is refused" "label not_run needs an owner's record" 1 zsh $Q

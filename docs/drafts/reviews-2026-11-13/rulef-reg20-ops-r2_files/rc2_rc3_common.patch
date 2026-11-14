@@ -1,0 +1,58 @@
+--- a/docs/probe/20261113_reg20/ops/common.sh	2026-11-14 07:37:07
++++ b/docs/probe/20261113_reg20/ops/common.sh	2026-11-14 07:40:19
+@@ -98,7 +98,7 @@
+ 
+ # Every point the owner rules (RA5) has an answer it may take, in a tracked, committed owner_rulings.txt. Sets MSG.
+ rulings_ok() {
+-  local k v rel=${RULINGS#$R/}
++  local k v rel=${RULINGS#$R/} rc
+   local -a allowed
+   MSG=""
+   [[ -f $RULINGS ]] || { MSG="no owner_rulings.txt"; return 2; }
+@@ -116,6 +116,10 @@
+     [[ -n $v && ${allowed[(Ie)$v]} -gt 0 ]] || { MSG="the owner's ruling on point $k reads '${v:-none}' in owner_rulings.txt, not one of: ${allowed[*]}: arm A does not start (RA5)"; return 2; }
+   done
+   [[ $(ruling 2a) != pin_head ]] || { MSG="the owner chose a pin at or after 5ee6e38 (point 2a): common.sh's PIN changes by a reviewed commit first"; return 2; }
++  # RC: the rulings change only in the commit of an owner's rulings entry (RA5): the last commit that touched the file
++  # must add that heading to docs/decisions.md. A later rulings heading also moves `gl`, so the start heading must follow it.
++  rc=$(git -C $R log -1 --format=%H -- $rel)
++  git -C $R show --format= $rc -- docs/decisions.md 2> /dev/null | sed -n 's/^+//p' | grep -qE "$RULINGS_PAT" || { MSG="the last commit that changed owner_rulings.txt (${rc:-none}) adds no '[DECISION] (owner) REG-20 arm A operations: the owner's rulings' heading: a ruling changes only with the owner's entry (RA5)"; return 2; }
+   return 0
+ }
+ 
+@@ -244,7 +248,7 @@
+ #     unless either attempt failed only checks of SETUP_CLASS (RA3): then the queue stops, and a settle record under
+ #     ruling 7 says lost_open or not_run; a control or the drift run with its attempts spent stops the queue.
+ decide() {
+-  local cfg=$1 line id st failed f n_valid=0 n_heat=0 norerun="" bad="" lost="" commit="" only nmax extra n counted sf slab okrec setup_case
++  local cfg=$1 line id st failed f n_valid=0 n_heat=0 norerun="" bad="" lost="" commit="" only nmax extra n counted sf slab okrec setup_case setup_all
+   local -a parts atts inval setup setas lostp cinval settles
+   RID=""; LAUNCH=""; LOST=""; SETTLED=""; SRID=""; MSG=""; MINE=(); inval=(); setup=(); setas=(); lostp=()
+   for line in $VMS; do
+@@ -302,6 +306,9 @@
+   nmax=$((MAX_ATTEMPTS + extra))
+   counted=$((${#atts} - ${#lostp}))
+   setup_case=""; [[ $cfg == ${B}* ]] && (( counted >= nmax && ${#inval} >= 2 && ${#setup} > 0 )) && setup_case=1
++  # RC: every invalid attempt failed only setup checks. Only then may a delegate settle not_run; in the mixed case
++  # (one attempt failed a check outside the class) the delegate's label is REG-20's registered lost_open (RB7, T3).
++  setup_all=""; (( ${#inval} > 0 && ${#setup} == ${#inval} )) && setup_all=1
+   # A slot settled by a settle record (RB3): not_run, lost_open (RA3's case only), control_not_run, drift_not_run.
+   if (( ${#settles} )); then
+     (( ${#settles} == 1 )) || { MSG="$cfg has ${#settles} settle records: the owner decides"; return 2; }
+@@ -311,14 +318,14 @@
+       ${B}*)
+         case $slab in
+           not_run)
+-            { rec_by $sf owner || { [[ -n $setup_case && $(ruling 7) == not_run ]] && rec_by $sf delegate; }; } || { MSG="${sf:t}: label not_run needs an owner's record, or a delegate's in RA3's case under ruling 7 not_run"; return 2; }
++            { rec_by $sf owner || { [[ -n $setup_case && -n $setup_all && $(ruling 7) == not_run ]] && rec_by $sf delegate; }; } || { MSG="${sf:t}: label not_run needs an owner's record, or a delegate's in RA3's case under ruling 7 not_run when every invalid attempt failed only setup checks (${SETUP_CLASS[*]})"; return 2; }
+             # k1 reads lost_open from two invalid folders of the config in runs/, so at most one may ever be there.
+             cinval=(); for id in $inval; do [[ -f $ST/copied_$id.txt ]] && cinval+=($id); done
+             (( ${#cinval} == 0 )) || [[ ${#cinval} == 1 && $cinval[1] == $SRID ]] || { MSG="${sf:t}: label not_run, but $cinval[1] is already in runs/ and the record names $SRID: k1 would read lost_open; the owner decides"; return 2; }
+             SETTLED=not_run;;
+           lost_open)
+             (( ${#inval} >= 2 )) || { MSG="${sf:t}: label lost_open needs two invalid runs of $cfg (k1 reads it from them)"; return 2; }
+-            { rec_by $sf owner || { [[ -n $setup_case && $(ruling 7) == lost_open ]] && rec_by $sf delegate; }; } || { MSG="${sf:t}: label lost_open needs an owner's record, or a delegate's in RA3's case under ruling 7 lost_open"; return 2; }
++            { rec_by $sf owner || { [[ -n $setup_case ]] && { [[ $(ruling 7) == lost_open ]] || [[ $(ruling 7) == not_run && -z $setup_all ]]; } && rec_by $sf delegate; }; } || { MSG="${sf:t}: label lost_open needs an owner's record, or a delegate's in RA3's case under ruling 7 lost_open, or under ruling 7 not_run when an attempt failed a check outside the setup class"; return 2; }
+             LOST="${inval[*]}";;
+           *) MSG="${sf:t}: label '$slab' is not not_run or lost_open"; return 2;;
+         esac;;
