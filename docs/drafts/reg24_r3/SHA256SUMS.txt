@@ -1,0 +1,17 @@
+# REG-24 draft 3: sha256 of the draft, its item map and every file in docs/drafts/reg24_r3/. Written 2026-11-14T06:26:43Z (date -u). Paths are relative to the repo root; check with: shasum -a 256 -c docs/drafts/reg24_r3/SHA256SUMS.txt (from the repo root).
+# The patches are against 6992e0e and apply alone and together; they also apply to 1acbc95 and d9ef742 (git apply --check).
+# current: the draft
+9467ac1c5cb41980d20255879b67d689abc1ca3ef416b3a26d1f7acdd7854df8  docs/drafts/reg24_confirm_draft3.md
+# current: the item map (rule F round 2, DK1-DK7 and DK-O1-DK-O6)
+3a86872aa1cf42f8dcc254433e561372477a73a60e132c7bf5e68e9bc10c5eca  docs/drafts/reg24_confirm_draft3_itemmap.md
+# current: reg24.patch (draft 2's, with rule F round 2's patch folded in, plus draft 3's docstrings and one test); withheld.patch (byte-identical to draft 2's)
+aa9a254879ba34b390165cd774a1de35c2d291b18d0e1c0cc6a9004051a045f3  docs/drafts/reg24_r3/reg24.patch
+a020a335276a1756154e96a7166ffc181e45975f6dfc0ddd8b52dce0fda9613c  docs/drafts/reg24_r3/withheld.patch
+# current: DK7, reg24_tilt run once (scratch export of 6992e0e with draft 2's two patches and rule F round 2's patch; .venv python)
+7edf2719f2e496cae6b50eb97bab40ba439381463bb6eea5e959ed3110472da7  docs/drafts/reg24_r3/reg24_tilt_20261114T042029Z.txt
+# current: the targeted tests and code checks (75 / 39 / 6 / 73 / 16 passed; block 5 the code checks)
+8f41b2bad053f395a29ef94f015ece420c080bbec631aa588a7b8383699ff573  docs/drafts/reg24_r3/tests_targeted_20261114T042655Z.txt
+# current: the full suite with both patches, --ignore=tests/test_check_docs.py (584 passed, 1 skipped)
+77d0e23eada2ff79d457031736dc27b33e2ba377730a64fb41e871adf04f3883  docs/drafts/reg24_r3/pytest_full_20261114T042615Z.txt
+# SUPERSEDED, kept (item map X1): its pytest lines did not run; its code-check block is valid
+cb3e02dbefc4d5a61ab41b1c7deff1713abcf271721a961a51b4a50da7c8b5fd  docs/drafts/reg24_r3/tests_targeted_20261114T042631Z.txt

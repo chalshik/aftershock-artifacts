@@ -1,0 +1,16 @@
+# REG-24 draft 3: the full suite. Started 20261114T042615Z UTC. cwd: fresh export of 6992e0e (git archive 6992e0e | tar -x) with docs/drafts/reg24_r3/reg24.patch (sha256 aa9a254879ba34b390165cd774a1de35c2d291b18d0e1c0cc6a9004051a045f3) and docs/drafts/reg24_r3/withheld.patch (sha256 a020a335276a1756154e96a7166ffc181e45975f6dfc0ddd8b52dce0fda9613c) applied by git apply; runs/ holds only the tracked empty runs/.gitkeep; python /Users/chalshik/Projects/aftershock-artifacts/.venv/bin/python; AFTERSHOCK_UNSEAL unset. tests/test_check_docs.py is left out: it checks the repository's docs, not this export.
+$ python -m pytest -q -p no:cacheprovider --ignore=tests/test_check_docs.py -rs
+........................................................................ [ 12%]
+........................................................................ [ 24%]
+........................................................................ [ 36%]
+........................................................s............... [ 49%]
+........................................................................ [ 61%]
+........................................................................ [ 73%]
+........................................................................ [ 86%]
+........................................................................ [ 98%]
+.........                                                                [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_gate.py:1024: run folder not on this machine
+584 passed, 1 skipped in 658.49s (0:10:58)
+rc 0
+# ended 20261114T043714Z UTC

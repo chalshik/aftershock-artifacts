@@ -1,0 +1,148 @@
+# REG-24 draft 3: targeted tests and code checks, started 20261114T042655Z UTC. Each block: a fresh export of 6992e0e (git archive 6992e0e | tar -x) with the named patch(es) applied by git apply; runs/ holds only .gitkeep; python /Users/chalshik/Projects/aftershock-artifacts/.venv/bin/python; AFTERSHOCK_UNSEAL unset; the export as cwd. Supersedes tests_targeted_20261114T042631Z.txt, whose pytest lines did not run (zsh did not split the command variable).
+# reg24.patch sha256 aa9a254879ba34b390165cd774a1de35c2d291b18d0e1c0cc6a9004051a045f3; withheld.patch sha256 a020a335276a1756154e96a7166ffc181e45975f6dfc0ddd8b52dce0fda9613c
+## 1. both patches (/private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad/reg24_r3w/t_both)
+$ python -m pytest -q -p no:cacheprovider tests/test_confirm.py tests/test_withheld.py
+........................................................................ [ 96%]
+...                                                                      [100%]
+75 passed in 8.45s
+$ python -m pytest -q -p no:cacheprovider tests/test_gate.py -k "reg15 or reg16 or reg19"
+.......................................                                  [100%]
+39 passed, 75 deselected in 5.70s
+$ python -m pytest -q -p no:cacheprovider tests/test_confirm.py -k "late_rewarm or reg19s_window or control_missing or burst_missing" -v   # rule F round 2's three tests and draft 3's one
+======================= 6 passed, 53 deselected in 0.74s =======================
+## 2. reg24.patch alone (/private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad/reg24_r3w/t_reg24only; HEAD's tests/test_withheld.py)
+$ python -m pytest -q -p no:cacheprovider tests/test_confirm.py tests/test_withheld.py
+.                                                                        [100%]
+73 passed in 7.88s
+## 3. withheld.patch alone (/private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad/reg24_r3w/t_sealonly)
+$ python -m pytest -q -p no:cacheprovider tests/test_withheld.py
+................                                                         [100%]
+16 passed in 0.81s
+## 4. collected per test function, both patches: tests/test_confirm.py
+   1 tests/test_confirm.py::test_burst_and_control_cfg_change_only_name_seed_duration_steps_watch
+   1 tests/test_confirm.py::test_burst_outcome_keeps_reg15s_order_where_the_tests_agree
+  13 tests/test_confirm.py::test_burst_outcome_order
+   1 tests/test_confirm.py::test_burst_table_on_a_synthetic_confirming_run
+   1 tests/test_confirm.py::test_burst_table_rules_of_rule_f_round_1
+   1 tests/test_confirm.py::test_check_pins_the_registered_configs
+   1 tests/test_confirm.py::test_control_shares_the_burst_runs_session_schedule
+   1 tests/test_confirm.py::test_control_table_on_synthetic_runs
+   1 tests/test_confirm.py::test_cotenant_readout
+   1 tests/test_confirm.py::test_design_row_conditions
+   1 tests/test_confirm.py::test_emptyings_are_reg19s_on_reg19s_window
+   1 tests/test_confirm.py::test_emptyings_need_30_s_of_zeros_inside_the_window
+   1 tests/test_confirm.py::test_end_window_cold_side_catches_a_late_rewarm
+   1 tests/test_confirm.py::test_implied_r_inverts_the_token_model
+   1 tests/test_confirm.py::test_inputs_schedule_facts_at_the_pick
+   1 tests/test_confirm.py::test_k3_band_labels
+   1 tests/test_confirm.py::test_load_verdict_judges_the_registered_windows
+   1 tests/test_confirm.py::test_owed_series_is_gate_owed_backlog
+  12 tests/test_confirm.py::test_pair_outcome
+   1 tests/test_confirm.py::test_phases_from_the_config_and_refusals
+   1 tests/test_confirm.py::test_readout_constants_are_the_studys
+   1 tests/test_confirm.py::test_registered_configs_are_the_design_at_the_pick
+   1 tests/test_confirm.py::test_released_after_counts_late_and_unsent_requests
+   1 tests/test_confirm.py::test_request_model_is_reg16s_and_reproduces_its_published_numbers
+   1 tests/test_confirm.py::test_request_model_on_reg19s_schedules
+   1 tests/test_confirm.py::test_seed_range_is_unused_and_outside_reg20b
+   1 tests/test_confirm.py::test_seed_rule_picks_seed_43_at_9000_s
+   1 tests/test_confirm.py::test_seed_rule_takes_the_lowest_seed_then_its_shortest_drop
+   1 tests/test_confirm.py::test_settings_are_the_earlier_registrations_values
+   1 tests/test_confirm.py::test_step_computes_no_readout
+   1 tests/test_confirm.py::test_step_continues_only_after_a_warm_control
+   1 tests/test_confirm.py::test_table_gives_burst_missing_after_a_valid_control
+   1 tests/test_confirm.py::test_table_gives_control_missing_without_a_valid_control
+   1 tests/test_confirm.py::test_table_refuses_a_pair_from_two_builds
+   1 tests/test_confirm.py::test_tilt_scan_on_the_pick_and_seed_61
+   1 tests/test_confirm.py::test_token_model_counts_planned_prompt_tokens_against_the_rate
+59 tests collected in 0.18s
+## 5. code checks (no test; source text only, neither file imported)
+$ python3 -I docs/drafts/reg24_r2/frozen/compare_frozen.py docs/drafts/reg24_r2/frozen/confirm_frozen.py <export 1>/analysis/confirm.py   # frozen rule -> draft 3
+same     assign CONFIGS
+changed  assign REG24
+same     REG24['lam']
+same     REG24['power_limit_w']
+same     REG24['watch_s']
+same     REG24['drop_rate']
+same     REG24['return_s']
+same     REG24['return_end_s']
+same     REG24['baseline']
+same     REG24['timeline_s']
+same     REG24['burst_parent']
+same     REG24['control_parent']
+same     REG24['reg19_seeds']
+same     REG24['burst_name']
+same     REG24['control_name']
+same     REG24['drop_candidates']
+same     REG24['seed_candidates']
+same     REG24['window_tol']
+same     REG24['surge_tip']
+same     REG24['warm_watch_s']
+same     REG24['cal15']
+same     REG24['c_pessimism']
+same     REG24['u_off']
+same     REG24['r_expected']
+same     REG24['u_tol']
+same     REG24['grid_s']
+same     REG24['empty_hold_s']
+same     REG24['n_cap']
+changed  REG24['seed']
+changed  REG24['drop_s']
+same     def _resolved
+same     def burst_cfg
+same     def control_cfg
+same     def phases
+same     def judged_windows
+same     def _rate
+same     def empty_time_requests
+same     def owed_requests_model
+same     def u_rate
+same     def excess_tokens
+same     def empty_time_tokens
+same     def used_seeds
+same     def candidate_seeds
+same     def design_row
+same     def seed_rule
+same     def seed_scan
+same     def model_check_reg19
+changed  def inputs
+same     def emptyings
+changed  assign BURST_LABELS
+changed  def burst_outcome
+changed  def pair_outcome
+changed  def k3_band
+same     def _flat
+same     def check
+same     def _one
+changed  def control_table
+changed  def step
+changed  def burst_table
+changed  def table
+added    assign READOUT
+added    READOUT['floor_8']
+added    READOUT['r_bracket']
+added    def tilt_scan
+added    def owed_series
+added    def drained_at
+added    def cold_side
+added    def control_outcome
+added    def released_after
+added    def cotenant
+added    def implied_r
+sha256 6801457c1b7aec9ef429e4d11a01828ff2ba730f21bb60e920ddaa08bf49c268  confirm_frozen.py
+sha256 245bd936d5585a6837fe75ea05121cef2d977e6995abd86a7090b04f9f1b8d2f  confirm.py
+# same: 48 changed: 12 added: 11
+$ python3 -I docs/drafts/reg24_r2/frozen/compare_frozen.py <export used for reg24_tilt>/analysis/confirm.py <export 1>/analysis/confirm.py   # draft 2 + rule F round 2's patch -> draft 3; lines other than 'same'
+changed  def drained_at
+changed  def burst_outcome
+changed  def burst_table
+changed  def table
+sha256 cac945b69bff9234228068f1ec2c499b0d3c60943b9495d5356dbd000983cd90  confirm.py
+sha256 245bd936d5585a6837fe75ea05121cef2d977e6995abd86a7090b04f9f1b8d2f  confirm.py
+$ python3 -I <scratch>/astcmp.py <export used for reg24_tilt>/analysis/confirm.py <export 1>/analysis/confirm.py   # each changed function's AST with its docstring removed (comments are not in the AST)
+same-code    def drained_at
+same-code    def burst_outcome
+same-code    def burst_table
+same-code    def table
+functions only in one file: []
+# ended 20261114T042721Z UTC
