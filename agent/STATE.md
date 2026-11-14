@@ -3,7 +3,7 @@
 Any fresh session resumes from this file alone. Read it, then `agent/PLAN.md`, then the last block of `agent/LOG.md`.
 Rules: `docs/FABLE_PROMPT.md` (the start prompt), `CLAUDE.md`, `PROTOCOL.md`, `docs/process.md`. The plan in force: the owner-approved plan of 2026-11-13 (session 8c5f8396; copy at `/Users/chalshik/.claude/plans/lexical-petting-thunder.md`, summarised under "Next three").
 
-Last updated: 2026-11-14 ≈ 02:16 UTC (session 8c5f8396; "Next three" item 000000000 is current). The update blocks of 05:15 to 12:10 UTC were moved to `_to_delete/agent/STATE_blocks_to_2026-11-13.md` (FOR_AUTHOR, "Things moved"); their content is in `agent/LOG.md` and `docs/decisions.md`.
+Last updated: 2026-11-14 ≈ 02:58 UTC (session 8c5f8396; "Next three" item 0000000000 is current). The update blocks of 05:15 to 12:10 UTC were moved to `_to_delete/agent/STATE_blocks_to_2026-11-13.md` (FOR_AUTHOR, "Things moved"); their content is in `agent/LOG.md` and `docs/decisions.md`.
 
 ## Phase
 
@@ -32,6 +32,8 @@ Last updated: 2026-11-14 ≈ 02:16 UTC (session 8c5f8396; "Next three" item 0000
 - The 79 `names_in_command` hits are hand-labelled (8f352b1; 0 UNLABELLED); two new reads were found and disclosed (the note copied whole at 18:07:10, its lines printed at 18:07:38; [CORR] 285584f).
 
 ## Next three
+
+0000000000. **(2026-11-14 02:58 UTC)** E1 still running (sweep attempt 1, GPU 100 %, 350 W at 02:53). **VM disk blocks REG-20 arm A** (`e788191`: [OPS] VM disk, 4,051,176 kB free vs 4,524,512 kB needed; FOR_AUTHOR −20; owner notified). Committed in `e788191`: REG-20 ops draft 3 and its files; rule F round 1 on D1 (NOT READY, DG1–DG11). Running: rule F round 3 on REG-20 ops draft 3 (output `<scratchpad>/reviews_r3/rulef-reg20-ops-draft3-r3.md`), then its owner-proxy delta; D1 draft 2 writer (`docs/drafts/d1_draft2.md`, `d1_r2/`), then rule F round 2 on D1, then its proxy. On E1's QUEUE DONE/END: commit ops/state, manifests, probes, the queue output with `[OPS] E1: the queue ended (…)`, update status.md's inventory, compute nothing; then list VM folders that verify against `manifests/runs.sha256` (read-only) for the owner's disk freeing. REG-24 draft 2 (RE1–RE9) waits; the drop length is the owner's (−18).
 
 000000000. **(2026-11-14 02:16 UTC)** **E1 is running on the GPU**: registered `ce5f842`, `e1_commit.txt` `8b11884`, DD9 held, VM checked out at ce5f842 (`7ec4760`), session probe OK (`1e245f9`, free 4.17 GB on the VM), queue started 02:15:09 UTC (`nohup caffeinate`, pid 35832, output `docs/probe/20261113_e1/queue_20261114T021508Z.txt`, which prints only allowed lines). A Monitor watches that file for `QUEUE|RUN |COPIED|PAUSE|STOP|LAUNCH`; re-arm it at expiry (30 min). **On a `RUN … INVALID` / pause / `QUEUE STOP`:** read only `checks.json` `valid`/`failed` via the queue's lines; apply the [REG]'s stopping rule; restart only with an [OPS] that quotes the `RUN … INVALID` lines. **On `QUEUE DONE`/`QUEUE END`:** commit `ops/state/`, the manifest, the probes and the queue output with `[OPS] E1: the queue ended (QUEUE DONE|END)`, the inventory line in status.md; compute nothing (E1's floor waits for E0's [REG]). After each copy, `check_docs` needs status.md's inventory updated before any commit. Meanwhile: writer subagent on REG-20 ops draft 3 (→ `docs/drafts/reg20_ops_decision_draft3.md`, patches in `docs/drafts/reg20_ops_r3/`), then rule F round 3 + owner-proxy delta on it; D1 writer still running; REG-24 draft 2 later (the drop length is the owner's). Reviews of REG-20 r2 and REG-24 r1 committed in `0e819d4`.
 
