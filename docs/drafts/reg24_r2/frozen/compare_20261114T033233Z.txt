@@ -1,0 +1,140 @@
+# REG-24 draft 2, RE7: compare_frozen.py, 20261114T033233Z UTC. (1) frozen file against draft 1's analysis/confirm.py (docs/drafts/reg24_r1/reg24.patch applied to an export of b46c279); (2) frozen file against draft 2's (docs/drafts/reg24_r2/reg24.patch, sha256 be8f5746314474dafd7148e202c606cdb994966eab8a543cb57eeab9e5da64bc, applied likewise). Supersedes compare_20261114T031618Z.txt, whose part (2) was made before a docstring fix in cotenant.
+
+## (1) frozen -> draft 1
+same     assign CONFIGS
+changed  assign REG24
+same     REG24['lam']
+same     REG24['power_limit_w']
+same     REG24['watch_s']
+same     REG24['drop_rate']
+same     REG24['return_s']
+same     REG24['return_end_s']
+same     REG24['baseline']
+same     REG24['timeline_s']
+same     REG24['burst_parent']
+same     REG24['control_parent']
+same     REG24['reg19_seeds']
+same     REG24['burst_name']
+same     REG24['control_name']
+same     REG24['drop_candidates']
+same     REG24['seed_candidates']
+same     REG24['window_tol']
+same     REG24['surge_tip']
+same     REG24['warm_watch_s']
+same     REG24['cal15']
+same     REG24['c_pessimism']
+same     REG24['u_off']
+same     REG24['r_expected']
+same     REG24['u_tol']
+same     REG24['grid_s']
+same     REG24['empty_hold_s']
+same     REG24['n_cap']
+changed  REG24['seed']
+changed  REG24['drop_s']
+same     def _resolved
+same     def burst_cfg
+same     def control_cfg
+same     def phases
+same     def judged_windows
+same     def _rate
+same     def empty_time_requests
+same     def owed_requests_model
+same     def u_rate
+same     def excess_tokens
+same     def empty_time_tokens
+same     def used_seeds
+same     def candidate_seeds
+same     def design_row
+same     def seed_rule
+same     def seed_scan
+same     def model_check_reg19
+changed  def inputs
+same     def emptyings
+same     assign BURST_LABELS
+same     def burst_outcome
+same     def pair_outcome
+same     def k3_band
+same     def _flat
+same     def check
+same     def _one
+same     def control_table
+same     def step
+same     def burst_table
+same     def table
+sha256 6801457c1b7aec9ef429e4d11a01828ff2ba730f21bb60e920ddaa08bf49c268  confirm_frozen.py
+sha256 5ba55384ae3662f6d021ed410b978e3404ee798c5796319bc41ef030f44b93fb  confirm.py
+
+## (2) frozen -> draft 2
+same     assign CONFIGS
+changed  assign REG24
+same     REG24['lam']
+same     REG24['power_limit_w']
+same     REG24['watch_s']
+same     REG24['drop_rate']
+same     REG24['return_s']
+same     REG24['return_end_s']
+same     REG24['baseline']
+same     REG24['timeline_s']
+same     REG24['burst_parent']
+same     REG24['control_parent']
+same     REG24['reg19_seeds']
+same     REG24['burst_name']
+same     REG24['control_name']
+same     REG24['drop_candidates']
+same     REG24['seed_candidates']
+same     REG24['window_tol']
+same     REG24['surge_tip']
+same     REG24['warm_watch_s']
+same     REG24['cal15']
+same     REG24['c_pessimism']
+same     REG24['u_off']
+same     REG24['r_expected']
+same     REG24['u_tol']
+same     REG24['grid_s']
+same     REG24['empty_hold_s']
+same     REG24['n_cap']
+changed  REG24['seed']
+changed  REG24['drop_s']
+same     def _resolved
+same     def burst_cfg
+same     def control_cfg
+same     def phases
+same     def judged_windows
+same     def _rate
+same     def empty_time_requests
+same     def owed_requests_model
+same     def u_rate
+same     def excess_tokens
+same     def empty_time_tokens
+same     def used_seeds
+same     def candidate_seeds
+same     def design_row
+same     def seed_rule
+same     def seed_scan
+same     def model_check_reg19
+changed  def inputs
+same     def emptyings
+changed  assign BURST_LABELS
+changed  def burst_outcome
+changed  def pair_outcome
+changed  def k3_band
+same     def _flat
+same     def check
+same     def _one
+changed  def control_table
+changed  def step
+changed  def burst_table
+changed  def table
+added    assign READOUT
+added    READOUT['floor_8']
+added    READOUT['r_bracket']
+added    def tilt_scan
+added    def owed_series
+added    def drained_at
+added    def cold_side
+added    def control_outcome
+added    def released_after
+added    def cotenant
+added    def implied_r
+sha256 6801457c1b7aec9ef429e4d11a01828ff2ba730f21bb60e920ddaa08bf49c268  confirm_frozen.py
+sha256 499cab040444de58aec194efcda39621e06c151c22748cd9ef7f09f8f6458aa6  confirm.py

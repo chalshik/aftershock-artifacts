@@ -1,0 +1,14 @@
+started 20261114T032400Z UTC; python /Users/chalshik/Projects/aftershock-artifacts/.venv/bin/python
+=== 1. both patches: export /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad/reg24_r2_both (b46c279 + reg24.patch + withheld.patch); runs/ holds only .gitkeep
+.......................................................................  [100%]
+71 passed in 8.03s
+=== 1b. both patches: tests/test_gate.py -k reg15 (gate unchanged)
+......                                                                   [100%]
+6 passed, 108 deselected in 0.51s
+=== 2. reg24.patch alone: export /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad/reg24_r2_reg24only; HEAD's tests/test_withheld.py
+.....................................................................    [100%]
+69 passed in 7.44s
+=== 3. withheld.patch alone: export /private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad/reg24_r2_sealonly
+................                                                         [100%]
+16 passed in 0.82s
+ended 20261114T032417Z UTC

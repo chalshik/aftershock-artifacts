@@ -1,0 +1,23 @@
+# REG-24 draft 2: sha256 of every file written for it (docs/drafts/reg24_confirm_draft2.md, its item map, and docs/drafts/reg24_r2/). 20261114T034303Z UTC, HEAD b46c279. Check with: shasum -a 256 -c docs/drafts/reg24_r2/SHA256SUMS.txt (from the repo root; '#' lines are notes).
+# Current: the draft, the item map, reg24.patch, withheld.patch, inputs_43_9000_20261114T033247Z.txt, tests_targeted_20261114T033203Z.txt, pytest_full_20261114T033150Z.txt, frozen/compare_20261114T033233Z.txt, frozen/frozen_to_draft2.diff, frozen/compare_frozen.py.
+# Frozen (copied unchanged from the agent's scratchpad; RE7): frozen/confirm_frozen.py, frozen/freeze_20261113T232339Z.txt, frozen/seed_rule_20261113T232345Z.txt, frozen/seed_rule_20261113T232345Z.err.txt.
+# Superseded, kept (made on the earlier reg24.patch, which differed only in cotenant's docstring; item map W7-W9): tests_targeted_20261114T031012Z.txt (its -k filter deselected tests), tests_targeted_20261114T032400Z.txt, pytest_full_20261114T031003Z.txt, inputs_43_9000_20261114T031548Z.txt, frozen/compare_20261114T031618Z.txt.
+de0a1cee11dd1df894df5aa3b78455a191a88e27f69c194bd2dc2f31083714f4  docs/drafts/reg24_confirm_draft2.md
+5bd585e55ac7c196b912cbe556fc7342dcf3ed44c10ba63156ecc6ea337f8b65  docs/drafts/reg24_confirm_draft2_itemmap.md
+9c693c2f70a064acee00fee8b9e0d18afb331c8f565593055d09aa5a2e05112e  docs/drafts/reg24_r2/frozen/compare_20261114T031618Z.txt
+08b73ee1c85b4d6d1e017fae480b8d0cbf5d8064495527c47c030bed73a431bd  docs/drafts/reg24_r2/frozen/compare_20261114T033233Z.txt
+790d08c519881e5de31752c93e950ea02a72b0e9ab7024b4ffc5fdad9a9cef43  docs/drafts/reg24_r2/frozen/compare_frozen.py
+6801457c1b7aec9ef429e4d11a01828ff2ba730f21bb60e920ddaa08bf49c268  docs/drafts/reg24_r2/frozen/confirm_frozen.py
+e8235ce11c18b06812c7e195a743b545957b799697cf780270cc9f95c7f09503  docs/drafts/reg24_r2/frozen/freeze_20261113T232339Z.txt
+75421d98db17c59f336e4e71cfb0c936455b73cce236fd80e2c0cb30446b9fff  docs/drafts/reg24_r2/frozen/frozen_to_draft2.diff
+167944d56a840cdf157d6d9081a29f129c31302aee13d174b4ba6c62de87eab0  docs/drafts/reg24_r2/frozen/seed_rule_20261113T232345Z.err.txt
+09d1f320e52c75b66569fd7d71c48e7fe947ce7484dae6870726a08c35f7c3d5  docs/drafts/reg24_r2/frozen/seed_rule_20261113T232345Z.txt
+0e7e80dfda0e92ca8df84ce3b482f73d6c064615543e52fd58c99ccac67aa9ca  docs/drafts/reg24_r2/inputs_43_9000_20261114T031548Z.txt
+0ae6cf9a220d27b50fe3312378e8fd619821297628c49e52b35da16987f2172a  docs/drafts/reg24_r2/inputs_43_9000_20261114T033247Z.txt
+820419e07f4183c5b17edc9ab7cb0f3564786955547b81659c2da10dcfeb3cad  docs/drafts/reg24_r2/pytest_full_20261114T031003Z.txt
+76aec9a74d3177f42c8fe356566ddb09f4c8a64b2a4c5ab7418c21d3cfef9fc8  docs/drafts/reg24_r2/pytest_full_20261114T033150Z.txt
+be8f5746314474dafd7148e202c606cdb994966eab8a543cb57eeab9e5da64bc  docs/drafts/reg24_r2/reg24.patch
+b52787db540a51aaaf0c794c15f85366ac8809d306f881f68c20105dc2b82c69  docs/drafts/reg24_r2/tests_targeted_20261114T031012Z.txt
+cf76b24ffc532eab8f2142fd459be0f612e97c39aaae835d7fd57010c9aa08e0  docs/drafts/reg24_r2/tests_targeted_20261114T032400Z.txt
+9fc807a861658f921150745d8803e18de87b0a9b33cfb0f4b46743035c862e1d  docs/drafts/reg24_r2/tests_targeted_20261114T033203Z.txt
+a020a335276a1756154e96a7166ffc181e45975f6dfc0ddd8b52dce0fda9613c  docs/drafts/reg24_r2/withheld.patch

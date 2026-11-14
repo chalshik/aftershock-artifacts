@@ -1,0 +1,51 @@
+# REG-24 draft 2: targeted tests, started 20261114T033203Z UTC. Each block: a fresh export of b46c279 (git archive) with the named patch(es) applied by git apply; runs/ holds only .gitkeep; python /Users/chalshik/Projects/aftershock-artifacts/.venv/bin/python; the export as cwd.
+# reg24.patch sha256 be8f5746314474dafd7148e202c606cdb994966eab8a543cb57eeab9e5da64bc; withheld.patch sha256 a020a335276a1756154e96a7166ffc181e45975f6dfc0ddd8b52dce0fda9613c
+## 1. both patches (/private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad/reg24_r2b_both_t)
+$ python -m pytest -q -p no:cacheprovider tests/test_confirm.py tests/test_withheld.py
+.......................................................................  [100%]
+71 passed in 7.77s
+$ python -m pytest -q -p no:cacheprovider tests/test_gate.py -k reg15
+......                                                                   [100%]
+6 passed, 108 deselected in 0.57s
+## 2. reg24.patch alone (/private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad/reg24_r2b_reg24only; HEAD's tests/test_withheld.py)
+$ python -m pytest -q -p no:cacheprovider tests/test_confirm.py tests/test_withheld.py
+.....................................................................    [100%]
+69 passed in 7.27s
+## 3. withheld.patch alone (/private/tmp/claude-501/-Users-chalshik-Projects-aftershock-artifacts/8c5f8396-cce6-43e6-b8a1-890bcd5373c5/scratchpad/reg24_r2_sealonly; withheld.patch unchanged since that export)
+$ python -m pytest -q -p no:cacheprovider tests/test_withheld.py
+................                                                         [100%]
+16 passed in 0.79s
+## 4. collected per test function, both patches: tests/test_confirm.py
+   1 tests/test_confirm.py::test_burst_and_control_cfg_change_only_name_seed_duration_steps_watch
+   1 tests/test_confirm.py::test_burst_outcome_keeps_reg15s_order_where_the_tests_agree
+  13 tests/test_confirm.py::test_burst_outcome_order
+   1 tests/test_confirm.py::test_burst_table_on_a_synthetic_confirming_run
+   1 tests/test_confirm.py::test_burst_table_rules_of_rule_f_round_1
+   1 tests/test_confirm.py::test_check_pins_the_registered_configs
+   1 tests/test_confirm.py::test_control_shares_the_burst_runs_session_schedule
+   1 tests/test_confirm.py::test_control_table_on_synthetic_runs
+   1 tests/test_confirm.py::test_cotenant_readout
+   1 tests/test_confirm.py::test_design_row_conditions
+   1 tests/test_confirm.py::test_emptyings_need_30_s_of_zeros_inside_the_window
+   1 tests/test_confirm.py::test_implied_r_inverts_the_token_model
+   1 tests/test_confirm.py::test_inputs_schedule_facts_at_the_pick
+   1 tests/test_confirm.py::test_k3_band_labels
+   1 tests/test_confirm.py::test_load_verdict_judges_the_registered_windows
+   1 tests/test_confirm.py::test_owed_series_is_gate_owed_backlog
+  12 tests/test_confirm.py::test_pair_outcome
+   1 tests/test_confirm.py::test_phases_from_the_config_and_refusals
+   1 tests/test_confirm.py::test_readout_constants_are_the_studys
+   1 tests/test_confirm.py::test_registered_configs_are_the_design_at_the_pick
+   1 tests/test_confirm.py::test_released_after_counts_late_and_unsent_requests
+   1 tests/test_confirm.py::test_request_model_is_reg16s_and_reproduces_its_published_numbers
+   1 tests/test_confirm.py::test_request_model_on_reg19s_schedules
+   1 tests/test_confirm.py::test_seed_range_is_unused_and_outside_reg20b
+   1 tests/test_confirm.py::test_seed_rule_picks_seed_43_at_9000_s
+   1 tests/test_confirm.py::test_seed_rule_takes_the_lowest_seed_then_its_shortest_drop
+   1 tests/test_confirm.py::test_settings_are_the_earlier_registrations_values
+   1 tests/test_confirm.py::test_step_computes_no_readout
+   1 tests/test_confirm.py::test_step_continues_only_after_a_warm_control
+   1 tests/test_confirm.py::test_table_refuses_a_pair_from_two_builds
+   1 tests/test_confirm.py::test_tilt_scan_on_the_pick_and_seed_61
+   1 tests/test_confirm.py::test_token_model_counts_planned_prompt_tokens_against_the_rate
+ended 20261114T033220Z UTC

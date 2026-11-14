@@ -1,0 +1,17 @@
+# REG-24 draft 2: targeted tests, 20261114T031012Z UTC. Each block: a fresh export of b46c279 (git archive) with the named patch(es) applied by git apply; the repo's .venv python; the export as cwd.
+
+## both (reg24.patch+withheld.patch)
+$ python -m pytest -q -p no:cacheprovider tests/test_confirm.py tests/test_withheld.py tests/test_gate.py -k reg15 or confirm or withheld or reg24 or owed or rule_f
+........................................................................ [ 91%]
+.......                                                                  [100%]
+79 passed, 106 deselected in 122.77s (0:02:02)
+
+## reg24only (reg24.patch)
+$ python -m pytest -q -p no:cacheprovider tests/test_confirm.py tests/test_withheld.py
+.....................................................................    [100%]
+69 passed in 7.35s
+
+## sealonly (withheld.patch)
+$ python -m pytest -q -p no:cacheprovider tests/test_withheld.py
+................                                                         [100%]
+16 passed in 0.84s
