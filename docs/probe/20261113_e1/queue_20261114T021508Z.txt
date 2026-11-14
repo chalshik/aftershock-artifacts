@@ -1,0 +1,24 @@
+QUEUE START E1; scripts 8b118843f3d74d3b983fa5841e8f0271c90a4b0e; registered commit ce5f8421d2667e52c3db99f445de00519b73473c; 2026-11-14T02:15:09Z
+LAUNCH sweep attempt 1
+LAUNCHED 20261114-021512_sweep_l1pl350cl_pc_off_r1.5 (attempt 1 of sweep)
+ENDED sweep attempt 1 (the tmux session is gone)
+SETTLED attempt_sweep_1.txt
+RUN 20261114-021512_sweep_l1pl350cl_pc_off_r1.5 VALID
+RUN 20261114-023230_sweep_l1pl350cl_pc_off_r2 VALID
+RUN 20261114-025146_sweep_l1pl350cl_pc_off_r2.5 VALID
+RUN 20261114-031247_sweep_l1pl350cl_pc_off_r3 VALID
+RUN 20261114-033348_sweep_l1pl350cl_pc_off_r3.5 VALID
+RUN 20261114-035448_sweep_l1pl350cl_pc_off_r4 VALID
+COPIED 20261114-021512_sweep_l1pl350cl_pc_off_r1.5 11 files sha-of-sums ec1987359f1bafe7
+COPIED 20261114-023230_sweep_l1pl350cl_pc_off_r2 11 files sha-of-sums 2c3819920468d76e
+COPIED 20261114-025146_sweep_l1pl350cl_pc_off_r2.5 11 files sha-of-sums 14375ba40ac6f044
+COPIED 20261114-031247_sweep_l1pl350cl_pc_off_r3 11 files sha-of-sums 75acfa47388221bd
+COPIED 20261114-033348_sweep_l1pl350cl_pc_off_r3.5 11 files sha-of-sums cb1d417fa2e306bd
+COPIED 20261114-035448_sweep_l1pl350cl_pc_off_r4 11 files sha-of-sums f7016e2d13c43441
+r1.5 20261114-021512_sweep_l1pl350cl_pc_off_r1.5 attempts 1
+r2 20261114-023230_sweep_l1pl350cl_pc_off_r2 attempts 1
+r2.5 20261114-025146_sweep_l1pl350cl_pc_off_r2.5 attempts 1
+r3 20261114-031247_sweep_l1pl350cl_pc_off_r3 attempts 1
+r3.5 20261114-033348_sweep_l1pl350cl_pc_off_r3.5 attempts 1
+r4 20261114-035448_sweep_l1pl350cl_pc_off_r4 attempts 1
+QUEUE DONE (every rate of E1 has a valid run, copied and checksum-verified). Next: E1's [RESULT] by hand, after REG-21's first [RESULT] (registration, 'Result, computed once')

@@ -19455,3 +19455,32 @@ Row 2a, REG-20 arm A, is not edited here: the same rule belongs in REG-20's ops 
 - **What arm A needs** (DERIVED by the REG-20 operations draft 3 writer, not yet reviewed): 4,524,512 kB free at the first launch for all 11 planned runs, and 8,408,288 kB for the 27-launch ceiling without losses (FILE(docs/drafts/reg20_ops_decision_draft3.md:496), FILE(docs/drafts/reg20_ops_decision_draft3.md:497)). Today's shortfall for the 11 runs: DERIVED 4,524,512 − 4,051,176 = 473,336 kB, before E1's remaining runs are written. When space runs out, `launch.sh` stops before the attempt record, so no attempt is spent (FILE(docs/drafts/reg20_ops_decision_draft3.md:503), FILE(docs/drafts/reg20_ops_decision_draft3.md:504)).
 - **Decision: none taken.** The agent deletes nothing on the VM. Rule 4's exception (a VM copy may be removed once checksum-verified on the Mac, FILE(docs/decisions.md:530)) is the owner's to use. This is put to the owner as `agent/FOR_AUTHOR.md` −20, with draft 3's options (a) and (b). After E1's end entry, the agent can list the VM folders whose files verify against `manifests/runs.sha256` (read-only hashing on the VM), so that only verified folders are removed. This is not done during E1, to keep CPU and disk load off its measurement (BELIEF, not checked: hashing 11 GB on the VM would perturb a throughput sweep).
 - **Same commit:** REG-20 arm A operations draft 3 and its files (`docs/drafts/reg20_ops_decision_draft3.md`, `docs/drafts/reg20_ops_decision_draft3_itemmap.md`, `docs/drafts/reg20_ops_r3/`), for rule F round 3; and rule F round 1 on D1 draft 1, saved verbatim (`docs/drafts/reviews-2026-11-13/rulef-d1-draft1-r1.md`, sha256 `23b29c09…`; NOT READY, DG1–DG11 required, DG-O1–O6 optional).
+
+## 2026-11-14 · [OPS] E1: the queue ended (QUEUE DONE)
+
+- **The queue's last line, verbatim** (PROBE(docs/probe/20261113_e1/queue_20261114T021508Z.txt)):
+
+    QUEUE DONE (every rate of E1 has a valid run, copied and checksum-verified). Next: E1's [RESULT] by hand, after REG-21's first [RESULT] (registration, 'Result, computed once')
+
+- **The six runs, one sweep invocation, attempt 1** (PROBE(docs/probe/20261113_e1/queue_20261114T021508Z.txt); `docs/probe/20261113_e1/ops/state/queue_end.txt`):
+
+    RUN 20261114-021512_sweep_l1pl350cl_pc_off_r1.5 VALID
+    RUN 20261114-023230_sweep_l1pl350cl_pc_off_r2 VALID
+    RUN 20261114-025146_sweep_l1pl350cl_pc_off_r2.5 VALID
+    RUN 20261114-031247_sweep_l1pl350cl_pc_off_r3 VALID
+    RUN 20261114-033348_sweep_l1pl350cl_pc_off_r3.5 VALID
+    RUN 20261114-035448_sweep_l1pl350cl_pc_off_r4 VALID
+
+    COPIED 20261114-021512_sweep_l1pl350cl_pc_off_r1.5 11 files sha-of-sums ec1987359f1bafe7
+    COPIED 20261114-023230_sweep_l1pl350cl_pc_off_r2 11 files sha-of-sums 2c3819920468d76e
+    COPIED 20261114-025146_sweep_l1pl350cl_pc_off_r2.5 11 files sha-of-sums 14375ba40ac6f044
+    COPIED 20261114-031247_sweep_l1pl350cl_pc_off_r3 11 files sha-of-sums 75acfa47388221bd
+    COPIED 20261114-033348_sweep_l1pl350cl_pc_off_r3.5 11 files sha-of-sums cb1d417fa2e306bd
+    COPIED 20261114-035448_sweep_l1pl350cl_pc_off_r4 11 files sha-of-sums f7016e2d13c43441
+
+- **E1's validity record** (the [REG], "In neither case", FILE(docs/decisions.md:17056)): only `valid` and `failed` were read from each `checks.json`, the reads E1's [REG] allows; all six read `valid True failed []` (PROBE(docs/probe/20261113_e1/validity_20261114T041823Z.txt)). So neither `recorder` nor `gpu_steady` is in `failed` of any E1 run, and no run ended without `checks.json`: the first GPU use of `5ee6e38`'s harness (session cap off, so the cap's path is not exercised) gives no reason to hold a registration on this harness.
+- **Timing:** queue started 02:15:09 UTC, sweep launched at 02:15:12, `QUEUE DONE` at 04:17:31 (`state/queue_end.txt`): DERIVED 2 h 02 min of queue time, against the [REG]'s ≈ 2.1 GPU h. The queue lock is renamed `state/queue.lock.ended_20261114T041731Z_35832_2`, so `state/queue.lock` is absent.
+- **Copies:** 66 files (6 × 11) added to `manifests/runs.sha256` by the queue's copy step, each folder's sha256 list equal on the VM and the Mac (the `COPIED` lines). `docs/status.md`'s inventory is updated to 193 folders: 164 VALID, 24 INVALID, 5 without checks (`tools/check_docs.py` inventory).
+- **Computed: nothing.** E1's floor waits, as approved (decisions.md 2026-11-14 [DECISION] (delegate) E1 approved, DE1 (iii)): it is not computed before E0's [REG] is committed or an entry records that E0's gate takes no input from E1's runs, and no command sets `AFTERSHOCK_UNSEAL=E1` before then. The queue's own last line names only REG-21's first [RESULT]; the approval's condition is the stricter one and governs. E1's six folders stay sealed (`analysis/withheld.py`, E1's row) until `[RESULT] E1`.
+- **E1's end:** this entry is E1's end entry ("E1 holds the VM", FILE(docs/decisions.md:17076)). The VM is free for the next item by the order rule; REG-20 arm A's operations decision is not yet approved (rule F round 3 READY provided DH1 and DH2; its owner-proxy delta is running), so nothing launches yet. The VM stays at `ce5f842`, detached.
+- **Committed with this entry:** `docs/probe/20261113_e1/ops/state/` (E1's records), `manifests/runs.sha256`, `docs/probe/20261113_e1/prelaunch_e1_sweep_l1pl350cl_pc_off_20261114T021510Z_36030_1.txt`, the queue output `docs/probe/20261113_e1/queue_20261114T021508Z.txt`, the validity probe, and `docs/status.md`. Also saved verbatim in this commit: rule F round 2 on D1 draft 2 (`docs/drafts/reviews-2026-11-13/rulef-d1-draft2-r2.md`, READY provided DJ1–DJ3 verbatim, with its patch).

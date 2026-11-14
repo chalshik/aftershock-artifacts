@@ -1,0 +1,242 @@
+diff --git a/analysis/d1.py b/analysis/d1.py
+index 35ed428..66ce695 100644
+--- a/analysis/d1.py
++++ b/analysis/d1.py
+@@ -21,7 +21,7 @@ watch (`k1.windows`), with the verdict's registered thresholds (configs/stage2_b
+ Labels (`label`), in this order: unclear (a missing baseline pf), bad_baseline, unclear (a missing input),
+ recovered, recovered_cap_draining, server_only, unclear (no climb test), rewarming, partial, unclear, stuck_kv_full,
+ stuck_kv_free, unclear.
+-The matrix (`outcome`): too_few, refutes, cap_did_not_cut, supports, admission_only, mixed.
++The matrix (`outcome`): too_few, refutes, cap_did_not_cut, stuck_split, supports, admission_only, mixed.
+ A run whose records show more sessions holding a slot than the cap, or a session waiting at the cap while a slot is free
+ in more than max_idle_share of the waiting grid seconds (`slots`, `harness_fault`), is labelled harness_fault and leaves n.
+ Readouts, never judged: `load.verdict` of the capped run and of REG-19's uncapped one (percent fast counts turns never
+@@ -404,14 +404,23 @@ def load_reading(capped_spans: list[dict], uncapped_spans: list[dict] | None, ba
+     below_floor, or undefined (NaN). With a binding cap and closed-loop turns the server is sent what it completes, so
+     in_window is expected whenever a cold span exists (rule F d1 r1, DG10 (e)): it is no evidence against admission."""
+     if math.isnan(base_reuse):
+-        return {"reading": "undefined", "rewarm_span": None, "cold": []}
++        return {"reading": "undefined", "rewarm_span": None, "cold": [], "cold_any": [], "nan_any": True,
++                "last_warm": None}
+     up = uncapped_spans or [None] * len(capped_spans)
++    after = lambda s: (None if s.get("span") is None or math.isnan(exit_t) else bool(s["span"][0] >= exit_t))
++    # Every cold span of the watch, not only those before the first re-warm (rule F d1 r2, DJ2): a cold state can
++    # form after an early re-warm, and a single warm span can interrupt one. `onset_class` reads these.
++    cold_any = [{"span": s.get("span"), "after_exit": after(s)} for s in capped_spans
++                if not math.isnan(s["reuse"]) and s["reuse"] <= base_reuse - rules["stuck_hit_drop"]]
++    nan_any = any(math.isnan(s["reuse"]) for s in capped_spans)
++    last = capped_spans[-1]["reuse"] if capped_spans else math.nan
++    last_warm = None if math.isnan(last) else bool(last >= base_reuse - rules["recovered_hit_drop"])
++    extra = {"cold_any": cold_any, "nan_any": nan_any, "last_warm": last_warm}
+     rew = next((i for i, s in enumerate(capped_spans)
+                 if not math.isnan(s["reuse"]) and s["reuse"] >= base_reuse - rules["recovered_hit_drop"]), None)
+     upto = capped_spans if rew is None else capped_spans[:rew]
+     if any(math.isnan(s["reuse"]) for s in upto):
+-        return {"reading": "undefined", "rewarm_span": rew, "cold": []}
+-    after = lambda s: (None if s.get("span") is None or math.isnan(exit_t) else bool(s["span"][0] >= exit_t))
++        return {"reading": "undefined", "rewarm_span": rew, "cold": [], **extra}
+     cold = [{"span": s.get("span"), "server_rate": s["server_rate"],
+              "uncapped_server_rate": None if u is None else u["server_rate"],
+              "below_floor": s["server_rate"] < D1["floor_ol"], "after_exit": after(s)}
+@@ -422,25 +431,29 @@ def load_reading(capped_spans: list[dict], uncapped_spans: list[dict] | None, ba
+         reading = "never_cold"
+     else:
+         reading = "below_floor" if any(c["below_floor"] for c in cold) else "in_window"
+-    return {"reading": reading, "rewarm_span": rew, "cold": cold}
++    return {"reading": reading, "rewarm_span": rew, "cold": cold, **extra}
+ 
+ 
+ def onset_class(lr: dict) -> str:
+-    """Reported, never judged (rule F d1 r1, DG10): for a seed, whether a cold state formed before the re-warm.
+-    never_cold: no cold span before the re-warm (the cap kept the cold state from forming); burst_only: cold only in
+-    spans that start before the last burst request ended (the burst's own requests still in the system; REG-22 judges
+-    no such span, analysis/c2.py `sustain`); formed_then_cleared: a cold span that starts at or after the exit, then the
+-    re-warm; undefined: no re-warm, a NaN reuse, or the exit unknown while a cold span exists. Only
+-    formed_then_cleared bears on whether the cap breaks a stuck state once it has formed."""
++    """Reported, never judged (rule F d1 r1, DG10; d1 r2, DJ2): for a seed, whether a cold state formed and cleared,
++    over every span of the watch (`load_reading`'s `cold_any`), not only those before the first re-warm.
++    never_cold: no cold span in the watch (the cap kept the cold state from forming); burst_only: cold only in spans
++    that start before the last burst request ended (the burst's own requests still in the system; REG-22 judges no
++    such span, analysis/c2.py `sustain`); formed_then_cleared: a cold span that starts at or after the exit, and the
++    last span warm; undefined: no re-warm, a NaN reuse in any span, the exit unknown while a cold span exists, or a
++    cold span after the exit with the last span not warm. Only formed_then_cleared bears on whether the cap breaks a
++    stuck state once it has formed."""
+     r = lr["reading"]
+-    if r == "never_cold":
+-        return "never_cold"
+-    if r not in ("in_window", "below_floor"):
++    if r not in ("never_cold", "in_window", "below_floor") or lr.get("nan_any"):
+         return "undefined"
+-    flags = [c["after_exit"] for c in lr["cold"]]
++    flags = [c["after_exit"] for c in lr.get("cold_any", [])]
++    if not flags:
++        return "never_cold"
+     if any(f is None for f in flags):
+         return "undefined"
+-    return "formed_then_cleared" if any(flags) else "burst_only"
++    if not any(flags):
++        return "burst_only"
++    return "formed_then_cleared" if lr.get("last_warm") else "undefined"
+ 
+ 
+ def slots(run: dict, cap: int) -> dict:
+@@ -543,7 +556,8 @@ def _cp_lower(k: int, n: int) -> float:
+ def outcome(labels: list[str], n_seeds: int | None = None) -> dict:
+     """The registered decision on the labels of the valid capped runs (one per seed run). `harness_fault` leaves n and
+     is listed. Rules, in this order: too_few (n < most) -> refutes (stuck_kv_free >= most) -> cap_did_not_cut
+-    (stuck_kv_full >= most) -> supports (no stuck label at all and recovered + recovered_cap_draining >= most) ->
++    (stuck_kv_full >= most) -> stuck_split (stuck_kv_free + stuck_kv_full >= most, neither class >= most) -> supports
++    (no stuck label at all and recovered + recovered_cap_draining >= most) ->
+     admission_only (server_only >= most) -> mixed. Bounds (rule H, one-sided Clopper-Pearson), readouts: the upper bound
+     on the share stuck under the cap, on k_stuck of n and on n - k_cut of n (every seed not cut counted as possibly
+     stuck, rule F d1 r1 DG4); the upper and lower bounds on the share cut; `below_reg19`, whether the second stuck bound
+@@ -562,6 +576,8 @@ def outcome(labels: list[str], n_seeds: int | None = None) -> dict:
+         dec = "refutes"
+     elif k_full >= most:
+         dec = "cap_did_not_cut"
++    elif k_stuck >= most:
++        dec = "stuck_split"        # most seeds stuck under the cap, neither KV class a majority (rule F d1 r2, DJ1)
+     elif k_stuck == 0 and k_cut >= most:
+         dec = "supports"
+     elif k_srv >= most:
+diff --git a/tests/test_d1.py b/tests/test_d1.py
+index 1b591ad..99def8f 100644
+--- a/tests/test_d1.py
++++ b/tests/test_d1.py
+@@ -370,6 +370,17 @@ def test_onset_class_separates_the_bursts_own_transient_from_a_formed_cold_state
+     assert D.onset_class(lr) == "formed_then_cleared"
+     assert D.onset_class(D.load_reading(formed, None, 1.0, v, math.nan)) == "undefined"      # exit unknown
+     assert D.onset_class(D.load_reading([sp(i, 0.0) for i in range(10)], None, 1.0, v, 1200.0)) == "undefined"
++    # rule F d1 r2, DJ2: every span counts, not only those before the first re-warm
++    late = [sp(0, 1.0)] + [sp(i, 0.2) for i in (1, 2, 3)] + [sp(i, 1.0) for i in range(4, 10)]
++    lr = D.load_reading(late, None, 1.0, v, 1200.0)
++    assert lr["reading"] == "never_cold" and D.onset_class(lr) == "formed_then_cleared"
++    gap = [sp(0, 0.0), sp(1, 0.95), sp(2, 0.5), sp(3, 0.6)] + [sp(i, 1.0) for i in range(4, 10)]
++    lr = D.load_reading(gap, None, 1.0, v, 1200.0)
++    assert lr["rewarm_span"] == 1 and D.onset_class(lr) == "formed_then_cleared"
++    tail = [sp(i, 1.0) for i in range(9)] + [sp(9, 0.5)]                     # cold again in the last span
++    assert D.onset_class(D.load_reading(tail, None, 1.0, v, 1200.0)) == "undefined"
++    holes = burst_only[:5] + [{**sp(5, 1.0), "reuse": math.nan}] + burst_only[6:]   # a NaN span after the re-warm
++    assert D.onset_class(D.load_reading(holes, None, 1.0, v, 1200.0)) == "undefined"
+     rows = [{"label": "recovered", "onset": "never_cold"}, {"label": "recovered_cap_draining", "onset": "burst_only"},
+             {"label": "recovered", "onset": "formed_then_cleared"}, {"label": "partial", "onset": "never_cold"}]
+     assert D.onset_split(rows) == {"never_cold": 1, "burst_only": 1, "formed_then_cleared": 1, "undefined": 0}
+@@ -390,6 +401,13 @@ def test_onset_class_separates_the_bursts_own_transient_from_a_formed_cold_state
+     (["recovered", "recovered"], "too_few"),
+     (["recovered", "recovered", "harness_fault", "harness_fault", "recovered"], "supports"),
+     (["recovered", "harness_fault", "harness_fault", "harness_fault", "recovered"], "too_few"),
++    # rule F d1 r2, DJ1: most seeds stuck under the cap, split across the KV classes, is not `mixed`
++    (["stuck_kv_free"] * 2 + ["stuck_kv_full"] + ["recovered"] * 2, "stuck_split"),
++    (["stuck_kv_free"] + ["stuck_kv_full"] * 2 + ["partial", "recovered"], "stuck_split"),
++    (["stuck_kv_free"] * 2 + ["stuck_kv_full"] * 2 + ["recovered"], "stuck_split"),
++    (["stuck_kv_free"] * 3 + ["stuck_kv_full"] * 2, "refutes"),
++    (["stuck_kv_free"] * 2 + ["stuck_kv_full"] * 3, "cap_did_not_cut"),
++    (["stuck_kv_free", "stuck_kv_full", "recovered", "recovered", "recovered"], "mixed"),
+ ])
+ def test_outcome_rules(labels, want):
+     assert D.outcome(labels)["decision"] == want
+@@ -553,6 +571,104 @@ def test_table_refuses_while_the_capped_folders_are_sealed(at_fake_runs, monkeyp
+         D.table()
+ 
+ 
++def harness_like(cap, s_warm=0.5, s_cold=2.0, kv_after=0.5, handover=0.002):
++    """Rule F d1 r2, DJ3: a capped run whose records have the shape harness/loadgen.py writes when the cap binds and
++    the server stays cold. Sessions every 4 s, 8 closed-loop turns 5 s apart (planned), FIFO slots (`SessionCap`),
++    handed over `handover` s after the last reply; a request sent from 900 s on takes s_cold s (else s_warm) and a
++    later turn sent then reuses nothing; the burst (2.4/s over [900, 1080), 30 s each) bypasses the cap. Deadline =
++    last planned + 300 s. A session never admitted keeps only `t_arrived` on turn 0 and sends nothing; a turn not sent
++    by the deadline is an 'unfinished' placeholder (t_sent None); one in flight at the deadline is 'unfinished' with
++    t_sent set."""
++    import heapq
++    arrivals = np.arange(0.0, 4080.0, 4.0)
++    deadline = arrivals[-1] + 35.0 + 300.0
++    free, rows, rid, prev_admit = [0.0] * cap, [], 0, 0.0
++    blank = lambda sid, k, a: dict(request_id=rid, session_id=sid, turn=k, t_planned=a + 5 * k, t_released=None,
++                                   prompt_tokens_planned=2176 + 256 * k, output_tokens_planned=128, t_sent=None,
++                                   t_first_token=None, t_end=None, prompt_tokens=None, output_tokens=None,
++                                   cached_tokens=None, status="unfinished", error=None)
++    for sid, a in enumerate(arrivals):
++        e = heapq.heappop(free)
++        admit = max(a, e + (handover if e > 0 else 0.0), prev_admit)
++        prev_admit = admit
++        if admit > deadline:
++            for k in range(8):
++                r = blank(sid, k, a)
++                if k == 0:
++                    r["t_arrived"] = a
++                rows.append(r)
++                rid += 1
++            heapq.heappush(free, e)
++            continue
++        t_rel, last = admit, deadline
++        for k in range(8):
++            r = blank(sid, k, a)
++            if k == 0:
++                r["t_arrived"], r["t_admitted"] = a, admit
++            if t_rel <= deadline:
++                svc = s_cold if t_rel >= 900 else s_warm
++                tf, te = t_rel + 0.3 * svc, t_rel + svc
++                r.update(t_released=t_rel, t_sent=t_rel)
++                if te <= deadline:
++                    share = 1.0 if t_rel < 900 else 0.0
++                    r.update(t_first_token=tf, t_end=te, prompt_tokens=2176 + 256 * k, output_tokens=128,
++                             cached_tokens=0 if k == 0 else int(share * (2176 + 256 * (k - 1))), status="ok")
++                    last, t_rel = te, te + 5.0
++                else:
++                    r["t_first_token"] = tf if tf <= deadline else None
++                    last, t_rel = deadline, math.inf
++            else:
++                last = deadline          # the chain sleeps past the deadline and holds its slot until the cancel
++            rows.append(r)
++            rid += 1
++        heapq.heappush(free, last)
++    for j, tb in enumerate(np.arange(900.0, 1080.0, 1 / 2.4)):
++        rows.append({**blank(100000 + j, 0, tb), "prompt_tokens_planned": 2944, "t_sent": tb, "t_first_token": tb + 1.0,
++                     "t_end": tb + 30.0, "prompt_tokens": 2944, "output_tokens": 128, "cached_tokens": 0,
++                     "status": "ok"})
++        rid += 1
++    q = pd.DataFrame(rows)
++    q["ttft"] = q.t_first_token - q.t_released.fillna(q.t_planned).astype(float)
++    t = np.arange(0.0, deadline + 1.0)
++    burst, after = (t >= 900) & (t < 1080), t >= 1080
++    m = pd.DataFrame({"t": t, "vllm:prefix_cache_hits_total": np.cumsum(np.where(after, 0.0, 80.0)),
++                      "vllm:prefix_cache_queries_total": 100.0 * (t + 1),
++                      "vllm:num_requests_waiting": np.where(burst, 40.0, 0.0), "vllm:num_requests_running": 10.0,
++                      "vllm:kv_cache_usage_perc": np.where(burst, 0.97, np.where(after, kv_after, 0.15))})
++    return {"cfg": None, "metrics": m, "requests": q, "dir": None}
++
++
++def test_table_end_to_end_on_stuck_seeds_written_like_the_harness(tmp_path, monkeypatch):
++    """Rule F d1 r2, DJ3 (DG9 completed): the outcome that changes C2's status the other way goes through `row` and
++    `table` on records of the harness's shape (never-admitted sessions, unsent placeholders, turns cut at the
++    deadline): the labels are stuck, the slot invariant holds, the hand-over gaps are no harness_fault, and three
++    stuck seeds split 2 / 1 across the KV classes give `stuck_split`."""
++    runs = tmp_path / "runs"
++    for sd in D.D1["seeds"]:
++        _write(runs / D.D1["controls"][sd], _cfg(f"stage2_control_l1pl350cl_r2.0_w3000_s{sd}"),
++               make_run(capped=False), True)
++        _write(runs / D.D1["uncapped"][sd], _cfg(f"burst_l1pl350cl_r2.0_w3000_s{sd}"),
++               make_run(reuse_after=0.0, q_after=100.0, kv_after=0.95, burst=True, capped=False), True)
++    for sd, kv in ((15, 0.5), (16, 0.95), (17, 0.5)):
++        _write(runs / f"20261120-1{sd}000_{D.config_name(sd)}", D.resolved(sd, CAP), harness_like(CAP, kv_after=kv),
++               True)
++    for sd in (18, 19):
++        _write(runs / f"20261120-1{sd}000_{D.config_name(sd)}", D.resolved(sd, CAP), make_run(burst=True), True)
++    _seal_env(tmp_path, monkeypatch, ["## 2026-11-13 · [RESULT] REG-19 (P0 at λ = 2.0): supports"])
++    monkeypatch.setattr(L, "RUNS", runs)
++    monkeypatch.setenv("AFTERSHOCK_UNSEAL", "D1")
++    t = D.table()
++    by = {r["seed"]: r for r in t["rows"]}
++    assert [by[s]["label"] for s in D.D1["seeds"]] == ["stuck_kv_free", "stuck_kv_full", "stuck_kv_free", "recovered",
++                                                       "recovered"]
++    for s in (15, 16, 17):
++        assert by[s]["slots"]["holds"] and by[s]["slots"]["idle_share"] < 0.01 and by[s]["slots"]["max_held"] == CAP
++        assert by[s]["label_values"]["cap_backlogged"] is True and by[s]["waits"]["all"]["n_never_admitted"] > 0
++        assert by[s]["onset"] == "undefined"
++    assert t["decision"] == "stuck_split" and t["k_stuck"] == 3 and t["below_reg19"] is False
++    json.dumps(t, default=str)
++
++
+ def test_two_valid_runs_of_one_seed_the_earliest_counts(monkeypatch):
+     """DG-O4, as E1's `first_valid`: both are listed, the earliest counts, nothing raises."""
+     mk = lambda name: {"dir": Path(name), "cfg": {**D.resolved(15, CAP), "run_id": name}, "checks": {"valid": True}}

@@ -1,0 +1,4 @@
+rid 20261114-021512_sweep_l1pl350cl_pc_off_r1.5
+files 11
+sha_of_sums ec1987359f1bafe7
+time 2026-11-14T04:16:25Z
