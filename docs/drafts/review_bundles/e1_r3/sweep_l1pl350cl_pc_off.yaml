@@ -1,0 +1,13 @@
+# E1 (draft, not registered; docs/experiment-plan.md "Stage 2, revised", step E1): the cache-off sweep of setup L1 at
+# 350 W with closed-loop turns. REG-8's G2' sweep (sweep_l1pl350_pc_off.yaml: seed 0, 900 s per rate) with the two
+# changes REG-13 made to the cache-on sweep: closed-loop turns and a new connection per request. The rates are REG-8
+# part b's, so gate.cold_floor applies unchanged and each rate pairs with REG-8's run at the same rate and seed.
+# Needs the owner's approval to run.
+extends: sweep_l1pl350_pc_off.yaml
+name: sweep_l1pl350cl_pc_off
+loadgen_force_close: true           # a new connection per request (REG-9 amendment; REG-12, REG-13)
+workload:
+  sessions:
+    closed_loop: true               # a later turn is released at the previous turn's end plus the planned gap
+sweep:
+  rates: [1.5, 2, 2.5, 3, 3.5, 4]   # REG-8 part b (sweep_l1pl350_pc_off_b.yaml)

@@ -1,0 +1,27 @@
+--- a/ops/common.sh	2026-11-14 04:42:39
++++ b/ops/common_dco2.sh	2026-11-14 04:42:39
+@@ -183,7 +183,7 @@
+ #     and so does any other check in `failed` of MAX_SAME of them, at any rates (draft 6, rule F e1_r1 DA1);
+ #   - a rate with MAX_ATTEMPTS attempts spent is not launched again (listed in SPENT); the other rates go on.
+ next_step() {
+-  local rec f stem line l2 parts id c r rate name s att n a ids valid inval lost=() stopper="" n_heat=0
++  local rec f stem line l2 parts id c r rate name s att n a ids valid inval lost=() stopper="" n_heat=0 n_norun=0
+   local -A NAMED per nfail
+   ACT=""; ARG=""; NEXT_ATT=""; MSG=""; SUMMARY=(); SPENT=()
+   vm_tmux || return 2
+@@ -204,6 +204,7 @@
+       [[ $c == $E1 ]] || { MSG="$id was made at commit '$c' (its launch log's run_id line), not at the registered commit $E1: the owner decides"; return 2; }
+       per[$r]=$id; NAMED[$id]=$stem
+     done
++    grep -q '^rid ' $f || n_norun=$((n_norun + 1))   # a launch whose log names no run (e1_r2, DC-O2)
+   done
+   ids=()
+   for line in $VMS; do
+@@ -260,6 +261,7 @@
+     for f in ${(k)nfail}; do
+       (( nfail[$f] < MAX_SAME )) || { MSG="$f is in failed of ${nfail[$f]} of E1's runs: a check that fails twice is a question about the harness, not a rerun. E1 stops; the owner decides"; return 2; }
+     done
++    (( n_norun < MAX_SAME )) || { MSG="$n_norun launches of E1 named no run (no run_id line in their logs): a question about the harness or the VM, not a rerun. E1 stops; the owner decides"; return 2; }
+     ACT=launch; ARG=$rate; NEXT_ATT=$((att + 1))
+     [[ ! -e $ST/attempt_r${rate}_$NEXT_ATT.txt ]] || { MSG="attempt record $NEXT_ATT of rate $rate exists"; ACT=""; return 2; }
+     return 0

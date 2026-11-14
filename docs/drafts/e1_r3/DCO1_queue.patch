@@ -1,0 +1,11 @@
+--- a/ops/queue.sh	2026-11-14 04:42:39
++++ b/ops/queue.sh	2026-11-14 04:42:39
+@@ -41,7 +41,7 @@
+     started+=($(rate_of $id))
+     case $st in
+       valid) echo "RUN $id VALID";;
+-      invalid) echo "RUN $id INVALID failed=$fl"; print -r -- "$id failed=$fl" >> $ST/pause_pending.txt;;
++      invalid) echo "RUN $id INVALID failed=$fl";;   # its pause line was written by `settle` (e1_r2, DC-O1)
+       nochecks) echo "RUN $id NO CHECKS.JSON";;
+       *) echo "RUN $id $st";;
+     esac

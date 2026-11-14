@@ -1,0 +1,16 @@
+--- a/ops/test_sandbox.sh	2026-11-14 04:42:39
++++ b/ops/test_sandbox_dco2.sh	2026-11-14 04:42:39
+@@ -472,6 +472,13 @@
+ case_ "and vm_checkout.sh" "the owner halted E1" 2 zsh $V
+ chk "nothing launched, the VM's tree not moved" is "$(launches) $(git -C $VM rev-parse HEAD)" "0 $C0"
+ 
++echo "--- review e1_r2, DC-O2: launches that name no run"
++reset
++case_ "a launch that names no run (its command fails)" "the launch command failed" 1 FAKE_LAUNCH_FAIL=1 zsh $Q
++case_ "a second one, at rate 1.5" "the launch command failed" 1 FAKE_LAUNCH_FAIL=1 zsh $Q
++case_ "two launches that named no run stop E1" "2 launches of E1 named no run" 1 zsh $Q
++chk "no third attempt" is "$(nfiles "$S/state/attempt_*.txt")" 2
++
+ echo "--- every stop"
+ chk "every stop above printed the allowed reads (${#noallowed} did not: ${noallowed[*]})" is ${#noallowed} 0
+ 

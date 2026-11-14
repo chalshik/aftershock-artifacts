@@ -179,3 +179,104 @@ def test_as_a_script_a_bad_name_reads_nothing(tmp_path):
     p = subprocess.run([sys.executable, str(HERE / "control_due.py"), "not_a_run"], capture_output=True, text=True,
                        cwd=tmp_path, env=env)
     assert p.returncode == 2 and p.stdout == ""
+
+
+# recheck_one.py (draft 2, RB2 and RA2 (b)): today's checks on one folder in the holding folder, validity fields only.
+_spec_ro = importlib.util.spec_from_file_location("recheck_one", HERE / "recheck_one.py")
+RO = importlib.util.module_from_spec(_spec_ro)
+_spec_ro.loader.exec_module(RO)
+RID = "20261114-060000_" + CFG
+FIELDS = {"run", "stored_valid", "stored_failed", "now_valid", "now_failed", "changed"}
+
+
+@pytest.fixture
+def held(tmp_path):
+    """A run folder in a temporary holding folder, with a config.yaml and a stored checks.json."""
+    d = tmp_path / "aftershock-reg20-holding" / RID
+    d.mkdir(parents=True)
+    (d / "config.yaml").write_text(f"name: {CFG}\n")
+    (d / "checks.json").write_text('{"valid": true, "failed": [], "checks": [{"name": "recorder", "passed": true, '
+                                   '"detail": {"last_ok_scrape_t": 4079}}]}')
+    return d
+
+
+def recheck(monkeypatch, capsys, argv, result=None, exc=None):
+    import harness.checks
+    seen = []
+
+    def run_checks(d):
+        seen.append(Path(d))
+        if exc:
+            raise exc
+        return result
+    monkeypatch.setattr(harness.checks, "run_checks", run_checks)
+    rc = RO.main(argv)
+    out, err = capsys.readouterr()
+    return rc, out, err, seen
+
+
+def test_recheck_one_prints_validity_fields_only(held, monkeypatch, capsys):
+    now = {"valid": False, "failed": ["recorder"], "checks": [{"name": "recorder", "passed": False,
+                                                               "detail": {"last_ok_scrape_t": 2500}}]}
+    rc, out, err, seen = recheck(monkeypatch, capsys, ["recheck_one.py", str(held)], result=now)
+    row = __import__("json").loads(out)
+    assert rc == 0 and seen == [held.resolve()] and set(row) == FIELDS
+    assert row == {"run": RID, "stored_valid": True, "stored_failed": [], "now_valid": False,
+                   "now_failed": ["recorder"], "changed": True}
+    assert "2500" not in out and "4079" not in out and "detail" not in out      # no check detail
+
+
+@pytest.mark.parametrize("stored, now, changed", [
+    ('{"valid": true, "failed": []}', {"valid": True, "failed": []}, False),
+    ('{"valid": false, "failed": ["a", "b"]}', {"valid": False, "failed": ["b", "a"]}, False),
+    ('{"valid": false, "failed": ["a"]}', {"valid": False, "failed": ["a", "b"]}, True),
+    ('{"valid": false, "failed": ["a"]}', {"valid": True, "failed": []}, True)])
+def test_recheck_one_changed_as_analysis_recheck(held, monkeypatch, capsys, stored, now, changed):
+    (held / "checks.json").write_text(stored)
+    rc, out, _, _ = recheck(monkeypatch, capsys, ["recheck_one.py", str(held)], result=now)
+    assert rc == 0 and __import__("json").loads(out)["changed"] is changed
+
+
+def test_recheck_one_lists_a_folder_todays_code_cannot_read(held, monkeypatch, capsys):
+    rc, out, _, _ = recheck(monkeypatch, capsys, ["recheck_one.py", str(held)], exc=KeyError("schedule.parquet"))
+    row = __import__("json").loads(out)
+    assert rc == 0 and row["changed"] is True and row["now_valid"] is None and row["error"].startswith("KeyError")
+    assert set(row) == FIELDS | {"error"}
+
+
+def test_recheck_one_refuses_a_folder_in_runs(tmp_path, monkeypatch, capsys):
+    d = tmp_path / "runs" / RID                     # a temporary stand-in for the repo's runs/: the real one is not touched
+    d.mkdir(parents=True)
+    (d / "config.yaml").write_text(f"name: {CFG}\n")
+    monkeypatch.setattr(RO, "ROOT", tmp_path)
+    rc, out, err, seen = recheck(monkeypatch, capsys, ["recheck_one.py", str(d)], result={"valid": True, "failed": []})
+    assert rc == 3 and out == "" and seen == [] and "inside runs/" in err
+
+
+@pytest.mark.parametrize("argv", [["recheck_one.py"], ["recheck_one.py", "a", "b"]])
+def test_recheck_one_takes_one_folder(argv, monkeypatch, capsys):
+    rc, out, _, seen = recheck(monkeypatch, capsys, argv, result={"valid": True, "failed": []})
+    assert rc == 2 and out == "" and seen == []
+
+
+def test_recheck_one_needs_a_run_folder(tmp_path, monkeypatch, capsys):
+    rc, out, _, seen = recheck(monkeypatch, capsys, ["recheck_one.py", str(tmp_path)], result={"valid": True, "failed": []})
+    assert rc == 3 and out == "" and seen == []
+
+
+def test_recheck_one_as_a_script_imports_no_analysis_module(held):
+    """In its own process, on a folder today's checks cannot read (an error row, not a crash), no analysis module is
+    imported, so the seal is not involved; AFTERSHOCK_UNSEAL is unset."""
+    env = {k: v for k, v in os.environ.items() if k != "AFTERSHOCK_UNSEAL"}
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    code = ("import runpy, sys\n"
+            f"sys.argv = ['recheck_one.py', {str(held)!r}]\n"
+            "try:\n"
+            f"    runpy.run_path({str(HERE / 'recheck_one.py')!r}, run_name='__main__')\n"
+            "except SystemExit as e:\n"
+            "    rc = e.code\n"
+            "print('RC', rc, sorted(m for m in sys.modules if m == 'analysis' or m.startswith('analysis.')), file=sys.stderr)\n")
+    p = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=held.parent, env=env)
+    row = __import__("json").loads(p.stdout)
+    assert p.returncode == 0 and "RC 0 []" in p.stderr
+    assert row["run"] == RID and row["changed"] is True and "error" in row

@@ -1,0 +1,85 @@
+--- a/tests/test_e1.py
++++ b/tests/test_e1.py
+@@ -100,8 +100,9 @@ def test_floor_no_rows_and_holes():
+     assert E.floor(full.iloc[:0], grid)["status"] == "no_rows"
+     gap = E.floor(full[full.rate != 3.0], grid)             # a swept rate above lam_sat has no valid run
+     assert gap["status"] == "holes" and gap["missing_rates"] == [3.0] and math.isnan(gap["mu_sat_off"])
+-    low = E.floor(full[full.rate != 1.5], grid)             # a hole below lam_sat does not matter
+-    assert low["status"] == "ok" and low["n"] == 5
++    low = E.floor(full[full.rate != 1.5], grid)             # no valid row below lam_sat: lam_sat could be 1.5
++    assert low["status"] == "holes" and low["missing_rates"] == [1.5]
++    assert E.floor(full, (1.0,) + grid)["status"] == "ok"   # a hole below a valid unsaturated row does not matter
+     assert E.floor(full[full.rate != 3.0])["status"] == "ok"   # without the swept rates the old behaviour
+ 
+ 
+@@ -127,3 +128,70 @@ def test_the_report_waits_for_reg21s_result(monkeypatch, tmp_path):
+     monkeypatch.setattr(E.withheld, "DECISIONS", d)
+     with pytest.raises(RuntimeError, match="REG-21"):
+         E.report()
++
++
++def test_each_single_rate_config_is_the_sweeps_own_run_at_that_rate():
++    """configs/sweep_l1pl350cl_pc_off_only_r<rate>.yaml (E1's reruns and never-started rates) expands to one run,
++    equal to the sweep's own run at that rate in every key but `sweep` (its list of rates)."""
++    drop = lambda c: {k: v for k, v in c.items() if k != "sweep"}
++    sweep = e1._cfgs(e1.E1["configs"]["cl"])
++    assert [c["workload"]["rate"] for c in sweep] == [1.5, 2, 2.5, 3, 3.5, 4]
++    for c in sweep:
++        only = e1._cfgs(f"configs/sweep_l1pl350cl_pc_off_only_r{c['workload']['rate']:g}.yaml")
++        assert len(only) == 1 and drop(only[0]) == drop(c)
++
++
++def test_a_hole_just_below_lam_sat_is_a_hole():
++    """Rule F e1_r1, DA-O4: 2.0 has no valid run, 1.5 kept up, 2.5-4.0 are saturated. cold_floor says "ok" from 2.5,
++    but lam_sat lies somewhere in (1.5, 2.5], so the floor is "holes" with 2.0 missing."""
++    grid = (1.5, 2.0, 2.5, 3.0, 3.5, 4.0)
++    r = rows([1.5, 2.5, 3.0, 3.5, 4.0], [1.45, 1.72, 1.73, 1.74, 1.75], kv=[0.6, 0.95, 0.95, 0.95, 0.95])
++    assert e1.saturated(r)["status"] == "ok" and e1.saturated(r)["lam_sat"] == 2.5
++    f = e1.floor(r, grid)
++    assert f["status"] == "holes" and f["missing_rates"] == [2.0] and math.isnan(f["mu_sat_off"])
++    no_low = rows([2.5, 3.0, 3.5, 4.0], [1.72, 1.73, 1.74, 1.75], kv=[0.95] * 4)    # no valid row below lam_sat
++    g = e1.floor(no_low, grid)                                                       # no valid row below lam_sat:
++    assert g["status"] == "holes" and g["missing_rates"] == [1.5, 2.0]               # lam_sat could be 1.5 or 2.0
++    nan_row = rows([1.5, 2.0, 2.5, 3.0], [1.45, 1.70, 1.72, float("nan")], kv=[0.6, 0.95, 0.95, 0.95])
++    assert e1.floor(nan_row, (1.5, 2.0, 2.5, 3.0))["missing_rates"] == [3.0]     # a row cold_floor drops is a hole
++
++
++def _sweeps(monkeypatch, cl, ol):
++    """observed() on synthetic rows: no run folder is read (sweep_rows, swept_rates and _kbar replaced)."""
++    import analysis.e1 as E
++    monkeypatch.setattr(E, "sweep_rows", lambda parent: cl if parent == E.E1["sweeps"]["cl"] else ol)
++    monkeypatch.setattr(E, "swept_rates", lambda parent: (1.5, 2.0, 2.5, 3.0, 3.5, 4.0))
++    monkeypatch.setattr(E, "_kbar", lambda run: 4.5)
++    return E
++
++
++def _named(r, stem):
++    return r.assign(run=[f"20261114-1{i}_{stem}_r{x:g}" for i, x in enumerate(r.rate)])
++
++
++def test_observed_reports_the_floors_slope_on_rate(monkeypatch):
++    """Rule F e1_r1, DA6: `floor_slope_reported` is the slope of throughput on rate over the floor's rows, with its
++    SE (reported, never judged); None when there is no lam_sat."""
++    cl = _named(rows([1.5, 2, 2.5, 3, 3.5, 4], [1.45, 1.70, 1.72, 1.74, 1.76, 1.78], kv=[0.6] + [0.95] * 5), "cl")
++    ol = _named(rows([1.5, 2, 2.5, 3, 3.5, 4], [1.45, 1.68, 1.68, 1.68, 1.68, 1.68], kv=[0.6] + [0.95] * 5), "ol")
++    E = _sweeps(monkeypatch, cl, ol)
++    res = E.observed()
++    assert res["floor"]["status"] == "ok" and res["floor"]["lam_sat"] == 2.0
++    s = res["floor_slope_reported"]
++    assert s["slope"] == pytest.approx(0.04) and s["n"] == 5 and s["se"] == pytest.approx(0.0, abs=1e-9)
++    E = _sweeps(monkeypatch, cl.assign(kv_mean=0.5), ol)                            # never full: "unsaturated"
++    assert E.observed()["floor_slope_reported"] is None
++
++
++def test_report_counts_only_the_runs_first_valid_keeps(monkeypatch):
++    """Rule F e1_r1, DA-O6: with two valid runs at one rate, the work rates are computed on the earliest only."""
++    cl = _named(rows([1.5, 2, 2.5, 3, 3.5, 4], [1.45, 1.70, 1.72, 1.74, 1.76, 1.78], kv=[0.6] + [0.95] * 5), "cl")
++    late = cl[cl.rate == 2].assign(run="20261114-99_cl_r2")
++    ol = _named(rows([1.5, 2, 2.5, 3, 3.5, 4], [1.45, 1.68, 1.68, 1.68, 1.68, 1.68], kv=[0.6] + [0.95] * 5), "ol")
++    E = _sweeps(monkeypatch, pd.concat([cl, late], ignore_index=True), ol)
++    monkeypatch.setattr(E.withheld, "lifted", lambda *a, **k: True)
++    seen = []
++    monkeypatch.setattr(E, "work_rates", lambda r, lam: seen.append(list(r.run)) or {})
++    res = E.report()
++    assert res["later_valid_runs_not_counted"] == ["20261114-99_cl_r2"]
++    assert "20261114-99_cl_r2" not in seen[0] and len(seen[0]) == 6

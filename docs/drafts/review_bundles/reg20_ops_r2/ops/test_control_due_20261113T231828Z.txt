@@ -1,0 +1,4 @@
+# PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider docs/probe/20261113_reg20/ops/test_control_due.py, run from the repo root on the Mac, started 20261113T231828Z UTC (draft 2; fakes only)
+..............................................                           [100%]
+46 passed in 0.86s
+# exit 0, ended 20261113T231829Z UTC

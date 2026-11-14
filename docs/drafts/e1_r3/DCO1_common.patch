@@ -1,0 +1,22 @@
+--- a/ops/common.sh	2026-11-14 04:42:39
++++ b/ops/common.sh	2026-11-14 04:42:39
+@@ -144,7 +144,7 @@
+ # harness/run.py:143), and written to state/settled_<attempt>.txt, once. A log that does not exist names no run.
+ SETTLE_END=END_OF_RUN_ID_LINES
+ settle() {
+-  local rec=$1 f log out line id c lines recs=()
++  local rec=$1 f log out line id c lines recs=() l2 p
+   MSG=""
+   f=$ST/settled_${${rec:t}%.txt}.txt
+   [[ ! -e $f ]] || { MSG="${f:t} exists"; return 2; }
+@@ -158,6 +158,10 @@
+     c=$(print -r -- "$line" | grep -o "'git_commit': '[^']*'" | head -1 | cut -d"'" -f4)
+     [[ -n $id ]] || { MSG="a run_id line of the launch log of ${rec:t} holds no run id"; return 2; }
+     recs+=("rid $id ${c:--}")
++  done
++  for line in $recs; do                          # the pause (draft 6, DA2), written before the settle record (e1_r2, DC-O1)
++    id=${${=line}[2]}
++    for l2 in $VMS; do p=(${=l2}); [[ $p[1] == $id && $p[2] == invalid ]] && print -r -- "$id failed=$p[3]" >> $ST/pause_pending.txt; done
+   done
+   print -r -l -- $recs "time $(date -u +%Y-%m-%dT%H:%M:%SZ)" "scripts $SC" > $f.tmp && mv $f.tmp $f || { MSG="${f:t} could not be written"; return 2; }
+   return 0

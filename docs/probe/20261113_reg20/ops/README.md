@@ -1,101 +1,152 @@
 # REG-20 arm A: operations scripts
 
-Written 2026-11-13 by a teammate agent from REG-19's reviewed `docs/probe/20261113_reg19/ops_r3/`, which is unchanged. 0 GPU h. The VM was not contacted, and no run folder or queue output was opened. **Nothing here is committed, and nothing has been reviewed yet.** REG-20's registration is FILE(docs/decisions.md:4045-4165) and the owner's approval is FILE(docs/decisions.md:4166-4171). `DESIGN_NOTES.md` and `PIN_DECISION_DRAFT.md` are an earlier worker's notes.
+**Status (2026-11-14).**
+- The first version of these scripts (draft 1 of the operations decision) is committed in c8b482d. README:3 of that commit said "Nothing here is committed", which was false (rule F round 1, RA7).
+- This folder now holds **draft 2's scripts**: c8b482d's files changed in the working tree after rule F round 1 (`docs/drafts/reviews-2026-11-13/rulef-reg20-ops-draft1-r1.md`, RA1–RA7, RA-O1–RA-O9) and owner-proxy round 1 (`docs/drafts/reviews-2026-11-13/proxy-reg20-ops-draft1.md`, RB1–RB15).
+- Draft 2 adds two new files: `recheck_one.py` and `owner_rulings.txt`.
+- A third new file, `gate.sh`, was written for RB5 (ii) and then withdrawn, because the gate had already been computed once: commit 3c8e5dc holds `docs/probe/reg20/gate_20261113T230307Z.txt` and its stderr file. The scripts now read that committed file. The decision draft, point 14, gives the details.
+- **Draft 2 is not committed and not reviewed.**
+- The decision text is `docs/drafts/reg20_ops_decision_draft2.md`. Where each review item went is in `docs/drafts/reg20_ops_draft2_itemmap.md`.
+- 0 GPU h. The VM was not contacted. Nothing under `runs/` was opened beyond folder names, and no `state/` folder or queue output was opened.
 
-Tests:
-- `zsh docs/probe/20261113_reg20/ops/test_sandbox.sh`: 214 of 214 passed on 2026-11-13, after the quiet hours were removed.
-- `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider docs/probe/20261113_reg20/ops/test_control_due.py`: 35 of 35 passed.
+REG-20's registration is FILE(docs/decisions.md:4045-4165). The owner's approval is FILE(docs/decisions.md:4166-4171).
+
+`DESIGN_NOTES.md` and `PIN_DECISION_DRAFT.md` are an earlier worker's notes, superseded as their headers say.
+
+**Tests (fakes only, never `runs/`):**
+- `zsh docs/probe/20261113_reg20/ops/test_sandbox.sh`: 350 of 350 passed, `sandbox_20261113T231823Z.txt` in this folder.
+- `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider docs/probe/20261113_reg20/ops/test_control_due.py`: 46 of 46 passed, `test_control_due_20261113T231828Z.txt`.
 
 ## Scripts
 
-**`common.sh`** holds the fixed settings and the shared functions:
-- the pin `1cface7`, `MAX_ATTEMPTS=2`, the eleven configs and the plan;
-- the two gate patterns and the judged code;
-- `mac_checks`, which checks on the Mac that:
+**`common.sh`** holds the fixed settings and the shared functions.
+
+Settings:
+- the pin `1cface7`;
+- `MAX_ATTEMPTS=2`, and `MAX_POWER_LOSSES=2` (ruling 8(b));
+- the setup class `clean_git kv_capacity trigger` (RA3);
+- the holding folder `STAGE` = `<repo's parent>/aftershock-reg20-holding`, outside every `runs/`;
+- the commits of the checks in force (`5ee6e38`, `harness/checks.py`) and of `analysis/recheck.py` (`72fafb5`);
+- the eleven configs and the plan;
+- the heading patterns and the judged code.
+
+Functions:
+- `mac_checks`, unchanged from draft 1. It checks that:
   - the pin is an ancestor of HEAD;
   - the lock files and `tools/manifest.py` equal the pin's;
   - all eleven configs exist at the pin;
-  - k1's import closure (`__init__`, `k1`, `gate`, `margin`, `derived`, `floor`, `stats`) equals the pin's;
-  - `analysis/load.py` and `analysis/withheld.py` are the blobs of 2026-11-13;
-  - the scripts are committed and named in `scripts_commit.txt`;
-- `gate_in_log`;
-- `vm_state`;
-- `decide`, the rerun rule;
-- `next_step`, which reads the plan and the state and returns one action;
-- `copy_verify`.
+  - k1's import closure equals the pin's;
+  - the two seal files are the recorded blobs;
+  - the scripts are committed and named in `scripts_commit.txt`.
+- `rulings_ok`: every point in `owner_rulings.txt` holds an answer it may take, and the file is tracked and equal to its commit (RA5).
+- `gate_in_log`: four conditions.
+  - REG-19's [RESULT] heading, the owner's rulings heading and, after both, `… REG-20 arm A starts: k1.reg20_a_may_start passed` (anchored, RA1).
+  - No stop heading after the start (RA-O3).
+  - Exactly one committed gate file in `docs/probe/reg20/` (`gate_<stamp>.txt`, from 3c8e5dc), whose one line reads `'may_start': True`, with its stderr file and no `withheld:` line (RB5).
+  - `rulings_ok`.
+- `vm_state`.
+- `decide`, the rerun rule.
+- `next_step`.
+- `copy_verify`: copy to the holding folder, compare sha256s, recheck, apply ruling 2a, then move into `runs/` (or hold), compare again and update the manifest.
+- `recheck_one`, `recheck_apply`, `recheck_guards`.
 
-**`vm_state.py`** runs read-only on the VM, sent over ssh. It is ops_r3's file byte for byte, with a two-line header added to the docstring.
+**The gate is not computed by these scripts.** It was computed once, after REG-19's [RESULT], in commit 3c8e5dc. No script runs `reg20_a_may_start`, and the sandbox fails if any script tries.
 
-**`session_probe.sh`** runs once before the queue and is ops_r3's in substance. It requires 350.00 W, driver 595.99.02, the VM tree clean at the pin, and the pin's `uv.lock` on the VM. It writes the boot id that every launch compares against. `SET=1` runs `sudo -n nvidia-smi -pl 350` on an idle GPU. `RENEW=1` replaces an existing probe, and needs a decisions.md entry.
+**`recheck_one.py`** (new, RB2 and RA2 (b)) applies `harness.checks.run_checks` to one folder in the holding folder:
+- it is read-only, and it refuses a folder inside `runs/`;
+- it prints only `run`, `stored_valid`, `stored_failed`, `now_valid`, `now_failed`, `changed`, and `error` when the folder cannot be read;
+- it imports no analysis module.
 
-**`launch.sh <config>`** is called by the queue. It launches only the config that `next_step` names, at the attempt number `next_step` gives.
-- Pre-launch checks, as in ops_r3:
-  - the two gate headings in the log;
-  - the GPU at or below 45 °C, waiting up to 30 min;
-  - the limit at 350.00 W;
-  - no compute process and no tmux session;
-  - the VM tree at the pin and clean;
-  - the same boot id as the session probe;
-  - at least 2 GB free.
-- Added for REG-20: the read records `ulimit -Hn` and `(ulimit -n 65536 && ulimit -n)`. An open-loop config stops if the second value is below 4096. For the closed drift run the values are only recorded.
-- The open-loop tmux command is `ulimit -n 65536 && echo "nofile $(ulimit -n)" > LOG && exec ~/.local/bin/uv run python -m harness.run configs/<cfg>.yaml >> LOG 2>&1`.
-- The drift run uses ops_r3's command unchanged.
-- The attempt record holds `nofile_hard`, `nofile_raised` and, for open-loop runs, `nofile_log`, the line from the log.
+**`owner_rulings.txt`** (new, RA5) holds one line per owner's point: `2a`, `6`, `7`, `8`, `9`, `16`.
+- Every point reads `unset`. The scripts refuse to start until the owner's entry sets every point and commits the file.
 
-**`queue.sh`** is the one command. Each turn it asks `next_step` for one of these actions:
-- **copy**: copy a finished run, valid or invalid, check its sha256s against the VM's as ops_r3 does, update the manifest, then write `state/copied_<rid>.txt`.
-- **due**: run `control_due.py` once on a copied valid open burst run and append its line to `state/control_due.txt`.
-- **launch**: launch the next config. After an invalid run it stops. It also stops once after an open-loop run whose log shows `nofile` below 4096, or no `nofile` line.
-- **done**: write `state/queue_done.txt`, one line per slot.
+**`vm_state.py`** and **`session_probe.sh`** are unchanged from draft 1.
 
-The order is 15, 16, 17, the drift run, 18, 19. A control runs right after its burst run, and only when the decision is `yes`.
+**`launch.sh <config>`** is draft 1's, plus three lines in the attempt record:
+- `arm open|closed`;
+- `log <path>`;
+- `end <time> <how>`, written when the wait ends. `<how>` is one of `done`, `tmux_gone`, `unreachable` (with the time of the first unanswered read), `still_running`, `no_run_id`, `launch_command_failed`.
 
-**`control_due.py <run folder>`** accepts only `^\d{8}-\d{6}_burst_l1pl350ol_r2\.0_w3000_s1[5-9]$`.
-- It sets `AFTERSHOCK_UNSEAL=REG-20` inside its own process, replacing any inherited value.
-- It loads `analysis.load.RUNS/<name>` with `load_run` and requires `checks.json` valid and the config name to match.
-- It prints `CONTROL_DUE yes|no|unclear` from `k1.cold_backlogged(run)["cold_backlogged"]`: True gives `yes`, False gives `no`, None or NaN gives `unclear`.
-- Any other outcome prints nothing on stdout and exits non-zero.
+These feed the lost runs' elapsed time (RA6) and each control's gap (RA-O1).
 
-**`final.sh`** computes the table once. It requires:
-- `state/queue_done.txt`;
-- no live queue lock;
-- a verified copy of every run the record names;
-- no earlier `reg20_final_*` file.
+**`queue.sh`** runs `mac_checks` first in every turn (RB1). Each turn does one of these:
+- **copy:** see `copy_verify`. Under ruling 2a `setaside`, a stored-valid run that today's checks fail stays in the holding folder and the queue stops. A restart reruns its config.
+- **hold:** copy and verify into the holding folder only, for the second invalid run of a seed settled `not_run`.
+- **due:** `control_due.py` once, on a copied and rechecked valid open burst run. `mac_checks` runs just before and just after it, and if either fails the decision is dropped (RA4).
+- **launch:** as in draft 1. A valid open run whose log shows no nofile line of at least 4096 needs `state/nofile_ok_<rid>.txt` (RB15).
+- **done:** writes `state/queue_done.txt`. It holds:
+  - six slot lines; a control slot carries `gap_s` and `boot same|changed`;
+  - `copied`, `held` and `lost …` lines (arm, elapsed time, how it ended, counted or not);
+  - `recheck_changed … kept|set_aside|held` lines;
+  - the rulings.
 
-It runs `AFTERSHOCK_UNSEAL=REG-20 uv run python -m analysis.k1 reg20` from the repo root and writes `state/reg20_final_<stamp>.txt` and `state/reg20_final_err_<stamp>.txt`. It was never run.
+**`control_due.py`** is unchanged from draft 1.
 
-**`test_sandbox.sh`** and **`test_control_due.py`** run on fakes only and never read `runs/`.
+**`final.sh`** computes the table once. Before it runs, it checks:
+- the gate;
+- that the queue has ended;
+- the six slot lines;
+- each copied run's copy record, recheck record and `checks.json`.
 
-## Launch command (only after review, commit, the owner's pin decision and both gate headings)
+The folders of the eleven configs in `runs/` must equal the copied runs (RB4 (i), RA-O2). The steps, in order:
+1. It runs `analysis.recheck` on both patterns (RB2). The changed runs it finds must equal the queue's `recheck_changed … kept` lines.
+2. It runs `AFTERSHOCK_UNSEAL=REG-20 .venv/bin/python -m analysis.k1 reg20` (RB5 (i), point 13), with no `uv run`.
+3. It runs `mac_checks` again (RA4).
+4. It refuses a stderr that holds a `withheld:` line (RA-O2).
 
-1. Commit this folder. Write `git log -1 --format=%H -- docs/probe/20261113_reg20/ops/{common.sh,vm_state.py,session_probe.sh,launch.sh,queue.sh,final.sh,control_due.py}` into `ops/scripts_commit.txt` and commit that file.
-2. Check the VM out clean at `1cface77ca001cdf5d90de9313ddd4a3af4569a1`. These scripts do not do it.
-3. Run `zsh docs/probe/20261113_reg20/ops/session_probe.sh`, with `SET=1` if allowed.
-4. Run `nohup caffeinate -i zsh docs/probe/20261113_reg20/ops/queue.sh > docs/probe/20261113_reg20/queue_<stamp>.txt 2>&1 &`
-5. After `QUEUE DONE`, run `zsh docs/probe/20261113_reg20/ops/final.sh` once, then commit its two files at once, alone.
+## Records
+
+Hand-written records are text files in `state/`, one "key value" per line. Each needs `under <the decision, ruling or [OPS] entry>` and `by owner|delegate`. The scripts check that the writer is one the rulings allow.
+
+| Record | Lines | Who may write it |
+|---|---|---|
+| `rerun_ok_<rid>.txt` | `lifts <failure>`, one line per failure lifted (RA-O4) | the owner; under 6(b), the delegate for `no_errors/client_error` when the run's log read nofile ≥ 4096 and the boot is unchanged |
+| `lost_ok_<rid>.txt` | `count yes\|no` (ruling 8) | after a power-off: 8(a) `count yes` by either; 8(b) `count no` by either, or `count yes` by the owner; without a reboot: the owner |
+| `settle_<rid>.txt` | `label not_run\|lost_open\|control_not_run\|drift_not_run` (RB3) | the owner. The delegate may write it: in RA3's case for the label ruling 7 names; for `control_not_run` after the spent attempts under 9(b) |
+| `attempt_ok_<cfg>_<n>.txt` | none beyond `under` and `by` | the owner; the delegate for a control's third attempt under 9(a) |
+| `nofile_ok_<rid>.txt` | none beyond `under` and `by` (RB15) | either, logged in an [OPS] entry |
+| `recheck_ok_<rid>.txt` | `answer keep\|setaside` (ruling 2a `stop`) | the owner |
+
+The queue writes these records itself:
+- `copied_<rid>.txt`;
+- `held_<rid>.txt` and `setaside_<rid>.txt`, for runs kept in the holding folder;
+- `recheck_<rid>.json`, which holds validity fields only;
+- `control_due.txt`;
+- `queue_done.txt`.
+
+## Launch order (only after: review rounds 2, the owner's rulings, the commit, REG-19's [RESULT] and the gate)
+
+1. Commit this folder. Write `git log -1 --format=%H -- docs/probe/20261113_reg20/ops/{common.sh,vm_state.py,session_probe.sh,launch.sh,queue.sh,final.sh,control_due.py,recheck_one.py}` into `ops/scripts_commit.txt` and commit that file.
+2. The owner's entry `## <date> · [DECISION] (owner) REG-20 arm A operations: the owner's rulings`. It quotes `owner_rulings.txt`, and is committed with it.
+3. The gate is already computed (3c8e5dc). Only if `docs/probe/reg20/gate_20261113T230307Z.txt` reads `'may_start': True`: write the entry `## <date> · [DECISION] (owner|delegate) REG-20 arm A starts: k1.reg20_a_may_start passed`. The entry quotes the file verbatim, and states how the gate's command differed from RB5 (ii) (decision draft, point 14).
+4. The VM, never while a run is in progress (RB6, RA-O7):
+   1. Push main to the VM's bare repo (RUNBOOK §4, step 1).
+   2. On the VM, run `git fetch origin && git checkout --detach 1cface77ca001cdf5d90de9313ddd4a3af4569a1`.
+   3. Check that `git rev-parse HEAD` equals the pin and that `git status --short` is empty.
+5. Run `zsh docs/probe/20261113_reg20/ops/session_probe.sh`, with `SET=1` if allowed.
+6. Run `nohup caffeinate -i zsh docs/probe/20261113_reg20/ops/queue.sh > docs/probe/20261113_reg20/queue_<stamp>.txt 2>&1 &`
+7. After `QUEUE DONE`: run `zsh docs/probe/20261113_reg20/ops/final.sh` once, then commit its files at once, alone.
+
+While arm A runs, no commit may change k1's closure, `analysis/load.py` or `analysis/withheld.py` (RA-O1). Any such commit stops the queue until `common.sh` is updated by a reviewed commit. REG-21's and REG-22's freeze already bars these files until both batch 2s are computed or declared not computed.
 
 ## Deviations from ops_r3, and why
 
-1. **No pinned worktree and no links.** Analysis runs from the repo root, and the judged code is checked instead. The design's `AFTERSHOCK_UNSEAL` needs `analysis/withheld.py`, which the pin predates. Between the pin and HEAD, k1's closure has an empty `git diff`, and `load.py` differs only by the 6-line seal guard. This also departs from `agent/RUNBOOK.md` §5, which asks for a worktree per item.
-2. **The gate is two ordered headings**, and `([^0-9]|$)` is added after `REG-19` so that `[RESULT] REG-190` does not match. The addition only refuses more.
-3. **Invalid runs are copied too.** `k1._open_row` counts invalid runs on the Mac to decide `lost_open`, and ops_r3 copied only valid ones. Copying is now per run, and the copy record is written after the manifest update.
-4. **One record type, `rerun_ok_<rid>.txt`.** It replaces ops_r3's `lost_ok`, and it also lifts the stop-and-ask for that run: client error, `manipulation`, `power_limit` or the second `gpu_steady`.
-5. **`lost_open` keeps the queue going.** When both attempts of an open burst run are invalid, the seed takes REG-20's label `lost_open` (counted as cold), gets no control, and the queue goes on. The design was silent on this. A control or the drift run with both attempts spent stops the queue, as ops_r3 does.
-6. **No time-of-day limit.** ops_r3 had quiet hours; the owner withdrew them on 2026-11-13 ("there is no such thing as quiet hours, whenever its available use it, power off happens randomly"; FILE(docs/decisions.md:4502)). An earlier version of these scripts copied ops_r3's windows and read run lengths from the configs; both are removed, because nothing else used the lengths. The sandbox now runs the whole queue with the clock at eleven different hours.
-7. **The `nofile` redirect.** The `echo` writes `> LOG` and the harness writes `>> LOG`, so the line lands in the log. The remote tmux argument is single-quoted, so tmux's own shell evaluates `$(ulimit -n)`.
-8. **No step records, futility flag or `analysis.recheck`.** These are REG-19's rules.
-9. **`final.sh` uses `uv run`**, the design's command, not `$PY`.
+1. **No pinned worktree and no links.** Analysis runs from the repo root, and the judged code is checked instead.
+   - It is checked at every turn, and just before and just after each `control_due.py` call and the table (RB1, RA4).
+   - This departs from `agent/RUNBOOK.md` §5. Draft 2 proposes a RUNBOOK change (see the decision draft).
+2. **The gate is three ordered headings plus the committed gate file.**
+   - The start heading is anchored on `: k1.reg20_a_may_start passed` (RA1).
+   - `([^0-9]|$)` keeps `[RESULT] REG-190` out.
+3. **Invalid runs are copied too**, because k1 counts them towards `lost_open`. Every run goes through the holding folder first.
+4. **The records** in the table above replace ops_r3's `lost_ok` and `recheck_ok`. ops_r3's recheck guard is kept: `analysis/`, `harness/` and `configs/defaults.yaml` must equal HEAD.
+5. **`lost_open` keeps the queue going**, except in RA3's setup case, which stops for a settle record under ruling 7.
+6. **No time-of-day limit.** The owner withdrew the quiet hours (FILE(docs/decisions.md:4502)).
+7. **The `nofile` redirect** is as in draft 1.
+8. **No step records and no futility flag.** These are REG-19's rules.
+9. **`final.sh` uses `$PY`**, `.venv/bin/python`.
 
 ## Not settled
 
-Each point below is settled, or sent to the owner, in `docs/drafts/reg20_ops_decision_draft1.md` (draft 1, not reviewed).
+See the decision draft, "For the owner, before the first launch" (points 2a, 6, 7, 8, 9, 16), and "Not settled".
 
-1. **The pin.** `1cface7` is the coordinator's proposal. The registration names no commit (FILE(docs/decisions.md:4169)). It needs the owner's entry before the VM moves (`PIN_DECISION_DRAFT.md`).
-2. **The drift run's place.** It runs after seed 17's burst run and its control, following the design. The registration says only "after arm A's third run" (FILE(docs/decisions.md:4053)).
-3. **A lost attempt (no `checks.json`) plus one invalid attempt.** Lost runs are not copied before the result (RUNBOOK §7), so k1 reads the seed as `not_run` and the queue stops. The owner decides.
-4. **Recheck before the table.** Whether to recheck validity under HEAD's stricter checks (A14), as REG-19 does, is the owner's call. It is not implemented.
-5. **The pre-launch `ulimit` read is a proxy.** It comes from an ssh shell. The launching shell's real value is known only after launch, from the log line, and the queue's stop after the run covers that.
-6. **Future changes to the judged code.** Any change on `main` to k1's closure or to the seal files stops the queue until `common.sh` is updated by a reviewed commit.
-7. **The queue output shows each control decision.** That reveals one bit per open run, which is inherent to the conditional control.
-
-**Arm B is out of scope.** REG-20's seal lifts both arms at `[RESULT] REG-20` (`analysis/withheld.py`), so arm B needs a new seal in a frozen file. Nothing is written for it.
+**Arm B is out of scope** (point 16).

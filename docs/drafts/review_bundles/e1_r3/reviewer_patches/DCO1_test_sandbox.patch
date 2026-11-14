@@ -1,0 +1,16 @@
+--- a/ops/test_sandbox.sh	2026-11-14 04:42:39
++++ b/ops/test_sandbox_dco1.sh	2026-11-14 04:42:39
+@@ -472,6 +472,13 @@
+ case_ "and vm_checkout.sh" "the owner halted E1" 2 zsh $V
+ chk "nothing launched, the VM's tree not moved" is "$(launches) $(git -C $VM rev-parse HEAD)" "0 $C0"
+ 
++echo "--- review e1_r2: the queue dies between settle and report_settled"
++reset
++case_ "the sweep launched by hand" "ENDED sweep attempt 1" 0 FAKE_FAIL="2:recorder" zsh $L sweep
++case_ "settled by hand, as if the queue died before report_settled" "SETTLED-BY-HAND" 0 zsh -c "source $S/common.sh; mac_checks && next_step && [[ \$ACT == settle ]] && settle \$ARG && echo SETTLED-BY-HAND"
++case_ "the restart still pauses before the rerun" "QUEUE STOP after an invalid run" 1 zsh $Q
++chk "no rerun launched before the pause" is "$(launches)" 1
++
+ echo "--- every stop"
+ chk "every stop above printed the allowed reads (${#noallowed} did not: ${noallowed[*]})" is ${#noallowed} 0
+ 

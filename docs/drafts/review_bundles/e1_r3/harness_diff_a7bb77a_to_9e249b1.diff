@@ -1,0 +1,364 @@
+diff --git a/harness/checks.py b/harness/checks.py
+index b738282..85225ca 100644
+--- a/harness/checks.py
++++ b/harness/checks.py
+@@ -92,8 +92,22 @@ def run_checks(run_dir: Path) -> dict:
+     max_gap = float(np.max(np.diff(ts))) if len(ts) >= 2 else math.inf
+     n_fail = len(scrapes) - len(ok_scrapes)
+     gap_ok = max_gap <= c["max_scrape_gap_s"] or not recording
+-    out.append(check("recorder", not decreases and gap_ok and n_fail == 0,
+-                     {"counter_decreases": decreases[:10], "max_gap_s": max_gap, "failed_scrapes": n_fail}))
++    # Coverage (open question A14; owner, 2026-11-12): gaps are measured only between scrapes that exist, so a recorder
++    # that stops early left none. With the recorder on, the good scrapes must also reach from the load's start (t = 0)
++    # to its end (the `load_end` event; `duration_s` for a run folder without one), each within max_scrape_gap_s, and
++    # the recorder must not have exited during the load (`recorder_died`, logged by run.py). No new threshold.
++    events = _jsonl(run_dir / "events.jsonl")
++    died = [e for e in events if e.get("event") == "recorder_died"]
++    load_end = next((e["t"] for e in events if e.get("event") == "load_end" and e.get("t") is not None), None)
++    end_ref = float(load_end) if load_end is not None else float(wl["duration_s"])
++    ok_ts = [s["t"] for s in ok_scrapes]
++    first, last = (min(ok_ts), max(ok_ts)) if ok_ts else (math.inf, -math.inf)
++    covered = (first <= c["max_scrape_gap_s"] and last >= end_ref - c["max_scrape_gap_s"]) or not recording
++    out.append(check("recorder", not decreases and gap_ok and n_fail == 0 and covered and not died,
++                     {"counter_decreases": decreases[:10], "max_gap_s": max_gap, "failed_scrapes": n_fail,
++                      "first_ok_scrape_t": first if ok_ts else None, "last_ok_scrape_t": last if ok_ts else None,
++                      "end_ref_t": end_ref, "end_ref": "load_end" if load_end is not None else "duration_s",
++                      "recorder_died": died[0] if died else None}))
+ 
+     # 5. GPU: SM clock steady and no thermal throttling during the measured window.
+     if cfg["server"]["kind"] == "fake":
+@@ -103,23 +117,39 @@ def run_checks(run_dir: Path) -> dict:
+     elif gpu.empty:
+         out.append(check("gpu_steady", False, "no gpu.jsonl data"))
+     else:
+-        w = gpu[(gpu.t >= wl["warmup_s"]) & (gpu.t <= wl["duration_s"])]
++        lo, hi = wl["warmup_s"], wl["duration_s"]
++        w = gpu[(gpu.t >= lo) & (gpu.t <= hi)]
+         busy = w[w.util_pct >= c["gpu_busy_util_pct"]]  # idle clocks are not throttling
+         cv = float(busy.sm_clock_mhz.std() / busy.sm_clock_mhz.mean()) if len(busy) > 1 else 0.0
+         reasons = w.throttle_reasons.astype(int)
+         hw = int(((reasons & HW_THROTTLE_MASK) != 0).sum())
+         sw_frac = float(((reasons & SW_THERMAL_BIT) != 0).mean()) if len(w) else 0.0
++        # Coverage (A14; owner, 2026-11-12): an empty or partly sampled window used to pass (no sample can fail). The
++        # samples must cover [warmup_s, duration_s] with no gap above max_scrape_gap_s, ends included, and at least one
++        # must be busy, or nothing here was measured. No new threshold.
++        g = c["max_scrape_gap_s"]
++        wt = np.sort(w.t.to_numpy(float))
++        w_gap = float(np.max(np.diff(np.concatenate(([lo], wt, [hi]))))) if len(wt) else math.inf
++        covered = w_gap <= g
+         out.append(check("gpu_steady",
+-                         cv <= c["max_sm_clock_cv"] and hw == 0 and sw_frac <= c["max_sw_thermal_frac"],
++                         cv <= c["max_sm_clock_cv"] and hw == 0 and sw_frac <= c["max_sw_thermal_frac"]
++                         and covered and len(busy) >= 1,
+                          {"busy_sm_clock_cv": cv, "busy_samples": len(busy), "hw_throttle_samples": hw,
+-                          "sw_thermal_frac": sw_frac, "max_temp_c": float(w.temp_c.max()) if len(w) else None}))
++                          "sw_thermal_frac": sw_frac, "max_temp_c": float(w.temp_c.max()) if len(w) else None,
++                          "window_samples": len(w), "window_max_gap_s": w_gap}))
+ 
+     # 6. Measured arrival rate matches lambda (Poisson-aware tolerance). With closed-loop turns only the open-loop
+     #    arrivals are the generator's: session starts (turn 0, at lambda / turns) and burst requests. Later turns follow
+     #    the server, so counting them would fail a run for being slow (REG-11 draft).
+     t_lo, t_hi = wl["warmup_s"], wl["duration_s"]
+     arr = sent_df[sent_df.turn == 0] if closed and len(sent_df) else sent_df
+-    n = int(((arr.t_sent >= t_lo) & (arr.t_sent < t_hi)).sum()) if len(arr) else 0
++    t_arr = arr.t_sent if len(arr) else None
++    if closed and len(reqs) and "t_arrived" in reqs:
++        # With a session cap (step D, owner 2026-11-12) a session start waits for a slot, so the generator's arrival
++        # is when the session reached the cap (`t_arrived`), sent or not; burst requests count by t_sent as before.
++        arr = reqs[(reqs.turn == 0) & (reqs.t_arrived.notna() | reqs.t_sent.notna())]
++        t_arr = arr.t_arrived.fillna(arr.t_sent)
++    n = int(((t_arr >= t_lo) & (t_arr < t_hi)).sum()) if len(arr) else 0
+     per = 1 / wl["sessions"]["turns"] if closed else 1.0
+     expected = expected_requests(wl, t_lo, t_hi) * per + burst_requests(cfg.get("trigger"), t_lo, t_hi)
+     tol = max(c["rate_rel_tolerance"] * expected, c["rate_sigma"] * math.sqrt(expected))
+diff --git a/harness/loadgen.py b/harness/loadgen.py
+index 87029d4..844327e 100644
+--- a/harness/loadgen.py
++++ b/harness/loadgen.py
+@@ -2,6 +2,9 @@
+ Closed-loop turns (`workload.sessions.closed_loop: true`, REG-11 draft): session starts and burst requests stay open
+ loop; a session's later turn is released only after its previous turn has ended, plus the schedule's own gap between
+ the two turns. `t_planned` stays the schedule's time; `t_released` records when the turn became due (None in open loop).
++Session cap (`workload.sessions.cap`, closed loop only; step D, owner 2026-11-12): at most `cap` sessions are in service
++at once (from turn 0 sent to the last turn's end). A session that arrives at a full cap waits, first come first served;
++its turn 0 records `t_arrived` and `t_admitted`, and its `t_released` is the admission time. Burst requests pass the cap.
+ 
+ Usage (started by run.py): python -m harness.loadgen <run_dir> <t0_monotonic>
+ Writes one line per request to requests.jsonl. No timeouts, no retries.
+@@ -10,6 +13,7 @@ import asyncio
+ import json
+ import sys
+ import time
++from collections import deque
+ from pathlib import Path
+ 
+ import aiohttp
+@@ -34,15 +38,60 @@ class Gateway:
+             self.sem.release()
+ 
+ 
+-def new_rec(row, t_released=None) -> dict:
++class SessionCap:
++    """At most `n` sessions in service at once, held at the load generator (the gateway stays off). Waiters are served
++    strictly first come first served from an explicit queue; a freed slot is handed straight to the oldest waiter."""
++
++    def __init__(self, n: int):
++        if not isinstance(n, int) or isinstance(n, bool) or n < 1:
++            raise ValueError(f"workload.sessions.cap must be a positive integer, got {n!r}")
++        self.n, self.used, self.waiters = n, 0, deque()
++
++    async def acquire(self):
++        if self.used < self.n and not self.waiters:
++            self.used += 1
++            return
++        fut = asyncio.get_running_loop().create_future()
++        self.waiters.append(fut)
++        try:
++            await fut  # resolved by release(): the slot passes over without `used` going down
++        except asyncio.CancelledError:
++            if fut.done() and not fut.cancelled():
++                self.release()  # handed a slot in the same tick as the cancel: give it on
++            elif fut in self.waiters:
++                self.waiters.remove(fut)
++            raise
++
++    def release(self):
++        while self.waiters:
++            fut = self.waiters.popleft()
++            if not fut.done():
++                fut.set_result(None)
++                return
++        self.used -= 1
++
++
++def session_cap(cfg: dict) -> SessionCap | None:
++    """The configured cap, or None. Read with .get (added after defaults.yaml was used; absent = no cap). Refused
++    with open-loop turns: an open-loop turn has no session in service to hold a slot."""
++    sessions = (cfg["workload"].get("sessions") or {})
++    n = sessions.get("cap")
++    if n is None:
++        return None
++    if not sessions.get("closed_loop"):
++        raise ValueError("workload.sessions.cap needs closed-loop turns (workload.sessions.closed_loop: true)")
++    return SessionCap(n)
++
++
++def new_rec(row, t_released=None, **extra) -> dict:
+     return dict(request_id=int(row.request_id), session_id=int(row.session_id), turn=int(row.turn),
+                t_planned=float(row.t_planned), t_released=t_released, prompt_tokens_planned=int(row.prompt_len),
+                output_tokens_planned=int(row.output_len), t_sent=None, t_connected=None, t_first_token=None, t_end=None,
+-               prompt_tokens=None, output_tokens=None, cached_tokens=None, status="unfinished", error=None)
++               prompt_tokens=None, output_tokens=None, cached_tokens=None, status="unfinished", error=None, **extra)
+ 
+ 
+-async def send(session, url, model, row, prompt, gateway, t0, out, inflight, t_released=None) -> dict:
+-    rec = new_rec(row, t_released)
++async def send(session, url, model, row, prompt, gateway, t0, out, inflight, t_released=None, extra=None) -> dict:
++    rec = new_rec(row, t_released, **(extra or {}))
+     inflight[rec["request_id"]] = rec
+     body = {"model": model, "prompt": prompt, "stream": True,
+             "max_tokens": rec["output_tokens_planned"], "min_tokens": rec["output_tokens_planned"],
+@@ -86,14 +135,24 @@ async def send(session, url, model, row, prompt, gateway, t0, out, inflight, t_r
+     return rec
+ 
+ 
+-async def session_chain(rows, prompts, session, url, model, gateway, t0, out, inflight):
++async def session_chain(rows, prompts, session, url, model, gateway, t0, out, inflight, cap=None):
+     """Closed-loop turns of one session. Turn 0 is released at its planned time; turn k at the end of turn k-1 (or the
+     time it failed) plus the planned gap t_planned[k] - t_planned[k-1]. Turns not yet sent stay in `inflight` as
+-    unfinished placeholders, so a turn never released before the drain deadline is still recorded (as a miss)."""
++    unfinished placeholders, so a turn never released before the drain deadline is still recorded (as a miss).
++    With a session cap the session first waits for a slot (it is called at turn 0's planned time); turn 0 is released
++    at admission, and the slot is held until the chain ends (last turn ended, failed, or cancelled at the deadline)."""
+     for row in rows:
+         inflight[int(row.request_id)] = new_rec(row)
++    held, extra = False, None
+     try:
+         release, prev = float(rows[0].t_planned), None
++        if cap is not None:
++            arrived = time.monotonic() - t0
++            inflight[int(rows[0].request_id)]["t_arrived"] = arrived  # kept if the deadline comes first
++            await cap.acquire()
++            held = True
++            admitted = time.monotonic() - t0
++            release, extra = max(release, admitted), {"t_arrived": arrived, "t_admitted": admitted}
+         for row in rows:
+             prompt = prompt_tokens(prompts, int(row.session_id), int(row.prompt_len))
+             if prev is not None:
+@@ -102,7 +161,8 @@ async def session_chain(rows, prompts, session, url, model, gateway, t0, out, in
+             delay = t0 + release - time.monotonic()
+             if delay > 0:
+                 await asyncio.sleep(delay)
+-            prev = await send(session, url, model, row, prompt, gateway, t0, out, inflight, t_released=release)
++            kw = {"extra": extra} if extra is not None and prev is None else {}  # turn 0 under a cap only
++            prev = await send(session, url, model, row, prompt, gateway, t0, out, inflight, t_released=release, **kw)
+     except asyncio.CancelledError:
+         raise  # the drain deadline: unsent turns stay unfinished placeholders
+     except Exception as e:  # a chain that dies must fail no_errors, not look like a slow server (REG-11 review, T2)
+@@ -111,8 +171,11 @@ async def session_chain(rows, prompts, session, url, model, gateway, t0, out, in
+             if rec is not None and rec["t_sent"] is None:
+                 rec["status"], rec["error"] = "client_error", f"session_chain: {type(e).__name__}: {e}"[:300]
+                 out.write(json.dumps(rec) + "\n")
++                out.flush()  # one line at a time, so a reader never sees a buffer cut mid-line (A14)
+                 inflight.pop(int(row.request_id), None)
+-        out.flush()
++    finally:
++        if held:
++            cap.release()
+ 
+ 
+ async def _connected(session, ctx, params):
+@@ -142,6 +205,7 @@ async def main(run_dir: Path, t0: float):
+     srv = cfg["server"]
+     url = f"http://{srv['host']}:{srv['port']}/v1/completions"
+     gateway = Gateway(cfg["gateway"])
++    cap = session_cap(cfg)
+     deadline = t0 + (float(sched.t_planned.max()) if len(sched) else 0.0) + cfg["drain_s"]
+     inflight, tasks = {}, []
+     closed = bool((cfg["workload"].get("sessions") or {}).get("closed_loop"))  # absent = open loop (older configs)
+@@ -162,7 +226,7 @@ async def main(run_dir: Path, t0: float):
+                             await asyncio.sleep(delay)
+                         tasks.append(asyncio.create_task(session_chain(
+                             chains[int(row.session_id)], prompts, session, url, cfg["model"], gateway, t0, out,
+-                            inflight)))
++                            inflight, cap)))
+                     continue
+                 prompt = prompt_tokens(prompts, int(row.session_id), int(row.prompt_len))  # built before the wait
+                 delay = t0 + row.t_planned - time.monotonic()
+@@ -178,6 +242,7 @@ async def main(run_dir: Path, t0: float):
+             await asyncio.gather(*tasks, return_exceptions=True)
+         for rec in inflight.values():  # still running at the end: counted as misses
+             out.write(json.dumps(rec) + "\n")
++            out.flush()  # one line at a time (A14)
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/harness/recorder.py b/harness/recorder.py
+index f5eda07..1dbf676 100644
+--- a/harness/recorder.py
++++ b/harness/recorder.py
+@@ -73,19 +73,37 @@ class Gpu:
+ 
+ 
+ class LagTail:
+-    """Reads new lines of requests.jsonl to report recent client lag (actual - planned send)."""
++    """Reads new lines of requests.jsonl to report recent client lag (actual - planned send).
++
++    The load generator may be partway through writing a line when this reads (open question A14: a half-written line
++    is the likely cause of the recorder's exit at t = 213 s in a REG-12 control). So only complete lines, up to the last
++    newline, are consumed; a partial tail is left for the next call, and a complete line that does not parse is
++    skipped and counted in `bad_lines`."""
+ 
+     def __init__(self, path: Path):
+-        self.path, self.pos = path, 0
++        self.path, self.pos, self.bad_lines = path, 0, 0
+ 
+     def recent_max(self) -> float | None:
+         if not self.path.exists():
+             return None
+-        with open(self.path) as f:
++        with open(self.path, "rb") as f:
+             f.seek(self.pos)
+-            lines = f.readlines()
+-            self.pos = f.tell()
+-        lags = [r["t_sent"] - r["t_planned"] for r in map(json.loads, lines) if r.get("t_sent") is not None]
++            chunk = f.read()
++        end = chunk.rfind(b"\n")
++        if end < 0:
++            return None
++        self.pos += end + 1
++        lags = []
++        for line in chunk[:end].splitlines():
++            if not line.strip():
++                continue
++            try:
++                r = json.loads(line)
++            except ValueError:
++                self.bad_lines += 1
++                continue
++            if r.get("t_sent") is not None and r.get("t_planned") is not None:
++                lags.append(r["t_sent"] - r["t_planned"])
+         return max(lags) if lags else None
+ 
+ 
+@@ -108,12 +126,22 @@ def main(run_dir: Path, t0: float):
+             except Exception as e:
+                 sample = None
+                 fm.write(json.dumps({"t": t, "error": f"{type(e).__name__}: {e}"[:200]}) + "\n")
+-            g = gpu.read()
+-            if g:
+-                fg.write(json.dumps({"t": t, **g}) + "\n")
+-                fg.flush()
++                fm.flush()
++            # Nothing below may end the process (A14): a failed GPU read or status line is logged and the loop goes on.
++            g = None
++            try:
++                g = gpu.read()
++                if g:
++                    fg.write(json.dumps({"t": t, **g}) + "\n")
++                    fg.flush()
++            except Exception as e:
++                print(f"[recorder] t={t:.1f}s gpu read failed: {type(e).__name__}: {e}"[:300], file=sys.stderr, flush=True)
+             if sample:
+-                print(status_line(t, prev, sample, g, lag.recent_max()), flush=True)
++                try:
++                    print(status_line(t, prev, sample, g, lag.recent_max()), flush=True)
++                except Exception as e:
++                    print(f"[recorder] t={t:.1f}s status line failed: {type(e).__name__}: {e}"[:300], file=sys.stderr,
++                          flush=True)
+                 prev = sample
+             next_tick += interval  # fixed grid: a slow scrape does not shift later ones
+             time.sleep(max(0.0, next_tick - time.monotonic()))
+diff --git a/harness/run.py b/harness/run.py
+index 2a7e0df..57774d9 100644
+--- a/harness/run.py
++++ b/harness/run.py
+@@ -21,6 +21,7 @@ from pathlib import Path
+ import yaml
+ 
+ from harness import checks, env_snapshot, trigger, workload
++from harness import loadgen as loadgen_mod  # session_cap(): validated before the server starts
+ from harness.config import _merge, load_config, with_defaults  # noqa: F401  (load_config is imported from here by tests)
+ from harness.recorder import scrape
+ 
+@@ -120,6 +121,10 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
+         raise SystemExit(f"{cfg['name']}: workload.rate is not set")
+     if cfg.get("trigger") is not None:
+         trigger.validate(cfg)
++    try:
++        loadgen_mod.session_cap(cfg)  # a bad session cap stops here, before the server starts
++    except ValueError as e:
++        raise SystemExit(f"{cfg['name']}: {e}")
+ 
+     env = env_snapshot.snapshot()
+     if env["git_dirty"] and cfg["checks"]["require_clean_git"] and not allow_dirty:
+@@ -166,9 +171,11 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
+         ev.t0 = t0
+         recording = cfg["recorder"].get("enabled", True)  # configs from before this switch have no key
+         if recording:
+-            recorder = subprocess.Popen(_pin(cfg["cpus"]["recorder"]) + py +
+-                                        ["harness.recorder", str(run_dir), repr(t0)],
+-                                        start_new_session=True, env=child_env, cwd=REPO)
++            with open(run_dir / "recorder.log", "w") as rlog:  # its stderr survives the console (A14)
++                recorder = subprocess.Popen(_pin(cfg["cpus"]["recorder"]) + py +
++                                            ["harness.recorder", str(run_dir), repr(t0)],
++                                            stderr=rlog,  # stdout (the status line) stays on the console
++                                            start_new_session=True, env=child_env, cwd=REPO)
+         else:
+             _scrape_once(run_dir, base, time.monotonic() - t0, cfg["recorder"]["scrape_timeout_s"])
+         if (cfg.get("trigger") or {}).get("kind") == "cache_wipe":  # a burst is already in the schedule
+@@ -180,10 +187,14 @@ def run_one(cfg: dict, runs_dir: Path, allow_dirty: bool) -> Path:
+                                    start_new_session=True, env=child_env, cwd=REPO)
+         ev("load_t0_planned", t0_mono=t0, wall_at_t0=time.time() + (t0 - time.monotonic()))
+         warm_logged = wl["warmup_s"] <= 0
++        recorder_dead = False
+         while loadgen.poll() is None:
+             if server.poll() is not None:
+                 ev("server_died", returncode=server.returncode)
+                 break
++            if recorder is not None and not recorder_dead and recorder.poll() is not None:
++                ev("recorder_died", returncode=recorder.returncode)  # the `recorder` check fails the run on this
++                recorder_dead = True
+             if not warm_logged and time.monotonic() >= t0 + wl["warmup_s"]:
+                 ev("warmup_end")
+                 warm_logged = True

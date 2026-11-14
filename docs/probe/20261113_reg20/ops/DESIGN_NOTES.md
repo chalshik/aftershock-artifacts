@@ -1,5 +1,7 @@
 # REG-20 ops scripts: design notes (the scripts themselves are NOT yet written)
 
+**Superseded (2026-11-14, draft 2 of the operations decision, RA-O6).** These are notes from before the scripts were written. They are kept as written and are not current. In particular, the gate pattern below is not the one in force: the scripts anchor the start heading on `REG-20 arm A starts: k1\.reg20_a_may_start passed`, require the owner's rulings heading and a committed gate file, and refuse a later stop heading (common.sh `gate_in_log`, RA1, RA5, RB5, RA-O3). The current state is in `README.md` and `docs/drafts/reg20_ops_decision_draft2.md`.
+
 Written 2026-11-13 by a teammate agent. 0 GPU h. The VM was not contacted, and no run folder or probe output was opened. The work stopped at the usage limit, before any script was written. This file records the registered rules found, each with its citation, and the points the scripts must settle, so that the next session can write `common.sh`, `vm_state.py`, `session_probe.sh`, `launch.sh`, `queue.sh` and `test_sandbox.sh` from REG-19's `ops_r3`.
 
 ## Registered rules to implement

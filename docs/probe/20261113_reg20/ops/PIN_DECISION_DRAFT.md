@@ -1,5 +1,7 @@
 # REG-20: which commit the runs use (draft for the owner; nothing here is binding)
 
+**Superseded (2026-11-14, draft 2 of the operations decision, RA-O6).** The pin is settled in `docs/drafts/reg20_ops_decision_draft2.md`, point 1: `1cface7`, and the delegate decides it, because the registration names no commit (FILE(docs/decisions.md:4169)). Only ruling 2a's option `pin_head` would change it, and that option is the owner's. This file is kept as written and is not current.
+
 Written 2026-11-13 by a teammate agent, 0 GPU h, no run read. The VM was not contacted.
 
 ## Facts (each from `git` on the Mac, 2026-11-13)

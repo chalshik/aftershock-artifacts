@@ -1,0 +1,27 @@
+--- a/tests/test_e1.py	2026-11-14 04:42:39
++++ b/tests/test_e1.py	2026-11-14 04:42:39
+@@ -100,8 +100,9 @@
+     assert E.floor(full.iloc[:0], grid)["status"] == "no_rows"
+     gap = E.floor(full[full.rate != 3.0], grid)             # a swept rate above lam_sat has no valid run
+     assert gap["status"] == "holes" and gap["missing_rates"] == [3.0] and math.isnan(gap["mu_sat_off"])
+-    low = E.floor(full[full.rate != 1.5], grid)             # a hole below lam_sat does not matter
+-    assert low["status"] == "ok" and low["n"] == 5
++    low = E.floor(full[full.rate != 1.5], grid)             # no valid row below lam_sat: lam_sat could be 1.5
++    assert low["status"] == "holes" and low["missing_rates"] == [1.5]
++    assert E.floor(full, (1.0,) + grid)["status"] == "ok"   # a hole below a valid unsaturated row does not matter
+     assert E.floor(full[full.rate != 3.0])["status"] == "ok"   # without the swept rates the old behaviour
+ 
+ 
+@@ -149,8 +150,10 @@
+     f = e1.floor(r, grid)
+     assert f["status"] == "holes" and f["missing_rates"] == [2.0] and math.isnan(f["mu_sat_off"])
+     no_low = rows([2.5, 3.0, 3.5, 4.0], [1.72, 1.73, 1.74, 1.75], kv=[0.95] * 4)    # no valid row below lam_sat
+-    g = e1.floor(no_low, grid)
+-    assert g["status"] == "ok" and g["lam_sat"] == 2.5                               # 1.5 and 2.0: below, not holes
++    g = e1.floor(no_low, grid)                                                       # no valid row below lam_sat:
++    assert g["status"] == "holes" and g["missing_rates"] == [1.5, 2.0]               # lam_sat could be 1.5 or 2.0
++    nan_row = rows([1.5, 2.0, 2.5, 3.0], [1.45, 1.70, 1.72, float("nan")], kv=[0.6, 0.95, 0.95, 0.95])
++    assert e1.floor(nan_row, (1.5, 2.0, 2.5, 3.0))["missing_rates"] == [3.0]     # a row cold_floor drops is a hole
+ 
+ 
+ def _sweeps(monkeypatch, cl, ol):

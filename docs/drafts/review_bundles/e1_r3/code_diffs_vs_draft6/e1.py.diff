@@ -1,0 +1,33 @@
+diff --git a/analysis/e1.py b/analysis/e1.py
+index 1e2604c..73663ae 100644
+--- a/analysis/e1.py
++++ b/analysis/e1.py
+@@ -1,4 +1,4 @@
+-"""E1 (not yet registered: draft docs/drafts/e1_draft4.md; its [REG] E1 entry does not exist yet): the closed-loop cache-off sweep of setup L1
++"""E1 (registered: the [REG] E1 entry in docs/decisions.md; frozen from its registered commit): the closed-loop cache-off sweep of setup L1
+ (configs/sweep_l1pl350cl_pc_off.yaml).
+ 
+ Judged: nothing. E1 *measures* K2's 8-turn closed-loop cold floor (`floor`, `gate.cold_floor` with REG-8's settings,
+@@ -151,16 +151,18 @@ def floor(rows: pd.DataFrame, swept: tuple | list | None = None) -> dict:
+     """E1's floor: `gate.cold_floor`; if and only if that returns "not_monotone", `floor_tail`. Two statuses of its
+     own, neither a floor: "no_rows" when the sweep has no valid run at all (a sweep that was not read is not a sweep
+     that did not saturate), and, when the swept rates are given, "holes" when a swept rate at or above the floor's
+-    lam_sat, or between the highest valid row below lam_sat and lam_sat (rule F e1_r1, DA-O4: lam_sat could lie
+-    there), has no valid run (the floor would average over a gap)."""
++    lam_sat, or below lam_sat with no valid row between it and lam_sat (rule F e1_r1, DA-O4; e1_r2, DC2: lam_sat
++    could lie there), has no valid run (the floor would average over a gap); a row with a non-finite rate, throughput,
++    planned rate or KV mean, which cold_floor drops, counts as no valid run."""
+     if not len(rows):
+         return {"mu_sat_off": math.nan, "lam_sat": math.nan, "n": 0, "status": "no_rows"}
+     f = saturated(rows)
+     f = floor_tail(rows) if f["status"] == "not_monotone" else f
+     if swept is not None and f["status"] in ("ok", "tail_ok"):
+-        have = set(np.round(rows.rate.to_numpy(float), 6))
++        fin = rows[np.isfinite(rows[["rate", "throughput", "planned_rate", "kv_mean"]]).all(axis=1)]   # as cold_floor reads them
++        have = set(np.round(fin.rate.to_numpy(float), 6))
+         below = [r for r in have if r < f["lam_sat"] - 1e-9]
+-        lo = max(below) if below else f["lam_sat"]
++        lo = max(below) if below else -math.inf          # no valid row below lam_sat: lam_sat is not bracketed (DC2)
+         missing = [float(x) for x in swept if x > lo + 1e-9 and round(float(x), 6) not in have]
+         if missing:
+             return {**f, "mu_sat_off": math.nan, "status": "holes", "missing_rates": missing}

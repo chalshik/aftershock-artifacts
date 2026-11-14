@@ -1,0 +1,17 @@
+# The owner's rulings on REG-20 arm A's operations points (docs/drafts/reg20_ops_decision_draft2.md, "For the owner,
+# before the first launch"). One line per point, "<point> <answer>"; a line starting with # is a comment. The queue,
+# launch.sh and final.sh refuse to run while any point reads `unset` or an answer it may not take (common.sh
+# `rulings_ok`, RA5). This file is changed only in the commit of the owner's entry
+# "## <date> · [DECISION] (owner) REG-20 arm A operations: the owner's rulings", which quotes it.
+#   2a: keep | setaside | stop | pin_head    (a run that today's checks flag at its copy)
+#   6:  a | b                                (a client error in an open burst run)
+#   7:  lost_open | not_run | per_stop       (an open burst run invalid twice, one attempt failing only setup checks, RA3)
+#   8:  a | b                                (a lost attempt, no checks.json)
+#   9:  a | b                                (a control with both attempts invalid)
+#   16: a | b | c                            (arm B's seal and how arm A's result is headed)
+2a unset
+6 unset
+7 unset
+8 unset
+9 unset
+16 unset
