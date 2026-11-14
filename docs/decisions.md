@@ -19515,3 +19515,40 @@ Row 2a, REG-20 arm A, is not edited here: the same rule belongs in REG-20's ops 
 - **Next steps and the owner's open decisions** are in `docs/status.md`, "Next steps (2026-11-14, end of the autonomous session)":
   - the GPU runs in order: REG-20 arm A, D1, REG-24;
   - not yet drafted: E0/E2 and D2.
+
+## 2026-11-14 · [DECISION] (owner) The owner delegates the approvals of all work that needs no VM to the agent: drafts go through their reviews and are approved by delegation, without waiting for the owner; nothing on the VM is delegated
+Owner, verbatim (2026-11-14, ≈ 08:11 UTC, in the session that ended the autonomous mode): "I left you work anything that is non related to VM, finish all of them, dont wait me to review drafts, I beielve you, do what is best".
+- **Delegated.** For work that needs no VM, the agent may give the approvals that CLAUDE.md rule C reserves for the owner:
+  - registrations, analysis-only and GPU alike;
+  - the computation of analysis-only registrations;
+  - new configs as new files;
+  - operations decisions up to, but not including, a GPU run's start entry;
+  - corrections of stale docs;
+  - `docs/claims.md` status lines;
+  - a PROTOCOL row that a reviewed registration needs.
+- **How.** The conditions of the 2026-11-13 delegation hold unchanged (FILE(docs/decisions.md:4234)). Each approval is its own `[DECISION] (delegate)` entry, written only after:
+  - (a) a rule F review by a separate subagent, quoted verbatim;
+  - (b) an independent owner-proxy subagent's approval.
+
+  A reject from either is binding.
+- **Not delegated: anything on the VM.** This covers:
+  - a GPU run's start entry and launch;
+  - `vm_checkout.sh`;
+  - the power limit;
+  - removing VM folders;
+  - any ssh command.
+
+  A GPU run approved under this entry waits for the owner to bring the VM back and start it.
+- **Not delegated, as before** (FILE(docs/decisions.md:4235)):
+  - editing `runs/`, a used config or an old decisions.md entry;
+  - choosing or widening a threshold after seeing the data it judges (rule A5);
+  - reading outcome data that a pending registration withholds;
+  - deleting anything;
+  - changing vLLM or `uv.lock`;
+  - root actions;
+  - posting or pushing anything off this machine.
+- **Kept for the owner although no VM is needed.** These are the agent's reading of "do what is best", given rule J and rule A5:
+  - **Condition 4's order clause** (REG-22; `agent/FOR_AUTHOR.md` −13). It is a term with more than one computation (rule J). The onsets of REG-19's runs are already printed, so choosing (a) or (c) now would judge runs whose data has been seen.
+  - **D1's question** whether a `harness_fault` run may be taken out of n. The registered default stands: such a run counts as `unclear`.
+  - **The check in `agent/FOR_AUTHOR.md` −12**, which the agent does not open.
+- The owner may overrule any delegate decision by a `[CORR]` or `[DECISION] (owner)` entry. This delegation ends when the owner writes an entry ending it. The agent's notes under `agent/` stay frozen (the entry above); this session's state goes in `docs/status.md`.
