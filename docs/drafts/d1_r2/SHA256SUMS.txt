@@ -1,0 +1,13 @@
+# D1 draft 2 (docs/drafts/d1_draft2.md): sha256 of every file in this folder except this one, written 2026-11-14T03:38:55Z; check with: shasum -a 256 -c SHA256SUMS.txt (lines without '#')
+11a8130568fa3380c5e7b1ac2b59e8bdef1ad973ef819fd00bffa3c1e6ae9998  closure_d1_20261114.txt
+7a2d590455a5a496171c2b142ea006d51ddecf6c0393cd89dce7d40f228795df  d1.patch
+93b96b16b7437981b3b6715e4d2ea46028daebc1688f872700bc1df656943076  inputs_prediction_20261114.txt
+df80adad8ac151b8b90dfa7b91f3c86a1505c4edc53cae9c638beddf18d3a7f2  merge_orders_20261114.txt
+d163275bece64f7d6d3564d1e8b5ea12605e88e1d111627e521d1002c82949e9  pytest_full_20261114T032543Z.txt
+9845e32d180837ae7f7269c30c30b157a5af16a14b6f20b1af86cab887f7d592  pytest_three_20261114T032342Z.txt
+594a3f288d30abe988325cfb12ab1f47e43f28774381a51f5c6ae0404a682553  test_d1.patch
+2c8c1da209169b14241255bcd67e3eed680070a63e5dfb7280f8c03f0c509f76  withheld.patch
+# the files the three patches give when applied to a git archive of e788191 (not in this folder):
+# b1ec2948df276b3130c13064eb2d48f1e8181b39e514e44855cc28c62a8f292d  analysis/d1.py
+# d83b54630f716639e35016764b47e30996a11bf0c7912fc3965e0ea192900ce2  tests/test_d1.py
+# e89e8a4d631cca5ff057ad60a603e5a73497986018708ca4908b9897abed88b3  analysis/withheld.py

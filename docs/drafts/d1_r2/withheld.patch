@@ -1,0 +1,8 @@
+diff --git a/analysis/withheld.py b/analysis/withheld.py
+index 46b42a7..dae9f6a 100644
+--- a/analysis/withheld.py
++++ b/analysis/withheld.py
+@@ -27,2 +27,3 @@ SEALS: tuple[tuple[str, str, str], ...] = (
+     ("REG-19", "*_l1pl350cl_r2.0_w3000_s1[5-9]", "[RESULT] REG-19"),
++    ("D1", "*_burst_l1pl350cl_r2.0_w3000_s1[5-9]_cap", "[RESULT] D1 (C2, session cap)"),   # the five capped burst runs
+     ("REG-20", "*_l1pl350ol_r2.[05]_w3000_s1[5-9]", "[RESULT] REG-20"),

@@ -1,0 +1,11 @@
+# withheld.patch (D1 draft 2) against e788191 with the other pending seal patches in the drafts, in these orders (analysis/withheld.py only; git apply)
+d1: ok
+d1 reg24: ok
+reg24 d1: ok
+deo1 d1: ok
+d1 deo1: ok
+deo1 reg24: FAIL
+reg24 deo1: FAIL
+deo1 reg24 d1: FAIL
+d1 reg24 deo1: FAIL
+# reg24 = docs/drafts/reg24_r2/withheld.patch; deo1 = docs/drafts/reviews-2026-11-13/rulef-e1-r3_files/DEO1_withheld.patch; d1 = docs/drafts/d1_r2/withheld.patch. REG-24's and DEO1's patches conflict with each other without D1's (rows 6-7), so every three-patch order fails on that pair; D1's applies before or after either one

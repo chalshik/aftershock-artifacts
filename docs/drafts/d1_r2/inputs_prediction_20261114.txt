@@ -1,0 +1,30 @@
+# d1.predicted_matrix(), d1.inputs() and d1 chain on a scratch export of e788191 with docs/drafts/d1_r2/*.patch applied; configs and D1['prediction'] (BELIEF) only, no run folder read
+# commands: PYTHONPATH=. .venv/bin/python -m analysis.d1 prediction | inputs | chain
+# at 2026-11-14T03:25:43Z
+## prediction
+{"decision": {"admission_only": 0.00025799579999999996, "cap_did_not_cut": 9.8506e-06, "mixed": 0.2366996095999997, "refutes": 0.00025799579999999996, "supports": 0.7627646976, "too_few": 9.850600000000002e-06}, "p_k_cut": [0.000796262399999999, 0.012607487999999977, 0.07984742400000007, 0.252850176, 0.400346112, 0.25355253759999996], "e_k_cut": 3.7999999999999923, "e_k_stuck": 0.19999999999999962, "p_supports_below_reg19": 0.2702336256}
+## inputs
+{"seeds": [{"seed": 15, "capped_equals_burst": true, "sessions_equal_control": true, "n_session": 8253, "n_burst": 425, "differs": ["name", "workload.sessions.cap"]}, {"seed": 16, "capped_equals_burst": true, "sessions_equal_control": true, "n_session": 8160, "n_burst": 466, "differs": ["name", "workload.sessions.cap"]}, {"seed": 17, "capped_equals_burst": true, "sessions_equal_control": true, "n_session": 8420, "n_burst": 441, "differs": ["name", "workload.sessions.cap"]}, {"seed": 18, "capped_equals_burst": true, "sessions_equal_control": true, "n_session": 8048, "n_burst": 438, "differs": ["name", "workload.sessions.cap"]}, {"seed": 19, "capped_equals_burst": true, "sessions_equal_control": true, "n_session": 8082, "n_burst": 431, "differs": ["name", "workload.sessions.cap"]}]}
+## chain
+configs/base.yaml
+configs/burst_l1pl350_r2.4_s1.yaml
+configs/burst_l1pl350cl_r2.0_s2.yaml
+configs/burst_l1pl350cl_r2.0_w3000_s15.yaml
+configs/burst_l1pl350cl_r2.0_w3000_s15_cap.yaml
+configs/burst_l1pl350cl_r2.0_w3000_s16.yaml
+configs/burst_l1pl350cl_r2.0_w3000_s16_cap.yaml
+configs/burst_l1pl350cl_r2.0_w3000_s17.yaml
+configs/burst_l1pl350cl_r2.0_w3000_s17_cap.yaml
+configs/burst_l1pl350cl_r2.0_w3000_s18.yaml
+configs/burst_l1pl350cl_r2.0_w3000_s18_cap.yaml
+configs/burst_l1pl350cl_r2.0_w3000_s19.yaml
+configs/burst_l1pl350cl_r2.0_w3000_s19_cap.yaml
+configs/burst_l1pl350cl_r2.2_s2.yaml
+configs/burst_l1pl350cl_r2.4_s1.yaml
+configs/burst_l1pl350cl_r2.4_s2.yaml
+configs/defaults.yaml
+configs/stage2_base.yaml
+configs/stage2_cap_base.yaml
+configs/stage2_gap5_base.yaml
+configs/stage2_l1_base.yaml
+configs/stage2_l1pl350_base.yaml

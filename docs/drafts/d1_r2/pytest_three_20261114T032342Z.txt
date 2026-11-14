@@ -1,0 +1,91 @@
+# tests/test_d1.py, test_withheld.py, test_session_cap.py on a scratch export of e788191 (git archive) with docs/drafts/d1_r2/{d1,test_d1,withheld}.patch applied (git apply); the repo's .venv, cwd = the scratch copy
+# command: .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_d1.py tests/test_withheld.py tests/test_session_cap.py -rA
+# started 20261114T032342Z
+[run] checks {'valid': True, 'failed': []}
+[run] checks {'valid': True, 'failed': []}
+[run] checks {'valid': True, 'failed': []}
+PASSED tests/test_d1.py::test_capped_config_is_reg19s_burst_config_with_the_cap_alone
+PASSED tests/test_d1.py::test_capped_schedule_equals_the_burst_runs_and_its_sessions_the_controls
+PASSED tests/test_d1.py::test_config_chain_is_every_file_the_capped_config_resolves_from
+PASSED tests/test_d1.py::test_config_text_refuses_other_seeds_and_bad_caps[14-20]
+PASSED tests/test_d1.py::test_config_text_refuses_other_seeds_and_bad_caps[15-0]
+PASSED tests/test_d1.py::test_config_text_refuses_other_seeds_and_bad_caps[15--3]
+PASSED tests/test_d1.py::test_config_text_refuses_other_seeds_and_bad_caps[15-2.5]
+PASSED tests/test_d1.py::test_config_text_refuses_other_seeds_and_bad_caps[15-True]
+PASSED tests/test_d1.py::test_config_text_refuses_other_seeds_and_bad_caps[15-20]
+PASSED tests/test_d1.py::test_write_configs_writes_new_files_only
+PASSED tests/test_d1.py::test_the_capped_folders_match_no_other_registrations_pattern
+PASSED tests/test_d1.py::test_which_broad_globs_take_in_the_capped_folders_once_d1s_seal_lifts
+PASSED tests/test_d1.py::test_d1_seal_covers_its_five_names_and_lifts_only_on_its_result
+PASSED tests/test_d1.py::test_pinned_runs_are_reg19s_counted_ten
+PASSED tests/test_d1.py::test_constants_are_the_ones_on_record
+PASSED tests/test_d1.py::test_first_order_bound
+PASSED tests/test_d1.py::test_peak_is_cap_max_with_its_time_and_the_pre_burst_peak
+PASSED tests/test_d1.py::test_cap_value_refuses_a_run_without_sessions
+PASSED tests/test_d1.py::test_cap_queue_counts_sessions_between_arrival_and_admission
+PASSED tests/test_d1.py::test_slots_invariant_and_idle_share
+PASSED tests/test_d1.py::test_waits_apart_before_the_burst
+PASSED tests/test_d1.py::test_warm_server_and_empty_cap_queue_is_recovered
+PASSED tests/test_d1.py::test_warm_server_with_a_shrinking_cap_queue_is_recovered_cap_draining
+PASSED tests/test_d1.py::test_warm_server_with_a_growing_cap_queue_is_server_only
+PASSED tests/test_d1.py::test_cold_reuse_needs_the_caps_backlog_to_be_stuck
+PASSED tests/test_d1.py::test_trace_t1_lower_reuse_without_any_backlog_is_partial
+PASSED tests/test_d1.py::test_trace_t1c_cold_reuse_with_a_growing_cap_queue_is_stuck
+PASSED tests/test_d1.py::test_backlogged_needs_a_slope_only_above_the_baseline
+PASSED tests/test_d1.py::test_a_climb_rules_out_stuck
+PASSED tests/test_d1.py::test_the_label_reads_reuse_not_the_hit_counter
+PASSED tests/test_d1.py::test_a_server_line_above_baseline_is_not_recovered
+PASSED tests/test_d1.py::test_bad_baseline_and_missing_values
+PASSED tests/test_d1.py::test_spans_and_the_load_reading
+PASSED tests/test_d1.py::test_onset_class_separates_the_bursts_own_transient_from_a_formed_cold_state
+PASSED tests/test_d1.py::test_outcome_rules[labels0-supports]
+PASSED tests/test_d1.py::test_outcome_rules[labels1-supports]
+PASSED tests/test_d1.py::test_outcome_rules[labels2-mixed]
+PASSED tests/test_d1.py::test_outcome_rules[labels3-refutes]
+PASSED tests/test_d1.py::test_outcome_rules[labels4-cap_did_not_cut]
+PASSED tests/test_d1.py::test_outcome_rules[labels5-admission_only]
+PASSED tests/test_d1.py::test_outcome_rules[labels6-mixed]
+PASSED tests/test_d1.py::test_outcome_rules[labels7-mixed]
+PASSED tests/test_d1.py::test_outcome_rules[labels8-supports]
+PASSED tests/test_d1.py::test_outcome_rules[labels9-too_few]
+PASSED tests/test_d1.py::test_outcome_rules[labels10-supports]
+PASSED tests/test_d1.py::test_outcome_rules[labels11-too_few]
+PASSED tests/test_d1.py::test_outcome_bounds
+PASSED tests/test_d1.py::test_trace_t4_undecided_seeds_do_not_separate_the_cells
+PASSED tests/test_d1.py::test_predicted_matrix_is_the_exact_enumeration
+PASSED tests/test_d1.py::test_cap_values_end_to_end_on_fake_controls
+PASSED tests/test_d1.py::test_table_end_to_end_on_fake_folders
+PASSED tests/test_d1.py::test_table_refuses_while_the_capped_folders_are_sealed
+PASSED tests/test_d1.py::test_two_valid_runs_of_one_seed_the_earliest_counts
+PASSED tests/test_d1.py::test_drift_readout_waits_for_reg20s_seal
+PASSED tests/test_d1.py::test_end_to_end_cap_from_a_fake_control_then_a_capped_burst_run
+PASSED tests/test_withheld.py::test_reg19_seal_covers_exactly_its_ten_configs
+PASSED tests/test_withheld.py::test_reg20_seal_covers_its_open_arms_controls_and_drift
+PASSED tests/test_withheld.py::test_runs_on_record_are_not_sealed[20261110-182920_burst_l1pl350cl_r2.0_s2]
+PASSED tests/test_withheld.py::test_runs_on_record_are_not_sealed[20261111-101805_burst_l1pl350cl_r2.0_s4]
+PASSED tests/test_withheld.py::test_runs_on_record_are_not_sealed[20261110-085730_confirm_l1pl350cl_r2.2_s12]
+PASSED tests/test_withheld.py::test_runs_on_record_are_not_sealed[20261107-075951_sweep_l1pl350_pc_off_r1]
+PASSED tests/test_withheld.py::test_runs_on_record_are_not_sealed[20261112-050920_burst_l1pl350cl_r2.0_w3000_s150]
+PASSED tests/test_withheld.py::test_seal_lifts_only_on_a_result_heading
+PASSED tests/test_withheld.py::test_unseal_variable_names_the_registration
+PASSED tests/test_withheld.py::test_load_run_refuses_a_sealed_folder_and_find_runs_skips_it
+PASSED tests/test_withheld.py::test_recheck_skips_a_sealed_folder
+PASSED tests/test_withheld.py::test_the_repo_state_today
+PASSED tests/test_withheld.py::test_e1_and_e2_seals_cover_exactly_their_sweeps
+PASSED tests/test_withheld.py::test_e1_seal_lifts_alone
+PASSED tests/test_session_cap.py::test_cap_admits_first_come_first_served_and_hands_slots_over
+PASSED tests/test_session_cap.py::test_cancelled_waiter_leaves_the_queue_and_never_holds_a_slot
+PASSED tests/test_session_cap.py::test_cap_must_be_a_positive_integer[0]
+PASSED tests/test_session_cap.py::test_cap_must_be_a_positive_integer[-1]
+PASSED tests/test_session_cap.py::test_cap_must_be_a_positive_integer[1.5]
+PASSED tests/test_session_cap.py::test_cap_must_be_a_positive_integer[2]
+PASSED tests/test_session_cap.py::test_cap_must_be_a_positive_integer[True]
+PASSED tests/test_session_cap.py::test_session_cap_from_config
+PASSED tests/test_session_cap.py::test_chain_waits_for_a_slot_and_records_arrival_and_admission
+PASSED tests/test_session_cap.py::test_slot_is_freed_when_a_chain_fails_or_is_cancelled
+PASSED tests/test_session_cap.py::test_capped_run_is_valid_and_never_exceeds_the_cap
+PASSED tests/test_session_cap.py::test_cap_with_open_loop_turns_is_refused_before_the_server_starts
+PASSED tests/test_session_cap.py::test_max_sessions_in_service_is_an_exact_sweep
+PASSED tests/test_session_cap.py::test_cap_wait_summary
+83 passed in 107.88s (0:01:47)
+# rc=0 ended 20261114T032530Z
