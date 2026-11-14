@@ -1,0 +1,26 @@
+--- a/tests/test_withheld.py
++++ b/tests/test_withheld.py
+@@ -120,6 +120,22 @@
+ 
+ 
+ def test_e1_seal_lifts_alone(no_result):
+-    no_result.write_text("## 2026-11-15 · [RESULT] E1: floor 1.75\n")
++    no_result.write_text("## 2026-11-15 · [OPS] E1: the floor may be computed (E0's [REG] is committed)\n"
++                         "## 2026-11-15 · [RESULT] E1: floor 1.75\n")
+     assert W.sealed_by("20261114-000000_sweep_l1pl350cl_pc_off_r2") is None
+     assert W.sealed_by("20261115-000000_sweep_l1t16pl350cl_pc_off_r2") == "E0"
++
++
++def test_e1_floor_waits_for_e0_even_when_unsealed(no_result, monkeypatch):
++    """E1's floor is E0's gate input (rule F e1_r2, DC1): AFTERSHOCK_UNSEAL=E1 alone does not open E1's folders until an
++    [OPS] entry records that E0's [REG] is committed (or that E0's gate takes no input from E1's runs)."""
++    name = "20261114-000000_sweep_l1pl350cl_pc_off_r2"
++    monkeypatch.setenv("AFTERSHOCK_UNSEAL", "E1")
++    assert W.sealed_by(name) == "E1-after-E0"
++    no_result.write_text("## 2026-11-15 · [REG] E0: the gate\n- quotes [OPS] E1: the floor may be computed\n")
++    assert W.sealed_by(name) == "E1-after-E0"                      # E0's [REG] alone, or a quote, lifts nothing
++    no_result.write_text("## 2026-11-15 · [OPS] E1: the floor may be computed (E0's [REG] is committed)\n")
++    assert W.sealed_by(name) is None
++    monkeypatch.delenv("AFTERSHOCK_UNSEAL")
++    assert W.sealed_by(name) == "E1"                               # E1's own seal still holds until its [RESULT]
++    assert W.sealed_by("20261115-000000_sweep_l1t16pl350cl_pc_off_r2") == "E0"
