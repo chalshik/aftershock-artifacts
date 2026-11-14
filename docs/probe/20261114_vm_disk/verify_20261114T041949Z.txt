@@ -1,0 +1,93 @@
+# zsh agent/bin/vm_verify_list.zsh (b2fa956), 20261114T041949Z, after E1's end entry (223ce78); read-only; sealed names skipped by name
+20261105-115752_sweep_l1_pc_on_r2 VERIFIED vm_kB=49032 files=10
+20261105-121403_sweep_l1_pc_on_r3 VERIFIED vm_kB=51524 files=10
+20261105-123008_sweep_l1_pc_on_r3.5 VERIFIED vm_kB=53060 files=10
+20261105-124617_sweep_l1_pc_on_r4 VERIFIED vm_kB=55220 files=10
+20261105-130250_sweep_l1_pc_on_r4.5 VERIFIED vm_kB=60064 files=10
+20261105-132035_sweep_l1_pc_on_r5 VERIFIED vm_kB=67008 files=10
+20261105-134018_sweep_l1_pc_on_r5.5 VERIFIED vm_kB=72008 files=10
+20261105-140120_sweep_l1_pc_on_r6 VERIFIED vm_kB=73172 files=10
+20261105-142221_sweep_l1_pc_on_r7 VERIFIED vm_kB=75480 files=10
+20261105-153307_sweep_l1_pc_on_r4.5 VERIFIED vm_kB=60100 files=10
+20261105-155052_sweep_l1_pc_on_r5 VERIFIED vm_kB=66560 files=10
+20261105-161123_sweep_l1_pc_on_r5.5 VERIFIED vm_kB=72024 files=10
+20261105-163225_sweep_l1_pc_on_r6 VERIFIED vm_kB=73168 files=10
+20261105-165327_sweep_l1_pc_on_r7 VERIFIED vm_kB=75492 files=10
+20261105-171648_sweep_l1_pc_on_r6 VERIFIED vm_kB=73172 files=10
+20261105-174215_sweep_l1_pc_off_r1 VERIFIED vm_kB=46620 files=10
+20261105-175822_sweep_l1_pc_off_r1.5 VERIFIED vm_kB=49892 files=10
+20261105-181511_sweep_l1_pc_off_r2 VERIFIED vm_kB=16300 files=9
+20261105-184607_sweep_l1_pc_off_r1 VERIFIED vm_kB=46628 files=10
+20261106-063534_sweep_l1_pc_off_r1 VERIFIED vm_kB=46676 files=10
+20261107-075951_sweep_l1pl350_pc_off_r1 VERIFIED vm_kB=46720 files=10
+20261107-082035_sweep_l1pl350_pc_off_r1.5 VERIFIED vm_kB=50232 files=10
+20261107-083730_sweep_l1pl350_pc_off_r2 VERIFIED vm_kB=58372 files=10
+20261107-085650_sweep_l1pl350_pc_off_r2.5 VERIFIED vm_kB=64516 files=10
+20261107-091752_sweep_l1pl350_pc_off_r3 VERIFIED vm_kB=65680 files=10
+20261107-093854_sweep_l1pl350_pc_off_r3.5 VERIFIED vm_kB=66908 files=10
+20261107-095958_sweep_l1pl350_pc_off_r4 VERIFIED vm_kB=68036 files=10
+20261107-103010_sweep_l1pl350_pc_on_r2 VERIFIED vm_kB=49036 files=10
+20261107-104614_sweep_l1pl350_pc_on_r3 VERIFIED vm_kB=51528 files=10
+20261107-110219_sweep_l1pl350_pc_on_r3.5 VERIFIED vm_kB=53172 files=10
+20261107-111833_sweep_l1pl350_pc_on_r4 VERIFIED vm_kB=55516 files=10
+20261107-113511_sweep_l1pl350_pc_on_r4.5 VERIFIED vm_kB=60744 files=10
+20261107-115311_sweep_l1pl350_pc_on_r5 VERIFIED vm_kB=68084 files=10
+20261108-134121_long_pl350_pc_off_r3_s0 VERIFIED vm_kB=194996 files=10
+20261108-164842_long_pl350_pc_off_r3_s0 VERIFIED vm_kB=195020 files=10
+20261108-190906_long_pl350fc_pc_off_r3_s0 VERIFIED vm_kB=195360 files=10
+20261108-201227_long_pl350fc_pc_off_r3_s1 VERIFIED vm_kB=195148 files=10
+20261108-211646_stage2_control_l1pl350_r2.4 VERIFIED vm_kB=143008 files=10
+20261108-220248_burst_l1pl350_r2.4_s1 VERIFIED vm_kB=148828 files=10
+20261109-034255_stage2_control_l1pl350cl_r2.4 VERIFIED vm_kB=143928 files=10
+20261109-042828_burst_l1pl350cl_r2.4_s1 VERIFIED vm_kB=163488 files=10
+20261109-055910_stage2_control_l1pl350cl_r2.4_s2 VERIFIED vm_kB=143512 files=10
+20261109-080203_burst_l1pl350cl_r2.4_s2 VERIFIED vm_kB=163712 files=10
+20261109-085121_stage2_control_l1pl350cl_r2.4_s3 VERIFIED vm_kB=142596 files=10
+20261109-093609_burst_l1pl350cl_r2.4_s3 VERIFIED vm_kB=162516 files=10
+20261109-102614_stage2_control_l1pl350cl_r2.4_s4 VERIFIED vm_kB=152100 files=10
+20261109-111316_burst_l1pl350cl_r2.4_s4 VERIFIED vm_kB=164528 files=10
+20261109-120308_stage2_control_l1pl350cl_r2.4_s5 VERIFIED vm_kB=158348 files=10
+20261109-125300_burst_l1pl350cl_r2.4_s5 VERIFIED vm_kB=164468 files=10
+20261109-134250_stage2_control_l1pl350cl_r2.4_s6 VERIFIED vm_kB=27340 files=10
+20261109-142813_stage2_control_l1pl350cl_r2.4_s6 VERIFIED vm_kB=143852 files=10
+20261109-151300_burst_l1pl350cl_r2.4_s6 VERIFIED vm_kB=163804 files=10
+20261109-190221_sweep_l1pl350cl_pc_on_r2 VERIFIED vm_kB=50128 files=10
+20261109-191845_sweep_l1pl350cl_pc_on_r2.4 VERIFIED vm_kB=51972 files=10
+20261109-193526_sweep_l1pl350cl_pc_on_r2.6 VERIFIED vm_kB=57500 files=10
+20261109-195349_sweep_l1pl350cl_pc_on_r2.8 VERIFIED vm_kB=59644 files=10
+20261109-201246_sweep_l1pl350cl_pc_on_r3 VERIFIED vm_kB=66176 files=10
+20261110-055201_stage2_control_l1pl350cl_r2.2_s2 VERIFIED vm_kB=142152 files=10
+20261110-063647_burst_l1pl350cl_r2.2_s2 VERIFIED vm_kB=162344 files=10
+20261110-085730_confirm_l1pl350cl_r2.2_s12 VERIFIED vm_kB=503416 files=10
+20261110-122001_stage2_control_l1pl350cl_r2.2_long_s14 VERIFIED vm_kB=859496 files=10
+20261110-174432_stage2_control_l1pl350cl_r2.0_s2 VERIFIED vm_kB=140568 files=10
+20261110-182920_burst_l1pl350cl_r2.0_s2 VERIFIED vm_kB=161012 files=10
+20261111-093312_stage2_control_l1pl350cl_r2.0_s4 VERIFIED vm_kB=142112 files=10
+20261111-101805_burst_l1pl350cl_r2.0_s4 VERIFIED vm_kB=161724 files=10
+20261111-110919_stage2_control_l1pl350cl_r2.0_s3 VERIFIED vm_kB=140060 files=10
+20261111-115409_burst_l1pl350cl_r2.0_s3 VERIFIED vm_kB=159780 files=10
+20261111-124527_stage2_control_l1pl350cl_r2.0_s5 VERIFIED vm_kB=141396 files=10
+20261111-133019_burst_l1pl350cl_r2.0_s5 VERIFIED vm_kB=161652 files=10
+20261111-142155_stage2_control_l1pl350cl_r2.0_s6 VERIFIED vm_kB=141192 files=10
+20261111-150642_burst_l1pl350cl_r2.0_s6 VERIFIED vm_kB=161028 files=10
+20261112-050920_stage2_control_l1pl350cl_r2.0_w3000_s15 VERIFIED vm_kB=222960 files=10
+20261112-061951_burst_l1pl350cl_r2.0_w3000_s15 VERIFIED vm_kB=242752 files=10
+20261112-073516_stage2_control_l1pl350cl_r2.0_w3000_s16 VERIFIED vm_kB=222812 files=10
+20261112-084533_burst_l1pl350cl_r2.0_w3000_s16 VERIFIED vm_kB=243064 files=10
+20261112-103423_stage2_control_l1pl350cl_r2.0_w3000_s17 VERIFIED vm_kB=223612 files=10
+20261112-135538_burst_l1pl350cl_r2.0_w3000_s17 VERIFIED vm_kB=243384 files=10
+20261112-151030_stage2_control_l1pl350cl_r2.0_w3000_s18 NOT_IN_MANIFEST
+20261113-033842_stage2_control_l1pl350cl_r2.0_w3000_s18 VERIFIED vm_kB=196060 files=9
+20261113-165516_stage2_control_l1pl350cl_r2.0_w3000_s18 VERIFIED vm_kB=222620 files=10
+20261113-180511_burst_l1pl350cl_r2.0_w3000_s18 VERIFIED vm_kB=242416 files=10
+20261113-192110_stage2_control_l1pl350cl_r2.0_w3000_s19 VERIFIED vm_kB=222668 files=10
+20261113-203108_burst_l1pl350cl_r2.0_w3000_s19 VERIFIED vm_kB=242308 files=10
+20261114-021512_sweep_l1pl350cl_pc_off_r1.5 SKIP_SEALED
+20261114-023230_sweep_l1pl350cl_pc_off_r2 SKIP_SEALED
+20261114-025146_sweep_l1pl350cl_pc_off_r2.5 SKIP_SEALED
+20261114-031247_sweep_l1pl350cl_pc_off_r3 SKIP_SEALED
+20261114-033348_sweep_l1pl350cl_pc_off_r3.5 SKIP_SEALED
+20261114-035448_sweep_l1pl350cl_pc_off_r4 SKIP_SEALED
+SUMMARY verified=82 verified_kB=10896304 other=1 sealed=6
+rc 0
+# end 20261114T042115Z

@@ -1,0 +1,3 @@
+# VM disk after E1's end entry (223ce78), read-only: df -k /; 20261114T042056Z
+Filesystem                        1K-blocks     Used Available Use% Mounted on
+/dev/mapper/ubuntu--vg-ubuntu--lv  64163468 57077300   3794420  94% /
