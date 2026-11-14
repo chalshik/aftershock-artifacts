@@ -1,4 +1,4 @@
-# STATE
+# STATE — FROZEN 2026-11-14: the autonomous mode ended (decisions.md 2026-11-14 [DECISION] (owner)); not current. Next steps and the owner's open decisions: `docs/status.md`, "Next steps".
 
 Any fresh session resumes from this file alone. Read it, then `agent/PLAN.md`, then the last block of `agent/LOG.md`.
 Rules: `docs/FABLE_PROMPT.md` (the start prompt), `CLAUDE.md`, `PROTOCOL.md`, `docs/process.md`. The plan in force: the owner-approved plan of 2026-11-13 (session 8c5f8396; copy at `/Users/chalshik/.claude/plans/lexical-petting-thunder.md`, summarised under "Next three").

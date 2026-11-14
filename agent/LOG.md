@@ -1,4 +1,4 @@
-# LOG (append-only)
+# LOG (append-only) — FROZEN 2026-11-14: the autonomous mode ended (decisions.md 2026-11-14 [DECISION] (owner)); not current. Next steps and the owner's open decisions: `docs/status.md`, "Next steps".
 
 One block per work block: what was done, what was found, the commit.
 

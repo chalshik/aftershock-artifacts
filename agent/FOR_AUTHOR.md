@@ -1,4 +1,4 @@
-# FOR THE AUTHOR
+# FOR THE AUTHOR — FROZEN 2026-11-14: the autonomous mode ended (decisions.md 2026-11-14 [DECISION] (owner)); not current. Next steps and the owner's open decisions: `docs/status.md`, "Next steps".
 
 What you should know or may want to overrule. The agent never waits on this file. Newest items at the top of each section.
 

@@ -19484,3 +19484,34 @@ Row 2a, REG-20 arm A, is not edited here: the same rule belongs in REG-20's ops 
 - **Computed: nothing.** E1's floor waits, as approved (decisions.md 2026-11-14 [DECISION] (delegate) E1 approved, DE1 (iii)): it is not computed before E0's [REG] is committed or an entry records that E0's gate takes no input from E1's runs, and no command sets `AFTERSHOCK_UNSEAL=E1` before then. The queue's own last line names only REG-21's first [RESULT]; the approval's condition is the stricter one and governs. E1's six folders stay sealed (`analysis/withheld.py`, E1's row) until `[RESULT] E1`.
 - **E1's end:** this entry is E1's end entry ("E1 holds the VM", FILE(docs/decisions.md:17076)). The VM is free for the next item by the order rule; REG-20 arm A's operations decision is not yet approved (rule F round 3 READY provided DH1 and DH2; its owner-proxy delta is running), so nothing launches yet. The VM stays at `ce5f842`, detached.
 - **Committed with this entry:** `docs/probe/20261113_e1/ops/state/` (E1's records), `manifests/runs.sha256`, `docs/probe/20261113_e1/prelaunch_e1_sweep_l1pl350cl_pc_off_20261114T021510Z_36030_1.txt`, the queue output `docs/probe/20261113_e1/queue_20261114T021508Z.txt`, the validity probe, and `docs/status.md`. Also saved verbatim in this commit: rule F round 2 on D1 draft 2 (`docs/drafts/reviews-2026-11-13/rulef-d1-draft2-r2.md`, READY provided DJ1–DJ3 verbatim, with its patch).
+
+## 2026-11-14 · [DECISION] (owner) The autonomous mode ended: the agent's notes frozen, its start prompt and self-resume machinery moved to `_to_delete/`, temporary files and caches deleted; next steps in `docs/status.md`
+
+- **Who decides:** the owner, in session on 2026-11-14 (≈ 06:55 UTC). Verbatim: "Alright, i think its enough, wrap up all your progresses, remove any temp files, caches, not required for future work stuff, decomompose your progress notes, agent plan, fable prompt, just follow existing core instructions about nex steps, decisions". This ends the delegation of 2026-11-13 (FILE(docs/decisions.md:4231-4237)) for new approvals. Every [DECISION] (delegate) entry already appended stands as written.
+- **Stopped:**
+  - the hourly heartbeat (a session cron job);
+  - the GPU watcher loop;
+  - the writer of REG-20 arm A's operations draft 4. It was stopped before it finished, and its one partial file was moved to `_to_delete/docs/drafts/`.
+  - Nothing ran on the VM, which has been down since ≈ 04:47 UTC.
+- **Deleted** (temporary, regenerable, outside the record):
+  - the session scratchpad (2.7 GB of scratch exports, test sandboxes and copies of reviews; every review used is saved under `docs/drafts/reviews-2026-11-13/`);
+  - `__pycache__/` and `.pytest_cache/` outside `.venv`;
+  - `agent/run/`, the watcher's runtime state, which is gitignored;
+  - two git worktrees whose contents are in git:
+    - `aftershock-linktest-pin` at `a7bb77a`. Its `runs/` held only symlinks, 176 of them, which were removed as links. Afterwards `python3 tools/manifest.py verify runs` gave "1946 listed, 0 missing, 0 different, 0 not in the manifest -> OK" on the Mac's `runs/`, 193 folders.
+    - a subagent's worktree at `a7bb77a`. Its staged and untracked files (REG-24 draft 1's working copies of `analysis/confirm.py`, `tests/test_confirm.py`, two configs and the draft) were first copied, checksum-checked, to `_to_delete/worktree_agent-a31d1e17f6b31f54e/`. Their sha256 differ from the frozen values that REG-24 draft 3 lists as missing (`6801457c…`, `867aba60…`), so they are not the frozen files. Its branch was deleted; its tip `a7bb77a` is in `main`.
+  - `aftershock-reg19-pin`, REG-19's registered worktree, is kept.
+- **Moved to `_to_delete/`, not deleted:**
+  - `docs/FABLE_PROMPT.md`, the start prompt (untracked);
+  - `agent/RESUME_PROMPT.md`;
+  - `agent/launchd/`;
+  - `agent/bin/gpu_watch.sh` and `agent/bin/resume.sh`;
+  - three untracked drafts: `reg20_ops_decision_draft4_itemmap.md` (partial), and `reg21_decision_draft2.md` and `reg22_decision_draft2.md`, both superseded by their registrations.
+  - The owner may delete `_to_delete/` whole.
+- **Frozen in place:** `agent/STATE.md`, `agent/LOG.md`, `agent/PLAN.md` and `agent/FOR_AUTHOR.md`.
+  - `docs/decisions.md` cites them by line, so they are not moved. Only each title line changed, so no cited line number moves.
+  - `agent/RUNBOOK.md`'s title notes that the watcher and self-resume steps are retired; its procedures stand.
+  - Kept as they are: `agent/bin/vm_back_probe.zsh`, `vm_verify_list.zsh` and its test, `agent/theory/`, `agent/lit/`, `agent/notes/`, `agent/DECISION_TREE.md`, `agent/INGEST.md`, `agent/LITERATURE.md`, `agent/NOVELTY_CHECKS.md` and `agent/REPORT.md`.
+- **Next steps and the owner's open decisions** are in `docs/status.md`, "Next steps (2026-11-14, end of the autonomous session)":
+  - the GPU runs in order: REG-20 arm A, D1, REG-24;
+  - not yet drafted: E0/E2 and D2.

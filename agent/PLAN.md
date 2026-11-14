@@ -1,4 +1,4 @@
-# PLAN: task board
+# PLAN: task board — FROZEN 2026-11-14: the autonomous mode ended (decisions.md 2026-11-14 [DECISION] (owner)); not current. Next steps and the owner's open decisions: `docs/status.md`, "Next steps".
 
 Status: todo / doing / done / blocked / dropped. GPU h are the registrations' own figures where one exists, else planning estimates (BELIEF).
 Value rule: information for the paper per hour. Re-plan GPU order only through `agent/DECISION_TREE.md`.

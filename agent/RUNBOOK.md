@@ -1,4 +1,4 @@
-# RUNBOOK: how a GPU item is run
+# RUNBOOK: how a GPU item is run — the watcher and self-resume steps are retired 2026-11-14 (`agent/bin/gpu_watch.sh` and `resume.sh` moved to `_to_delete/agent/bin/`); the operating procedures stand. Next steps: `docs/status.md`.
 
 Written 2026-11-13, before any GPU run of this session. Read with `agent/DECISION_TREE.md`. Nothing here overrides a registration: where they differ, the registration rules and this file is wrong (fix it and log a [CORR]).
 

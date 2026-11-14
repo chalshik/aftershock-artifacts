@@ -1,6 +1,52 @@
 # Study status
 
-Living document: update it after every run or decision. Last updated: 2026-11-13 (UTC).
+Living document: update it after every run or decision. Last updated: 2026-11-14 (UTC).
+
+## Next steps (2026-11-14, end of the autonomous session)
+
+The owner ended the autonomous mode on 2026-11-14 (decisions.md 2026-11-14 [DECISION] (owner), the autonomous mode ended). Future sessions work from CLAUDE.md, this file and `docs/decisions.md`. The agent's own notes are frozen, not current (below).
+
+**The VM is down** since ≈ 04:47 UTC on 2026-11-14 (the last watcher reads; both addresses timed out at 06:21). Nothing was running: E1's queue had ended at 04:17:31 (decisions.md 2026-11-14 [OPS] E1: the queue ended (QUEUE DONE)).
+
+**GPU runs still to make, in order:**
+1. **REG-20 arm A (K1: the open-loop arm at λ = 2.0, seeds 15–19).** About 6.4–7.4 GPU h, plus about 1.1 h per control that falls due (FILE(docs/drafts/reviews-2026-11-13/rulef-reg20-ops-draft3-r3.md:160-167)).
+   - **Approved by both reviews.** Rule F round 3 is READY provided DH1 and DH2 go in verbatim (`docs/drafts/reviews-2026-11-13/rulef-reg20-ops-draft3-r3.md`). The owner-proxy delta is APPROVE, with DL1–DL10 before the first launch and DL11 later (`docs/drafts/reviews-2026-11-13/proxy-reg20-ops-draft3-delta.md`). REG-20's gate passed on 2026-11-13: `may_start` True, k_closed 5 of 5 (PROBE(docs/probe/reg20/gate_20261113T230307Z.txt)).
+   - **Not yet done:**
+     - draft 4, which applies DH1, DH2 and DL1–DL10 to `docs/drafts/reg20_ops_decision_draft3.md` and its patches (the writer was stopped before it finished; nothing of it is kept);
+     - the three decision entries (operations, rulings, start), in the order of the patched README's "Launch order";
+     - then, once the VM is back: `vm_checkout.sh` (the VM back to `1cface7`), 350 W, the session probe with `RENEW=1` after a reboot, and the queue.
+   - **Disk:** 3,794,420 kB free after E1 (PROBE(docs/probe/20261114_vm_disk/disk_after_e1_20261114T042056Z.txt)). Under DH1, 6 launches fit, and all 11 runs need 4,281,776 kB. By the owner-proxy's ruling, a disk stop falls at a seed boundary and spends no attempt.
+2. **D1 (C2's session-cap arm, about 6.2 GPU h).**
+   - **Reviews:** rule F round 2 is READY provided DJ1–DJ3 (`docs/drafts/reviews-2026-11-13/rulef-d1-draft2-r2.md`). The owner-proxy is APPROVE with DM1–DM16 (`docs/drafts/reviews-2026-11-13/proxy-d1-draft2.md`).
+   - **Still needed:**
+     - draft 3, applying DJ1–DJ3, R1–R21, DM2 and DM3;
+     - rule F round 3 on DM2's and DM3's code (DM4);
+     - the caps computation;
+     - the five configs;
+     - ops scripts, with their own reviews.
+   - **Timing:** its registered commit lands only after REG-20 arm A's hold ends (DM7).
+3. **REG-24 (C1's confirmation with the drop and return, seed 43; about 9.1 GPU h with a 9000 s drop).** Draft 3 is `docs/drafts/reg24_confirm_draft3.md` (`89e5272`). It waits for the owner's ruling on the drop length, then rule F round 3, the owner-proxy and its ops scripts.
+4. **Not drafted yet:**
+   - E0/E2, the 16-turn sweeps for K2. E1's floor is not computed before E0's [REG].
+   - D2, caching off at matched utilization: C2's second link-cut control.
+   - REG-23 (K5) has been in review since 2026-11-13.
+
+**Waiting for the owner:**
+- **VM:** power the VM on, and set 350 W after a reboot. `sudo -n` asks for a password.
+- **REG-24's drop length:** (a) 9000 s, (b) 1800 s or (c) other. The options and costs are in `agent/FOR_AUTHOR.md` −18; the agent recommends (a).
+- **VM disk:** 82 VM run folders, 10,896,304 kB in all, match the Mac's manifest (PROBE(docs/probe/20261114_vm_disk/verify_20261114T041949Z.txt)). Candidates for removal, oldest first: `docs/probe/20261114_vm_disk/removal_candidates_20261114.txt`. Keep the one VM folder the verify file reads `NOT_IN_MANIFEST` (REG-19 seed 18's control of 2026-11-12, 15:10): the Mac has no copy of it.
+- **Condition 4's order clause** (REG-22; `agent/FOR_AUTHOR.md` −13).
+- **D1:** whether a `harness_fault` run may be taken out of n. It is the owner's alone; by default such a run counts as `unclear` (DM2).
+- **`docs/claims.md`:** the status lines of C1, C2 and K3 still date from 2026-11-04 and 2026-11-12. Restating them on REG-19's, REG-21's and REG-22's results needs a reviewed decision each.
+
+**Frozen and moved (2026-11-14):**
+- **Frozen:** `agent/STATE.md`, `agent/LOG.md`, `agent/PLAN.md` and `agent/FOR_AUTHOR.md`. They stay in place, because `docs/decisions.md` cites them by line.
+- **Unchanged:** `agent/RUNBOOK.md` keeps its operating procedures. Its watcher steps are retired.
+- **Moved to `_to_delete/`:**
+  - the start prompt (`docs/FABLE_PROMPT.md`) and `agent/RESUME_PROMPT.md`;
+  - the launchd jobs, `agent/bin/gpu_watch.sh` and `agent/bin/resume.sh`;
+  - three untracked drafts;
+  - the files of a subagent's worktree (the worktree itself was removed).
 
 **Stage 1 is complete; Stage 2 is in progress (started 2026-10-31).** Stage 1 inputs: μ_warm = 4 req/s, μ_off = 2 req/s (Stage 1 grid 1, 2, 3, …), λ = 3 healthy for 2 h, SLO TTFT ≤ 1.0 s, τ = 300 s (`20261101-131823_tau`), so the watch window is 1500 s.
 
